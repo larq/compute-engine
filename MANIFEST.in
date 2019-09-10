@@ -1,1 +1,1 @@
-recursive-include tensorflow_zero_out/ *.so
+recursive-include larq_compute_engine/ *.so
