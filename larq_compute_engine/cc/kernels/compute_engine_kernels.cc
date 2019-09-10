@@ -38,9 +38,10 @@ class BgemmOp : public OpKernel {
     // number of the first matrix columns should be same as
     // the number of second matrix rows
     OP_REQUIRES(context, a_tensor.dim_size(1) == b_tensor.dim_size(0),
-                errors::InvalidArgument(
-                    "number of the first matrix cols and second matrix rows must be the same: ",
-                    a_tensor.dim_size(1), " vs ", b_tensor.dim_size(0)));
+                errors::InvalidArgument("number of the first matrix cols and "
+                                        "second matrix rows must be the same: ",
+                                        a_tensor.dim_size(1), " vs ",
+                                        b_tensor.dim_size(0)));
 
     const int m = a_tensor.dim_size(0);
     const int n = b_tensor.dim_size(1);
@@ -55,8 +56,8 @@ class BgemmOp : public OpKernel {
     }
 
     Tensor* output_tensor = nullptr;
-    OP_REQUIRES_OK(context, context->allocate_output(0, output_shape,
-                                                     &output_tensor));
+    OP_REQUIRES_OK(context,
+                   context->allocate_output(0, output_shape, &output_tensor));
 
     // Set all elements of the output tensor to 0.
     auto output_flat = output_tensor->flat<T>();
@@ -67,9 +68,8 @@ class BgemmOp : public OpKernel {
   }
 };
 
-
-#define REGISTER_KERNEL(type)                                       \
-  REGISTER_KERNEL_BUILDER(                                          \
+#define REGISTER_KERNEL(type)                                     \
+  REGISTER_KERNEL_BUILDER(                                        \
       Name("Bgemm").Device(DEVICE_CPU).TypeConstraint<type>("T"), \
       BgemmOp<type>)
 

@@ -15,16 +15,14 @@ except ImportError:
 
 
 class BGEMMTest(test.TestCase):
-
     def test_bgemm_int32(self):
         with self.test_session():
             input_a = np.array([[1, 1], [1, 1]]).astype(np.int32)
             input_b = np.array([[1, 1], [1, 1]]).astype(np.int32)
             expected_output = np.array([[0, 0], [0, 0]])
 
-            self.assertAllClose(
-                bgemm(input_a, input_b).eval(), expected_output)
+            self.assertAllClose(bgemm(input_a, input_b).eval(), expected_output)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test.main()
