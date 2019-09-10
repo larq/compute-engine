@@ -1,10 +1,9 @@
 """Setup for pip package."""
 
-from setuptools import Extension, find_packages, setup
-from setuptools.dist import Distribution
+from setuptools import Extension, dist, find_packages, setup
 
 
-class BinaryDistribution(Distribution):
+class BinaryDistribution(dist.Distribution):
     """This class is needed in order to create OS specific wheels."""
 
     def has_ext_modules(self):
