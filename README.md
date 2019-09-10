@@ -35,8 +35,5 @@ Once the pip package has been built, you can install it with,
 Then test out the pip package
 ```bash
     cd ..
-    python -c "
-    import tensorflow as tf;
-    import larq_compute_engine as lce;
-    print(lce.bgemm([[1,2], [3,4]], [[1,2], [3,4]]).eval(session=tf.Session()));"
+    python -c "import tensorflow as tf;import larq_compute_engine as lce;print(lce.bgemm([[1,2], [3,4]], [[1,2], [3,4]]).eval(session=tf.Session()));"
 ```
