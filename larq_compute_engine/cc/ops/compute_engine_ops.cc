@@ -22,5 +22,4 @@ REGISTER_OP("Bgemm")
     .Attr("T: {float, double, int32}")
     .Input("input_a: T")
     .Input("input_b: T")
-    .Output("output_c: T")
-;
+    .Output("output_c: T");

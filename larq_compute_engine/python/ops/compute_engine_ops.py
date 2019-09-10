@@ -22,5 +22,6 @@ from tensorflow.python.framework import load_library
 from tensorflow.python.platform import resource_loader
 
 compute_engine_ops = load_library.load_op_library(
-    resource_loader.get_path_to_datafile('_larq_compute_engine_ops.so'))
+    resource_loader.get_path_to_datafile("_larq_compute_engine_ops.so")
+)
 bgemm = compute_engine_ops.bgemm
