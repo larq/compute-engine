@@ -1,0 +1,18 @@
+trigger:
+  - master
+
+pr:
+  - master
+
+pool:
+  vmImage: "ubuntu-latest"
+
+container: tensorflow/tensorflow:custom-op-ubuntu16
+
+steps:
+- script: make compute_engine_pip_pkg
+  displayName: "Build PIP Package"
+- script: pip install artifacts/*.whl
+  displayName: "Install PIP Package"
+- script: python -c "import tensorflow as tf;import larq_compute_engine as lce;print(lce.bgemm([[1,2], [3,4]], [[1,2], [3,4]]).eval(session=tf.Session()));"
+  displayName: "Run a sanity check"
