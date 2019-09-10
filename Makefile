@@ -1,6 +1,6 @@
 CXX := g++
 NVCC := nvcc
-PYTHON_BIN_PATH = python
+PYTHON_BIN_PATH = python3
 
 COMPUTE_ENGINE_SRCS = $(wildcard larq_compute_engine/cc/kernels/*.cc) $(wildcard larq_compute_engine/cc/kernels/*.h) $(wildcard larq_compute_engine/cc/ops/*.cc)
 

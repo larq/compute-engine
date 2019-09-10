@@ -10,11 +10,11 @@ pool:
 container: tensorflow/tensorflow:custom-op-ubuntu16
 
 steps:
-  - script: pip install tensorflow==1.14.0 --user
+  - script: pip3 install tensorflow==1.14.0 --user
     displayName: "Install TensorFlow"
   - script: make compute_engine_pip_pkg
     displayName: "Build PIP Package"
-  - script: pip install artifacts/*.whl --user
+  - script: pip3 install artifacts/*.whl --user
     displayName: "Install PIP Package"
   - script: make compute_engine_test
     displayName: "Run unit tests"
