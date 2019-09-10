@@ -10,6 +10,8 @@ pool:
 container: tensorflow/tensorflow:custom-op-ubuntu16
 
 steps:
+  - script: pip install tensorflow==1.14.0 --user
+    displayName: "Install TensorFlow"
   - script: make compute_engine_pip_pkg
     displayName: "Build PIP Package"
   - script: pip install artifacts/*.whl
