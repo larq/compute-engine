@@ -18,9 +18,6 @@ compute_engine_ops: $(COMPUTE_ENGINE_TARGET_LIB)
 $(COMPUTE_ENGINE_TARGET_LIB): $(COMPUTE_ENGINE_SRCS)
 	$(CXX) $(CFLAGS) -o $@ $^ ${LDFLAGS}
 
-compute_engine_test: larq_compute_engine/python/ops/compute_engine_ops_test.py larq_compute_engine/python/ops/compute_engine_ops.py $(COMPUTE_ENGINE_TARGET_LIB)
-	$(PYTHON_BIN_PATH) larq_compute_engine/python/ops/compute_engine_ops_test.py
-
 compute_engine_pip_pkg: $(COMPUTE_ENGINE_TARGET_LIB)
 	./build_pip_pkg.sh make artifacts
 
