@@ -5,6 +5,6 @@ sh_binary(
         "LICENSE",
         "MANIFEST.in",
         "setup.py",
-        "//tensorflow_zero_out:zero_out_py",
+        "//larq_compute_engine:compute_engine_py",
     ],
 )
