@@ -4,9 +4,11 @@ import tensorflow as tf
 
 try:
     from larq_compute_engine.python.ops.compute_engine_ops import bgemm, fast_sign
+
     print("Imported larq compute engine from pip package")
 except ImportError:
     from compute_engine_ops import bgemm, fast_sign
+
     print("Imported larq compute engine from local file")
 
 
@@ -18,6 +20,7 @@ class BGEMMTest(tf.test.TestCase):
             expected_output = np.array([[0, 0], [0, 0]])
 
             self.assertAllClose(bgemm(input_a, input_b).eval(), expected_output)
+
 
 class SignTest(tf.test.TestCase):
     def test_sign_int8(self):
@@ -39,4 +42,3 @@ class SignTest(tf.test.TestCase):
             x = np.array([[0.1, -5.8], [-3.0, 0.00], [0.0, -0.0]]).astype(np.float32)
             expected_output = np.array([[1, -1], [-1, 1], [1, -1]]).astype(np.float32)
             self.assertAllClose(fast_sign(x).eval(), expected_output)
-
