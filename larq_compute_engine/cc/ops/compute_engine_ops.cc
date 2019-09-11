@@ -1,4 +1,4 @@
-/* Copyright 2017 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2019 Plumerai. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ REGISTER_OP("Bgemm")
     .Output("output_c: T");
 
 REGISTER_OP("FastSign")
-    .Attr("T: {float, int32, int8} = DT_FLOAT")
+    .Attr("T: {half, float, double, int8, int32, int64}")
     .Input("input: T")
     .Output("output: T");
     //.SetShapeFn(shape_inference::UnchangedShape);
