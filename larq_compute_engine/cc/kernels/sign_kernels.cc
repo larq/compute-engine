@@ -30,6 +30,11 @@ float sign(float x) {
   return (std::signbit(x) ? -1.0f : 1.0f);
 }
 
+template <>
+double sign(double x) {
+  return (std::signbit(x) ? -1.0 : 1.0);
+}
+
 template <typename T>
 class SignOp : public OpKernel {
  public:
