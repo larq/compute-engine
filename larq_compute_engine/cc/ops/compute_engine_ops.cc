@@ -31,7 +31,7 @@ REGISTER_OP("Bgemm")
     .Input("input_b: T")
     .Output("output_c: T");
 
-REGISTER_OP("FastSign")
+REGISTER_OP("Bsign")
     .Attr("T: {half, float, double, int8, int32, int64}")
     .Input("input: T")
     .Output("output: T");

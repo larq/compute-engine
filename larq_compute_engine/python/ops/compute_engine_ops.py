@@ -7,4 +7,4 @@ compute_engine_ops = tf.load_op_library(
     resource_loader.get_path_to_datafile("_larq_compute_engine_ops.so")
 )
 bgemm = compute_engine_ops.bgemm
-fast_sign = compute_engine_ops.fast_sign
+bsign = compute_engine_ops.bsign
