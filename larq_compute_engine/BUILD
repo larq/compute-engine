@@ -17,6 +17,14 @@ cc_binary(
     copts = ["-pthread", "-std=c++11", "-D_GLIBCXX_USE_CXX11_ABI=0"]
 )
 
+cc_test(
+    name = "bgemm_tests",
+    size = "small",
+    srcs = ["cc/tests/bgemm_tests.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = ["@gtest//:main"],
+)
+
 py_library(
     name = "compute_engine_ops_py",
     srcs = ([
