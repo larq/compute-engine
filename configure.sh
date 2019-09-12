@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+shopt -s expand_aliases
+alias pip='pip3'
+alias python='python3'
+
 function write_to_bazelrc() {
   echo "$1" >> .bazelrc
 }
