@@ -41,7 +41,7 @@ py_library(
     data = [
         ":python/ops/_larq_compute_engine_ops.so"
     ],
-    srcs_version = "PY2AND3",
+    srcs_version = "PY3",
 )
 
 py_library(
@@ -54,7 +54,7 @@ py_library(
     deps = [
         ":compute_engine_ops_py"
     ],
-    srcs_version = "PY2AND3",
+    srcs_version = "PY3",
 )
 
 py_test(
@@ -66,7 +66,8 @@ py_test(
     deps = [
         ":compute_engine_ops_py",
     ],
-    srcs_version = "PY2AND3",
+    python_version = "PY3",
+    srcs_version = "PY3",
 )
 
 # collection of all python tests
