@@ -33,6 +33,16 @@ test_suite(
     ],
 )
 
+py_runtime(
+    name = "pyruntime",
+    interpreter_path = select({
+        # Update paths as appropriate for your system.
+        "@bazel_tools//tools/python:PY2": "/usr/bin/python2",
+        "@bazel_tools//tools/python:PY3": "/usr/bin/python3",
+    }),
+    files = [],
+)
+
 py_library(
     name = "compute_engine_ops_py",
     srcs = ([
