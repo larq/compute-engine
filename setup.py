@@ -13,7 +13,7 @@ class BinaryDistribution(dist.Distribution):
 setup(
     name="larq-compute-engine",
     version="0.0.1",
-    python_requires=">=3.6",
+    python_requires=">=3.4",
     description="An Open Source Collection of Highly Tuned Implementations of Primitives Operations for Binarized Neural Networks",
     author="Plumerai",
     author_email="arash@plumerai.com",
