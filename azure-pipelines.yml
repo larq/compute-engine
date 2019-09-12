@@ -10,6 +10,9 @@ jobs:
       vmImage: "ubuntu-latest"
     container: tensorflow/tensorflow:custom-op-ubuntu16
     steps:
+      - script: ./configure.sh <<< $'yes\nno\n'
+        displayName: "Configure Bazel"
+
       - script: bazel test larq_compute_engine:cc_tests
         displayName: "Run CC unit tests"
 
