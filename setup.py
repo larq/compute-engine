@@ -24,7 +24,6 @@ setup(
         "tensorflow_gpu": ["tensorflow-gpu>=1.13.1"],
     },
     include_package_data=True,
-    ext_modules=[Extension("_foo", ["stub.cc"])],
     zip_safe=False,
     distclass=BinaryDistribution,
     classifiers=[
