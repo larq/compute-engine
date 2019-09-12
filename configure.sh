@@ -66,7 +66,7 @@ if [[ "$TF_NEED_CUDA" == "0" ]]; then
     fi
     # Install CPU version
     echo 'Installing tensorflow......\n'
-    pip install tensorflow
+    pip install tensorflow --user
   fi
 
 else
@@ -85,7 +85,7 @@ else
     fi
     # Install CPU version
     echo 'Installing tensorflow-gpu .....\n'
-    pip install tensorflow-gpu
+    pip install tensorflow-gpu --user
   fi
 fi
 
