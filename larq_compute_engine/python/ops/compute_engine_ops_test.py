@@ -2,10 +2,7 @@
 import numpy as np
 import tensorflow as tf
 
-try:
-    from compute_engine_ops import bgemm, bsign
-except ImportError:
-    from larq_compute_engine.python.ops.compute_engine_ops import bgemm, bsign
+import larq_compute_engine as lqce
 
 
 class BGEMMTest(tf.test.TestCase):
@@ -15,7 +12,7 @@ class BGEMMTest(tf.test.TestCase):
             input_b = np.array([[1, 1], [1, 1]]).astype(np.int32)
             expected_output = np.array([[0, 0], [0, 0]])
 
-            self.assertAllClose(bgemm(input_a, input_b).eval(), expected_output)
+            self.assertAllClose(lqce.bgemm(input_a, input_b).eval(), expected_output)
 
 
 class SignTest(tf.test.TestCase):
@@ -23,7 +20,7 @@ class SignTest(tf.test.TestCase):
         with self.test_session():
             x = np.array([[2, -5], [-3, 0]]).astype(dtype)
             expected_output = np.array([[1, -1], [-1, 1]])
-            self.assertAllClose(bsign(x).eval(), expected_output)
+            self.assertAllClose(lqce.bsign(x).eval(), expected_output)
 
     # Test for +0 and -0 floating points.
     # We have sign(+0) = 1 and sign(-0) = -1
@@ -31,7 +28,7 @@ class SignTest(tf.test.TestCase):
         with self.test_session():
             x = np.array([[0.1, -5.8], [-3.0, 0.00], [0.0, -0.0]]).astype(dtype)
             expected_output = np.array([[1, -1], [-1, 1], [1, -1]])
-            self.assertAllClose(bsign(x).eval(), expected_output)
+            self.assertAllClose(lqce.bsign(x).eval(), expected_output)
 
     def test_sign_int8(self):
         self.run_test_for_integers(np.int8)
