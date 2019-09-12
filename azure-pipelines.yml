@@ -25,11 +25,8 @@ jobs:
       - script: pip3 install artifacts/*.whl --user
         displayName: "Install PIP Package"
 
-      - script: pip3 install tensorflow==1.14.0 --user
-        displayName: "Install PIP Package"
-
-      - script: bazel test larq_compute_engine:py_tests
-        displayName: "Run Python unit tests"
+      # - script: bazel test larq_compute_engine:py_tests
+      #   displayName: "Run Python unit tests"
 
   - job: "Lint"
     pool:
