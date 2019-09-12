@@ -1,10 +1,20 @@
 """Use larq compute engine ops in python."""
 
 import tensorflow as tf
-from tensorflow.python.platform import resource_loader
+import os
 
-compute_engine_ops = tf.load_op_library(
-    resource_loader.get_path_to_datafile("_larq_compute_engine_ops.so")
-)
-bgemm = compute_engine_ops.bgemm
-bsign = compute_engine_ops.bsign
+
+def get_path_to_datafile(path):
+    """Get the path to the specified file in the data dependencies.
+    Args:
+    path: a string resource path relative to the current file
+    Returns:
+    The path to the specified data file
+    """
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(root_dir, path)
+
+
+_ops_lib = tf.load_op_library(get_path_to_datafile("_larq_compute_engine_ops.so"))
+bgemm = _ops_lib.bgemm
+bsign = _ops_lib.bsign
