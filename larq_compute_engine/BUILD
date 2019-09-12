@@ -25,6 +25,14 @@ cc_test(
     deps = ["@gtest//:main"],
 )
 
+# collection of all cc tests
+test_suite(
+    name = "cc_tests",
+    tests = [
+        "bgemm_tests",
+    ],
+)
+
 py_library(
     name = "compute_engine_ops_py",
     srcs = ([
@@ -32,6 +40,19 @@ py_library(
     ]),
     data = [
         ":python/ops/_larq_compute_engine_ops.so"
+    ],
+    srcs_version = "PY2AND3",
+)
+
+py_library(
+    name = "compute_engine_py",
+    srcs = ([
+        "__init__.py",
+        "python/__init__.py",
+        "python/ops/__init__.py",
+    ]),
+    deps = [
+        ":compute_engine_ops_py"
     ],
     srcs_version = "PY2AND3",
 )
@@ -48,15 +69,10 @@ py_test(
     srcs_version = "PY2AND3",
 )
 
-py_library(
-    name = "compute_engine_py",
-    srcs = ([
-        "__init__.py",
-        "python/__init__.py",
-        "python/ops/__init__.py",
-    ]),
-    deps = [
-        ":compute_engine_ops_py"
+# collection of all python tests
+test_suite(
+    name = "py_tests",
+    tests = [
+        "compute_engine_ops_py_test",
     ],
-    srcs_version = "PY2AND3",
 )
