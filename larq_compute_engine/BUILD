@@ -22,7 +22,7 @@ cc_test(
     size = "small",
     srcs = ["cc/tests/bgemm_tests.cc"],
     copts = ["-Iexternal/gtest/include"],
-    deps = ["@gtest//:main"],
+    deps = ["@googletest//:gtest_main"],
 )
 
 # collection of all cc tests
