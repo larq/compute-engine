@@ -17,6 +17,32 @@ cc_binary(
     copts = ["-pthread", "-std=c++11", "-D_GLIBCXX_USE_CXX11_ABI=0"]
 )
 
+cc_test(
+    name = "bgemm_tests",
+    size = "small",
+    srcs = ["cc/tests/bgemm_tests.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = ["@gtest//:main"],
+)
+
+# collection of all cc tests
+test_suite(
+    name = "cc_tests",
+    tests = [
+        "bgemm_tests",
+    ],
+)
+
+py_runtime(
+    name = "pyruntime",
+    interpreter_path = select({
+        # Update paths as appropriate for your system.
+        "@bazel_tools//tools/python:PY2": "/usr/bin/python2",
+        "@bazel_tools//tools/python:PY3": "/usr/bin/python3",
+    }),
+    files = [],
+)
+
 py_library(
     name = "compute_engine_ops_py",
     srcs = ([
@@ -25,19 +51,7 @@ py_library(
     data = [
         ":python/ops/_larq_compute_engine_ops.so"
     ],
-    srcs_version = "PY2AND3",
-)
-
-py_test(
-    name = "compute_engine_ops_py_test",
-    srcs = [
-        "python/ops/compute_engine_ops_test.py"
-    ],
-    main = "python/ops/compute_engine_ops_test.py",
-    deps = [
-        ":compute_engine_ops_py",
-    ],
-    srcs_version = "PY2AND3",
+    srcs_version = "PY3",
 )
 
 py_library(
@@ -50,5 +64,26 @@ py_library(
     deps = [
         ":compute_engine_ops_py"
     ],
-    srcs_version = "PY2AND3",
+    srcs_version = "PY3",
+)
+
+py_test(
+    name = "compute_engine_ops_py_test",
+    srcs = [
+        "python/ops/compute_engine_ops_test.py"
+    ],
+    main = "python/ops/compute_engine_ops_test.py",
+    deps = [
+        ":compute_engine_ops_py",
+    ],
+    python_version = "PY3",
+    srcs_version = "PY3",
+)
+
+# collection of all python tests
+test_suite(
+    name = "py_tests",
+    tests = [
+        "compute_engine_ops_py_test",
+    ],
 )

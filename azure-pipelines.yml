@@ -8,19 +8,25 @@ jobs:
   - job: "Test"
     pool:
       vmImage: "ubuntu-latest"
-    container: tensorflow/tensorflow:custom-op-ubuntu16
+    container: tensorflow/tensorflow:custom-op-ubuntu14
     steps:
-      - script: pip3 install tensorflow==1.14.0 pytest --user
-        displayName: "Install Dependencies"
+      - script: ./configure.sh <<< $'yes\nno\n'
+        displayName: "Configure Bazel"
 
-      - script: make compute_engine_pip_pkg
+      - script: bazel test larq_compute_engine:cc_tests
+        displayName: "Run CC Unit Tests"
+
+      - script: bazel build :build_pip_pkg
+        displayName: "Build Bazel Package Creator Binary"
+
+      - script: bazel-bin/build_pip_pkg artifacts
         displayName: "Build PIP Package"
 
       - script: pip3 install artifacts/*.whl --user
         displayName: "Install PIP Package"
 
-      - script: python3 -m pytest .
-        displayName: "Run unit tests"
+      - script: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime
+        displayName: "Run Python Tests"
 
   - job: "Lint"
     pool:

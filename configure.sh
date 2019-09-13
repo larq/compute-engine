@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+shopt -s expand_aliases
+alias pip='pip3'
+alias python='python3'
+
 function write_to_bazelrc() {
   echo "$1" >> .bazelrc
 }
@@ -66,7 +70,7 @@ if [[ "$TF_NEED_CUDA" == "0" ]]; then
     fi
     # Install CPU version
     echo 'Installing tensorflow......\n'
-    pip install tensorflow
+    pip install tensorflow --user
   fi
 
 else
@@ -85,7 +89,7 @@ else
     fi
     # Install CPU version
     echo 'Installing tensorflow-gpu .....\n'
-    pip install tensorflow-gpu
+    pip install tensorflow-gpu --user
   fi
 fi
 
