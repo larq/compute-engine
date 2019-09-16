@@ -2,6 +2,45 @@ licenses(["notice"])  # Apache 2.0
 
 package(default_visibility = ["//visibility:public"])
 
+cc_library(
+    name = "utils",
+    hdrs = [
+        "cc/utils/macros.h",
+    ],
+)
+
+# BUILDING BGEMM
+cc_library(
+    name = "bgemm",
+    hdrs = [
+        "cc/core/bgemm_functor.h",
+    ],
+    deps = [
+    ":utils",
+    ]
+)
+
+cc_test(
+    name = "bgemm_tests",
+    size = "small",
+    srcs = ["cc/tests/bgemm_tests.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = [
+         "@googletest//:gtest_main",
+         ":bgemm",
+    ],
+)
+
+# COLLECTION OF ALL CC TESTS
+# each new cc test needs to be added here
+test_suite(
+    name = "cc_tests",
+    tests = [
+        "bgemm_tests",
+    ],
+)
+
+# MAIN COMPUTE ENGINE LIBRARY
 cc_binary(
     name = 'python/ops/_larq_compute_engine_ops.so',
     srcs = [
@@ -15,22 +54,6 @@ cc_binary(
         "@local_config_tf//:tf_header_lib",
     ],
     copts = ["-pthread", "-std=c++11", "-D_GLIBCXX_USE_CXX11_ABI=0"]
-)
-
-cc_test(
-    name = "bgemm_tests",
-    size = "small",
-    srcs = ["cc/tests/bgemm_tests.cc"],
-    copts = ["-Iexternal/gtest/include"],
-    deps = ["@googletest//:gtest_main"],
-)
-
-# collection of all cc tests
-test_suite(
-    name = "cc_tests",
-    tests = [
-        "bgemm_tests",
-    ],
 )
 
 py_runtime(
