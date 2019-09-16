@@ -21,7 +21,7 @@ def run_benchmark(operation, dtype, inputshape, numlayers):
     for i in range(numlayers):
         x = operation(x)
     # Evaluate the graph and time it
-    with tf.compat.v1.Session() as sess:
+    with tf.compat.v1.Session():
         start = time.perf_counter()
         x.eval()
         end = time.perf_counter()
