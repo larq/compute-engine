@@ -31,12 +31,33 @@ cc_test(
     ],
 )
 
+# BUILDING BGEMM
+cc_library(
+    name = "packbits",
+    hdrs = [
+        "cc/core/packbits.h",
+    ],
+)
+
+cc_test(
+    name = "packbits_tests",
+    size = "small",
+    srcs = ["cc/tests/packbits_tests.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = [
+         "@googletest//:gtest_main",
+         ":packbits",
+         ":utils",
+    ],
+)
+
 # COLLECTION OF ALL CC TESTS
 # each new cc test needs to be added here
 test_suite(
     name = "cc_tests",
     tests = [
         "bgemm_tests",
+        "packbits_tests",
     ],
 )
 
