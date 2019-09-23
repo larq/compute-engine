@@ -1,6 +1,14 @@
 #ifndef COMPUTE_ENGINE_CORE_MACROS_H_
 #define COMPUTE_ENGINE_CORE_MACROS_H_
 
+#ifdef __unix__
+#include <arpa/inet.h>
+#elif defined(_WIN32) || defined(WIN32)
+#include <winsock.h>
+#endif
+
+#define CE_IS_BIG_ENDIAN (htonl(47) == 47)
+
 // Compiler attributes
 #if (defined(__GNUC__) || defined(__APPLE__)) && !defined(SWIG)
 // Compiler supports GCC-style attributes
