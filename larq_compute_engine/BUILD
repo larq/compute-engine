@@ -31,7 +31,7 @@ cc_test(
     ],
 )
 
-# BUILDING BGEMM
+# BUILDING PACKBITS
 cc_library(
     name = "packbits",
     hdrs = [
@@ -51,6 +51,25 @@ cc_test(
     ],
 )
 
+# BUILDING IM2COL
+cc_library(
+    name = "im2col",
+    hdrs = [
+        "cc/core/im2col_functor.h",
+    ],
+)
+
+cc_test(
+    name = "im2col_tests",
+    size = "small",
+    srcs = ["cc/tests/im2col_tests.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = [
+         "@googletest//:gtest_main",
+         ":im2col",
+    ],
+)
+
 # COLLECTION OF ALL CC TESTS
 # each new cc test needs to be added here
 test_suite(
@@ -58,6 +77,7 @@ test_suite(
     tests = [
         "bgemm_tests",
         "packbits_tests",
+        "im2col_tests",
     ],
 )
 
