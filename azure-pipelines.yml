@@ -28,6 +28,24 @@ jobs:
       - script: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime
         displayName: "Run Python Tests"
 
+  - job: "TFLite"
+    pool:
+      vmImage: "ubuntu-latest"
+    container: tensorflow/tensorflow:custom-op-ubuntu14
+    steps:
+      - checkout: self
+        submodules: true
+
+      - script: tflite/download_dependencies.sh
+        displayName: "Download TFLite dependencies"
+
+      - script: tflite/build_lib.sh
+        displayName: "Build TFLite C++ library"
+
+      - script: tflite/gen/linux_x86_64/bin/minimal tflite/example_model.tflite
+        displayName: "Run inference on example model"
+
+
   - job: "Lint"
     pool:
       vmImage: "ubuntu-latest"
