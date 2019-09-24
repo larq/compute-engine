@@ -122,6 +122,7 @@ $(wildcard tensorflow/lite/kernels/*.cc) \
 $(wildcard tensorflow/lite/kernels/internal/*.cc) \
 $(wildcard tensorflow/lite/kernels/internal/optimized/*.cc) \
 $(wildcard tensorflow/lite/kernels/internal/reference/*.cc) \
+$(wildcard ../larq_compute_engine/cc/tflite/*.cc) \
 $(wildcard ../larq_compute_engine/cc/tflite/kernels/*.cc) \
 $(PROFILER_SRCS) \
 $(MAKEFILE_DIR)/downloads/farmhash/src/farmhash.cc \
@@ -133,6 +134,7 @@ CORE_CC_ALL_SRCS += \
 endif
 # Remove any duplicates.
 CORE_CC_ALL_SRCS := $(sort $(CORE_CC_ALL_SRCS))
+#LQCE: Add the original register.cc file to the exclude list
 CORE_CC_EXCLUDE_SRCS := \
 $(wildcard tensorflow/lite/*test.cc) \
 $(wildcard tensorflow/lite/*/*test.cc) \
@@ -143,6 +145,7 @@ $(wildcard tensorflow/lite/*/*/*test.cc) \
 $(wildcard tensorflow/lite/*/*/*/*test.cc) \
 $(wildcard tensorflow/lite/kernels/*test_main.cc) \
 $(wildcard tensorflow/lite/kernels/*test_util*.cc) \
+tensorflow/lite/kernels/register.cc \
 $(MINIMAL_SRCS)
 
 BUILD_WITH_MMAP ?= true

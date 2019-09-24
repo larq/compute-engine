@@ -31,7 +31,6 @@ jobs:
   - job: "TFLite"
     pool:
       vmImage: "ubuntu-latest"
-    container: tensorflow/tensorflow:custom-op-ubuntu14
     steps:
       - checkout: self
         submodules: true
