@@ -22,7 +22,7 @@ using namespace tensorflow;
 // Do *not* use a name that already exists within the Tensorflow system
 // like `Sign` because it will fail without giving an error message.
 
-// The shape functions cause crashes. This might be caused by gcc versions
+// The shape functions can cause crashes when compiled by 'wrong' gcc versions
 // https://github.com/tensorflow/tensorflow/issues/29643
 
 REGISTER_OP("Bgemm")
@@ -34,6 +34,6 @@ REGISTER_OP("Bgemm")
 REGISTER_OP("Bsign")
     .Attr("T: {half, float, double, int8, int32, int64}")
     .Input("input: T")
-    .Output("output: T");
-    //.SetShapeFn(shape_inference::UnchangedShape);
+    .Output("output: T")
+    .SetShapeFn(shape_inference::UnchangedShape);
 
