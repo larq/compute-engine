@@ -27,9 +27,6 @@ tensorflow/contrib/cmake/_build/
 /estimator_api_init_files_list.txt
 *.whl
 
-tflite/downloads
-tflite/gen
-
 # Android
 .gradle
 .idea

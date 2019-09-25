@@ -35,13 +35,19 @@ jobs:
       - checkout: self
         submodules: true
 
-      - script: tflite/download_dependencies.sh
+      - script: tensorflow/tensorflow/lite/tools/make/download_dependencies.sh
         displayName: "Download TFLite dependencies"
 
-      - script: tflite/build_lib.sh
+      - script: tensorflow/tensorflow/lite/tools/make/build_lib.sh
         displayName: "Build TFLite C++ library"
 
-      - script: tflite/gen/linux_x86_64/bin/minimal tflite/example_model.tflite
+      - script: larq_compute_engine/tflite/build/build_lqce.sh
+        displayName: "Build Larq Compute Engine extension"
+
+      - script: tensorflow/tensorflow/lite/tools/make/build_lib.sh
+        displayName: "Build TFLite C++ examples with modified library"
+
+      - script: tensorflow/tensorflow/lite/tools/make/gen/linux_x86_64/bin/minimal examples/example_model.tflite
         displayName: "Run inference on example model"
 
 
