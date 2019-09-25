@@ -1,4 +1,4 @@
-"""TF lite model conversion."""
+"""TF lite converter wrapper."""
 import tensorflow as tf
 
 
@@ -14,7 +14,6 @@ class ModelConverter:
 
     !!! example
         ```python
-        import larq_compute_engine as lqce
         from larq_zoo import BiRealNet
         model = BiRealNet()
         conv = ModelConverter(model)
@@ -25,33 +24,41 @@ class ModelConverter:
     def __init__(self, model):
         self.model = model
 
-    def convert(self, filename):
+    def convert(self, filename=None):
+        """Convert and return the tflite model.
+
+        Optionally save the model to a file.
+
+        # Arguments
+        filename: If `None`, then returns the tflite model object. If its a string then it saves the model to that filename.
+        """
         tflite_model = None
         keras_result = "success"
         session_result = "success"
         try:
-            tflite_model = self.convert_kerasmethod()
-        except Exception as e:
-            keras_result = str(e)
-
-        try:
-            tflite_model2 = self.convert_sessionmethod()
-            if tflite_model is None:
-                tflite_model = tflite_model2
+            tflite_model = self.convert_sessionmethod()
         except Exception as e:
             session_result = str(e)
 
-        print("Converion result:")
-        print("Keras method: {}".format(keras_result))
+        try:
+            tflite_model2 = self.convert_kerasmethod()
+            if tflite_model is None:
+                tflite_model = tflite_model2
+        except Exception as e:
+            keras_result = str(e)
+
+        print("Conversion result:")
         print("Session method: {}".format(session_result))
+        print("Keras method: {}".format(keras_result))
 
         if tflite_model is not None:
             print("Saving tf lite model as {}".format(filename))
-            open(filename, "wb").write(tflite_model)
-            return True
+            if filename is not None:
+                open(filename, "wb").write(tflite_model)
         else:
             print("Did not save tf lite model.")
-            return False
+
+        return tflite_model
 
     def convert_kerasmethod(self):
         """Conversion through the 'Keras method'
@@ -74,7 +81,9 @@ class ModelConverter:
         https://github.com/tensorflow/tensorflow/issues/25301
         """
         converter = tf.lite.TFLiteConverter.from_session(
-            tf.keras.backend.get_session(), self.model.inputs, self.model.outputs
+            tf.compat.v1.keras.backend.get_session(),
+            self.model.inputs,
+            self.model.outputs,
         )
         converter.allow_custom_ops = True
         return converter.convert()
