@@ -35,20 +35,29 @@ jobs:
       - checkout: self
         submodules: true
 
-      - script: tensorflow/tensorflow/lite/tools/make/download_dependencies.sh
+      - script: |
+          tensorflow/tensorflow/lite/tools/make/download_dependencies.sh
         displayName: "Download TFLite dependencies"
 
-      - script: tensorflow/tensorflow/lite/tools/make/build_lib.sh
+      - script: |
+          tensorflow/tensorflow/lite/tools/make/build_lib.sh
+          larq_compute_engine/tflite/build/build_lqce.sh
         displayName: "Build TFLite C++ library"
 
-      - script: larq_compute_engine/tflite/build/build_lqce.sh
-        displayName: "Build Larq Compute Engine extension"
+      - script: |
+          sudo apt install swig -y
+          pip3 install numpy setuptools wheel
+          tensorflow/tensorflow/lite/tools/pip_package/build_pip_package.sh
+          pip3 install /tmp/tflite_pip/python3/dist/*.whl --user
+        displayName: "Build and install Python wrapper"
 
-      - script: tensorflow/tensorflow/lite/tools/make/build_lib.sh
-        displayName: "Build TFLite C++ examples with modified library"
+      - script: |
+          tensorflow/tensorflow/lite/tools/make/gen/linux_x86_64/bin/minimal examples/example_model.tflite
+        displayName: "Test the C++ library on example model"
 
-      - script: tensorflow/tensorflow/lite/tools/make/gen/linux_x86_64/bin/minimal examples/example_model.tflite
-        displayName: "Run inference on example model"
+      - script: |
+          python3 larq_compute_engine/tflite/python/check_inference.py --model_file examples/example_model.tflite
+        displayName: "Test the Python package on example model"
 
 
   - job: "Lint"
