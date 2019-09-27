@@ -1,25 +1,15 @@
-"""Test for TF lite Python library
-
-Run inference on model given on commandline.
+"""Test for compute engine TF lite Python wrapper
 
 Based on tensorflow/tensorflow/lite/examples/python/label_image.py
 """
-import argparse
 import numpy as np
 
 from tflite_runtime.interpreter import Interpreter
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-m",
-        "--model_file",
-        default="example_model.tflite",
-        help=".tflite model to be executed",
-    )
-    args = parser.parse_args()
 
-    interpreter = Interpreter(model_path=args.model_file)
+def test_inference():
+    # Currently this has to be run from the root directory of the repository
+    interpreter = Interpreter("examples/example_model.tflite")
     interpreter.allocate_tensors()
 
     input_details = interpreter.get_input_details()
@@ -41,6 +31,4 @@ if __name__ == "__main__":
     output_data = interpreter.get_tensor(output_details[0]["index"])
     results = np.squeeze(output_data)
 
-    print("Result tensor:\n{}".format(results))
-
-    assert (results == [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]).all()
+    np.testing.assert_allclose(results, [0, 0, 0, 0, 1, 0, 0, 0, 0, 0])
