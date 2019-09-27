@@ -5,10 +5,10 @@
 #include "tensorflow/lite/kernels/kernel_util.h"
 #include "tensorflow/lite/kernels/op_macros.h"
 
+using namespace tflite;
+
+namespace compute_engine {
 namespace tflite {
-namespace ops {
-namespace custom {
-namespace bsign {
 
 template <typename T>
 T sign(T x) {
@@ -63,13 +63,10 @@ TfLiteStatus BsignEval(TfLiteContext* context, TfLiteNode* node) {
   return kTfLiteOk;
 }
 
-}  // namespace bsign
-
 TfLiteRegistration* Register_BSIGN() {
-  static TfLiteRegistration r = {nullptr, nullptr, bsign::BsignPrepare, bsign::BsignEval};
+  static TfLiteRegistration r = {nullptr, nullptr, BsignPrepare, BsignEval};
   return &r;
 }
 
-}  // namespace custom
-}  // namespace ops
 }  // namespace tflite
+}  // namespace compute_engine

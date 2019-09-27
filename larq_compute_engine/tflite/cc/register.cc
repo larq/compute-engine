@@ -2,13 +2,19 @@
 // This file is a copy of `tensorflow/tensorflow/lite/kernels/register.cc`.
 // But with our custom ops added to it.
 //
-// Normally, custom ops have to be added in the python interpreter wrapper
-// or in the android wrapper and so on, so it is easier to only add them once here.
-//
-// In the Makefile we simply blacklist the original `register.cc` file.
+// Normally, custom ops can be added in the Python, Android or iOS wrapper,
+// but this way we only have to add them once.
 //
 
 #include "tensorflow/lite/kernels/register.h"
+
+namespace compute_engine {
+namespace tflite {
+
+TfLiteRegistration* Register_BSIGN();
+
+}  // namespace tflite
+}  // namespace compute_engine
 
 namespace tflite {
 namespace ops {
@@ -20,8 +26,6 @@ TfLiteRegistration* Register_MFCC();
 TfLiteRegistration* Register_DETECTION_POSTPROCESS();
 TfLiteRegistration* Register_IF();
 TfLiteRegistration* Register_WHILE();
-
-TfLiteRegistration* Register_BSIGN();
 
 }  // namespace custom
 
@@ -398,7 +402,7 @@ BuiltinOpResolver::BuiltinOpResolver() {
   AddCustom("TFLite_Detection_PostProcess",
             tflite::ops::custom::Register_DETECTION_POSTPROCESS());
 
-  AddCustom("Bsign", tflite::ops::custom::Register_BSIGN());
+  AddCustom("Bsign", compute_engine::tflite::Register_BSIGN());
 }
 
 }  // namespace builtin
