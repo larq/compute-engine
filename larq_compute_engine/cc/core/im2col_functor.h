@@ -103,13 +103,14 @@ class ReferenceIm2ColFunctorHWC {
               // outside image
               memset(data_col, 0, num_channels * data_elem_size_in_bytes);
             } else {
-              // inside image -> copy all corresponding channels of element (x,y)
+              // inside image -> copy all corresponding channels of element
+              // (x,y)
               memcpy(data_col, data_im_at_row_y + x * num_channels,
                      num_channels * data_elem_size_in_bytes);
             }
             data_col += num_channels;
           }  // end of loop over kernel cols
-        }  // end of loop over kernel rows
+        }    // end of loop over kernel rows
         input_col += stride_w;
       }  // end of loop over output cols
       input_row += stride_h;

@@ -1,26 +1,54 @@
 #ifndef COMPUTE_ENGINE_KERNELS_BGEMM_FUNCTORS_H_
 #define COMPUTE_ENGINE_KERNELS_BGEMM_FUNCTORS_H_
 
+#include <bitset>
+#include <cstdint>
+
 #include "larq_compute_engine/cc/utils/macros.h"
 
 namespace compute_engine {
 namespace core {
 
-// TODO: benchmark if inlining the impacts speed
 template <class TIn, class TOut>
-CE_ATTRIBUTE_ALWAYS_INLINE auto compute_binary_inner_prod(const TIn& a,
-                                                          const TIn& b)
-    -> TOut {
-  // TODO: __builtin_popcount works only with GCC compiler -> implement a
-  // generalized version.
-  // TODO: SIMD optimization for popcount
+inline auto compute_binary_inner_prod(const TIn& a, const TIn& b) -> TOut {
   static_assert(std::is_unsigned<TIn>::value,
                 "Input of binary inner product should be of an unsigned type.");
   static_assert(std::is_signed<TOut>::value,
                 "Output of binary inner product should be of a signed type.");
 
-  return static_cast<TOut>(std::numeric_limits<TIn>::digits -
-                           2 * static_cast<TIn>(__builtin_popcount(a ^ b)));
+  constexpr auto bitwidth = std::numeric_limits<TIn>::digits;
+  std::bitset<bitwidth> bs(a ^ b);
+  return bitwidth - 2 * static_cast<TOut>(bs.count());
+}
+
+template <>
+inline float compute_binary_inner_prod<std::uint8_t, float>(
+    const std::uint8_t& a, const std::uint8_t& b) {
+  // TODO: __builtin_popcount works only with GCC compiler -> implement a
+  // generalized version.
+  // TODO: SIMD optimization for popcount
+  constexpr auto bitwidth = std::numeric_limits<std::uint8_t>::digits;
+  return bitwidth - 2 * static_cast<float>(__builtin_popcount(a ^ b));
+}
+
+template <>
+inline float compute_binary_inner_prod<std::uint32_t, float>(
+    const std::uint32_t& a, const std::uint32_t& b) {
+  // TODO: __builtin_popcount works only with GCC compiler -> implement a
+  // generalized version.
+  // TODO: SIMD optimization for popcount
+  constexpr auto bitwidth = std::numeric_limits<std::uint32_t>::digits;
+  return bitwidth - 2 * static_cast<float>(__builtin_popcountl(a ^ b));
+}
+
+template <>
+inline float compute_binary_inner_prod<std::uint64_t, float>(
+    const std::uint64_t& a, const std::uint64_t& b) {
+  // TODO: __builtin_popcount works only with GCC compiler -> implement a
+  // generalized version.
+  // TODO: SIMD optimization for popcount
+  constexpr auto bitwidth = std::numeric_limits<std::uint64_t>::digits;
+  return bitwidth - 2 * static_cast<float>(__builtin_popcountll(a ^ b));
 }
 
 // A naive implementation of binary matrix multiplication, useful for
@@ -34,10 +62,9 @@ class ReferenceBGemmFunctor {
     // for now accept only unsigned {8,32,64}-bits values as input.
     static_assert(std::is_same<TIn2, TIn1>::value,
                   "Inputs to BGEMM should have the same type.");
-    static_assert(std::is_same<TIn1, uint8_t>::value ||
-                      std::is_same<TIn1, uint32_t>::value ||
-                      std::is_same<TIn1, uint64_t>::value,
-                  "Input to BGEMM should be of type uint{8,32,64}_t.");
+    static_assert(
+        std::is_unsigned<TIn1>::value && std::is_integral<TIn1>::value,
+        "Input to BGEMM should be of type unsigned integral.");
     static_assert(std::is_signed<TOut>::value,
                   "Output of BGEMM should be of a signed type.");
 
@@ -51,6 +78,10 @@ class ReferenceBGemmFunctor {
     size_t i, j, l;
     for (j = 0; j < n; ++j) {
       for (i = 0; i < m; ++i) {
+        // TODO: TOut is normally a single or double precision float.
+        // However to accumulate the results of binary inner product
+        // even int32 should suffice. By using and integral as accumulator
+        // we can avoid lots of float operations
         TOut total(0);
         for (l = 0; l < k; ++l) {
           const size_t a_index = ((i * a_i_stride) + (l * a_l_stride));
