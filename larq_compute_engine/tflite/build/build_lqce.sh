@@ -4,12 +4,21 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}/../../.."
 
-if [ -f "${ROOT_DIR}/tensorflow/tensorflow/lite/tools/make/gen/linux_x86_64/lib/libtensorflow-lite.a" ]; then
+# Try to figure out the host system
+HOST_OS="unknown"
+UNAME="$(uname -s)"
+if [ "$UNAME" = "Linux" ] ; then
+    HOST_OS="linux"
+elif [ "$UNAME" = "Darwin" ] ; then
+    HOST_OS="osx"
+fi
+
+if [ -f "${ROOT_DIR}/tensorflow/tensorflow/lite/tools/make/gen/${HOST_OS}_x86_64/lib/libtensorflow-lite.a" ]; then
     make -j 8 BUILD_WITH_NNAPI=false -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
     # Also re-make the tf-lite examples so that they use the modified library
     ${ROOT_DIR}/tensorflow/tensorflow/lite/tools/make/build_lib.sh
 else
-    echo "linux_x86_64 target not found. Please build tensorflow lite first using build_lib.sh"
+    echo "${HOST_OS}_x86_64 target not found. Please build tensorflow lite first using build_lib.sh"
 fi
 
 # Check if we need to cross-compile to raspberry pi
