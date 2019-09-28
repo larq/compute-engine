@@ -3,17 +3,13 @@
 # tensorflow/tensorflow/lite/tools/make/Makefile
 # 
 # The makefile will always be run from the root of the compute engine repository
-# So the tensorflow repository is in `tensorflow/`
-# and the files in this repository, use `larq_compute_engine/tfilte/cc/`
-#
-# The MAKEFILE_DIR variable will point to the directory inside the tensorflow repo
-#
 
 # Make uses /bin/sh by default, which is incompatible with the bashisms seen
 # below.
 SHELL := /bin/bash
 
-MAKEFILE_DIR := tensorflow/tensorflow/lite/tools/make
+TF_DIR := external/tensorflow
+TF_MAKEFILE_DIR := $(TF_DIR)/tensorflow/lite/tools/make
 
 # Try to figure out the host system
 HOST_OS :=
@@ -37,21 +33,21 @@ TARGET := $(HOST_OS)
 TARGET_ARCH := $(HOST_ARCH)
 
 #LQCE: Removed the following includes. It is unclear what they were for.
-#-I$(MAKEFILE_DIR)/../../../../../ \
-#-I$(MAKEFILE_DIR)/../../../../../../ \
+#-I$(TF_MAKEFILE_DIR)/../../../../../ \
+#-I$(TF_MAKEFILE_DIR)/../../../../../../ \
 #-I$(OBJDIR)
 
 INCLUDES := \
 -Ilarq_compute_engine/tflite/cc \
 -Ilarq_compute_engine/cc \
--Itensorflow/ \
--I$(MAKEFILE_DIR)/downloads/ \
--I$(MAKEFILE_DIR)/downloads/eigen \
--I$(MAKEFILE_DIR)/downloads/absl \
--I$(MAKEFILE_DIR)/downloads/gemmlowp \
--I$(MAKEFILE_DIR)/downloads/neon_2_sse \
--I$(MAKEFILE_DIR)/downloads/farmhash/src \
--I$(MAKEFILE_DIR)/downloads/flatbuffers/include
+-I$(TF_DIR) \
+-I$(TF_MAKEFILE_DIR)/downloads/ \
+-I$(TF_MAKEFILE_DIR)/downloads/eigen \
+-I$(TF_MAKEFILE_DIR)/downloads/absl \
+-I$(TF_MAKEFILE_DIR)/downloads/gemmlowp \
+-I$(TF_MAKEFILE_DIR)/downloads/neon_2_sse \
+-I$(TF_MAKEFILE_DIR)/downloads/farmhash/src \
+-I$(TF_MAKEFILE_DIR)/downloads/flatbuffers/include
 # This is at the end so any globally-installed frameworks like protobuf don't
 # override local versions in the source tree.
 INCLUDES += -I/usr/local/include
@@ -87,10 +83,10 @@ $(wildcard larq_compute_engine/tflite/cc/kernels/*.cc) \
 # CXXFLAGS or LIBS to work for a specific targetted architecture. All logic
 # based on platforms or architectures should happen within these files, to
 # keep this main makefile focused on the sources and dependencies.
-include $(wildcard $(MAKEFILE_DIR)/targets/*_makefile.inc)
+include $(wildcard $(TF_MAKEFILE_DIR)/targets/*_makefile.inc)
 
 # Where compiled objects are stored.
-GENDIR := $(MAKEFILE_DIR)/gen/$(TARGET)_$(TARGET_ARCH)/
+GENDIR := $(TF_MAKEFILE_DIR)/gen/$(TARGET)_$(TARGET_ARCH)/
 OBJDIR := $(GENDIR)obj/
 LIBDIR := $(GENDIR)lib/
 
@@ -130,7 +126,7 @@ libdir:
 
 # Gets rid of all generated files.
 clean:
-	rm -rf $(MAKEFILE_DIR)/gen
+	rm -rf $(TF_MAKEFILE_DIR)/gen
 
 # Gets rid of target files only, leaving the host alone. Also leaves the lib
 # directory untouched deliberately, so we can persist multiple architectures
