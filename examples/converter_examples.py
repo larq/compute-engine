@@ -1,7 +1,7 @@
 """Examples of TF lite model conversion."""
 import tensorflow as tf
 import larq_compute_engine as lqce
-from larq_zoo import BiRealNet
+from larq_zoo import BinaryAlexNet, BiRealNet
 from modelconverter import ModelConverter
 
 # Generate a tf.keras model.
@@ -36,7 +36,13 @@ conv = ModelConverter(model)
 conv.convert("/tmp/testnet_converted_model.tflite")
 
 
-# Example of converting BiRealNet to TF lite
+# Example of converting some Larq Zoo models to TF lite
+
+tf.compat.v1.keras.backend.clear_session()
+model = BinaryAlexNet()
+
+conv = ModelConverter(model)
+conv.convert("/tmp/binaryalexnet.tflite")
 
 tf.compat.v1.keras.backend.clear_session()
 model = BiRealNet()
