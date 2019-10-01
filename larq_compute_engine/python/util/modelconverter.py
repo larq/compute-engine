@@ -1,6 +1,10 @@
 """TF lite converter wrapper."""
 import tensorflow as tf
+import numpy as np
+from larq_compute_engine import bsign
+from tensorflow.keras.utils import get_custom_objects
 
+get_custom_objects()["bsign"] = bsign
 
 class ModelConverter:
     """Converter to create TF lite models from Keras models
@@ -32,6 +36,7 @@ class ModelConverter:
         # Arguments
         filename: If `None`, then returns the tflite model object. If its a string then it saves the model to that filename.
         """
+        self.fix_quantizers()
         tflite_model = None
         keras_result = "success"
         session_result = "success"
@@ -59,6 +64,20 @@ class ModelConverter:
             print("Did not save tf lite model.")
 
         return tflite_model
+
+    def fix_quantizers(self):
+        for l in self.model.layers:
+            try:
+                if l.input_quantizer is not None:
+                    l.input_quantizer = bsign
+            except AttributeError:
+                pass
+            try:
+                if l.kernel_quantizer is not None:
+                    l.kernel_quantizer = None
+                    l.set_weights(np.sign(np.sign(l.get_weights()) + 0.5))
+            except AttributeError:
+                pass
 
     def convert_kerasmethod(self):
         """Conversion through the 'Keras method'
