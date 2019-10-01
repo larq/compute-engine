@@ -284,38 +284,57 @@ template <class TIn, class TOut>
 inline void packbits_array(const TIn* input_array, std::size_t n,
                            TOut* bitpacked_array) {
   const size_t bitwidth = std::numeric_limits<TOut>::digits;
+  const int num_bpacked_elems = n / bitwidth;
 
-  assert(n % bitwidth == 0);
+  TOut* bpacked_elem_ptr = bitpacked_array;
+  const TIn* input_elem_ptr = input_array;
+  for (int bpacked_elem = 0; bpacked_elem < num_bpacked_elems; ++bpacked_elem) {
+    pack_bitfield<TIn>(input_elem_ptr, bpacked_elem_ptr++);
+    input_elem_ptr += bitwidth;
+  }
 
-  TOut* bitpacked_el = bitpacked_array;
-  for (int i = 0; i < n; i += bitwidth)
-    pack_bitfield<TIn>(&input_array[i], bitpacked_el++);
+  // if needs padding, copy the remaining elements in a buffer and add enough
+  // zero padding to fill the bitwidth. This function assumes enough memory for
+  // padding, is already allocatd for "bitpacked_array" argument.
+  // TODO: Avoid memory allocation and memory copy
+  if (n % bitwidth != 0) {
+    std::vector<TIn> padding_buffer(bitwidth, 0);
+    const auto num_remaining_elems = n - num_bpacked_elems * bitwidth;
+    memcpy(padding_buffer.data(), input_elem_ptr,
+           num_remaining_elems * sizeof(TIn));
+    pack_bitfield<TIn>(padding_buffer.data(), bpacked_elem_ptr);
+  }
 }
 
-// assumes matrices are stored in row-major mode
+// input/output matrices are stored in row-major mode
+// bitpacking_axis argument specifies the dimension in matrix where
+// the bitpacking operation is performed. For example for a RowWise
+// bitpacking operation compresses an MxN matrix to a Mx(N/bitwidth)
+// matrix.
 template <class TInContainer, class TOutContainer>
 inline void packbits_matrix(const TInContainer& input,
                             const size_t input_num_rows,
                             const size_t input_num_cols, TOutContainer& output,
                             size_t& output_num_rows, size_t& output_num_cols,
-                            const Axis bitpacking_axis = Axis::RowWise) {
+                            size_t& output_bitpadding,
+                            const Axis bitpacking_axis) {
   using TIn = typename TInContainer::value_type;
   using TOut = typename TOutContainer::value_type;
   const size_t bitwidth = std::numeric_limits<TOut>::digits;
 
-  // TODO: padding in case that is not divisible by bitwidth
-  // TODO: change axis type to an enum
   if (bitpacking_axis == Axis::RowWise) {
-    assert((input_num_cols % bitwidth) == 0);
-
     // calculate size of bitpacked matrix and allocate its memory
     output_num_rows = input_num_rows;
-    output_num_cols = input_num_cols / bitwidth;
+    output_num_cols = (input_num_cols + bitwidth - 1) / bitwidth;
+
     const auto output_size = output_num_cols * output_num_rows;
     output.resize(output_size);
 
     const auto input_row_size = input_num_cols;
     const auto output_row_size = output_num_cols;
+
+    const auto num_extra_elems = input_num_cols % bitwidth;
+    output_bitpadding = num_extra_elems == 0 ? 0 : bitwidth - num_extra_elems;
 
     // iterate through each row of the input matrix and bitpack the row into
     // the corresponding memory location of the output matrix
@@ -330,17 +349,17 @@ inline void packbits_matrix(const TInContainer& input,
   }
 
   if (bitpacking_axis == Axis::ColWise) {
-    // TODO: padding in case that is not divisible by bitwidth
-    assert(input_num_rows % bitwidth == 0);
-
     // calculate size of bitpacked matrix and allocate its memory
-    output_num_rows = input_num_rows / bitwidth;
+    output_num_rows = (input_num_rows + bitwidth - 1) / bitwidth;
     output_num_cols = input_num_cols;
     const auto output_size = output_num_cols * output_num_rows;
     output.resize(output_size);
 
     const auto input_row_size = input_num_cols;
     const auto output_row_size = output_num_cols;
+
+    const auto num_extra_elems = input_num_rows % bitwidth;
+    output_bitpadding = num_extra_elems == 0 ? 0 : bitwidth - num_extra_elems;
 
     // allocate temporary buffers
     std::vector<TIn> input_buffer(input_num_rows);

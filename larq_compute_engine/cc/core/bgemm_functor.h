@@ -29,7 +29,8 @@ template <class TIn1, class TIn2, class TOut>
 class ReferenceBGemmFunctor {
  public:
   void operator()(size_t m, size_t n, size_t k, const TIn1* a, size_t lda,
-                  const TIn2* b, size_t ldb, TOut* c, size_t ldc) {
+                  const TIn2* b, size_t ldb, TOut* c, size_t ldc,
+                  int bitpaddding = 0) {
     // for now accept only unsigned {8,32,64}-bits values as input.
     static_assert(std::is_same<TIn2, TIn1>::value,
                   "Inputs to BGEMM should have the same type.");
@@ -58,7 +59,7 @@ class ReferenceBGemmFunctor {
               compute_binary_inner_prod<TIn1, TOut>(a[a_index], b[b_index]);
         }
         const size_t c_index = ((i * c_i_stride) + (j * c_j_stride));
-        c[c_index] = total;
+        c[c_index] = total - bitpaddding;
       }
     }
   }

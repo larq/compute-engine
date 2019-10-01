@@ -32,9 +32,9 @@ void test_bitpacking_nonuniform_input_rowwise() {
     expected = {0b10001011, 0b11000101};
 
   std::vector<uint8_t> output;
-  size_t num_rows_bp = 0, num_cols_bp = 0;
+  size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
   ce::core::packbits_matrix(input, num_rows, num_cols, output, num_rows_bp,
-                            num_cols_bp, bitpacking_axis);
+                            num_cols_bp, bitpadding, bitpacking_axis);
 
   EXPECT_EQ(num_rows_bp, expected_num_rows);
   EXPECT_EQ(num_cols_bp, expected_num_cols);
@@ -60,9 +60,9 @@ void test_bitpacking_nonuniform_input_colwise() {
     expected = {0b10001011, 0b11000101};
 
   std::vector<uint8_t> output;
-  size_t num_rows_bp = 0, num_cols_bp = 0;
+  size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
   ce::core::packbits_matrix(input, num_rows, num_cols, output, num_rows_bp,
-                            num_cols_bp, bitpacking_axis);
+                            num_cols_bp, bitpadding, bitpacking_axis);
 
   EXPECT_EQ(num_rows_bp, expected_num_rows);
   EXPECT_EQ(num_cols_bp, expected_num_cols);
@@ -81,9 +81,9 @@ void test_bitpacking(const ce::core::Axis bitpacking_axis,
   input.fill(1);
 
   std::vector<TOut> output;
-  size_t num_rows_bp = 0, num_cols_bp = 0;
+  size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
   ce::core::packbits_matrix(input, num_rows, num_cols, output, num_rows_bp,
-                            num_cols_bp, bitpacking_axis);
+                            num_cols_bp, bitpadding, bitpacking_axis);
 
   TOut expected_value = std::numeric_limits<TOut>::max();
   const size_t num_elems_bp = num_elems / bitwidth;
@@ -92,6 +92,7 @@ void test_bitpacking(const ce::core::Axis bitpacking_axis,
 
   EXPECT_EQ(num_rows_bp, expected_num_rows);
   EXPECT_EQ(num_cols_bp, expected_num_cols);
+  EXPECT_EQ(bitpadding, 0);
   EXPECT_EQ(output.size(), num_rows_bp * num_cols_bp);
   EXPECT_THAT(output, ::testing::ElementsAreArray(expected));
 }
@@ -127,6 +128,64 @@ TEST(BitpackingTests, BitpackingColumnMajorUInt32) {
 TEST(BitpackingTests, BitpackingColumnMajorUInt64) {
   test_bitpacking<float, uint64_t, 128, 2>(ce::core::Axis::ColWise, 2, 2);
 }
+
+TEST(BitpackingWithBitPaddingTests, RowMajorPadding) {
+  const auto bitpacking_axis = ce::core::Axis::RowWise;
+  // input matrix
+  const int num_rows = 2;
+  const int num_cols = 9;
+  std::vector<float> input{1, 1,  -1, 1,  -1, -1, -1, 1, 1,
+                           1, -1, 1,  -1, -1, -1, 1,  1, -1};
+
+  // expected output matrix after bitpacking
+  const size_t expected_num_rows = 2;
+  const size_t expected_num_cols = 2;
+  std::vector<uint8_t> expected;
+  if (CE_IS_BIG_ENDIAN)
+    expected = {0b11010001, 0b10000000, 0b10100011, 0b00000000};
+  else
+    expected = {0b10001011, 0b00000001, 0b11000101, 0b00000000};
+
+  std::vector<uint8_t> output;
+  size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
+  ce::core::packbits_matrix(input, num_rows, num_cols, output, num_rows_bp,
+                            num_cols_bp, bitpadding, bitpacking_axis);
+
+  EXPECT_EQ(num_rows_bp, expected_num_rows);
+  EXPECT_EQ(num_cols_bp, expected_num_cols);
+  EXPECT_EQ(bitpadding, 7);
+  EXPECT_EQ(output.size(), num_rows_bp * num_cols_bp);
+  EXPECT_THAT(output, ::testing::ElementsAreArray(expected));
+};
+
+TEST(BitpackingWithBitPaddingTests, ColMajorPadding) {
+  const auto bitpacking_axis = ce::core::Axis::ColWise;
+  // The input matrix is:
+  const int num_rows = 9;
+  const int num_cols = 2;
+  std::vector<float> input{1,  1,  1,  -1, -1, 1, 1, -1, -1,
+                           -1, -1, -1, -1, 1,  1, 1, 1,  -1};
+
+  // expected output matrix after bitpacking
+  const size_t expected_num_rows = 2;
+  const size_t expected_num_cols = 2;
+  std::vector<uint8_t> expected;
+  if (CE_IS_BIG_ENDIAN)
+    expected = {0b11010001, 0b10100011, 0b10000000, 0b00000000};
+  else
+    expected = {0b10001011, 0b11000101, 0b00000001, 0b00000000};
+
+  std::vector<uint8_t> output;
+  size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
+  ce::core::packbits_matrix(input, num_rows, num_cols, output, num_rows_bp,
+                            num_cols_bp, bitpadding, bitpacking_axis);
+
+  EXPECT_EQ(num_rows_bp, expected_num_rows);
+  EXPECT_EQ(num_cols_bp, expected_num_cols);
+  EXPECT_EQ(bitpadding, 7);
+  EXPECT_EQ(output.size(), num_rows_bp * num_cols_bp);
+  EXPECT_THAT(output, ::testing::ElementsAreArray(expected));
+};
 
 }  // end namespace testing
 }  // end namespace compute_engine
