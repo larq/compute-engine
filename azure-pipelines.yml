@@ -50,6 +50,8 @@ jobs:
       - script: |
           export PATH="$PATH:$HOME/.local/bin"
           pip3 install pytest --user
+          # Go to a different directory to force it to use the installed package
+          # and not use the local larq_compute_engine directory
           cd larq_compute_engine/tflite
           python3 -m pytest .
         displayName: "TFLite: Run Python Tests"
