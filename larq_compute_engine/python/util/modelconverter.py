@@ -3,8 +3,14 @@ import tensorflow as tf
 import numpy as np
 from larq_compute_engine import bsign
 from tensorflow.keras.utils import get_custom_objects
+from distutils.version import LooseVersion
 
 get_custom_objects()["bsign"] = bsign
+
+
+def tf_2_or_newer():
+    return LooseVersion(tf.__version__) >= LooseVersion("2.0")
+
 
 class ModelConverter:
     """Converter to create TF lite models from Keras models
@@ -39,11 +45,14 @@ class ModelConverter:
         self.fix_quantizers()
         tflite_model = None
         keras_result = "success"
-        session_result = "success"
-        try:
-            tflite_model = self.convert_sessionmethod()
-        except Exception as e:
-            session_result = str(e)
+        if tf_2_or_newer():
+            session_result = "tensorflow 1.x only"
+        else:
+            session_result = "success"
+            try:
+                tflite_model = self.convert_sessionmethod()
+            except Exception as e:
+                session_result = str(e)
 
         try:
             tflite_model2 = self.convert_kerasmethod()
@@ -85,9 +94,12 @@ class ModelConverter:
         This method works with many normal models. When adding a single Lambda layer, such as `tf.keras.layers.Lambda(tf.sign)` or with a custom op, then it still works.
         However, sometimes, when adding *more than one* of such layers, at any place in the network, then it stops working.
         """
-        keras_file = "/tmp/modelconverter_temporary.h5"
-        tf.keras.models.save_model(self.model, keras_file)
-        converter = tf.lite.TFLiteConverter.from_keras_model_file(keras_file)
+        if tf_2_or_newer():
+            converter = tf.lite.TFLiteConverter.from_keras_model(self.model)
+        else:
+            keras_file = "/tmp/modelconverter_temporary.h5"
+            tf.keras.models.save_model(self.model, keras_file)
+            converter = tf.lite.TFLiteConverter.from_keras_model_file(keras_file)
         converter.allow_custom_ops = True
         return converter.convert()
 
