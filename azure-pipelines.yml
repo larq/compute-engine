@@ -10,6 +10,9 @@ jobs:
       vmImage: "ubuntu-latest"
     container: tensorflow/tensorflow:custom-op-ubuntu14
     steps:
+      - checkout: self
+        submodules: true
+
       - script: ./configure.sh <<< $'yes\nno\n'
         displayName: "Configure Bazel"
 
@@ -28,37 +31,30 @@ jobs:
       - script: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime
         displayName: "Run Python Tests"
 
-  - job: "TFLite"
-    pool:
-      vmImage: "ubuntu-latest"
-    steps:
-      - checkout: self
-        submodules: true
-
       - script: |
           external/tensorflow/tensorflow/lite/tools/make/download_dependencies.sh
-        displayName: "Download TFLite dependencies"
+        displayName: "TFLite: Download dependencies"
 
       - script: |
           external/tensorflow/tensorflow/lite/tools/make/build_lib.sh
           larq_compute_engine/tflite/build/build_lqce.sh
-        displayName: "Build TFLite C++ library"
+        displayName: "TFLite: Build C++ library"
 
       - script: |
           sudo apt install swig -y
-          pip3 install numpy setuptools wheel
+          pip3 install numpy setuptools wheel --user
           external/tensorflow/tensorflow/lite/tools/pip_package/build_pip_package.sh
           pip3 install /tmp/tflite_pip/python3/dist/*.whl --user
-        displayName: "Build and install Python wrapper"
+        displayName: "TFLite: Build and install Python wrapper"
 
       - script: |
-          external/tensorflow/tensorflow/lite/tools/make/gen/linux_x86_64/bin/minimal examples/example_model.tflite
-        displayName: "Test the C++ library on example model"
-
-      - script: |
-          pip3 install pytest
-          python3 -m pytest larq_compute_engine/tflite/python
-        displayName: "Run Python Tests"
+          export PATH="$PATH:$HOME/.local/bin"
+          pip3 install pytest --user
+          # Go to a different directory to force it to use the installed package
+          # and not use the local larq_compute_engine directory
+          cd larq_compute_engine/tflite
+          python3 -m pytest .
+        displayName: "TFLite: Run Python Tests"
 
 
   - job: "Lint"
