@@ -51,6 +51,19 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "packbits_bgemm_tests",
+    size = "small",
+    srcs = ["cc/tests/packbits_bgemm_tests.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = [
+         "@googletest//:gtest_main",
+         ":packbits",
+         ":bgemm",
+         ":utils",
+    ],
+)
+
 # BUILDING IM2COL
 cc_library(
     name = "im2col",
@@ -77,6 +90,7 @@ test_suite(
     tests = [
         "bgemm_tests",
         "packbits_tests",
+        "packbits_bgemm_tests",
         "im2col_tests",
     ],
 )
