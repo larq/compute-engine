@@ -1,6 +1,7 @@
-"""TF lite converter wrapper."""
+"""TF lite converter for larq models."""
 import tensorflow as tf
 import numpy as np
+import larq as lq
 from larq_compute_engine import bsign
 from tensorflow.keras.utils import get_custom_objects
 from distutils.version import LooseVersion
@@ -12,12 +13,28 @@ def tf_2_or_newer():
     return LooseVersion(tf.__version__) >= LooseVersion("2.0")
 
 
+quantizer_replacements = {
+    "SteSign": bsign,
+    "ste_sign": bsign,
+    "approx_sign": bsign,
+    "MagnitudeAwareSign": None,
+    "magnitude_aware_sign": None,
+    "swish_sign": bsign,
+    "SwishSign": bsign,
+    "SteTern": None,
+    "ste_tern": None,
+    "SteHeaviside": None,
+    "ste_heaviside": None,
+    "DoReFaQuantizer": None,
+    "dorefa_quantizer": None,
+}
+
+
 class ModelConverter:
-    """Converter to create TF lite models from Keras models
+    """Converter to create TF lite models from Larq Keras models
 
-    This is a simple wrapper around the existing TF lite converter which will try multiple methods.
-
-    When the conversion fails, it can help to use the pip package `tf-nightly`.
+    This converter will convert the input quantizers to their tflite counterpart.
+    It will remove the kernel quantizers and only store the signs instead of the latent weights.
 
     # Arguments
     model: The Keras model to convert.
@@ -25,8 +42,10 @@ class ModelConverter:
     !!! example
         ```python
         from larq_zoo import BiRealNet
-        model = BiRealNet()
+        model = BiRealNet(weights="imagenet")
         conv = ModelConverter(model)
+        tflite_model = conv.convert()
+        # Or directly save it to a file:
         conv.convert("birealnet.tflite")
         ```
     """
@@ -42,7 +61,10 @@ class ModelConverter:
         # Arguments
         filename: If `None`, then returns the tflite model object. If its a string then it saves the model to that filename.
         """
-        self.fix_quantizers()
+        if not self.fix_quantizers():
+            print("Model contains unsupported quantizers. No conversion will be done.")
+            return None
+
         tflite_model = None
         keras_result = "success"
         if tf_2_or_newer():
@@ -62,11 +84,11 @@ class ModelConverter:
             keras_result = str(e)
 
         print("Conversion result:")
-        print("Session method: {}".format(session_result))
-        print("Keras method: {}".format(keras_result))
+        print(f"Session method: {session_result}")
+        print(f"Keras method: {keras_result}")
 
         if tflite_model is not None:
-            print("Saving tf lite model as {}".format(filename))
+            print(f"Saving tf lite model as {filename}")
             if filename is not None:
                 open(filename, "wb").write(tflite_model)
         else:
@@ -75,18 +97,50 @@ class ModelConverter:
         return tflite_model
 
     def fix_quantizers(self):
+        result = True
         for l in self.model.layers:
+            input_quantizer = None
             try:
-                if l.input_quantizer is not None:
-                    l.input_quantizer = bsign
+                input_quantizer = l.input_quantizer
             except AttributeError:
                 pass
+            if input_quantizer is not None:
+                name = lq.quantizers.serialize(input_quantizer)
+                if isinstance(name, dict):
+                    name = name['class_name']
+                if not isinstance(name, str) or name not in quantizer_replacements:
+                    print(f"ERROR: Input quantizer {name} unknown.")
+                    result = False
+                elif quantizer_replacements[name] is None:
+                    print(f"ERROR: Input quantizer {name} not yet supported.")
+                    result = False
+                else:
+                    l.input_quantizer = quantizer_replacements[name]
+            kernel_quantizer = None
             try:
-                if l.kernel_quantizer is not None:
+                kernel_quantizer = l.kernel_quantizer
+            except AttributeError:
+                pass
+            if kernel_quantizer is not None:
+                name = lq.quantizers.serialize(kernel_quantizer)
+                if isinstance(name, dict):
+                    name = name['class_name']
+                if not isinstance(name, str) or name not in quantizer_replacements:
+                    print(f"ERROR: Kernel quantizer {name} unknown.")
+                    result = False
+                elif name == "magnitude_aware_sign":
+                    w = l.get_weights()[0]
+                    absw = np.abs(w)
+                    means = np.mean(absw, axis=tuple(range(len(w.shape) - 1)))
+                    l.set_weights([means * np.sign(np.sign(w) + 0.5)])
+                    # TODO: Implement the means in a multiplication layer after the convolution
+                elif quantizer_replacements[name] is None:
+                    print(f"ERROR: Kernel quantizer {name} not yet supported.")
+                    result = False
+                else:
                     l.kernel_quantizer = None
                     l.set_weights(np.sign(np.sign(l.get_weights()) + 0.5))
-            except AttributeError:
-                pass
+        return result
 
     def convert_kerasmethod(self):
         """Conversion through the 'Keras method'
