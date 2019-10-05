@@ -69,8 +69,13 @@ if [[ "$TF_NEED_CUDA" == "0" ]]; then
       pip uninstall tf-nightly-gpu
     fi
     # Install CPU version
-    echo 'Installing tensorflow......\n'
-    pip install tensorflow --user
+    if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
+        echo 'Installing tensorflow 1.14......\n'
+        pip install tensorflow==1.14 --user
+    else
+        echo 'Installing tensorflow 2......\n'
+        pip install tensorflow --user
+    fi
   fi
 
 else
@@ -88,8 +93,13 @@ else
       pip uninstall tf-nightly
     fi
     # Install CPU version
-    echo 'Installing tensorflow-gpu .....\n'
-    pip install tensorflow-gpu --user
+    if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
+        echo 'Installing tensorflow-gpu 1.14.....\n'
+        pip install tensorflow-gpu==1.14 --user
+    else
+        echo 'Installing tensorflow-gpu 2.....\n'
+        pip install tensorflow-gpu --user
+    fi
   fi
 fi
 
