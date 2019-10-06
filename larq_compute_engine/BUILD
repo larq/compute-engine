@@ -24,7 +24,7 @@ cc_test(
     name = "bgemm_tests",
     size = "small",
     srcs = ["cc/tests/bgemm_tests.cc"],
-    copts = ["-Iexternal/gtest/include"],
+    copts = ["-Iext/gtest/include"],
     deps = [
          "@googletest//:gtest_main",
          ":bgemm",
@@ -43,7 +43,7 @@ cc_test(
     name = "packbits_tests",
     size = "small",
     srcs = ["cc/tests/packbits_tests.cc"],
-    copts = ["-Iexternal/gtest/include"],
+    copts = ["-Iext/gtest/include"],
     deps = [
          "@googletest//:gtest_main",
          ":packbits",
@@ -55,7 +55,7 @@ cc_test(
     name = "packbits_bgemm_tests",
     size = "small",
     srcs = ["cc/tests/packbits_bgemm_tests.cc"],
-    copts = ["-Iexternal/gtest/include"],
+    copts = ["-Iext/gtest/include"],
     deps = [
          "@googletest//:gtest_main",
          ":packbits",
@@ -76,7 +76,7 @@ cc_test(
     name = "im2col_tests",
     size = "small",
     srcs = ["cc/tests/im2col_tests.cc"],
-    copts = ["-Iexternal/gtest/include"],
+    copts = ["-Iext/gtest/include"],
     deps = [
          "@googletest//:gtest_main",
          ":im2col",

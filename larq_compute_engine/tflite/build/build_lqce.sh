@@ -3,7 +3,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}/../../.."
-TF_DIR="${ROOT_DIR}/external/tensorflow"
+TF_DIR="${ROOT_DIR}/ext/tensorflow"
 
 # Try to figure out the host system
 HOST_OS="unknown"

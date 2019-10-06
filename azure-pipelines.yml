@@ -25,7 +25,7 @@ jobs:
       - script: pip3 install artifacts/*.whl --user
         displayName: "Install PIP Package"
 
-      - script: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime
+      - script: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime --test_output=errors
         displayName: "Run Python Tests"
 
   - job: "Test_TF_2"
@@ -51,22 +51,22 @@ jobs:
       - script: pip3 install artifacts/*.whl --user
         displayName: "Install PIP Package"
 
-      - script: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime
+      - script: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime --test_output=errors
         displayName: "Run Python Tests"
 
       - script: |
-          external/tensorflow/tensorflow/lite/tools/make/download_dependencies.sh
+          ext/tensorflow/tensorflow/lite/tools/make/download_dependencies.sh
         displayName: "TFLite: Download dependencies"
 
       - script: |
-          external/tensorflow/tensorflow/lite/tools/make/build_lib.sh
+          ext/tensorflow/tensorflow/lite/tools/make/build_lib.sh
           larq_compute_engine/tflite/build/build_lqce.sh
         displayName: "TFLite: Build C++ library"
 
       - script: |
           sudo apt install swig -y
           pip3 install numpy setuptools wheel --user
-          external/tensorflow/tensorflow/lite/tools/pip_package/build_pip_package.sh
+          ext/tensorflow/tensorflow/lite/tools/pip_package/build_pip_package.sh
           pip3 install /tmp/tflite_pip/python3/dist/*.whl --user
         displayName: "TFLite: Build and install Python wrapper"
 

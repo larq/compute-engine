@@ -9,7 +9,7 @@ def _tpl(repository_ctx, tpl, substitutions = {}, out = None):
         out = tpl
     repository_ctx.template(
         out,
-        Label("//external/tf:%s.tpl" % tpl),
+        Label("//ext/tf:%s.tpl" % tpl),
         substitutions,
     )
 
