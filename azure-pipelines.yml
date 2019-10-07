@@ -66,6 +66,7 @@ jobs:
       - script: |
           sudo apt install swig -y
           pip3 install numpy setuptools wheel --user
+          export PYTHON="python3"
           ext/tensorflow/tensorflow/lite/tools/pip_package/build_pip_package.sh
           pip3 install /tmp/tflite_pip/python3/dist/*.whl --user
         displayName: "TFLite: Build and install Python wrapper"
