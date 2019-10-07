@@ -46,8 +46,7 @@ def test_inference():
     tf_result = model.predict(data)
 
     # Convert to tflite
-    converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    converter.allow_custom_ops = True
+    converter = lqce.ModelConverter(model)
     tflite_model = converter.convert()
 
     # Setup tflite

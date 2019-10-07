@@ -135,7 +135,11 @@ class ModelConverter:
                     result = False
                 else:
                     l.kernel_quantizer = None
-                    l.set_weights(np.sign(np.sign(l.get_weights()) + 0.5))
+                    w = l.get_weights()[0]
+                    # wbin = (w >= 0)
+                    # wpacked = np.packbits(wbin, axis=3, bitorder='little')
+                    binary_weights = np.sign(np.sign(w) + 0.5)
+                    l.set_weights([binary_weights])
         return result
 
     def convert_kerasmethod(self):
