@@ -1,4 +1,4 @@
 [submodule "tensorflow"]
 	path = ext/tensorflow
 	url = https://github.com/tensorflow/tensorflow.git
-	branch = master
+	branch = r2.0
