@@ -3,14 +3,10 @@ import tensorflow as tf
 import numpy as np
 import larq as lq
 from larq_compute_engine import bsign
+from larq_compute_engine.python.utils import tf_2_or_newer
 from tensorflow.keras.utils import get_custom_objects
-from distutils.version import LooseVersion
 
 get_custom_objects()["bsign"] = bsign
-
-
-def tf_2_or_newer():
-    return LooseVersion(tf.__version__) >= LooseVersion("2.0")
 
 
 quantizer_replacements = {
@@ -107,7 +103,7 @@ class ModelConverter:
             if input_quantizer is not None:
                 name = lq.quantizers.serialize(input_quantizer)
                 if isinstance(name, dict):
-                    name = name['class_name']
+                    name = name["class_name"]
                 if not isinstance(name, str) or name not in quantizer_replacements:
                     print(f"ERROR: Input quantizer {name} unknown.")
                     result = False
@@ -124,7 +120,7 @@ class ModelConverter:
             if kernel_quantizer is not None:
                 name = lq.quantizers.serialize(kernel_quantizer)
                 if isinstance(name, dict):
-                    name = name['class_name']
+                    name = name["class_name"]
                 if not isinstance(name, str) or name not in quantizer_replacements:
                     print(f"ERROR: Kernel quantizer {name} unknown.")
                     result = False
