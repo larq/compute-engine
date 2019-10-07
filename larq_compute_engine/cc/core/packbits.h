@@ -1,9 +1,7 @@
 #ifndef COMPUTE_ENGINE_KERNELS_PACKBITS_H_
 #define COMPUTE_ENGINE_KERNELS_PACKBITS_H_
 
-#include <stdint.h>
-#include <cassert>
-#include <cstddef>
+#include <cstdint>
 #include <vector>
 
 namespace compute_engine {
@@ -27,7 +25,7 @@ inline void pack_bitfield(const TIn* fptr, TOut* buf) {
 }
 
 template <class T>
-inline void pack_bitfield(const T* fptr, uint8_t* buf) {
+inline void pack_bitfield(const T* fptr, std::uint8_t* buf) {
   struct bf {
     unsigned int b0 : 1;
     unsigned int b1 : 1;
@@ -41,7 +39,7 @@ inline void pack_bitfield(const T* fptr, uint8_t* buf) {
 
   union bf_u8 {
     bf t;
-    uint8_t u8;
+    std::uint8_t u8;
   };
 
   // TODO: use the bit sign instead of comparision operator
@@ -59,7 +57,7 @@ inline void pack_bitfield(const T* fptr, uint8_t* buf) {
 }
 
 template <class T>
-inline void pack_bitfield(const T* fptr, uint32_t* buf) {
+inline void pack_bitfield(const T* fptr, std::uint32_t* buf) {
   struct bf {
     unsigned int b0 : 1;
     unsigned int b1 : 1;
@@ -97,7 +95,7 @@ inline void pack_bitfield(const T* fptr, uint32_t* buf) {
 
   union bf_u32 {
     bf t;
-    uint32_t u32;
+    std::uint32_t u32;
   };
 
   // TODO: use the bit sign instead of comparision operator
@@ -139,7 +137,7 @@ inline void pack_bitfield(const T* fptr, uint32_t* buf) {
 }
 
 template <class T>
-inline void pack_bitfield(const T* fptr, uint64_t* buf) {
+inline void pack_bitfield(const T* fptr, std::uint64_t* buf) {
   struct bf {
     unsigned int b0 : 1;
     unsigned int b1 : 1;
@@ -209,7 +207,7 @@ inline void pack_bitfield(const T* fptr, uint64_t* buf) {
 
   union bf_u64 {
     bf t;
-    uint64_t u64;
+    std::uint64_t u64;
   };
 
   bf_u64 u;
@@ -311,14 +309,12 @@ inline void packbits_array(const TIn* input_array, std::size_t n,
 // the bitpacking operation is performed. For example for a RowWise
 // bitpacking operation compresses an MxN matrix to a Mx(N/bitwidth)
 // matrix.
-template <class TInContainer, class TOutContainer>
-inline void packbits_matrix(const TInContainer& input,
-                            const size_t input_num_rows,
+template <class TIn, class TOutContainer>
+inline void packbits_matrix(const TIn* input_data, const size_t input_num_rows,
                             const size_t input_num_cols, TOutContainer& output,
                             size_t& output_num_rows, size_t& output_num_cols,
                             size_t& output_bitpadding,
                             const Axis bitpacking_axis) {
-  using TIn = typename TInContainer::value_type;
   using TOut = typename TOutContainer::value_type;
   const size_t bitwidth = std::numeric_limits<TOut>::digits;
 
@@ -338,7 +334,6 @@ inline void packbits_matrix(const TInContainer& input,
 
     // iterate through each row of the input matrix and bitpack the row into
     // the corresponding memory location of the output matrix
-    auto input_data = input.data();
     auto output_data = output.data();
     for (size_t row_index = 0; row_index < input_num_rows; ++row_index)
       packbits_array(
@@ -365,7 +360,6 @@ inline void packbits_matrix(const TInContainer& input,
     std::vector<TIn> input_buffer(input_num_rows);
     std::vector<TOut> output_buffer(output_num_rows);
 
-    auto input_data = input.data();
     auto output_data = output.data();
 
     // iterate through the columns

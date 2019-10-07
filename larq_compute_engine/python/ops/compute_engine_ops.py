@@ -9,3 +9,10 @@ _ops_lib = load_library.load_op_library(
 
 bgemm = _ops_lib.bgemm
 bsign = _ops_lib.bsign
+
+# binary convolution ops with the naming format bconv2d{bitpacking-bitwidth}
+# the default bitpacking bitwidth is 64
+bconv2d8 = _ops_lib.bconv2d8
+bconv2d32 = _ops_lib.bconv2d32
+bconv2d64 = _ops_lib.bconv2d64
+bconv2d = _ops_lib.bconv2d64

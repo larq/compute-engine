@@ -37,3 +37,21 @@ REGISTER_OP("Bsign")
     .Output("output: T")
     .SetShapeFn(shape_inference::UnchangedShape);
 
+#define REGISTER_CONV_BITPACKED_OP(OPNAME)                                                                 \
+  REGISTER_OP(OPNAME)                                                                                      \
+      .Input("input: T")                                                                                   \
+      .Input("filter: T")                                                                                  \
+      .Output("output: T")                                                                                 \
+      .Attr("T: {float, double}")                                                                          \
+      .Attr("strides: list(int)")                                                                          \
+      .Attr(GetPaddingAttrStringWithExplicit())                                                            \
+      .Attr(GetExplicitPaddingsAttrString())                                                               \
+      .Attr(GetConvnetDataFormatAttrString())                                                              \
+      .Attr("dilations: list(int) = [1, 1, 1, 1]")                                                         \
+      .Doc(                                                                                                \
+          R"doc(Computes a 2-D binary convolution by binarizing and bitpacking the input and filter.)doc") \
+      .SetShapeFn(shape_inference::Conv2DShapeWithExplicitPadding);
+
+REGISTER_CONV_BITPACKED_OP("Bconv2d8");
+REGISTER_CONV_BITPACKED_OP("Bconv2d32");
+REGISTER_CONV_BITPACKED_OP("Bconv2d64");

@@ -51,15 +51,25 @@ cc_test(
     ],
 )
 
+cc_library(
+    name = "fused_bgemm",
+    hdrs = [
+        "cc/core/fused_bgemm_functor.h",
+    ],
+    deps = [
+         ":packbits",
+         ":bgemm",
+    ],
+)
+
 cc_test(
-    name = "packbits_bgemm_tests",
+    name = "fused_bgemm_tests",
     size = "small",
-    srcs = ["cc/tests/packbits_bgemm_tests.cc"],
+    srcs = ["cc/tests/fused_bgemm_tests.cc"],
     copts = ["-Iext/gtest/include"],
     deps = [
          "@googletest//:gtest_main",
-         ":packbits",
-         ":bgemm",
+         "fused_bgemm",
          ":utils",
     ],
 )
@@ -83,6 +93,27 @@ cc_test(
     ],
 )
 
+cc_library(
+    name = "bconv2d",
+    hdrs = [
+        "cc/core/bconv2d_functor.h",
+    ],
+    deps = [
+         ":fused_bgemm",
+    ],
+)
+
+cc_test(
+    name = "bconv2d_tests",
+    size = "small",
+    srcs = ["cc/tests/bconv2d_tests.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = [
+         "@googletest//:gtest_main",
+         ":bconv2d",
+    ],
+)
+
 # COLLECTION OF ALL CC TESTS
 # each new cc test needs to be added here
 test_suite(
@@ -90,8 +121,9 @@ test_suite(
     tests = [
         "bgemm_tests",
         "packbits_tests",
-        "packbits_bgemm_tests",
+        "fused_bgemm_tests",
         "im2col_tests",
+        "bconv2d_tests",
     ],
 )
 
@@ -101,12 +133,15 @@ cc_binary(
     srcs = [
         "cc/kernels/compute_engine_kernels.cc",
         "cc/kernels/sign_kernels.cc",
+        "cc/kernels/bconv2d.cc",
         "cc/ops/compute_engine_ops.cc",
     ],
     linkshared = 1,
     deps = [
         "@local_config_tf//:libtensorflow_framework",
         "@local_config_tf//:tf_header_lib",
+        ":utils",
+        ":bconv2d",
     ],
     copts = ["-pthread", "-std=c++11", "-D_GLIBCXX_USE_CXX11_ABI=0"]
 )
@@ -168,10 +203,25 @@ py_test(
     srcs_version = "PY3",
 )
 
+py_test(
+    name = "bconv2d_ops_py_test",
+    srcs = [
+        "python/ops/bconv2d_ops_test.py"
+    ],
+    main = "python/ops/bconv2d_ops_test.py",
+    deps = [
+        ":compute_engine_ops_py",
+        ":compute_engine_utils_py",
+    ],
+    python_version = "PY3",
+    srcs_version = "PY3",
+)
+
 # collection of all python tests
 test_suite(
     name = "py_tests",
     tests = [
         "compute_engine_ops_py_test",
+        "bconv2d_ops_py_test",
     ],
 )
