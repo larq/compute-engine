@@ -24,7 +24,7 @@ cc_test(
     name = "bgemm_tests",
     size = "small",
     srcs = ["cc/tests/bgemm_tests.cc"],
-    copts = ["-Iexternal/gtest/include"],
+    copts = ["-Iext/gtest/include"],
     deps = [
          "@googletest//:gtest_main",
          ":bgemm",
@@ -43,7 +43,7 @@ cc_test(
     name = "packbits_tests",
     size = "small",
     srcs = ["cc/tests/packbits_tests.cc"],
-    copts = ["-Iexternal/gtest/include"],
+    copts = ["-Iext/gtest/include"],
     deps = [
          "@googletest//:gtest_main",
          ":packbits",
@@ -55,7 +55,7 @@ cc_test(
     name = "packbits_bgemm_tests",
     size = "small",
     srcs = ["cc/tests/packbits_bgemm_tests.cc"],
-    copts = ["-Iexternal/gtest/include"],
+    copts = ["-Iext/gtest/include"],
     deps = [
          "@googletest//:gtest_main",
          ":packbits",
@@ -76,7 +76,7 @@ cc_test(
     name = "im2col_tests",
     size = "small",
     srcs = ["cc/tests/im2col_tests.cc"],
-    copts = ["-Iexternal/gtest/include"],
+    copts = ["-Iext/gtest/include"],
     deps = [
          "@googletest//:gtest_main",
          ":im2col",
@@ -133,6 +133,14 @@ py_library(
 )
 
 py_library(
+    name = "compute_engine_utils_py",
+    srcs = ([
+        "python/utils.py",
+    ]),
+    srcs_version = "PY3",
+)
+
+py_library(
     name = "compute_engine_py",
     srcs = ([
         "__init__.py",
@@ -140,7 +148,8 @@ py_library(
         "python/ops/__init__.py",
     ]),
     deps = [
-        ":compute_engine_ops_py"
+        ":compute_engine_ops_py",
+        ":compute_engine_utils_py",
     ],
     srcs_version = "PY3",
 )
@@ -153,6 +162,7 @@ py_test(
     main = "python/ops/compute_engine_ops_test.py",
     deps = [
         ":compute_engine_ops_py",
+        ":compute_engine_utils_py",
     ],
     python_version = "PY3",
     srcs_version = "PY3",

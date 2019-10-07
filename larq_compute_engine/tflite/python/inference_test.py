@@ -46,9 +46,7 @@ def test_inference():
     tf_result = model.predict(data)
 
     # Convert to tflite
-    keras_file = "/tmp/modelconverter_temporary.h5"
-    tf.keras.models.save_model(model, keras_file)
-    converter = tf.lite.TFLiteConverter.from_keras_model_file(keras_file)
+    converter = tf.lite.TFLiteConverter.from_keras_model(model)
     converter.allow_custom_ops = True
     tflite_model = converter.convert()
 

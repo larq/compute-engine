@@ -46,9 +46,9 @@ while [[ "$PIP_MANYLINUX2010" == "" ]]; do
   read -p "Does the pip package have tag manylinux2010 (usually the case for nightly release after Aug 1, 2019, or official releases past 1.14.0)?"\
 " Y or enter for manylinux2010, N for manylinux1. [Y/n] " INPUT
   case $INPUT in
-    [Yy]* ) echo "Build against pip package with manylinux2010 tag. --crosstool_top=//external/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.0:toolchain will be added to bazel command."; PIP_MANYLINUX2010=1;;
+    [Yy]* ) echo "Build against pip package with manylinux2010 tag. --crosstool_top=//ext/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.0:toolchain will be added to bazel command."; PIP_MANYLINUX2010=1;;
     [Nn]* ) echo "Build against pip package with manylinux1."; PIP_MANYLINUX2010=0;;
-    "" ) echo "Build against pip package with manylinux2010 tag. --crosstool_top=//external/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.0:toolchain will be added to bazel command."; PIP_MANYLINUX2010=1;;
+    "" ) echo "Build against pip package with manylinux2010 tag. --crosstool_top=//ext/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.0:toolchain will be added to bazel command."; PIP_MANYLINUX2010=1;;
     * ) echo "Invalid selection: " $INPUT;;
   esac
 done
@@ -69,8 +69,13 @@ if [[ "$TF_NEED_CUDA" == "0" ]]; then
       pip uninstall tf-nightly-gpu
     fi
     # Install CPU version
-    echo 'Installing tensorflow......\n'
-    pip install tensorflow --user
+    if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
+        echo 'Installing tensorflow 1.14......\n'
+        pip install tensorflow==1.14 --user
+    else
+        echo 'Installing tensorflow 2......\n'
+        pip install tensorflow --user
+    fi
   fi
 
 else
@@ -88,8 +93,13 @@ else
       pip uninstall tf-nightly
     fi
     # Install CPU version
-    echo 'Installing tensorflow-gpu .....\n'
-    pip install tensorflow-gpu --user
+    if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
+        echo 'Installing tensorflow-gpu 1.14.....\n'
+        pip install tensorflow-gpu==1.14 --user
+    else
+        echo 'Installing tensorflow-gpu 2.....\n'
+        pip install tensorflow-gpu --user
+    fi
   fi
 fi
 
@@ -101,7 +111,7 @@ write_to_bazelrc "build:cuda --define=using_cuda=true --define=using_cuda_nvcc=t
 if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
   write_to_bazelrc "build:cuda --crosstool_top=@local_config_cuda//crosstool:toolchain"
 fi
-write_to_bazelrc "build:manylinux2010 --crosstool_top=//external/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.0:toolchain"
+write_to_bazelrc "build:manylinux2010 --crosstool_top=//ext/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.0:toolchain"
 write_to_bazelrc "build --spawn_strategy=standalone"
 write_to_bazelrc "build --strategy=Genrule=standalone"
 write_to_bazelrc "build -c opt"
