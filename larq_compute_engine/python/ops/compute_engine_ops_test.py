@@ -1,20 +1,14 @@
 """Tests for compute engine ops."""
 import numpy as np
 import tensorflow as tf
-from distutils.version import LooseVersion
 
 
 try:
     from larq_compute_engine.python.ops.compute_engine_ops import bgemm, bsign
+    from larq_compute_engine.python.utils import eval_op
 except ImportError:
     from compute_engine_ops import bgemm, bsign
-
-
-def eval_op(op):
-    if LooseVersion(tf.__version__) >= LooseVersion("2.0"):
-        return op  # or op.numpy() also works
-    else:
-        return op.eval()
+    from compute_engine_ops.python.utils import eval_op
 
 
 class BGEMMTest(tf.test.TestCase):

@@ -133,6 +133,14 @@ py_library(
 )
 
 py_library(
+    name = "compute_engine_utils_py",
+    srcs = ([
+        "python/utils.py",
+    ]),
+    srcs_version = "PY3",
+)
+
+py_library(
     name = "compute_engine_py",
     srcs = ([
         "__init__.py",
@@ -140,7 +148,8 @@ py_library(
         "python/ops/__init__.py",
     ]),
     deps = [
-        ":compute_engine_ops_py"
+        ":compute_engine_ops_py",
+        ":compute_engine_utils_py",
     ],
     srcs_version = "PY3",
 )
@@ -153,6 +162,7 @@ py_test(
     main = "python/ops/compute_engine_ops_test.py",
     deps = [
         ":compute_engine_ops_py",
+        ":compute_engine_utils_py",
     ],
     python_version = "PY3",
     srcs_version = "PY3",
