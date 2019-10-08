@@ -71,6 +71,7 @@ endif
 # This library is the main target for this makefile. It will contain a minimal
 # runtime that can be linked in to other programs.
 LIB_NAME := libtensorflow-lite.a
+BENCHMARK_LIB_NAME := benchmark-lib.a
 
 # What sources we want to compile, must be kept in sync with the main Bazel
 # build files.
@@ -91,6 +92,7 @@ OBJDIR := $(GENDIR)obj/
 LIBDIR := $(GENDIR)lib/
 
 LIB_PATH := $(LIBDIR)$(LIB_NAME)
+BENCHMARK_LIB := $(LIBDIR)$(BENCHMARK_LIB_NAME)
 
 CXX := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}g++
 CC := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}gcc
@@ -112,12 +114,23 @@ $(OBJDIR)%.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 # The target that's compiled if there's no command-line arguments.
-all: $(LIB_PATH)
+all: $(LIB_PATH) $(BENCHMARK_LIB)
 
 # Add together all the objects we've compiled to the '.a' archive.
 $(LIB_PATH): $(LIB_OBJS)
 	@mkdir -p $(dir $@)
 	$(AR) $(ARFLAGS) $(LIB_PATH) $(LIB_OBJS)
+	# Move the original register.o to the end so that
+	# our version, register_lqce.o, has precedence
+	$(AR) -m $(LIB_PATH) register.o
+
+# Make sure benchmark_lib depends on lib_path so that the access-times are correct.
+# If not, the tflite Makefile will rebuild it
+$(BENCHMARK_LIB): $(LIB_PATH) $(LIB_OBJS)
+	@mkdir -p $(dir $@)
+	$(AR) $(ARFLAGS) $(BENCHMARK_LIB) $(LIB_OBJS)
+	# Move the original register.o to the end
+	$(AR) -m $(LIB_PATH) register.o
 
 lib: $(LIB_PATH)
 
