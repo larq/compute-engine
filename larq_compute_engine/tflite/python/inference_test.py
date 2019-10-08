@@ -1,6 +1,7 @@
 """Test for compute engine TF lite Python wrapper"""
 import numpy as np
 import tensorflow as tf
+import larq as lq
 import larq_compute_engine as lqce
 
 from tflite_runtime.interpreter import Interpreter
@@ -10,8 +11,16 @@ from tflite_runtime.interpreter import Interpreter
 def generate_kerasmodel():
     def shortcut_block(x):
         shortcut = x
-        x = tf.keras.layers.Lambda(lqce.bsign)(x)
-        x = tf.keras.layers.Conv2D(64, 3, padding="same", use_bias=False)(x)
+        # Larq quantized convolution layer
+        x = lq.layers.QuantConv2D(
+            64,
+            3,
+            padding="same",
+            input_quantizer="ste_sign",
+            kernel_quantizer="ste_sign",
+            kernel_constraint="weight_clip",
+            use_bias=False,
+        )(x)
         x = tf.keras.layers.BatchNormalization(momentum=0.8)(x)
         return tf.keras.layers.add([x, shortcut])
 
@@ -24,6 +33,7 @@ def generate_kerasmodel():
     out = tf.keras.layers.BatchNormalization(momentum=0.8)(out)
     out = shortcut_block(out)
     out = shortcut_block(out)
+    out = tf.keras.layers.Lambda(lqce.bsign)(out)
     out = shortcut_block(out)
     out = tf.keras.layers.MaxPool2D(3, strides=2, padding="same")(out)
     out = tf.keras.layers.GlobalAvgPool2D()(out)
@@ -46,8 +56,7 @@ def test_inference():
     tf_result = model.predict(data)
 
     # Convert to tflite
-    converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    converter.allow_custom_ops = True
+    converter = lqce.ModelConverter(model)
     tflite_model = converter.convert()
 
     # Setup tflite

@@ -171,6 +171,7 @@ py_library(
     name = "compute_engine_utils_py",
     srcs = ([
         "python/utils.py",
+        "python/modelconverter.py",
     ]),
     srcs_version = "PY3",
 )

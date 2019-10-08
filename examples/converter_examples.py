@@ -1,10 +1,9 @@
 """Examples of TF lite model conversion."""
 import tensorflow as tf
 import larq_compute_engine as lqce
-from larq_zoo import BinaryAlexNet, BiRealNet
-from modelconverter import ModelConverter
+import larq_zoo as lqz
 
-# Generate a tf.keras model.
+# Generate a tf.keras model with our custom bsign op
 def testnet():
     def shortcut_block(x):
         shortcut = x
@@ -32,20 +31,24 @@ def testnet():
 
 model = testnet()
 
-conv = ModelConverter(model)
-conv.convert("/tmp/testnet_converted_model.tflite")
+conv = lqce.ModelConverter(model)
+conv.convert("testnet_converted_model.tflite")
 
 
-# Example of converting some Larq Zoo models to TF lite
+# Example of converting some models from Larq Zoo to TF lite
 
-tf.compat.v1.keras.backend.clear_session()
-model = BinaryAlexNet()
+zoo_models = [
+    ("binaryalexnet", lqz.BinaryAlexNet),
+    ("birealnet", lqz.BiRealNet),
+    ("xnornet", lqz.XNORNet),
+    ("binarydensenet45", lqz.BinaryDenseNet45),
+    ("dorefanet", lqz.DoReFaNet),
+    ("binaryresnete18", lqz.BinaryResNetE18),
+]
 
-conv = ModelConverter(model)
-conv.convert("/tmp/binaryalexnet.tflite")
-
-tf.compat.v1.keras.backend.clear_session()
-model = BiRealNet()
-
-conv = ModelConverter(model)
-conv.convert("/tmp/birealnet.tflite")
+for (name, modelfunc) in zoo_models:
+    tf.keras.backend.clear_session()
+    print(f"Converting {name}")
+    model = modelfunc(weights="imagenet")
+    conv = lqce.ModelConverter(model)
+    conv.convert(f"{name}.tflite")
