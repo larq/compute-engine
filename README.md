@@ -1,16 +1,13 @@
 # Larq Compute Engine
 
-### Setup Docker Container
-You are going to build the op inside a Docker container. Pull the provided Docker image from TensorFlow's Docker hub and start a container.
+### Setup Docker container
 
-Use the following command if the TensorFlow pip package you are building
-against is not yet manylinux2010 compatible:
-``` bash
-docker pull tensorflow/tensorflow:custom-op-ubuntu14
-docker run -it tensorflow/tensorflow:custom-op-ubuntu14 /bin/bash
-```
-And the following instead if it is manylinux2010 compatible:
+We will build the compute engine inside a Docker container. The image that you use depends on the version of Tensorflow:
 
+- To build the compute engine for Tensorflow 2.x (manylinux2010 compatible) use `custom-op-ubuntu16`
+- To build the compute engine for Tensorflow 1.x (not manylinux2010 comptaible) use `custom-op-ubuntu14`
+
+You can download and start a docker container as follows:
 ``` bash
 docker pull tensorflow/tensorflow:custom-op-ubuntu16
 docker run -it tensorflow/tensorflow:custom-op-ubuntu16 /bin/bash
@@ -22,35 +19,29 @@ git clone https://github.com/plumerai/compute-engine.git
 cd compute_engine
 ```
 
-### Build PIP Package
+### Build PIP package
 You can build the pip package with Bazel.
 
+For the configure script, answer Yes to the manylinux2010 question when you want to build for Tensorflow 2.x, and No for Tensorflow 1.x.
 ``` bash
 ./configure.sh
-bazel build build_pip_pkg
+bazel build :build_pip_pkg
 bazel-bin/build_pip_pkg artifacts
 ```
 
-### Install and Test PIP Package
-Once the pip package has been built, you can install it with,
+The wheel file is now available in `artifacts/`, you can install it with
 ``` bash
-pip install artifacts/*.whl
+pip3 install artifacts/*.whl
 ```
 
-Then test out the pip package
-``` bash
-cd ..
-python -c "import tensorflow as tf;import larq_compute_engine as lqce;print(lce.bgemm([[1,2], [3,4]], [[1,2], [3,4]]).eval(session=tf.Session()));"
-```
+### Running tests
 
-## Running Tests
-
-### Run CC Unit Tests
+Run CC unit tests
 ``` bash
 bazel test larq_compute_engine:cc_tests
 ```
 
-### Run Python Unit Tests
+Run Python unit tests
 ``` bash
 bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime
 ```
