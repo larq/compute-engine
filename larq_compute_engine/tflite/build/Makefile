@@ -120,8 +120,7 @@ all: $(LIB_PATH) $(BENCHMARK_LIB)
 $(LIB_PATH): $(LIB_OBJS)
 	@mkdir -p $(dir $@)
 	$(AR) $(ARFLAGS) $(LIB_PATH) $(LIB_OBJS)
-	# Move the original register.o to the end so that
-	# our version, register_lqce.o, has precedence
+	# Move the original register.o to the end so that our version, register_lqce.o, has precedence
 	$(AR) -m $(LIB_PATH) register.o
 
 # Make sure benchmark_lib depends on lib_path so that the access-times are correct.
@@ -129,7 +128,7 @@ $(LIB_PATH): $(LIB_OBJS)
 $(BENCHMARK_LIB): $(LIB_PATH) $(LIB_OBJS)
 	@mkdir -p $(dir $@)
 	$(AR) $(ARFLAGS) $(BENCHMARK_LIB) $(LIB_OBJS)
-	# Move the original register.o to the end
+	# Move the original register.o to the end so that our version, register_lqce.o, has precedence
 	$(AR) -m $(LIB_PATH) register.o
 
 lib: $(LIB_PATH)

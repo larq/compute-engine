@@ -59,13 +59,10 @@ jobs:
         displayName: "TFLite: Download dependencies"
 
       - script: |
-          ext/tensorflow/tensorflow/lite/tools/make/build_lib.sh
           larq_compute_engine/tflite/build/build_lqce.sh
         displayName: "TFLite: Build C++ library"
 
       - script: |
-          sudo apt install swig -y
-          pip3 install numpy setuptools wheel --user
           export PYTHON="python3" # This is needed for tf v2.0.0, not for tf master
           ext/tensorflow/tensorflow/lite/tools/pip_package/build_pip_package.sh
           pip3 install /tmp/tflite_pip/python3/dist/*.whl --user
