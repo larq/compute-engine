@@ -7,7 +7,7 @@ from tflite_runtime.interpreter import Interpreter
 
 # Base class for testing a model and comparing tf with tflite
 class InferenceTest(tf.test.TestCase):
-    def run_inference(self, model):
+    def run_inference(self, model, rtol=1e-04, atol=1e-05):
         # Set batch dimension to 1
         input_shape = (1,) + model.input_shape[1:]
         # Generate data
@@ -41,4 +41,4 @@ class InferenceTest(tf.test.TestCase):
         # Get tflite result
         tflite_result = interpreter.get_tensor(output_details[0]["index"])
 
-        self.assertAllClose(tf_result, tflite_result, rtol=1e-04, atol=1e-05)
+        self.assertAllClose(tf_result, tflite_result, rtol=rtol, atol=atol)
