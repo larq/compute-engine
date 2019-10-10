@@ -1,6 +1,8 @@
 #ifndef COMPUTE_ENGINE_KERNELS_BCONV2D_H_
 #define COMPUTE_ENGINE_KERNELS_BCONV2D_H_
 
+#include <iostream>
+
 #include "larq_compute_engine/cc/core/fused_bgemm_functor.h"
 
 namespace compute_engine {

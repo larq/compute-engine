@@ -39,7 +39,7 @@ TARGET_ARCH := $(HOST_ARCH)
 
 INCLUDES := \
 -Ilarq_compute_engine/tflite/cc \
--Ilarq_compute_engine/cc \
+-I. \
 -I$(TF_DIR) \
 -I$(TF_MAKEFILE_DIR)/downloads/ \
 -I$(TF_MAKEFILE_DIR)/downloads/eigen \
