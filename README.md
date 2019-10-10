@@ -31,8 +31,18 @@ bazel-bin/build_pip_pkg artifacts
 
 The wheel file is now available in `artifacts/`, you can install it with
 ``` bash
-pip3 install artifacts/*.whl
+pip install artifacts/*.whl
 ```
+
+### Test the PIP package
+
+You can test the package by running the following python code
+```python
+import larq_compute_engine as lqce
+
+print(lqce.bsign([[1,-2], [-3,-4]], [[-1,-2], [3,4]]))
+```
+
 
 ### Running tests
 
