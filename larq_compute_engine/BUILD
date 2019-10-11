@@ -131,7 +131,6 @@ test_suite(
 cc_binary(
     name = 'python/ops/_larq_compute_engine_ops.so',
     srcs = [
-        "cc/kernels/compute_engine_kernels.cc",
         "cc/kernels/sign_kernels.cc",
         "cc/kernels/bconv2d.cc",
         "cc/ops/compute_engine_ops.cc",
@@ -191,11 +190,11 @@ py_library(
 )
 
 py_test(
-    name = "compute_engine_ops_py_test",
+    name = "bsign_ops_py_test",
     srcs = [
-        "python/ops/compute_engine_ops_test.py"
+        "python/ops/bsign_ops_test.py"
     ],
-    main = "python/ops/compute_engine_ops_test.py",
+    main = "python/ops/bsign_ops_test.py",
     deps = [
         ":compute_engine_ops_py",
         ":compute_engine_utils_py",
@@ -222,7 +221,7 @@ py_test(
 test_suite(
     name = "py_tests",
     tests = [
-        "compute_engine_ops_py_test",
+        "bsign_ops_py_test",
         "bconv2d_ops_py_test",
     ],
 )

@@ -25,12 +25,6 @@ using namespace tensorflow;
 // The shape functions can cause crashes when compiled by 'wrong' gcc versions
 // https://github.com/tensorflow/tensorflow/issues/29643
 
-REGISTER_OP("Bgemm")
-    .Attr("T: {float, double, int32}")
-    .Input("input_a: T")
-    .Input("input_b: T")
-    .Output("output_c: T");
-
 REGISTER_OP("Bsign")
     .Attr("T: {half, float, double, int8, int32, int64}")
     .Input("input: T")
