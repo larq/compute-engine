@@ -55,17 +55,14 @@ jobs:
         run: |
           ext/tensorflow/tensorflow/lite/tools/make/build_lib.sh
           larq_compute_engine/tflite/build/build_lqce.sh
+      - name: "TFLite: Install PIP dependencies"
+        run: pip3 install larq pytest
       - name: "TFLite: Build and install Python wrapper"
         run: |
-          sudo apt install swig -y
-          pip3 install numpy setuptools wheel --upgrade
-          export PYTHON="python3" # This is needed for tf v2.0.0, not for tf master
           ext/tensorflow/tensorflow/lite/tools/pip_package/build_pip_package.sh
           pip3 install /tmp/tflite_pip/python3/dist/*.whl
       - name: "TFLite: Run Python Tests"
         run: |
-          export PATH="$PATH:$HOME/.local/bin"
-          pip3 install larq pytest
           # Go to a different directory to force it to use the installed package
           # and not use the local larq_compute_engine directory
           cd larq_compute_engine/tflite
