@@ -9,22 +9,22 @@ jobs:
       image: tensorflow/tensorflow:custom-op-ubuntu14
 
     steps:
-    - uses: actions/checkout@v1
-      with:
-        submodules: true
-    - name: Configure Bazel
-      run: ./configure.sh <<< $'yes\nno\n' #yes,no for tf1
-      shell: bash
-    - name: Run CC Unit Tests
-      run: bazel test larq_compute_engine:cc_tests
-    - name: Build Bazel Package Creator Binary
-      run: bazel build :build_pip_pkg
-    - name: Build PIP Package
-      run: bazel-bin/build_pip_pkg artifacts
-    - name: Install PIP Package
-      run: pip3 install artifacts/*.whl
-    - name: Run Python Tests
-      run: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime --test_output=errors
+      - uses: actions/checkout@v1
+        with:
+          submodules: true
+      - name: Configure Bazel
+        run: ./configure.sh <<< $'yes\nno\n' #yes,no for tf1
+        shell: bash
+      - name: Run CC Unit Tests
+        run: bazel test larq_compute_engine:cc_tests
+      - name: Build Bazel Package Creator Binary
+        run: bazel build :build_pip_pkg
+      - name: Build PIP Package
+        run: bazel-bin/build_pip_pkg artifacts
+      - name: Install PIP Package
+        run: pip3 install artifacts/*.whl
+      - name: Run Python Tests
+        run: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime --test_output=errors
 
   buildTF2:
     runs-on: ubuntu-latest
@@ -32,40 +32,40 @@ jobs:
       image: tensorflow/tensorflow:custom-op-ubuntu16
 
     steps:
-    - uses: actions/checkout@v1
-      with:
-        submodules: true
-    - name: Configure Bazel
-      run: ./configure.sh <<< $'yes\nyes\n' #yes,yes for tf2
-      shell: bash
-    - name: Run CC Unit Tests
-      run: bazel test larq_compute_engine:cc_tests
-    - name: Build Bazel Package Creator Binary
-      run: bazel build :build_pip_pkg
-    - name: Build PIP Package
-      run: bazel-bin/build_pip_pkg artifacts
-    - name: Install PIP Package
-      run: pip3 install artifacts/*.whl
-    - name: Run Python Tests
-      run: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime --test_output=errors
-    - name: "TFLite: Download dependencies"
-      run: ext/tensorflow/tensorflow/lite/tools/make/download_dependencies.sh
-    - name: "TFLite: Build C++ library"
-      run: |
-        ext/tensorflow/tensorflow/lite/tools/make/build_lib.sh
-        larq_compute_engine/tflite/build/build_lqce.sh
-    - name: "TFLite: Build and install Python wrapper"
-      run: |
-        sudo apt install swig -y
-        pip3 install numpy setuptools wheel --upgrade
-        export PYTHON="python3" # This is needed for tf v2.0.0, not for tf master
-        ext/tensorflow/tensorflow/lite/tools/pip_package/build_pip_package.sh
-        pip3 install /tmp/tflite_pip/python3/dist/*.whl
-    - name: "TFLite: Run Python Tests"
-      run: |
-        export PATH="$PATH:$HOME/.local/bin"
-        pip3 install larq pytest
-        # Go to a different directory to force it to use the installed package
-        # and not use the local larq_compute_engine directory
-        cd larq_compute_engine/tflite
-        python3 -m pytest .
+      - uses: actions/checkout@v1
+        with:
+          submodules: true
+      - name: Configure Bazel
+        run: ./configure.sh <<< $'yes\nyes\n' #yes,yes for tf2
+        shell: bash
+      - name: Run CC Unit Tests
+        run: bazel test larq_compute_engine:cc_tests
+      - name: Build Bazel Package Creator Binary
+        run: bazel build :build_pip_pkg
+      - name: Build PIP Package
+        run: bazel-bin/build_pip_pkg artifacts
+      - name: Install PIP Package
+        run: pip3 install artifacts/*.whl
+      - name: Run Python Tests
+        run: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime --test_output=errors
+      - name: "TFLite: Download dependencies"
+        run: ext/tensorflow/tensorflow/lite/tools/make/download_dependencies.sh
+      - name: "TFLite: Build C++ library"
+        run: |
+          ext/tensorflow/tensorflow/lite/tools/make/build_lib.sh
+          larq_compute_engine/tflite/build/build_lqce.sh
+      - name: "TFLite: Build and install Python wrapper"
+        run: |
+          sudo apt install swig -y
+          pip3 install numpy setuptools wheel --upgrade
+          export PYTHON="python3" # This is needed for tf v2.0.0, not for tf master
+          ext/tensorflow/tensorflow/lite/tools/pip_package/build_pip_package.sh
+          pip3 install /tmp/tflite_pip/python3/dist/*.whl
+      - name: "TFLite: Run Python Tests"
+        run: |
+          export PATH="$PATH:$HOME/.local/bin"
+          pip3 install larq pytest
+          # Go to a different directory to force it to use the installed package
+          # and not use the local larq_compute_engine directory
+          cd larq_compute_engine/tflite
+          python3 -m pytest .
