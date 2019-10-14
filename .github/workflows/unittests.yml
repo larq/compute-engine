@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
         with:
-          submodules: true
+          fetch-depth: 1
       - name: Configure Bazel
         run: ./configure.sh <<< $'yes\nno\n' #yes,no for tf1
         shell: bash
@@ -35,6 +35,7 @@ jobs:
       - uses: actions/checkout@v1
         with:
           submodules: true
+          fetch-depth: 1
       - name: Configure Bazel
         run: ./configure.sh <<< $'yes\nyes\n' #yes,yes for tf2
         shell: bash
