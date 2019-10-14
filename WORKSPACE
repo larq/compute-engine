@@ -11,5 +11,5 @@ new_git_repository(
     name = "googletest",
     build_file = "@//ext:BUILD.gtest",
     remote = "https://github.com/google/googletest",
-    tag = "release-1.8.0",
+    tag = "release-1.10.0",
 )
