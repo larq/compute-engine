@@ -3,7 +3,7 @@ name: Tests
 on: [push]
 
 jobs:
-  buildTF1:
+  TensorFlow1:
     runs-on: ubuntu-latest
     container:
       image: tensorflow/tensorflow:custom-op-ubuntu14
@@ -26,7 +26,7 @@ jobs:
       - name: Run Python Tests
         run: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime --test_output=errors
 
-  buildTF2:
+  TensorFlow2:
     runs-on: ubuntu-latest
     container:
       image: tensorflow/tensorflow:custom-op-ubuntu16
