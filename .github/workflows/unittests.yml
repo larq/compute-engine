@@ -3,6 +3,29 @@ name: Tests
 on: [push]
 
 jobs:
+  buildTF1:
+    runs-on: ubuntu-latest
+    container:
+      image: tensorflow/tensorflow:custom-op-ubuntu14
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: true
+    - name: Configure Bazel
+      run: ./configure.sh <<< $'yes\nno\n' #yes,no for tf1
+      shell: bash
+    - name: Run CC Unit Tests
+      run: bazel test larq_compute_engine:cc_tests
+    - name: Build Bazel Package Creator Binary
+      run: bazel build :build_pip_pkg
+    - name: Build PIP Package
+      run: bazel-bin/build_pip_pkg artifacts
+    - name: Install PIP Package
+      run: pip3 install artifacts/*.whl
+    - name: Run Python Tests
+      run: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime --test_output=errors
+
   buildTF2:
     runs-on: ubuntu-latest
     container:
