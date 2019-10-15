@@ -31,8 +31,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-        with:
-          submodules: true
       - name: Configure Bazel
         run: ./configure.sh <<< $'yes\nyes\n' #yes,yes for tf2
         shell: bash
@@ -46,6 +44,25 @@ jobs:
         run: pip3 install artifacts/*.whl
       - name: Run Python Tests
         run: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime --test_output=errors
+
+  TFLite:
+    runs-on: ubuntu-latest
+    container:
+      image: tensorflow/tensorflow:custom-op-ubuntu16
+
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          submodules: true
+      - name: Configure Bazel
+        run: ./configure.sh <<< $'yes\nyes\n' #yes,yes for tf2
+        shell: bash
+      - name: Build Bazel Package Creator Binary
+        run: bazel build :build_pip_pkg
+      - name: Build PIP Package
+        run: bazel-bin/build_pip_pkg artifacts
+      - name: Install PIP Package
+        run: pip3 install artifacts/*.whl
       - name: "TFLite: Download dependencies"
         run: ext/tensorflow/tensorflow/lite/tools/make/download_dependencies.sh
       - name: "TFLite: Build C++ library"
