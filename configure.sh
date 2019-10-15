@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+set -e
 shopt -s expand_aliases
 alias pip='pip3'
 alias python='python3'
@@ -71,10 +72,10 @@ if [[ "$TF_NEED_CUDA" == "0" ]]; then
     # Install CPU version
     if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
         echo 'Installing tensorflow 1.14......\n'
-        pip install tensorflow==1.14 --user
+        pip install tensorflow==1.14
     else
         echo 'Installing tensorflow 2......\n'
-        pip install tensorflow --user
+        pip install tensorflow
     fi
   fi
 
@@ -95,10 +96,10 @@ else
     # Install CPU version
     if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
         echo 'Installing tensorflow-gpu 1.14.....\n'
-        pip install tensorflow-gpu==1.14 --user
+        pip install tensorflow-gpu==1.14
     else
         echo 'Installing tensorflow-gpu 2.....\n'
-        pip install tensorflow-gpu --user
+        pip install tensorflow-gpu
     fi
   fi
 fi

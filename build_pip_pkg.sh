@@ -14,7 +14,6 @@
 # limitations under the License.
 # ==============================================================================
 set -e
-set -x
 
 PLATFORM="$(uname -s | tr 'A-Z' 'a-z')"
 
