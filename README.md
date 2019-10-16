@@ -63,3 +63,5 @@ The core of the TF lite library is a C++ library. There are python, Android and 
 This is independent of the normal tensorflow part of the compute engine. It does not require the docker image or the tensorflow python package.
 
 Please see the [TF lite readme](larq_compute_engine/tflite/build/README.md) for more information.
+
+To benchmark the TF lite ops, see [benchmarking](larq_compute_engine/tflite/benchmark).
