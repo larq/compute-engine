@@ -65,7 +65,7 @@ class SignOp : public OpKernel {
 
 #define REGISTER_KERNEL(type)                                     \
   REGISTER_KERNEL_BUILDER(                                        \
-      Name("Bsign").Device(DEVICE_CPU).TypeConstraint<type>("T"), \
+      Name("Lqce>Bsign").Device(DEVICE_CPU).TypeConstraint<type>("T"), \
       compute_engine::SignOp<type>)
 
 REGISTER_KERNEL(Eigen::half);

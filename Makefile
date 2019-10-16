@@ -7,7 +7,7 @@ COMPUTE_ENGINE_SRCS = $(wildcard larq_compute_engine/cc/kernels/*.cc) $(wildcard
 TF_CFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))')
 TF_LFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))')
 
-CFLAGS = ${TF_CFLAGS} -fPIC -O2 -std=c++11
+CFLAGS = ${TF_CFLAGS} -fPIC -O2 -std=c++11 -I.
 LDFLAGS = -shared ${TF_LFLAGS}
 
 COMPUTE_ENGINE_TARGET_LIB = larq_compute_engine/python/ops/_larq_compute_engine_ops.so
