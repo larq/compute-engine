@@ -405,10 +405,10 @@ BuiltinOpResolver::BuiltinOpResolver() {
   AddCustom("TFLite_Detection_PostProcess",
             tflite::ops::custom::Register_DETECTION_POSTPROCESS());
 
-  AddCustom("Bsign", compute_engine::tflite::Register_BSIGN());
-  AddCustom("Bconv2d8", compute_engine::tflite::Register_BCONV_2D8());
-  AddCustom("Bconv2d32", compute_engine::tflite::Register_BCONV_2D32());
-  AddCustom("Bconv2d64", compute_engine::tflite::Register_BCONV_2D64());
+  AddCustom("Lqce>Bsign", compute_engine::tflite::Register_BSIGN());
+  AddCustom("Lqce>Bconv2d8", compute_engine::tflite::Register_BCONV_2D8());
+  AddCustom("Lqce>Bconv2d32", compute_engine::tflite::Register_BCONV_2D32());
+  AddCustom("Lqce>Bconv2d64", compute_engine::tflite::Register_BCONV_2D64());
 }
 
 }  // namespace builtin
