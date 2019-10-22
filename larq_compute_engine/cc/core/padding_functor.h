@@ -8,7 +8,7 @@ namespace ce = compute_engine;
 
 //
 // Applies (in-place) corrections for zero-padding
-// Assumes that padding type is 'VALID'.
+// Assumes that padding type is 'SAME'.
 // Currently assumes filter is not bitpacked.
 //
 // Reference implementation
@@ -38,11 +38,23 @@ class PaddingFunctor {
           int in_x_min = out_x * stride_cols - filter_left_offset;
           int in_x_max = in_x_min + filter_width - 1;
 
-          // Skip if this output pixel is in the 'valid' region with no padding
-          // TODO: Skip to the correct out_x value at once
           if (in_x_min >= 0 && in_x_max < input_width && in_y_min >= 0 &&
-              in_y_max < input_height)
+              in_y_max < input_height) {
+            // This output pixel corresponds to a completely 'valid' region
+            // of the input and there is no padding: we are entering the inside
+            // of the image.
+            // Therefore we now *skip* from the left to the right edge of the image
+            // We want to find `out_x` such that `in_x_max >= input_width`
+            // i.e.
+            // out_x * stride_cols >= input_with + filter_left_offset - filter_width + 1
+            // So we want it to be the ceiling of
+            // (input_with + filter_left_offset - filter_width + 1) / stride_cols
+            out_x = (input_width + filter_left_offset - filter_width + 1 +
+                     stride_cols - 1) /
+                    stride_cols;
+            out_x--; // the for-loop will increment it again
             continue;
+          }
 
           for (int out_c = 0; out_c < filter_count; ++out_c) {
             Tdata correction = Tdata(0);
@@ -73,9 +85,10 @@ class PaddingFunctor {
             }
 
             // Apply correction
-            // During im2col, the image was filled with 0's which effectively
-            // became -1's. So the convolution has added -1 * filter_values So
-            // we correct by adding filter_values
+            // im2col padded the input with 0s which effectively became -1s.
+            // The convolution therefore computed
+            // out = correct_part + (-1) * (outside_filter_values)
+            // So to correct fot this we add (+1) * (outside_filter_values)
 
             // Output shape is [batch, height, width, out_channels]
             int out_idx = batch * output_height * output_width * filter_count +
