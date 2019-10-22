@@ -7,6 +7,7 @@
 #include "tensorflow/lite/kernels/padding.h"
 
 #include "larq_compute_engine/cc/core/bconv2d_functor.h"
+#include "larq_compute_engine/cc/core/padding_functor.h"
 
 #include <cstdint>
 
@@ -167,6 +168,7 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
       ce::core::FusedBGemmFunctor<T, T, T, TBitpacked, TBGemmFunctor>;
   using TConvFunctor =
       ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
+  using PaddingFunctor = ce::core::PaddingFunctor<T, T>;
 
   const auto* input = GetInput(context, node, 0);
   const auto* filter = GetInput(context, node, 1);
@@ -183,6 +185,15 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
                params->filter_height, params->filter_width,
                params->channels_out, stride_height, stride_width, padding,
                output->data.f, params->out_height, params->out_width);
+
+  if (params->padding == TfLitePadding::kTfLitePaddingSame) {
+      PaddingFunctor padding_functor;
+      padding_functor(params->batch, params->input_height, params->input_width,
+                      params->channels_in, filter->data.f,
+                      params->filter_height, params->filter_width,
+                      params->channels_out, stride_height, stride_width,
+                      output->data.f, params->out_height, params->out_width);
+  }
 }
 
 template <KernelType kernel_type, class TBitpacked>
