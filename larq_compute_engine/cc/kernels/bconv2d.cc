@@ -140,11 +140,10 @@ class BConv2DOp : public BinaryOp<T> {
 
     if (padding_ != 1) {
       PaddingFunctor padding_functor;
-      int result = padding_functor(batch, input_rows, input_cols, in_depth,
+      padding_functor(batch, input_rows, input_cols, in_depth,
                       filter.flat<T>().data(), filter_rows, filter_cols,
                       out_depth, stride_rows, stride_cols,
                       output->flat<T>().data(), out_rows, out_cols);
-      OP_REQUIRES(context, result == 0, errors::InvalidArgument("ERROR: padding functor said ", result));
     }
   }
 

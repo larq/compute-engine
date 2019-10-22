@@ -16,45 +16,30 @@ namespace ce = compute_engine;
 template <class Tdata, class Tfilter>
 class PaddingFunctor {
  public:
-  int operator()(int input_batches, int input_height, int input_width,
+  void operator()(int input_batches, int input_height, int input_width,
                   int input_channels, const Tfilter* filter_data,
                   int filter_height, int filter_width, int filter_count,
                   int stride_rows, int stride_cols, Tdata* output_data,
                   int output_height, int output_width) {
+
+    int filter_left_offset =
+        ((output_width - 1) * stride_cols + filter_width - input_width) / 2;
+    int filter_top_offset =
+        ((output_height - 1) * stride_rows + filter_height - input_height) / 2;
+
     // We assume that the input numbers are correct because they
     // are already checked by the bconv functor
 
-    if (stride_rows != 1 || stride_cols != 1) {
-      return 1;
-    }
-    if (output_height != input_height || output_width != input_width) {
-      return 2;
-    }
-
-    // For even-sized kernels, there is an extra pixel of padding at the bottom
-    // and the right i.e. the "center pixel" is the top-left one of the 4
-    // possible centers. So we split the padding numbers into one for each side
-    int pad_x_low = (filter_width - 1) / 2;
-    int pad_x_high = filter_width / 2;
-    int pad_y_low = (filter_height - 1) / 2;
-    int pad_y_high = filter_height / 2;
-
-    // When the filter indices are {0,1,..,s-1}
-    // Then the "center pixel" has index (s-1)/2
-    //
-    // So output index i (centered at input index i)
-    // gets input from {i - (s-1)/2, ..., i + s/2}
-    // both endpoints included
-    //
-
     for (int batch = 0; batch < input_batches; ++batch) {
       for (int out_y = 0; out_y < output_height; ++out_y) {
-        int in_y_min = out_y - pad_y_low;
-        int in_y_max = out_y + pad_y_high;
+        int in_y_min = out_y * stride_rows - filter_top_offset;
+        int in_y_max = in_y_min + filter_height - 1;
         for (int out_x = 0; out_x < output_width; ++out_x) {
-          int in_x_min = out_x - pad_x_low;
-          int in_x_max = out_x + pad_x_high;
+          int in_x_min = out_x * stride_cols - filter_left_offset;
+          int in_x_max = in_x_min + filter_width - 1;
 
+          // Skip if this output pixel is in the 'valid' region with no padding
+          // TODO: Skip to the correct out_x value at once
           if (in_x_min >= 0 && in_x_max < input_width && in_y_min >= 0 &&
               in_y_max < input_height)
             continue;
@@ -63,12 +48,13 @@ class PaddingFunctor {
             Tdata correction = Tdata(0);
 
             // TODO: The correction factors that are computed in these loops
-            // can be pre-computed.
+            // can be pre-computed in tf lite.
             for (int f_y = 0; f_y < filter_height; ++f_y) {
-              int in_y = out_y - pad_y_low + f_y;
+              int in_y = in_y_min + f_y;
               for (int f_x = 0; f_x < filter_width; ++f_x) {
-                int in_x = out_x - pad_x_low + f_x;
+                int in_x = in_x_min + f_x;
 
+                // Check if this filter pixel is 'inside' the input image
                 if (in_x >= 0 && in_x < input_width && in_y >= 0 &&
                     in_y < input_height)
                   continue;
@@ -100,8 +86,7 @@ class PaddingFunctor {
         }
       }
     }
-
-    return 0;
+    return;
   }
 };
 

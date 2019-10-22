@@ -20,10 +20,10 @@ class BConv2DTest(tf.test.TestCase):
     def __test_bconv_no_padding(self, bconv_op):
         data_types = [np.float32, np.float64]
         data_formats = ["NHWC"]
-        in_channels = list(range(1, 10)) + list(range(10, 20, 2))
+        in_channels = list(range(1, 10)) + [31, 32, 33] + [63, 64, 65]
         out_channels = [1, 4, 16, 32]
         hw_strides = [[1, 1], [2, 2]]
-        paddings = ["VALID"]
+        paddings = ["VALID", "SAME"]
 
         args_lists = [
             data_types,
@@ -37,7 +37,7 @@ class BConv2DTest(tf.test.TestCase):
             dtype, data_format, in_channel, out_channel, hw_stride, padding = args
 
             batch_size = out_channel
-            h, w, fh, fw = 50, 50, 3, 3
+            h, w, fh, fw = 20, 20, 3, 3
             if data_format == "NHWC":
                 ishape = [batch_size, h, w, in_channel]
                 strides = [1] + hw_stride + [1]
