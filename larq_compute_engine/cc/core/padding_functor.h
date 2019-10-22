@@ -51,11 +51,13 @@ class PaddingFunctor {
       for (int out_y = 0; out_y < output_height; ++out_y) {
         int in_y_min = out_y - pad_y_low;
         int in_y_max = out_y + pad_y_high;
-        if (in_y_min >= 0 && in_y_max < input_height) continue;
         for (int out_x = 0; out_x < output_width; ++out_x) {
           int in_x_min = out_x - pad_x_low;
           int in_x_max = out_x + pad_x_high;
-          if (in_x_min >= 0 && in_x_max < input_width) continue;
+
+          if (in_x_min >= 0 && in_x_max < input_width && in_y_min >= 0 &&
+              in_y_max < input_height)
+            continue;
 
           for (int out_c = 0; out_c < filter_count; ++out_c) {
             Tdata correction = Tdata(0);
