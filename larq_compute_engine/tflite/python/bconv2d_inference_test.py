@@ -76,7 +76,7 @@ class BConv2DTest(tf.test.TestCase):
         input_sizes = [28]
         kernel_sizes = [3, 5]
         hw_strides = [[1, 1], [2, 2]]
-        paddings = ["VALID"]
+        paddings = ["VALID", "SAME"]
 
         args_lists = [
             data_types,

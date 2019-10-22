@@ -13,7 +13,7 @@ namespace ce = compute_engine;
 namespace compute_engine {
 namespace kernels {
 
-template <class T, class TConvFunctor, class PaddingFunctor>
+template <class T, class TConvFunctor>
 class BConv2DOp : public BinaryOp<T> {
  public:
   explicit BConv2DOp(OpKernelConstruction* context) : BinaryOp<T>(context) {
@@ -139,7 +139,7 @@ class BConv2DOp : public BinaryOp<T> {
                  output->flat<T>().data(), out_rows, out_cols);
 
     if (padding_ != 1) {
-      PaddingFunctor padding_functor;
+      ce::core::PaddingFunctor<T,T> padding_functor;
       padding_functor(batch, input_rows, input_cols, in_depth,
                       filter.flat<T>().data(), filter_rows, filter_cols,
                       out_depth, stride_rows, stride_cols,
@@ -158,37 +158,34 @@ class BConv2DOp : public BinaryOp<T> {
 }  // namespace kernels
 }  // namespace compute_engine
 
-#define REGISTER_BITPACKED_KERNEL_CPU(T)                                     \
-  REGISTER_KERNEL_BUILDER(                                                   \
-      Name("Bconv2d8").Device(DEVICE_CPU).TypeConstraint<T>("T"),            \
-      ce::kernels::BConv2DOp<T,                                              \
-                             ce::core::Im2ColBConvFunctor<                   \
-                                 T, T, T,                                    \
-                                 ce::core::FusedBGemmFunctor<                \
-                                     T, T, T, std::uint8_t,                  \
-                                     ce::core::ReferenceBGemmFunctor<        \
-                                         std::uint8_t, std::uint8_t, T>>>,   \
-                             ce::core::PaddingFunctor<T, T>>);               \
-  REGISTER_KERNEL_BUILDER(                                                   \
-      Name("Bconv2d32").Device(DEVICE_CPU).TypeConstraint<T>("T"),           \
-      ce::kernels::BConv2DOp<T,                                              \
-                             ce::core::Im2ColBConvFunctor<                   \
-                                 T, T, T,                                    \
-                                 ce::core::FusedBGemmFunctor<                \
-                                     T, T, T, std::uint32_t,                 \
-                                     ce::core::ReferenceBGemmFunctor<        \
-                                         std::uint32_t, std::uint32_t, T>>>, \
-                             ce::core::PaddingFunctor<T, T>>);               \
-  REGISTER_KERNEL_BUILDER(                                                   \
-      Name("Bconv2d64").Device(DEVICE_CPU).TypeConstraint<T>("T"),           \
-      ce::kernels::BConv2DOp<T,                                              \
-                             ce::core::Im2ColBConvFunctor<                   \
-                                 T, T, T,                                    \
-                                 ce::core::FusedBGemmFunctor<                \
-                                     T, T, T, std::uint64_t,                 \
-                                     ce::core::ReferenceBGemmFunctor<        \
-                                         std::uint64_t, std::uint64_t, T>>>, \
-                             ce::core::PaddingFunctor<T, T>>);
+#define REGISTER_BITPACKED_KERNEL_CPU(T)                                    \
+  REGISTER_KERNEL_BUILDER(                                                  \
+      Name("Bconv2d8").Device(DEVICE_CPU).TypeConstraint<T>("T"),           \
+      ce::kernels::BConv2DOp<                                               \
+          T, ce::core::Im2ColBConvFunctor<                                  \
+                 T, T, T,                                                   \
+                 ce::core::FusedBGemmFunctor<                               \
+                     T, T, T, std::uint8_t,                                 \
+                     ce::core::ReferenceBGemmFunctor<std::uint8_t,          \
+                                                     std::uint8_t, T>>>>);  \
+  REGISTER_KERNEL_BUILDER(                                                  \
+      Name("Bconv2d32").Device(DEVICE_CPU).TypeConstraint<T>("T"),          \
+      ce::kernels::BConv2DOp<                                               \
+          T, ce::core::Im2ColBConvFunctor<                                  \
+                 T, T, T,                                                   \
+                 ce::core::FusedBGemmFunctor<                               \
+                     T, T, T, std::uint32_t,                                \
+                     ce::core::ReferenceBGemmFunctor<std::uint32_t,         \
+                                                     std::uint32_t, T>>>>); \
+  REGISTER_KERNEL_BUILDER(                                                  \
+      Name("Bconv2d64").Device(DEVICE_CPU).TypeConstraint<T>("T"),          \
+      ce::kernels::BConv2DOp<                                               \
+          T, ce::core::Im2ColBConvFunctor<                                  \
+                 T, T, T,                                                   \
+                 ce::core::FusedBGemmFunctor<                               \
+                     T, T, T, std::uint64_t,                                \
+                     ce::core::ReferenceBGemmFunctor<std::uint64_t,         \
+                                                     std::uint64_t, T>>>>);
 
 TF_CALL_float(REGISTER_BITPACKED_KERNEL_CPU);
 TF_CALL_double(REGISTER_BITPACKED_KERNEL_CPU);
