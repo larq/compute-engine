@@ -134,6 +134,50 @@ test_suite(
     ],
 )
 
+#
+# Benchmarks
+#
+
+cc_library(
+    name = "bconv2d_bench",
+    srcs = ["cc/benchmark/bconv2d_bench.cc"],
+    deps = [
+        "@googlebenchmark//:benchmark",
+        ":bconv2d",
+    ],
+)
+
+cc_library(
+    name = "im2col_bench",
+    srcs = ["cc/benchmark/im2col_bench.cc"],
+    deps = [
+        "@googlebenchmark//:benchmark",
+         ":im2col",
+    ],
+)
+
+cc_library(
+    name = "bgemm_bench",
+    srcs = ["cc/benchmark/bgemm_bench.cc"],
+    deps = [
+        "@googlebenchmark//:benchmark",
+        ":bgemm",
+        ":fused_bgemm",
+    ],
+)
+
+cc_test(
+	name = "benchmark",
+	linkopts = ["-lrt"],
+	deps = [
+        "@googlebenchmark//:benchmark_main",
+		":bconv2d_bench",
+		":im2col_bench",
+		":bgemm_bench",
+	],
+)
+    
+
 # MAIN COMPUTE ENGINE LIBRARY
 cc_binary(
     name = 'python/ops/_larq_compute_engine_ops.so',

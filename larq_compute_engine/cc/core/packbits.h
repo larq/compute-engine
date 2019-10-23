@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstring>
 #include <vector>
+#include <cstring>
 
 namespace compute_engine {
 namespace core {

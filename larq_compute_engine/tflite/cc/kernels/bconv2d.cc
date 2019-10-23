@@ -6,13 +6,10 @@
 #include "tensorflow/lite/kernels/op_macros.h"
 #include "tensorflow/lite/kernels/padding.h"
 
-#include "tensorflow/lite/core/api/profiler.h"
-
 #include "larq_compute_engine/cc/core/bconv2d_functor.h"
 #include "larq_compute_engine/cc/core/padding_functor.h"
 
 #include <cstdint>
-#include <cstdio>
 
 using namespace tflite;
 
@@ -162,19 +159,6 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
   conv_params->out_height = ComputeOutSize(
       conv_params->padding, conv_params->input_height,
       conv_params->filter_height, stride_height, dilation_height);
-
-  // These strings get quite long, so instead of giving both height and width
-  // we only give the width since they are almost always square anyway,
-  // this should be sufficient for benchmarking.
-  snprintf(conv_params->profile_im2col_tag,
-           sizeof(conv_params->profile_im2col_tag), "im2col_in=%dx%d_str=%d",
-           conv_params->input_width, conv_params->channels_in, stride_width);
-
-  snprintf(conv_params->profile_bgemm_tag,
-           sizeof(conv_params->profile_bgemm_tag),
-           "bgemm_in=%dx%d_filt=%dx%d_str=%d", conv_params->input_width,
-           conv_params->channels_in, conv_params->filter_width,
-           conv_params->channels_out, stride_width);
 
   // determine the output dimensions
   TfLiteIntArray* output_shape = TfLiteIntArrayCreate(4);

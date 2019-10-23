@@ -80,9 +80,6 @@ LQCE_ALL_SRCS := \
 $(wildcard larq_compute_engine/tflite/cc/*.cc) \
 $(wildcard larq_compute_engine/tflite/cc/kernels/*.cc) \
 
-LQCE_BENCHMARK_SRCS := \
-$(wildcard larq_compute_engine/tflite/cc/profiling/*.cc)
-
 # These target-specific makefiles should modify or replace options like
 # CXXFLAGS or LIBS to work for a specific targetted architecture. All logic
 # based on platforms or architectures should happen within these files, to
@@ -103,9 +100,6 @@ AR := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}ar
 
 LIB_OBJS := $(addprefix $(OBJDIR), \
 $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LQCE_ALL_SRCS)))))
-
-BENCHMARK_OBJS  := $(addprefix $(OBJDIR), \
-$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LQCE_BENCHMARK_SRCS)))))
 
 # For normal manually-created TensorFlow Lite C++ source files.
 $(OBJDIR)%.o: %.cc
@@ -132,12 +126,11 @@ $(LIB_PATH): $(LIB_OBJS)
 
 # Make sure benchmark_lib depends on lib_path so that the access-times are correct.
 # If not, the tflite Makefile will rebuild it
-$(BENCHMARK_LIB): $(LIB_PATH) $(LIB_OBJS) $(BENCHMARK_OBJS)
+$(BENCHMARK_LIB): $(LIB_PATH) $(LIB_OBJS)
 	@mkdir -p $(dir $@)
-	$(AR) $(ARFLAGS) $(BENCHMARK_LIB) $(LIB_OBJS) $(BENCHMARK_OBJS)
+	$(AR) $(ARFLAGS) $(BENCHMARK_LIB) $(LIB_OBJS)
 	# Move the original register.o to the end
 	$(AR) -m $(BENCHMARK_LIB) register.o
-	$(AR) -m $(BENCHMARK_LIB) profile_summarizer.o
 
 lib: $(LIB_PATH)
 
