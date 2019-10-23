@@ -6,9 +6,12 @@
 #include "tensorflow/lite/kernels/op_macros.h"
 #include "tensorflow/lite/kernels/padding.h"
 
+#include "tensorflow/lite/core/api/profiler.h"
+
 #include "larq_compute_engine/cc/core/bconv2d_functor.h"
 
 #include <cstdint>
+#include <cstdio>
 
 using namespace tflite;
 
@@ -50,6 +53,8 @@ typedef struct {
   int64_t out_width{0};
   int64_t out_height{0};
 
+  char profile_im2col_tag[128];
+  char profile_bgemm_tag[128];
 } TfLiteBConv2DParams;
 
 void* Init(TfLiteContext* context, const char* buffer, size_t length) {
@@ -142,6 +147,19 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
       conv_params->padding, conv_params->input_height,
       conv_params->filter_height, stride_height, dilation_height);
 
+  // These strings get quite long, so instead of giving both height and width
+  // we only give the width since they are almost always square anyway,
+  // this should be sufficient for benchmarking.
+  snprintf(conv_params->profile_im2col_tag,
+           sizeof(conv_params->profile_im2col_tag), "im2col_in=%dx%d_str=%d",
+           conv_params->input_width, conv_params->channels_in, stride_width);
+
+  snprintf(conv_params->profile_bgemm_tag,
+           sizeof(conv_params->profile_bgemm_tag),
+           "bgemm_in=%dx%d_filt=%dx%d_str=%d", conv_params->input_width,
+           conv_params->channels_in, conv_params->filter_width,
+           conv_params->channels_out, stride_width);
+
   // determine the output dimensions
   TfLiteIntArray* output_shape = TfLiteIntArrayCreate(4);
   output_shape->data[0] = conv_params->batch;
@@ -177,12 +195,27 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   const int padding =
       params->padding == TfLitePadding::kTfLitePaddingValid ? 1 : 2;
 
-  TConvFunctor conv_functor;
-  conv_functor(input->data.f, params->batch, params->input_height,
-               params->input_width, params->channels_in, filter->data.f,
-               params->filter_height, params->filter_width,
-               params->channels_out, stride_height, stride_width, padding,
-               output->data.f, params->out_height, params->out_width);
+  // Note: when profiler is a nullptr, these things will not do anything
+  // so they do not hurt performance in case profiling is not enabled
+  {
+    ScopedProfile im2colProfiler((Profiler*)context->profiler,
+                                 params->profile_im2col_tag,
+                                 (Profiler::EventType)2);
+  }
+
+  {
+    ScopedProfile bgemmProfiler((Profiler*)context->profiler,
+                                params->profile_bgemm_tag,
+                                (Profiler::EventType)2);
+
+    // TODO: split into im2col and bgemm
+    TConvFunctor conv_functor;
+    conv_functor(input->data.f, params->batch, params->input_height,
+                 params->input_width, params->channels_in, filter->data.f,
+                 params->filter_height, params->filter_width,
+                 params->channels_out, stride_height, stride_width, padding,
+                 output->data.f, params->out_height, params->out_width);
+  }
 }
 
 template <KernelType kernel_type, class TBitpacked>
