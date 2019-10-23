@@ -25,7 +25,7 @@ using namespace tensorflow;
 // The shape functions can cause crashes when compiled by 'wrong' gcc versions
 // https://github.com/tensorflow/tensorflow/issues/29643
 
-REGISTER_OP("Lqce>Bsign")
+REGISTER_OP("LqceBsign")
     .Attr("T: {half, float, double, int8, int32, int64}")
     .Input("input: T")
     .Output("output: T")
@@ -47,6 +47,6 @@ REGISTER_OP("Lqce>Bsign")
           R"doc(Computes a 2-D binary convolution by binarizing and bitpacking the input and filter.)doc") \
       .SetShapeFn(shape_inference::Conv2DShapeWithExplicitPadding);
 
-REGISTER_CONV_BITPACKED_OP("Lqce>Bconv2d8");
-REGISTER_CONV_BITPACKED_OP("Lqce>Bconv2d32");
-REGISTER_CONV_BITPACKED_OP("Lqce>Bconv2d64");
+REGISTER_CONV_BITPACKED_OP("LqceBconv2d8");
+REGISTER_CONV_BITPACKED_OP("LqceBconv2d32");
+REGISTER_CONV_BITPACKED_OP("LqceBconv2d64");
