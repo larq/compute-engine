@@ -4,24 +4,22 @@
 
 namespace ce = compute_engine;
 
+// Arguments: (input_size, filter_size, channels_in, channels_out)
+template <typename T, typename TBitpacked>
 static void bconv2d(benchmark::State& state) {
-  using T = float;
-  using TBitpacked = uint32_t;
-
-  // We have to choose realistic sizes here for an honest benchmark
-  const int input_depth = state.range(0);
-  const int filter_count = input_depth;
-  const int filter_width = 3;
-  const int filter_height = 3;
-  const int input_height = 32;
-  const int input_width = 32;
+  const int input_height = state.range(0);
+  const int input_width = state.range(0);
+  const int filter_width = state.range(1);
+  const int filter_height = state.range(1);
+  const int channels_in = state.range(2);
+  const int channels_out = state.range(3);
 
   const int input_batch_count = 1;
   const int input_num_elem =
-      input_batch_count * input_height * input_width * input_depth;
+      input_batch_count * input_height * input_width * channels_in;
 
   const int filters_num_elem =
-      filter_height * filter_width * input_depth * filter_count;
+      filter_height * filter_width * channels_in * channels_out;
 
   const int pad_h = 0, pad_w = 0;
   const int stride_h = 1, stride_w = 1;
@@ -31,7 +29,7 @@ static void bconv2d(benchmark::State& state) {
   const int output_width =
       (input_width - filter_width + 2 * pad_w) / stride_w + 1;
   const int output_num_elem =
-      input_batch_count * output_height * output_width * filter_count;
+      input_batch_count * output_height * output_width * channels_out;
 
   std::vector<T> input_data;
   input_data.resize(input_num_elem);
@@ -54,11 +52,18 @@ static void bconv2d(benchmark::State& state) {
   TBConv2DFunctor bconv2d_functor;
   for (auto _ : state) {
     bconv2d_functor(input_data.data(), input_batch_count, input_height,
-                    input_width, input_depth, filters_data.data(), filter_height,
-                    filter_width, filter_count, stride_h, stride_w,
+                    input_width, channels_in, filters_data.data(),
+                    filter_height, filter_width, channels_out, stride_h,
+                    stride_w,
                     1,  // pad_h, pad_w,
                     output.data(), output_height, output_width);
   }
 }
 
-BENCHMARK(bconv2d)->Arg(64)->Arg(256);
+// We have to choose realistic sizes here for an honest benchmark
+// For all argumentgs, it will choose powers-of-two between those numbers
+// Note that we get all possible combinations, so the number of benchmarks grows large quickly!
+BENCHMARK_TEMPLATE(bconv2d, float, uint8_t)->Ranges({{16,32},{3,5},{8,128},{4,16}});
+BENCHMARK_TEMPLATE(bconv2d, float, uint32_t)->Ranges({{16,32},{3,5},{8,128},{4,16}});
+BENCHMARK_TEMPLATE(bconv2d, float, uint64_t)->Ranges({{16,32},{3,5},{8,128},{4,16}});
+
