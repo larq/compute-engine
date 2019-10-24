@@ -17,7 +17,7 @@ except ImportError:
 
 
 class BConv2DTest(tf.test.TestCase):
-    def __test_bconv_no_padding(self, bconv_op):
+    def __test_bconv(self, bconv_op):
         data_types = [np.float32, np.float64]
         data_formats = ["NHWC"]
         in_channels = list(range(1, 10)) + [31, 32, 33] + [63, 64, 65]
@@ -61,14 +61,14 @@ class BConv2DTest(tf.test.TestCase):
                 )
                 self.assertAllClose(output, expected)
 
-    def test_bconv2d8_no_padding(self):
-        self.__test_bconv_no_padding(bconv2d8)
+    def test_bconv2d8(self):
+        self.__test_bconv(bconv2d8)
 
-    def test_bconv2d32_no_padding(self):
-        self.__test_bconv_no_padding(bconv2d32)
+    def test_bconv2d32(self):
+        self.__test_bconv(bconv2d32)
 
-    def test_bconv2d64_no_padding(self):
-        self.__test_bconv_no_padding(bconv2d64)
+    def test_bconv2d64(self):
+        self.__test_bconv(bconv2d64)
 
 
 if __name__ == "__main__":
