@@ -29,7 +29,8 @@ REGISTER_OP("LqceBsign")
     .Attr("T: {half, float, double, int8, int32, int64}")
     .Input("input: T")
     .Output("output: T")
-    .Doc(R"doc(Computes element-wise sign function where 0 is mapped to +1.)doc")
+    .Doc(
+        R"doc(Computes element-wise sign function where 0 is mapped to +1.)doc")
     .SetShapeFn(shape_inference::UnchangedShape);
 
 #define REGISTER_CONV_BITPACKED_OP(OPNAME)                                                                 \
