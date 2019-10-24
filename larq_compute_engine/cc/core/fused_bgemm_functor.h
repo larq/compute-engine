@@ -13,9 +13,9 @@ template <class TIn1, class TIn2, class TOut, class TBitpacked,
           class TBGemmFunctor>
 class FusedBGemmFunctor {
  public:
-  void operator()(size_t m, size_t n, size_t k, const TIn1* a_data, size_t lda,
-                  const TIn2* b_data, size_t ldb, TOut* c_data_out,
-                  size_t ldc) {
+  void operator()(const size_t m, const size_t n, const size_t k,
+                  const TIn1* a_data, const size_t lda, const TIn2* b_data,
+                  const size_t ldb, TOut* c_data_out, const size_t ldc) {
     const int a_num_rows = m;
     const int a_num_cols = k;
     std::vector<TBitpacked> a_data_bp;

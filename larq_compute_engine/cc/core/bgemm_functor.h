@@ -57,9 +57,9 @@ inline float compute_binary_inner_prod<std::uint64_t, float>(
 template <class TIn1, class TIn2, class TOut>
 class ReferenceBGemmFunctor {
  public:
-  void operator()(size_t m, size_t n, size_t k, const TIn1* a, size_t lda,
-                  const TIn2* b, size_t ldb, TOut* c, size_t ldc,
-                  int bitpaddding = 0) {
+  void operator()(const size_t m, const size_t n, const size_t k, const TIn1* a,
+                  const size_t lda, const TIn2* b, const size_t ldb, TOut* c,
+                  const size_t ldc, const int bitpaddding = 0) {
     // for now accept only unsigned {8,32,64}-bits values as input.
     static_assert(std::is_same<TIn2, TIn1>::value,
                   "Inputs to BGEMM should have the same type.");
