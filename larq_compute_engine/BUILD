@@ -94,12 +94,18 @@ cc_test(
 )
 
 cc_library(
+    name = "padding",
+    hdrs = ["cc/core/padding_functor.h"],
+)
+
+cc_library(
     name = "bconv2d",
     hdrs = [
         "cc/core/bconv2d_functor.h",
     ],
     deps = [
          ":fused_bgemm",
+         ":padding",
     ],
 )
 

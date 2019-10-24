@@ -17,27 +17,34 @@ except ImportError:
 
 
 class BConv2DTest(tf.test.TestCase):
-    def __test_bconv_no_padding(self, bconv_op):
+    def __test_bconv(self, bconv_op):
         data_types = [np.float32, np.float64]
         data_formats = ["NHWC"]
-        in_channels = list(range(1, 10)) + list(range(10, 20, 2))
-        out_channels = [1, 4, 16, 32]
+        in_sizes = [[10, 10], [11, 11], [10, 11]]
+        filter_sizes = [[3, 3], [4, 5]]
+        in_channels = [1, 31, 32, 33, 64]
+        out_channels = [1, 16]
         hw_strides = [[1, 1], [2, 2]]
-        paddings = ["VALID"]
+        paddings = ["VALID", "SAME"]
 
         args_lists = [
             data_types,
             data_formats,
+            in_sizes,
+            filter_sizes,
             in_channels,
             out_channels,
             hw_strides,
             paddings,
         ]
         for args in itertools.product(*args_lists):
-            dtype, data_format, in_channel, out_channel, hw_stride, padding = args
+            dtype, data_format, in_size, filter_size, in_channel, out_channel, hw_stride, padding = (
+                args
+            )
 
             batch_size = out_channel
-            h, w, fh, fw = 50, 50, 3, 3
+            h, w = in_size
+            fh, fw = filter_size
             if data_format == "NHWC":
                 ishape = [batch_size, h, w, in_channel]
                 strides = [1] + hw_stride + [1]
@@ -61,14 +68,14 @@ class BConv2DTest(tf.test.TestCase):
                 )
                 self.assertAllClose(output, expected)
 
-    def test_bconv2d8_no_padding(self):
-        self.__test_bconv_no_padding(bconv2d8)
+    def test_bconv2d8(self):
+        self.__test_bconv(bconv2d8)
 
-    def test_bconv2d32_no_padding(self):
-        self.__test_bconv_no_padding(bconv2d32)
+    def test_bconv2d32(self):
+        self.__test_bconv(bconv2d32)
 
-    def test_bconv2d64_no_padding(self):
-        self.__test_bconv_no_padding(bconv2d64)
+    def test_bconv2d64(self):
+        self.__test_bconv(bconv2d64)
 
 
 if __name__ == "__main__":
