@@ -56,6 +56,16 @@ Run Python unit tests
 bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime
 ```
 
+### Benchmarking
+
+See [benchmarking TF lite ops](larq_compute_engine/tflite/benchmark) for benchmarks of complete ops in TF lite.
+
+Benchmarks of sub-components can be run using
+``` bash
+bazel run larq_compute_engine:benchmark
+```
+
+
 ## TF lite
 
 The core of the TF lite library is a C++ library. There are python, Android and iOS wrappers around it. Note that it is possible to use the C++ library directly on Android as well.
