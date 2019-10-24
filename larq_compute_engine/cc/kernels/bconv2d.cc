@@ -132,18 +132,21 @@ class BConv2DOp : public BinaryOp<T> {
     if (out_shape.num_elements() == 0) {
       return;
     }
+
+    const T* input_data = input.flat<T>().data();
+    const T* filter_data = filter.flat<T>().data();
+    T* output_data = output->flat<T>().data();
+
     TConvFunctor conv_functor;
-    conv_functor(input.flat<T>().data(), batch, input_rows, input_cols,
-                 in_depth, filter.flat<T>().data(), filter_rows, filter_cols,
-                 out_depth, stride_rows, stride_cols, padding_,
-                 output->flat<T>().data(), out_rows, out_cols);
+    conv_functor(input_data, batch, input_rows, input_cols, in_depth,
+                 filter_data, filter_rows, filter_cols, out_depth, stride_rows,
+                 stride_cols, padding_, output_data, out_rows, out_cols);
 
     if (padding_ != 1) {
-      ce::core::ReferencePaddingFunctor<T,T> padding_functor;
-      padding_functor(batch, input_rows, input_cols, in_depth,
-                      filter.flat<T>().data(), filter_rows, filter_cols,
-                      out_depth, stride_rows, stride_cols,
-                      output->flat<T>().data(), out_rows, out_cols);
+      ce::core::ReferencePaddingFunctor<T, T> padding_functor;
+      padding_functor(batch, input_rows, input_cols, in_depth, filter_data,
+                      filter_rows, filter_cols, out_depth, stride_rows,
+                      stride_cols, output_data, out_rows, out_cols);
     }
   }
 
