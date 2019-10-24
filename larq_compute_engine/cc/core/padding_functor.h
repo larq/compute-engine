@@ -32,27 +32,26 @@ class ReferencePaddingFunctor {
 
     for (int batch = 0; batch < input_batches; ++batch) {
       for (int out_y = 0; out_y < output_height; ++out_y) {
-        int in_y_min = out_y * stride_rows - filter_top_offset;
-        int in_y_max = in_y_min + filter_height - 1;
+        int in_y_start = out_y * stride_rows - filter_top_offset;
+        int in_y_end = in_y_start + filter_height - 1; // inclusive
         for (int out_x = 0; out_x < output_width; ++out_x) {
-          int in_x_min = out_x * stride_cols - filter_left_offset;
-          int in_x_max = in_x_min + filter_width - 1;
+          int in_x_start = out_x * stride_cols - filter_left_offset;
+          int in_x_end = in_x_start + filter_width - 1; // inclusive
 
-          if (in_x_min >= 0 && in_x_max < input_width && in_y_min >= 0 &&
-              in_y_max < input_height) {
+          if (in_x_start >= 0 && in_x_end < input_width && in_y_start >= 0 &&
+              in_y_end < input_height) {
             // This output pixel corresponds to a completely 'valid' region
             // of the input and there is no padding: we are entering the inside
             // of the image.
             // Therefore we now *skip* from the left to the right edge of the image
-            // We want to find `out_x` such that `in_x_max >= input_width`
+            // We want to find `out_x` such that `in_x_end >= input_width`
             // i.e.
             // out_x * stride_cols >= input_with + filter_left_offset - filter_width + 1
             // So we want it to be the ceiling of
             // (input_with + filter_left_offset - filter_width + 1) / stride_cols
             out_x = (input_width + filter_left_offset - filter_width + 1 +
                      stride_cols - 1) /
-                    stride_cols;
-            out_x--; // the for-loop will increment it again
+                    stride_cols - 1; // -1 because the for-loop will increment it again
             continue;
           }
 
@@ -61,10 +60,10 @@ class ReferencePaddingFunctor {
 
             // TODO: The correction factors that are computed in these loops
             // can be pre-computed in tf lite.
-            for (int f_y = 0; f_y < filter_height; ++f_y) {
-              int in_y = in_y_min + f_y;
-              for (int f_x = 0; f_x < filter_width; ++f_x) {
-                int in_x = in_x_min + f_x;
+            for (int filter_y = 0; filter_y < filter_height; ++filter_y) {
+              int in_y = in_y_start + filter_y;
+              for (int filter_x = 0; filter_x < filter_width; ++filter_x) {
+                int in_x = in_x_start + filter_x;
 
                 // Check if this filter pixel is 'inside' the input image
                 if (in_x >= 0 && in_x < input_width && in_y >= 0 &&
@@ -74,12 +73,12 @@ class ReferencePaddingFunctor {
                 for (int in_c = 0; in_c < input_channels; ++in_c) {
                   // filter_data currently has shape
                   // [height, width, in_channels, out_channels]
-                  int f_idx =
-                      f_y * (filter_width * input_channels * filter_count) +
-                      f_x * (input_channels * filter_count) +
+                  int filter_idx =
+                      filter_y * (filter_width * input_channels * filter_count) +
+                      filter_x * (input_channels * filter_count) +
                       in_c * filter_count + out_c;
 
-                  correction += filter_data[f_idx];
+                  correction += filter_data[filter_idx];
                 }
               }
             }
