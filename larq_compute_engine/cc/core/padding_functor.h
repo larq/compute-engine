@@ -14,7 +14,7 @@ namespace ce = compute_engine;
 // Reference implementation
 //
 template <class Tdata, class Tfilter>
-class PaddingFunctor {
+class ReferencePaddingFunctor {
  public:
   void operator()(int input_batches, int input_height, int input_width,
                   int input_channels, const Tfilter* filter_data,

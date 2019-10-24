@@ -168,7 +168,7 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
       ce::core::FusedBGemmFunctor<T, T, T, TBitpacked, TBGemmFunctor>;
   using TConvFunctor =
       ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
-  using PaddingFunctor = ce::core::PaddingFunctor<T, T>;
+  using PaddingFunctor = ce::core::ReferencePaddingFunctor<T, T>;
 
   const auto* input = GetInput(context, node, 0);
   const auto* filter = GetInput(context, node, 1);
