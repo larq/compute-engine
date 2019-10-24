@@ -14,6 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include <cmath>
+
 #include "tensorflow/core/framework/op_kernel.h"
 
 using namespace tensorflow;
@@ -63,9 +64,9 @@ class SignOp : public OpKernel {
 
 }  // namespace compute_engine
 
-#define REGISTER_KERNEL(type)                                     \
-  REGISTER_KERNEL_BUILDER(                                        \
-      Name("Bsign").Device(DEVICE_CPU).TypeConstraint<type>("T"), \
+#define REGISTER_KERNEL(type)                                         \
+  REGISTER_KERNEL_BUILDER(                                            \
+      Name("LqceBsign").Device(DEVICE_CPU).TypeConstraint<type>("T"), \
       compute_engine::SignOp<type>)
 
 REGISTER_KERNEL(Eigen::half);

@@ -1,7 +1,9 @@
 #ifndef COMPUTE_ENGINE_KERNELS_PACKBITS_H_
 #define COMPUTE_ENGINE_KERNELS_PACKBITS_H_
 
+#include <limits>
 #include <cstdint>
+#include <cstring>
 #include <vector>
 
 namespace compute_engine {

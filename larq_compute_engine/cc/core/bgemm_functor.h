@@ -1,6 +1,7 @@
 #ifndef COMPUTE_ENGINE_KERNELS_BGEMM_FUNCTORS_H_
 #define COMPUTE_ENGINE_KERNELS_BGEMM_FUNCTORS_H_
 
+#include <limits>
 #include <bitset>
 #include <cstdint>
 

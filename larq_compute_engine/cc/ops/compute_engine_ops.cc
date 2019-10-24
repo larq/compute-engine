@@ -25,10 +25,12 @@ using namespace tensorflow;
 // The shape functions can cause crashes when compiled by 'wrong' gcc versions
 // https://github.com/tensorflow/tensorflow/issues/29643
 
-REGISTER_OP("Bsign")
+REGISTER_OP("LqceBsign")
     .Attr("T: {half, float, double, int8, int32, int64}")
     .Input("input: T")
     .Output("output: T")
+    .Doc(
+        R"doc(Computes element-wise sign function where 0 is mapped to +1.)doc")
     .SetShapeFn(shape_inference::UnchangedShape);
 
 #define REGISTER_CONV_BITPACKED_OP(OPNAME)                                                                 \
@@ -46,6 +48,6 @@ REGISTER_OP("Bsign")
           R"doc(Computes a 2-D binary convolution by binarizing and bitpacking the input and filter.)doc") \
       .SetShapeFn(shape_inference::Conv2DShapeWithExplicitPadding);
 
-REGISTER_CONV_BITPACKED_OP("Bconv2d8");
-REGISTER_CONV_BITPACKED_OP("Bconv2d32");
-REGISTER_CONV_BITPACKED_OP("Bconv2d64");
+REGISTER_CONV_BITPACKED_OP("LqceBconv2d8");
+REGISTER_CONV_BITPACKED_OP("LqceBconv2d32");
+REGISTER_CONV_BITPACKED_OP("LqceBconv2d64");

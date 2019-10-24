@@ -1,10 +1,9 @@
+#include "larq_compute_engine/cc/core/bconv2d_functor.h"
 #include "tensorflow/core/framework/bounds_check.h"
 #include "tensorflow/core/framework/common_shape_fns.h"
 #include "tensorflow/core/framework/numeric_op.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/register_types.h"
-
-#include "larq_compute_engine/cc/core/bconv2d_functor.h"
 
 using namespace tensorflow;
 
@@ -152,7 +151,7 @@ class BConv2DOp : public BinaryOp<T> {
 
 #define REGISTER_BITPACKED_KERNEL_CPU(T)                                    \
   REGISTER_KERNEL_BUILDER(                                                  \
-      Name("Bconv2d8").Device(DEVICE_CPU).TypeConstraint<T>("T"),           \
+      Name("LqceBconv2d8").Device(DEVICE_CPU).TypeConstraint<T>("T"),       \
       ce::kernels::BConv2DOp<                                               \
           T, ce::core::Im2ColBConvFunctor<                                  \
                  T, T, T,                                                   \
@@ -161,7 +160,7 @@ class BConv2DOp : public BinaryOp<T> {
                      ce::core::ReferenceBGemmFunctor<std::uint8_t,          \
                                                      std::uint8_t, T>>>>);  \
   REGISTER_KERNEL_BUILDER(                                                  \
-      Name("Bconv2d32").Device(DEVICE_CPU).TypeConstraint<T>("T"),          \
+      Name("LqceBconv2d32").Device(DEVICE_CPU).TypeConstraint<T>("T"),      \
       ce::kernels::BConv2DOp<                                               \
           T, ce::core::Im2ColBConvFunctor<                                  \
                  T, T, T,                                                   \
@@ -170,7 +169,7 @@ class BConv2DOp : public BinaryOp<T> {
                      ce::core::ReferenceBGemmFunctor<std::uint32_t,         \
                                                      std::uint32_t, T>>>>); \
   REGISTER_KERNEL_BUILDER(                                                  \
-      Name("Bconv2d64").Device(DEVICE_CPU).TypeConstraint<T>("T"),          \
+      Name("LqceBconv2d64").Device(DEVICE_CPU).TypeConstraint<T>("T"),      \
       ce::kernels::BConv2DOp<                                               \
           T, ce::core::Im2ColBConvFunctor<                                  \
                  T, T, T,                                                   \
