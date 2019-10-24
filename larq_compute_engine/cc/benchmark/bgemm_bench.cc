@@ -82,10 +82,10 @@ static void fused_bgemm(benchmark::State& state) {
   }
 }
 
-BENCHMARK_TEMPLATE(bgemm, uint8_t, int32_t)->Ranges({{16,32},{3,5},{8,128},{4,16}});
-BENCHMARK_TEMPLATE(bgemm, uint32_t, int32_t)->Ranges({{16,32},{3,5},{8,128},{4,16}});
-BENCHMARK_TEMPLATE(bgemm, uint64_t, int32_t)->Ranges({{16,32},{3,5},{8,128},{4,16}});
-BENCHMARK_TEMPLATE(fused_bgemm, float, uint8_t, int32_t)->Ranges({{16,32},{3,5},{8,128},{4,16}});
-BENCHMARK_TEMPLATE(fused_bgemm, float, uint32_t, int32_t)->Ranges({{16,32},{3,5},{8,128},{4,16}});
-BENCHMARK_TEMPLATE(fused_bgemm, float, uint64_t, int32_t)->Ranges({{16,32},{3,5},{8,128},{4,16}});
+BENCHMARK_TEMPLATE(bgemm, uint8_t, float)->Ranges({{16,32},{3,5},{8,128},{4,16}});
+BENCHMARK_TEMPLATE(bgemm, uint32_t, float)->Ranges({{16,32},{3,5},{8,128},{4,16}});
+BENCHMARK_TEMPLATE(bgemm, uint64_t, float)->Ranges({{16,32},{3,5},{8,128},{4,16}});
+BENCHMARK_TEMPLATE(fused_bgemm, float, uint8_t, float)->Ranges({{16,32},{3,5},{8,128},{4,16}});
+BENCHMARK_TEMPLATE(fused_bgemm, float, uint32_t, float)->Ranges({{16,32},{3,5},{8,128},{4,16}});
+BENCHMARK_TEMPLATE(fused_bgemm, float, uint64_t, float)->Ranges({{16,32},{3,5},{8,128},{4,16}});
 
