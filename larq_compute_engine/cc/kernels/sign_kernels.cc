@@ -51,7 +51,7 @@ class SignOp : public OpKernel {
                    context->allocate_output(0, in_tensor.shape(), &out_tensor));
 
     // Get flat representations of the tensor
-    auto input_flat = in_tensor.flat<T>();
+    const auto input_flat = in_tensor.flat<T>();
     auto output_flat = out_tensor->flat<T>();
 
     // Compute the sign

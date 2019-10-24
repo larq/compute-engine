@@ -28,11 +28,13 @@ const size_t kMaxChunkSize = (16 * 1024 * 1024);
 template <class T1, class T2, class T3, class TGemmFunctor>
 class Im2ColBConvFunctor {
  public:
-  void operator()(const T1* input_data, int input_batches, int input_height,
-                  int input_width, int input_depth, const T2* filter_data,
-                  int filter_height, int filter_width, int filter_count,
-                  int stride_rows, int stride_cols, int padding,
-                  T3* output_data, int output_height, int output_width) {
+  void operator()(const T1* input_data, const int input_batches,
+                  const int input_height, const int input_width,
+                  const int input_depth, const T2* filter_data,
+                  const int filter_height, const int filter_width,
+                  const int filter_count, const int stride_rows,
+                  const int stride_cols, const int padding, T3* output_data,
+                  const int output_height, const int output_width) {
     if ((input_batches <= 0) || (input_width <= 0) || (input_height <= 0) ||
         (input_depth <= 0)) {
       std::cout << "Conv2D was called with bad input dimensions: "

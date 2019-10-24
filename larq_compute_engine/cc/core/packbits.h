@@ -365,9 +365,9 @@ inline void packbits_matrix(const TIn* input_data, const size_t input_num_rows,
     auto output_data = output.data();
 
     // iterate through the columns
-    for (int col_index = 0; col_index < input_num_cols; ++col_index) {
+    for (size_t col_index = 0; col_index < input_num_cols; ++col_index) {
       // store the values of the current column in a buffer
-      for (int row_index = 0; row_index < input_num_rows; ++row_index)
+      for (size_t row_index = 0; row_index < input_num_rows; ++row_index)
         input_buffer[row_index] =
             input_data[GET_ELEM_INDEX(row_index, col_index, input_row_size)];
 
@@ -376,7 +376,7 @@ inline void packbits_matrix(const TIn* input_data, const size_t input_num_rows,
                      output_buffer.data());
 
       // store the bitpacked values of the current column in the output matrix
-      for (int row_index = 0; row_index < output_num_rows; ++row_index)
+      for (size_t row_index = 0; row_index < output_num_rows; ++row_index)
         output_data[GET_ELEM_INDEX(row_index, col_index, output_row_size)] =
             output_buffer[row_index];
     }
