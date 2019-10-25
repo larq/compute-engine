@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+#include "larq_compute_engine/cc/core/util.h"
 #include "larq_compute_engine/cc/core/fused_bgemm_functor.h"
 
 namespace compute_engine {
@@ -28,6 +29,15 @@ const size_t kMaxChunkSize = (16 * 1024 * 1024);
 template <class T1, class T2, class T3, class TGemmFunctor>
 class Im2ColBConvFunctor {
  public:
+  void operator()(const Tensor<T1, 4> input, const Tensor<T2, 4> filter,
+                  const int stride_rows, const int stride_cols,
+                  const int padding, Tensor<T3, 4> output) {
+    (*this)(input.data, input.shape[0], input.shape[1], input.shape[2],
+            input.shape[3], filter.data, filter.shape[0], filter.shape[1],
+            filter.shape[3], stride_rows, stride_cols, padding, output.data,
+            output.shape[1], output.shape[2]);
+  }
+
   void operator()(const T1* input_data, const int input_batches,
                   const int input_height, const int input_width,
                   const int input_depth, const T2* filter_data,

@@ -1,3 +1,5 @@
+#define UTIL_TF
+#include "larq_compute_engine/cc/core/util.h"
 #include "larq_compute_engine/cc/core/bconv2d_functor.h"
 #include "larq_compute_engine/cc/core/padding_functor.h"
 #include "tensorflow/core/framework/bounds_check.h"
@@ -133,20 +135,17 @@ class BConv2DOp : public BinaryOp<T> {
       return;
     }
 
-    const T* input_data = input.flat<T>().data();
-    const T* filter_data = filter.flat<T>().data();
-    T* output_data = output->flat<T>().data();
+    const ce::core::Tensor<T, 4> input_t(input);
+    const ce::core::Tensor<T, 4> filter_t(filter);
+    ce::core::Tensor<T, 4> output_t(*output);
 
     TConvFunctor conv_functor;
-    conv_functor(input_data, batch, input_rows, input_cols, in_depth,
-                 filter_data, filter_rows, filter_cols, out_depth, stride_rows,
-                 stride_cols, padding_, output_data, out_rows, out_cols);
+    conv_functor(input_t, filter_t, stride_rows, stride_cols, padding_, output_t);
 
     if (padding_ != 1) {
       ce::core::ReferencePaddingFunctor<T, T> padding_functor;
-      padding_functor(batch, input_rows, input_cols, in_depth, filter_data,
-                      filter_rows, filter_cols, out_depth, stride_rows,
-                      stride_cols, output_data, out_rows, out_cols);
+      padding_functor(input_t.shape, filter_t, stride_rows, stride_cols,
+                      output_t);
     }
   }
 

@@ -6,6 +6,7 @@ cc_library(
     name = "utils",
     hdrs = [
         "cc/utils/macros.h",
+        "cc/core/util.h",
     ],
 )
 

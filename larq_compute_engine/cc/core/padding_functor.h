@@ -16,6 +16,15 @@ namespace ce = compute_engine;
 template <class Tdata, class Tfilter>
 class ReferencePaddingFunctor {
  public:
+  void operator()(const std::array<long int, 4> input_shape,
+                  const Tensor<Tfilter, 4> filter, const int stride_rows,
+                  const int stride_cols, Tensor<Tdata, 4> output) {
+    (*this)(input_shape[0], input_shape[1], input_shape[2], input_shape[3],
+            filter.data, filter.shape[0], filter.shape[1], filter.shape[3],
+            stride_rows, stride_cols, output.data, output.shape[1],
+            output.shape[2]);
+  }
+
   void operator()(const int input_batches, const int input_height,
                   const int input_width, const int input_channels,
                   const Tfilter* filter_data, const int filter_height,
