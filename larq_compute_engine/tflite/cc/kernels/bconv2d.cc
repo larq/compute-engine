@@ -1,14 +1,18 @@
 #include <cstdint>
 
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
-#include "larq_compute_engine/cc/core/bconv2d_functor.h"
-#include "larq_compute_engine/cc/core/padding_functor.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/c/c_api_internal.h"
+#include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/internal/tensor.h"
 #include "tensorflow/lite/kernels/kernel_util.h"
 #include "tensorflow/lite/kernels/op_macros.h"
 #include "tensorflow/lite/kernels/padding.h"
+
+#include "larq_compute_engine/cc/core/bconv2d_functor.h"
+#include "larq_compute_engine/cc/core/padding_functor.h"
+
+#include "bconv2d_impl.h"
 
 using namespace tflite;
 
@@ -20,10 +24,15 @@ namespace ce = compute_engine;
 using ce::core::Layout;
 
 enum class KernelType {
-  // kReference: the same code base as the reference implementation of BConv2D
-  // op in TF
+  // kReference: the same impl. path as the BConv2D op for TF
   kReference,
+  // kGenericOptimized: the impl. path using optimized BGEMM kernel
+  kGenericOptimized,
+  // kRuyOptimized: the impl. path using RUY framework
+  kRuyOptimized,  // TODO
 };
+
+const int kTensorNotAllocated = -1;
 
 typedef struct {
   // TODO: double check the type of each variable
@@ -45,13 +54,23 @@ typedef struct {
   int64_t dilations[4] = {};
 
   // padding
-  TfLitePadding padding{};
+  TfLitePadding padding_type{};
+  TfLitePaddingValues padding_values{};
 
   // output tensor dimensions
   int64_t out_width{0};
   int64_t out_height{0};
 
   ce::core::FilterFormat filter_format;
+
+  bool need_im2col = false;
+  // IDs are the arbitrary identifiers used by TF Lite to identify and access
+  // memory buffers.
+  int im2col_id = kTensorNotAllocated;
+  // Indexes are the offset to the memory buffer in the array used to keep track
+  // of the allocated temporaries.
+  int32_t im2col_index;
+
 } TfLiteBConv2DParams;
 
 void* Init(TfLiteContext* context, const char* buffer, size_t length) {
@@ -92,7 +111,7 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
     conv_params->dilations[i] = dilation_vector[i].AsInt64();
 
   // reading padding
-  conv_params->padding =
+  conv_params->padding_type =
       m["padding"].ToString() == "VALID" ||
               m["padding"].ToString() ==
                   "valid"  // TODO: not sure if this check is needed
@@ -143,21 +162,17 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
     conv_params->channels_out = filter->dims->data[3];
   }
 
-  // getting the stride values. There values are already
-  // stored in conv_params struct by interpreting the arguments "buffer" in
-  // "Init" function
-  const auto stride_height = conv_params->strides[1];
-  const auto stride_width = conv_params->strides[2];
+  // computing the padding and output values (height, width)
+  int out_width, out_height;
+  conv_params->padding_values = ComputePaddingHeightWidth(
+      conv_params->strides[1] /* strides height */, conv_params->strides[2] /* strides width */,
+      conv_params->dilations[1] /* dil. height */, conv_params->dilations[2] /* dil. width */,
+      conv_params->input_height, conv_params->input_width,
+      conv_params->filter_height, conv_params->filter_width,
+      conv_params->padding_type, &out_height, &out_width);
 
-  const auto dilation_height = conv_params->dilations[1];
-  const auto dilation_width = conv_params->dilations[2];
-
-  conv_params->out_width =
-      ComputeOutSize(conv_params->padding, conv_params->input_width,
-                     conv_params->filter_width, stride_width, dilation_width);
-  conv_params->out_height = ComputeOutSize(
-      conv_params->padding, conv_params->input_height,
-      conv_params->filter_height, stride_height, dilation_height);
+  conv_params->out_width = out_width;
+  conv_params->out_height = out_height;
 
   // determine the output dimensions
   TfLiteIntArray* output_shape = TfLiteIntArrayCreate(4);
@@ -167,7 +182,46 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
   output_shape->data[3] = conv_params->channels_out;
 
   // allocate the output buffer
-  return context->ResizeTensor(context, output, output_shape);
+  TF_LITE_ENSURE_OK(context, context->ResizeTensor(context, output, output_shape));
+
+  // pre-allocate temporary tensors for optimized version
+  if (kernel_type == KernelType::kGenericOptimized) {
+    conv_params->need_im2col = true;
+
+    int temporaries_count = 0;
+    if (conv_params->need_im2col) {
+      conv_params->im2col_index = temporaries_count;
+      if (conv_params->im2col_id == kTensorNotAllocated) {
+        context->AddTensors(context, 1, &conv_params->im2col_id);
+      }
+      ++temporaries_count;
+    }
+
+    TfLiteIntArrayFree(node->temporaries);
+    node->temporaries = TfLiteIntArrayCreate(temporaries_count);
+  }
+
+  // pre-allocate the im2col tensor
+  if (conv_params->need_im2col) {
+    node->temporaries->data[conv_params->im2col_index] = conv_params->im2col_id;
+
+    // determine the im2col buffer size
+    TfLiteIntArray* im2col_size = TfLiteIntArrayCreate(4);
+    im2col_size->data[0] = conv_params->batch;
+    im2col_size->data[1] = conv_params->out_height;
+    im2col_size->data[2] = conv_params->out_width;
+    im2col_size->data[3] = conv_params->channels_in * conv_params->filter_height * conv_params->filter_width;
+
+    // get the pointer to im2col tensor
+    TfLiteTensor* im2col = GetTemporary(context, node, conv_params->im2col_index);
+
+    // allocate the im2col tensor
+    im2col->type = input->type;
+    im2col->allocation_type = kTfLiteArenaRw;
+    TF_LITE_ENSURE_OK(context, context->ResizeTensor(context, im2col, im2col_size));
+  }
+
+  return kTfLiteOk;
 }
 
 template <KernelType kernel_type>
@@ -185,7 +239,7 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   const auto stride_height = params->strides[1];
   const auto stride_width = params->strides[2];
   const int padding =
-      params->padding == TfLitePadding::kTfLitePaddingValid ? 1 : 2;
+      params->padding_type == TfLitePadding::kTfLitePaddingValid ? 1 : 2;
 
   if (params->filter_format == ce::core::FilterFormat::OHWI) {
     using TBGemmFunctor =
@@ -207,7 +261,7 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
                  params->channels_out, stride_height, stride_width, padding,
                  output->data.f, params->out_height, params->out_width);
 
-    if (params->padding == TfLitePadding::kTfLitePaddingSame) {
+    if (params->padding_type == TfLitePadding::kTfLitePaddingSame) {
       PaddingFunctor padding_functor;
       padding_functor(params->batch, params->input_height, params->input_width,
                       params->channels_in, filter->data.f,
@@ -235,7 +289,7 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
                  params->channels_out, stride_height, stride_width, padding,
                  output->data.f, params->out_height, params->out_width);
 
-    if (params->padding == TfLitePadding::kTfLitePaddingSame) {
+    if (params->padding_type == TfLitePadding::kTfLitePaddingSame) {
       PaddingFunctor padding_functor;
       padding_functor(params->batch, params->input_height, params->input_width,
                       params->channels_in, filter->data.f,
@@ -246,12 +300,83 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   }
 }
 
+// TODO: We can directly use the PaddingType in our
+// TfLiteBConv2DParams struct instead of the TfLitePadding.
+// In that case, we don't need this conversion anymore.
+inline PaddingType RuntimePaddingType(TfLitePadding padding) {
+  switch (padding) {
+    case TfLitePadding::kTfLitePaddingSame:
+      return PaddingType::kSame;
+    case TfLitePadding::kTfLitePaddingValid:
+      return PaddingType::kValid;
+    case TfLitePadding::kTfLitePaddingUnknown:
+    default:
+      return PaddingType::kNone;
+  }
+}
+
+inline void GetConvParamsType(const TfLiteBConv2DParams& conv_params,
+                              ConvParams& op_params) {
+  // padding
+  op_params.padding_type = RuntimePaddingType(conv_params.padding_type);
+  op_params.padding_values.width = conv_params.padding_values.width;
+  op_params.padding_values.height = conv_params.padding_values.height;
+
+  // strides
+  op_params.stride_height = conv_params.strides[1];
+  op_params.stride_width = conv_params.strides[2];
+
+  // dilations
+  op_params.dilation_height_factor = conv_params.dilations[1];
+  op_params.dilation_width_factor = conv_params.dilations[2];
+
+  // TODO: this is not required for binary conv, however we need to
+  // check if it is used in other components of TF lite internal method which
+  // we are reusing and what are the default values!
+  // op_params.float_activation_min = output_activation_min;
+  // op_params.float_activation_max = output_activation_max;
+}
+
+template <class T, class TBitpacked>
+void EvalOpt(TfLiteContext* context, TfLiteNode* node,
+                const TfLiteBConv2DParams* params) {
+  const auto* input = GetInput(context, node, 0);
+  const auto* filter = GetInput(context, node, 1);
+  auto* output = GetOutput(context, node, 0);
+
+  // TODO: investigate how to use the biases
+  bool has_bias = node->inputs->size == 3;
+  const TfLiteTensor* bias =
+      has_bias ? GetInput(context, node, 2) : nullptr;
+
+  TfLiteTensor* im2col =
+      params->need_im2col ? GetTemporary(context, node, params->im2col_index) : nullptr;
+
+  // Using the standard TF Lite ConvParams struct.
+  // This requires extra step of converting the TfLiteBConv2DParams
+  // but unifies the interface with the default TF lite API for CONV params
+  // which is used in internal TF lite im2col functions.
+  // TODO: maybe we should use ConvParams for Ref. impl. as well
+  ConvParams op_params;
+  GetConvParamsType(*params, op_params);
+
+  BConv2D(op_params, GetTensorShape(input),
+          GetTensorData<float>(input), GetTensorShape(filter),
+          GetTensorData<float>(filter), GetTensorShape(bias),
+          GetTensorData<float>(bias), GetTensorShape(output),
+          GetTensorData<float>(output), GetTensorShape(im2col),
+          GetTensorData<float>(im2col),
+          CpuBackendContext::GetFromContext(context));
+}
+
 template <KernelType kernel_type, class TBitpacked>
 TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   auto* conv_params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
 
   if (kernel_type == KernelType::kReference) {
     EvalRef<float, TBitpacked>(context, node, conv_params);
+  } else if (kernel_type == KernelType::kGenericOptimized) {
+    EvalOpt<float, TBitpacked>(context, node, conv_params);
   } else {
     return kTfLiteError;
   }
@@ -285,10 +410,54 @@ TfLiteRegistration* Register_BCONV_2D64_REF() {
   return &r;
 }
 
-// use this registration wrapper to decide which impl. to use.
-TfLiteRegistration* Register_BCONV_2D8() { return Register_BCONV_2D8_REF(); }
-TfLiteRegistration* Register_BCONV_2D32() { return Register_BCONV_2D32_REF(); }
-TfLiteRegistration* Register_BCONV_2D64() { return Register_BCONV_2D64_REF(); }
+TfLiteRegistration* Register_BCONV_2D8_OPT() {
+  static TfLiteRegistration r = {
+      bconv2d::Init, bconv2d::Free,
+      bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized>,
+      bconv2d::Eval<bconv2d::KernelType::kGenericOptimized, std::uint8_t>};
+  return &r;
+}
+
+TfLiteRegistration* Register_BCONV_2D32_OPT() {
+    static TfLiteRegistration r = {
+      bconv2d::Init, bconv2d::Free,
+      bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized>,
+      bconv2d::Eval<bconv2d::KernelType::kGenericOptimized, std::uint32_t>};
+  return &r;
+}
+
+TfLiteRegistration* Register_BCONV_2D64_OPT() {
+  static TfLiteRegistration r = {
+      bconv2d::Init, bconv2d::Free,
+      bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized>,
+      bconv2d::Eval<bconv2d::KernelType::kGenericOptimized, std::uint64_t>};
+  return &r;
+}
+
+// use these registration wrappers to decide which impl. to use.
+TfLiteRegistration* Register_BCONV_2D8() {
+#if defined TFLITE_WITH_RUY
+  return Register_BCONV_2D8_OPT();
+#else
+  return Register_BCONV_2D8_REF();
+#endif
+}
+
+TfLiteRegistration* Register_BCONV_2D32() {
+#if defined TFLITE_WITH_RUY
+  return Register_BCONV_2D32_OPT();
+#else
+  return Register_BCONV_2D32_REF();
+#endif
+}
+
+TfLiteRegistration* Register_BCONV_2D64() {
+#if defined TFLITE_WITH_RUY
+  return Register_BCONV_2D64_OPT();
+#else
+  return Register_BCONV_2D64_REF();
+#endif
+}
 
 }  // namespace tflite
 }  // namespace compute_engine
