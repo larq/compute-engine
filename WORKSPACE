@@ -14,3 +14,15 @@ http_archive(
     build_file = "@//ext:gtest.BUILD",
     strip_prefix = "googletest-release-1.10.0",
 )
+
+http_archive(
+    name = "eigen_archive",
+    build_file = "@//ext:eigen.BUILD",
+    sha256 = "a126a1af9ec3b3f646c4896bf69a4bb71e9ebfb30c50c3182f01270a704a4093",
+    strip_prefix = "eigen-eigen-89abeb806e2e",
+    urls = [
+        "https://storage.googleapis.com/mirror.tensorflow.org/bitbucket.org/eigen/eigen/get/89abeb806e2e.tar.gz",
+        "https://bitbucket.org/eigen/eigen/get/89abeb806e2e.tar.gz",
+    ],
+)
+

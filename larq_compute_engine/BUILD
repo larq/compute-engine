@@ -69,6 +69,7 @@ cc_test(
     copts = ["-Iext/gtest/include"],
     deps = [
          "@googletest//:gtest_main",
+         "@eigen_archive//:eigen",
          "fused_bgemm",
          ":utils",
     ],

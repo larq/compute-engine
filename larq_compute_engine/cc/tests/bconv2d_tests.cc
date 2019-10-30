@@ -46,10 +46,10 @@ void test_bconv2d_one_filter(const int input_height, const int input_width,
   std::fill(std::begin(output_expected), std::end(output_expected),
             output_expected_value);
 
-  using TBGemmFunctor =
-      ce::core::ReferenceBGemmFunctor<TBitpacked, TBitpacked, T>;
   using TFusedBGemmFunctor =
-      ce::core::FusedBGemmFunctor<T, T, T, TBitpacked, TBGemmFunctor>;
+      ce::core::FusedBGemmFunctor<T, ce::core::Storage::RowMajor, T,
+                                  ce::core::Storage::RowMajor, T, TBitpacked,
+                                  ce::core::ReferenceBGemmFunctor>;
   using TBConv2DFunctor =
       ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
 
