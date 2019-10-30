@@ -63,7 +63,7 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
   // For now we allow both filter format to allow for easier comparison
   // in benchmarks and tests.
   // Later we can change this so that we only allow "OHWI_PACKED" (prepacked)
-  if (m["filter_format"].ToString() == "HWIO") {
+  if (m["filter_format"].IsNull() || m["filter_format"].ToString() == "HWIO") {
     conv_params->filter_format = ce::core::FilterFormat::HWIO;
   } else if (m["filter_format"].ToString() == "OHWI") {
     conv_params->filter_format = ce::core::FilterFormat::OHWI;

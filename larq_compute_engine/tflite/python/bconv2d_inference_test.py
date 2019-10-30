@@ -13,18 +13,15 @@ def _create_bconv2d_layer(
     strides = [1] + list(hw_strides) + [1]
     sample_list = [-1, 1]
     fshape = [kernel_size, kernel_size, in_channels, filters]
-    filt_tf = np.random.choice(sample_list, fshape)
-    filt_lite = np.copy(np.moveaxis(filt_tf, 3, 0))
+    filt = np.random.choice(sample_list, fshape)
 
+    # Once we add filter_format support to the model converter
+    # these two layers will be different
     def _layer_tf(x):
-        return bconv_op(
-            x, filt_tf, strides, padding, data_format="NHWC", filter_format="HWIO"
-        )
+        return bconv_op(x, filt, strides, padding, data_format="NHWC")
 
     def _layer_lite(x):
-        return bconv_op(
-            x, filt_lite, strides, padding, data_format="NHWC", filter_format="OHWI"
-        )
+        return bconv_op(x, filt, strides, padding, data_format="NHWC")
 
     return _layer_tf, _layer_lite
 
