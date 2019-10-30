@@ -1,13 +1,12 @@
 #include <benchmark/benchmark.h>
 
-#include "larq_compute_engine/cc/core/bconv2d_functor.h"
 #include "larq_compute_engine/cc/core/padding_functor.h"
 
 namespace ce = compute_engine;
 
 // Arguments: (input_size, filter_size, channels_in, channels_out)
-template <typename T, typename TBitpacked>
-static void bconv2d(benchmark::State& state) {
+template <typename T>
+static void padding(benchmark::State& state) {
   const int input_height = state.range(0);
   const int input_width = state.range(0);
   const int filter_width = state.range(1);
@@ -16,8 +15,6 @@ static void bconv2d(benchmark::State& state) {
   const int channels_out = state.range(3);
 
   const int input_batch_count = 1;
-  const int input_num_elem =
-      input_batch_count * input_height * input_width * channels_in;
 
   const int filters_num_elem =
       filter_height * filter_width * channels_in * channels_out;
@@ -32,34 +29,17 @@ static void bconv2d(benchmark::State& state) {
   const int output_num_elem =
       input_batch_count * output_height * output_width * channels_out;
 
-  std::vector<T> input_data;
-  input_data.resize(input_num_elem);
-  std::fill(std::begin(input_data), std::end(input_data), 1);
-
   std::vector<T> filters_data;
   filters_data.resize(filters_num_elem);
   std::fill(std::begin(filters_data), std::end(filters_data), 1);
 
-  using TBGemmFunctor =
-      ce::core::ReferenceBGemmFunctor<TBitpacked, TBitpacked, T>;
-  using TFusedBGemmFunctor =
-      ce::core::FusedBGemmFunctor<T, T, T, TBitpacked, TBGemmFunctor>;
-  using TBConv2DFunctor =
-      ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
   using PaddingFunctor = ce::core::ReferencePaddingFunctor<T, T>;
 
   std::vector<T> output;
   output.resize(output_num_elem);
 
-  TBConv2DFunctor bconv2d_functor;
   PaddingFunctor padding_functor;
   for (auto _ : state) {
-    bconv2d_functor(input_data.data(), input_batch_count, input_height,
-                    input_width, channels_in, filters_data.data(),
-                    filter_height, filter_width, channels_out, stride_h,
-                    stride_w,
-                    1,  // pad_h, pad_w,
-                    output.data(), output_height, output_width);
     padding_functor(input_batch_count, input_height, input_width, channels_in,
                     filters_data.data(), filter_height, filter_width,
                     channels_out, stride_h, stride_w, output.data(),
@@ -67,10 +47,7 @@ static void bconv2d(benchmark::State& state) {
   }
 }
 
-// We have to choose realistic sizes here for an honest benchmark
-// For all argumentgs, it will choose powers-of-two between those numbers
-// Note that we get all possible combinations, so the number of benchmarks grows large quickly!
-BENCHMARK_TEMPLATE(bconv2d, float, uint8_t )->Ranges({{16,32},{1,3},{64,128},{16,32}});
-BENCHMARK_TEMPLATE(bconv2d, float, uint32_t)->Ranges({{16,32},{1,3},{64,128},{16,32}});
-BENCHMARK_TEMPLATE(bconv2d, float, uint64_t)->Ranges({{16,32},{1,3},{64,128},{16,32}});
+BENCHMARK_TEMPLATE(padding, float)->Ranges({{16,32},{1,3},{64,128},{16,32}});
+BENCHMARK_TEMPLATE(padding, float)->Ranges({{16,32},{1,3},{64,128},{16,32}});
+BENCHMARK_TEMPLATE(padding, float)->Ranges({{16,32},{1,3},{64,128},{16,32}});
 
