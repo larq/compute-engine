@@ -1,6 +1,36 @@
 #!/bin/bash
 set -e
 
+# Use --fullbuild to also build the pip package
+
+# Use --benchmark to compile with gemmlowp profiling enabled
+# Note: if you have previously build the library without benchmarking
+# then you should pass --cleanbuild to do a complete rebuild
+
+fullbuild=0
+benchmark=0
+cleanbuild=0
+
+for arg in "$@"
+do
+case $arg in
+    --fullbuild)
+	fullbuild=1
+    shift
+    ;;
+    --benchmark)
+	benchmark=1
+    shift
+    ;;
+    --cleanbuild)
+    cleanbuild=1
+    shift
+    ;;
+    *)
+    ;;
+esac
+done
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}/../../.."
 TF_DIR="${ROOT_DIR}/ext/tensorflow"
@@ -15,32 +45,38 @@ elif [ "$UNAME" = "Darwin" ] ; then
 fi
 HOST_ARCH="$(if uname -m | grep -q i[345678]86; then echo x86_32; else uname -m; fi)"
 
-# Use --fullbuild to also download dependencies and build the package
-# It will not download dependencies if the downloads directory already exists
-# It will not rebuild the library if all files are already up to date
-# It will, however, always rebuild the pip package
-if [ "$1" == "--fullbuild" ]; then
-    # Check if dependencies need to be downloaded
-    if [ ! -d "${TF_DIR}/tensorflow/lite/tools/make/downloads" ]; then
-        ext/tensorflow/tensorflow/lite/tools/make/download_dependencies.sh
-    fi
-    # Build tflite (will automatically skip when up-to-date
-    ${TF_DIR}/tensorflow/lite/tools/make/build_lib.sh
-    # Build our kernels
-    make -j 8 BUILD_WITH_NNAPI=false -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
-    # Rebuild tflite binaries such as benchmarking libs to include our ops
-    ${TF_DIR}/tensorflow/lite/tools/make/build_lib.sh
-    # Build the pip package
-    ext/tensorflow/tensorflow/lite/tools/pip_package/build_pip_package.sh
-else
-    if [ -f "${TF_DIR}/tensorflow/lite/tools/make/gen/${HOST_OS}_${HOST_ARCH}/lib/libtensorflow-lite.a" ]; then
-        make -j 8 BUILD_WITH_NNAPI=false -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
-        # Also re-make the tf-lite examples so that they use the modified library
-        ${TF_DIR}/tensorflow/lite/tools/make/build_lib.sh
-    else
-        echo "${HOST_OS}_${HOST_ARCH} target not found. Please build tensorflow lite first using build_lib.sh"
-    fi
+export EXTRA_CXXFLAGS="-DTFLITE_WITH_RUY"
+if [ "$benchmark" == "1" ]; then
+	export EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS} -DGEMMLOWP_PROFILING"
 fi
+
+if [ "$cleanbuild" == "1" ]; then
+    rm -rf "${TF_DIR}/tensorflow/lite/tools/make/gen"
+fi
+
+# Check if dependencies need to be downloaded
+if [ ! -d "${TF_DIR}/tensorflow/lite/tools/make/downloads" ]; then
+    ext/tensorflow/tensorflow/lite/tools/make/download_dependencies.sh
+fi
+# Build tflite (will automatically skip when up-to-date
+${TF_DIR}/tensorflow/lite/tools/make/build_lib.sh
+# Build our kernels
+make -j 8 BUILD_WITH_NNAPI=false -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
+# Rebuild tflite binaries such as benchmarking libs to include our ops
+${TF_DIR}/tensorflow/lite/tools/make/build_lib.sh
+
+# Optionally build the pip package
+if [ "$fullbuild" == "1" ]; then
+    ext/tensorflow/tensorflow/lite/tools/pip_package/build_pip_package.sh
+fi
+
+
+#
+# Everything below is for cross-compilation only.
+# By default it won't run, except if that cross-compiled target already existed,
+# in which case it will add our kernels to it.
+#
+
 
 # Check if we need to cross-compile to raspberry pi
 if [ -f "${TF_DIR}/tensorflow/lite/tools/make/gen/rpi_armv7l/lib/libtensorflow-lite.a" ]; then

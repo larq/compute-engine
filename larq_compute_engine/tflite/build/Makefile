@@ -130,7 +130,7 @@ $(BENCHMARK_LIB): $(LIB_PATH) $(LIB_OBJS)
 	@mkdir -p $(dir $@)
 	$(AR) $(ARFLAGS) $(BENCHMARK_LIB) $(LIB_OBJS)
 	# Move the original register.o to the end
-	$(AR) -m $(LIB_PATH) register.o
+	$(AR) -m $(BENCHMARK_LIB) register.o
 
 lib: $(LIB_PATH)
 

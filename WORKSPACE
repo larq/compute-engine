@@ -16,6 +16,13 @@ http_archive(
 )
 
 http_archive(
+    name = "googlebenchmark",
+    url = "https://github.com/google/benchmark/archive/v1.5.0.zip",
+    sha256 = "2d22dd3758afee43842bb504af1a8385cccb3ee1f164824e4837c1c1b04d92a0",
+    strip_prefix = "benchmark-1.5.0",
+)
+
+http_archive(
     name = "eigen_archive",
     build_file = "@//ext:eigen.BUILD",
     sha256 = "a126a1af9ec3b3f646c4896bf69a4bb71e9ebfb30c50c3182f01270a704a4093",
@@ -25,4 +32,3 @@ http_archive(
         "https://bitbucket.org/eigen/eigen/get/89abeb806e2e.tar.gz",
     ],
 )
-
