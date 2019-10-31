@@ -170,8 +170,8 @@ class BConv2DOp : public BinaryOp<T> {
           T, ce::core::Im2ColBConvFunctor<                             \
                  T, T, T,                                              \
                  ce::core::FusedBGemmFunctor<                          \
-                     T, ce::core::Storage::RowMajor, T,                \
-                     ce::core::Storage::RowMajor, T, std::uint8_t,     \
+                     T, ce::core::Layout::RowMajor, T,                 \
+                     ce::core::Layout::RowMajor, T, std::uint8_t,      \
                      ce::core::ReferenceBGemmFunctor>>>);              \
   REGISTER_KERNEL_BUILDER(                                             \
       Name("LqceBconv2d32").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
@@ -179,8 +179,8 @@ class BConv2DOp : public BinaryOp<T> {
           T, ce::core::Im2ColBConvFunctor<                             \
                  T, T, T,                                              \
                  ce::core::FusedBGemmFunctor<                          \
-                     T, ce::core::Storage::RowMajor, T,                \
-                     ce::core::Storage::RowMajor, T, std::uint32_t,    \
+                     T, ce::core::Layout::RowMajor, T,                 \
+                     ce::core::Layout::RowMajor, T, std::uint32_t,     \
                      ce::core::ReferenceBGemmFunctor>>>);              \
   REGISTER_KERNEL_BUILDER(                                             \
       Name("LqceBconv2d64").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
@@ -188,8 +188,8 @@ class BConv2DOp : public BinaryOp<T> {
           T, ce::core::Im2ColBConvFunctor<                             \
                  T, T, T,                                              \
                  ce::core::FusedBGemmFunctor<                          \
-                     T, ce::core::Storage::RowMajor, T,                \
-                     ce::core::Storage::RowMajor, T, std::uint64_t,    \
+                     T, ce::core::Layout::RowMajor, T,                 \
+                     ce::core::Layout::RowMajor, T, std::uint64_t,     \
                      ce::core::ReferenceBGemmFunctor>>>);
 
 TF_CALL_float(REGISTER_BITPACKED_KERNEL_CPU);

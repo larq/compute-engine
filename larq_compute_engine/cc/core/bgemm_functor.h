@@ -10,7 +10,7 @@
 namespace compute_engine {
 namespace core {
 
-enum class Storage { RowMajor, ColMajor };
+enum class Layout { RowMajor, ColMajor };
 
 template <class TIn, class TOut>
 inline auto compute_binary_inner_prod(const TIn& a, const TIn& b) -> TOut {
@@ -56,13 +56,13 @@ inline std::int32_t compute_binary_inner_prod<std::uint64_t, std::int32_t>(
 
 // A naive implementation of binary matrix multiplication, useful for
 // debugging and understanding the algorithm.
-template <class TIn1, Storage SIn1, class TIn2, Storage SIn2, class TOut>
+template <class TIn1, Layout SIn1, class TIn2, Layout SIn2, class TOut>
 class ReferenceBGemmFunctor {
  public:
   void operator()(const size_t m, const size_t n, const size_t k, const TIn1* a,
                   const size_t lda, const TIn2* b, const size_t ldb, TOut* c,
                   const size_t ldc, const int bitpaddding = 0) {
-    static_assert(SIn1 == Storage::RowMajor,
+    static_assert(SIn1 == Layout::RowMajor,
                   "Left-hand input should be stored row major.");
 
     // for now accept only unsigned {8,32,64}-bits values as input.
@@ -76,8 +76,8 @@ class ReferenceBGemmFunctor {
 
     const size_t a_i_stride = lda;
     const size_t a_l_stride = 1;
-    const size_t b_j_stride = (SIn2 == Storage::RowMajor ? 1 : ldb);
-    const size_t b_l_stride = (SIn2 == Storage::RowMajor ? ldb : 1);
+    const size_t b_j_stride = (SIn2 == Layout::RowMajor ? 1 : ldb);
+    const size_t b_l_stride = (SIn2 == Layout::RowMajor ? ldb : 1);
     const size_t c_i_stride = ldc;
     const size_t c_j_stride = 1;
 
@@ -85,7 +85,7 @@ class ReferenceBGemmFunctor {
     // The j-loop should be the inner loop for weight-stationary computations
     for (i = 0; i < m; ++i) {
       for (j = 0; j < n; ++j) {
-        if (SIn2 == Storage::RowMajor) {
+        if (SIn2 == Layout::RowMajor) {
           int32_t total = 0;
           for (l = 0; l < k; ++l) {
             const size_t a_index = ((i * a_i_stride) + (l * a_l_stride));

@@ -189,8 +189,8 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
 
   if (params->filter_format == ce::core::FilterFormat::OHWI) {
     using TFusedBGemmFunctor =
-        ce::core::FusedBGemmFunctor<T, ce::core::Storage::RowMajor, T,
-                                    ce::core::Storage::ColMajor, T, TBitpacked,
+        ce::core::FusedBGemmFunctor<T, ce::core::Layout::RowMajor, T,
+                                    ce::core::Layout::ColMajor, T, TBitpacked,
                                     ce::core::ReferenceBGemmFunctor>;
     using TConvFunctor =
         ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
@@ -214,8 +214,8 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
     }
   } else {  // HWIO. This support will be dropped later.
     using TFusedBGemmFunctor =
-        ce::core::FusedBGemmFunctor<T, ce::core::Storage::RowMajor, T,
-                                    ce::core::Storage::RowMajor, T, TBitpacked,
+        ce::core::FusedBGemmFunctor<T, ce::core::Layout::RowMajor, T,
+                                    ce::core::Layout::RowMajor, T, TBitpacked,
                                     ce::core::ReferenceBGemmFunctor>;
     using TConvFunctor =
         ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;

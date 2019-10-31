@@ -71,8 +71,8 @@ TEST(BGemmTests, BGemmTestUInt8) {
   using TIn = uint8_t;
   using TOut = int32_t;
   using BGemmFunctor =
-      ce::core::ReferenceBGemmFunctor<TIn, ce::core::Storage::RowMajor, TIn,
-                                      ce::core::Storage::RowMajor, TOut>;
+      ce::core::ReferenceBGemmFunctor<TIn, ce::core::Layout::RowMajor, TIn,
+                                      ce::core::Layout::RowMajor, TOut>;
   const int m = 20;
   const int k = 200;
   const int n = 30;
@@ -83,8 +83,8 @@ TEST(BGemmTests, BGemmTestUInt32) {
   using TIn = uint32_t;
   using TOut = int32_t;
   using BGemmFunctor =
-      ce::core::ReferenceBGemmFunctor<TIn, ce::core::Storage::RowMajor, TIn,
-                                      ce::core::Storage::RowMajor, TOut>;
+      ce::core::ReferenceBGemmFunctor<TIn, ce::core::Layout::RowMajor, TIn,
+                                      ce::core::Layout::RowMajor, TOut>;
   const int m = 20;
   const int k = 200;
   const int n = 30;
@@ -95,8 +95,8 @@ TEST(BGemmTests, BGemmTestUInt64) {
   using TIn = uint64_t;
   using TOut = int32_t;
   using BGemmFunctor =
-      ce::core::ReferenceBGemmFunctor<TIn, ce::core::Storage::RowMajor, TIn,
-                                      ce::core::Storage::RowMajor, TOut>;
+      ce::core::ReferenceBGemmFunctor<TIn, ce::core::Layout::RowMajor, TIn,
+                                      ce::core::Layout::RowMajor, TOut>;
   const int m = 20;
   const int k = 200;
   const int n = 30;
@@ -107,8 +107,8 @@ TEST(BGemmTests, BGemmTestUInt64ColMajor) {
   using TIn = uint64_t;
   using TOut = int32_t;
   using BGemmFunctor =
-      ce::core::ReferenceBGemmFunctor<TIn, ce::core::Storage::RowMajor, TIn,
-                                      ce::core::Storage::ColMajor, TOut>;
+      ce::core::ReferenceBGemmFunctor<TIn, ce::core::Layout::RowMajor, TIn,
+                                      ce::core::Layout::ColMajor, TOut>;
   const int m = 20;
   const int k = 200;
   const int n = 30;

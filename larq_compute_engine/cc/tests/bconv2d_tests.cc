@@ -47,8 +47,8 @@ void test_bconv2d_one_filter(const int input_height, const int input_width,
             output_expected_value);
 
   using TFusedBGemmFunctor =
-      ce::core::FusedBGemmFunctor<T, ce::core::Storage::RowMajor, T,
-                                  ce::core::Storage::RowMajor, T, TBitpacked,
+      ce::core::FusedBGemmFunctor<T, ce::core::Layout::RowMajor, T,
+                                  ce::core::Layout::RowMajor, T, TBitpacked,
                                   ce::core::ReferenceBGemmFunctor>;
   using TBConv2DFunctor =
       ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;

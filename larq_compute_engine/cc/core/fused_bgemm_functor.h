@@ -9,9 +9,9 @@ namespace compute_engine {
 namespace core {
 
 // this functor just encapsulates the bitpacking and bgemm in one function
-template <class TIn1, Storage SIn1, class TIn2, Storage SIn2, class TOut,
+template <class TIn1, Layout SIn1, class TIn2, Layout SIn2, class TOut,
           class TBitpacked,
-          template <class, Storage, class, Storage, class> class TBGemmFunctor>
+          template <class, Layout, class, Layout, class> class TBGemmFunctor>
 class FusedBGemmFunctor {
  public:
   void operator()(const size_t m, const size_t n, const size_t k,
@@ -30,7 +30,7 @@ class FusedBGemmFunctor {
     std::vector<TBitpacked> b_data_bp;
     size_t b_num_rows_bp = 0, b_num_cols_bp = 0;
     size_t b_bitpadding = 0;
-    if (SIn2 == Storage::RowMajor) {
+    if (SIn2 == Layout::RowMajor) {
       packbits_matrix(b_data, b_num_rows, b_num_cols, b_data_bp, b_num_rows_bp,
                       b_num_cols_bp, b_bitpadding, Axis::ColWise);
 

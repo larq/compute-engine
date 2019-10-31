@@ -19,7 +19,7 @@ void fused_test_rowmajor() {
   const int a_num_cols = 9;
   std::vector<T> a_data_float{1,  1, -1,  1, -1, -1, -1,  1,  1,
                               1, -1,  1, -1, -1, -1,  1,  1, -1};
-  const int b_num_rows = 9;
+  //const int b_num_rows = 9;
   const int b_num_cols = 2;
   std::vector<T> b_data_float{ -1,  1,
                                 1, -1,
@@ -41,7 +41,6 @@ void fused_test_rowmajor() {
   //  5 =  1 + 1 - 1 + 1 + 1 - 1 + 1 + 1 + 1
   std::vector<T> c_expected{3, -1, -7, 5};
 
-  (void)b_num_rows;  // to avoid non-usage warning
   const int m = a_num_rows;
   const int k = a_num_cols;
   const int n = b_num_cols;
@@ -50,8 +49,8 @@ void fused_test_rowmajor() {
   const int ldc = n;
 
   using TFusedBGemmFunctor =
-      ce::core::FusedBGemmFunctor<T, ce::core::Storage::RowMajor, T,
-                                  ce::core::Storage::RowMajor, T, TBitpacked,
+      ce::core::FusedBGemmFunctor<T, ce::core::Layout::RowMajor, T,
+                                  ce::core::Layout::RowMajor, T, TBitpacked,
                                   ce::core::ReferenceBGemmFunctor>;
 
   const int c_size = m * n;
@@ -70,7 +69,7 @@ void fused_test_colmajor() {
   const int a_num_cols = 9;
   std::vector<T> a_data_float{1,  1, -1,  1, -1, -1, -1,  1,  1,
                               1, -1,  1, -1, -1, -1,  1,  1, -1};
-  const int b_num_rows = 9;
+  //const int b_num_rows = 9;
   const int b_num_cols = 2;
   std::vector<T> b_data_float{-1,  1, -1,  1,  1,  1, -1, 1,  1,
                                1, -1, -1, -1, -1,  1,  1, 1, -1};
@@ -85,7 +84,6 @@ void fused_test_colmajor() {
   //  5 =  1 + 1 - 1 + 1 + 1 - 1 + 1 + 1 + 1
   std::vector<T> c_expected{3, -1, -7, 5};
 
-  (void)b_num_rows;  // to avoid non-usage warning
   const int m = a_num_rows;
   const int k = a_num_cols;
   const int n = b_num_cols;
@@ -94,8 +92,8 @@ void fused_test_colmajor() {
   const int ldc = n;
 
   using TFusedBGemmFunctor =
-      ce::core::FusedBGemmFunctor<T, ce::core::Storage::RowMajor, T,
-                                  ce::core::Storage::ColMajor, T, TBitpacked,
+      ce::core::FusedBGemmFunctor<T, ce::core::Layout::RowMajor, T,
+                                  ce::core::Layout::ColMajor, T, TBitpacked,
                                   ce::core::ReferenceBGemmFunctor>;
 
   const int c_size = m * n;
@@ -123,7 +121,6 @@ void fused_test_eigen(int m, int n, int k) {
   MatColMajor b(b_num_rows, b_num_cols);
 
   // Fill with random values
-  srand(0);  // reset seed so tests are repeatable
   for (int i = 0; i < a_num_rows; ++i) {
     for (int j = 0; j < a_num_cols; ++j) {
       a(i, j) = (rand() % 2) ? 1 : -1;
@@ -143,8 +140,8 @@ void fused_test_eigen(int m, int n, int k) {
   const int ldc = n;
 
   using TFusedBGemmFunctor =
-      ce::core::FusedBGemmFunctor<T, ce::core::Storage::RowMajor, T,
-                                  ce::core::Storage::ColMajor, T, TBitpacked,
+      ce::core::FusedBGemmFunctor<T, ce::core::Layout::RowMajor, T,
+                                  ce::core::Layout::ColMajor, T, TBitpacked,
                                   ce::core::ReferenceBGemmFunctor>;
 
   const int c_size = m * n;
