@@ -3,7 +3,8 @@
 #include "larq_compute_engine/cc/core/bconv2d_functor.h"
 #include "larq_compute_engine/cc/core/padding_functor.h"
 
-namespace ce = compute_engine;
+using namespace compute_engine::core;
+using compute_engine::core::Layout;
 
 // Arguments: (input_size, filter_size, channels_in, channels_out)
 template <typename T, typename TBitpacked>
@@ -40,13 +41,14 @@ static void bconv2d(benchmark::State& state) {
   filters_data.resize(filters_num_elem);
   std::fill(std::begin(filters_data), std::end(filters_data), 1);
 
-  using TBGemmFunctor =
-      ce::core::ReferenceBGemmFunctor<TBitpacked, TBitpacked, T>;
+  using TBGemmFunctor = ReferenceBGemmFunctor<TBitpacked, Layout::RowMajor,
+                                              TBitpacked, Layout::ColMajor, T>;
   using TFusedBGemmFunctor =
-      ce::core::FusedBGemmFunctor<T, T, T, TBitpacked, TBGemmFunctor>;
-  using TBConv2DFunctor =
-      ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
-  using PaddingFunctor = ce::core::ReferencePaddingFunctor<T, T>;
+      FusedBGemmFunctor<T, Layout::RowMajor, T, Layout::ColMajor, T, TBitpacked,
+                        TBGemmFunctor>;
+
+  using TBConv2DFunctor = Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
+  using PaddingFunctor = ReferencePaddingFunctor<T, T, FilterFormat::OHWI>;
 
   std::vector<T> output;
   output.resize(output_num_elem);

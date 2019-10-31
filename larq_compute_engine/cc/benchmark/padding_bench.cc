@@ -2,7 +2,7 @@
 
 #include "larq_compute_engine/cc/core/padding_functor.h"
 
-namespace ce = compute_engine;
+using namespace compute_engine::core;
 
 // Arguments: (input_size, filter_size, channels_in, channels_out)
 template <typename T>
@@ -33,7 +33,7 @@ static void padding(benchmark::State& state) {
   filters_data.resize(filters_num_elem);
   std::fill(std::begin(filters_data), std::end(filters_data), 1);
 
-  using PaddingFunctor = ce::core::ReferencePaddingFunctor<T, T>;
+  using PaddingFunctor = ReferencePaddingFunctor<T, T, FilterFormat::OHWI>;
 
   std::vector<T> output;
   output.resize(output_num_elem);

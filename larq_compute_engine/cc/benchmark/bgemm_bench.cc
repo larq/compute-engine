@@ -4,6 +4,9 @@
 #include "larq_compute_engine/cc/core/bgemm_functor.h"
 #include "larq_compute_engine/cc/core/fused_bgemm_functor.h"
 
+using namespace compute_engine::core;
+using compute_engine::core::Layout;
+
 // Arguments are similar to the bconv2d one:
 // (input_size, filter_size, channels_in, channels_out)
 template <typename TIn, typename TOut>
@@ -38,7 +41,8 @@ static void bgemm(benchmark::State& state) {
   std::vector<TIn> b(b_size, 1);
   std::vector<TOut> c(c_size);
 
-  using BGemmFunctor = compute_engine::core::ReferenceBGemmFunctor<TIn, TIn, TOut>;
+  using BGemmFunctor =
+      ReferenceBGemmFunctor<TIn, Layout::RowMajor, TIn, Layout::ColMajor, TOut>;
   BGemmFunctor bgemm_functor;
   for (auto _ : state) {
     bgemm_functor(m, n, k, a.data(), lda, b.data(), ldb, c.data(), ldc);
@@ -71,9 +75,11 @@ static void fused_bgemm(benchmark::State& state) {
   const int ldc = n;
 
   using TBGemmFunctor =
-      compute_engine::core::ReferenceBGemmFunctor<TBitpacked, TBitpacked, TOut>;
+      ReferenceBGemmFunctor<TBitpacked, Layout::RowMajor, TBitpacked,
+                            Layout::ColMajor, TOut>;
   using TFusedBGemmFunctor =
-      compute_engine::core::FusedBGemmFunctor<TIn, TIn, TOut, TBitpacked, TBGemmFunctor>;
+      FusedBGemmFunctor<TIn, Layout::RowMajor, TIn, Layout::ColMajor, TOut,
+                        TBitpacked, TBGemmFunctor>;
 
   TFusedBGemmFunctor fused_bgemm_functor;
   for (auto _ : state) {
