@@ -1,4 +1,5 @@
 #include <gmock/gmock.h>
+
 #include <cstdint>
 #include <numeric>
 
@@ -8,6 +9,7 @@ namespace compute_engine {
 namespace testing {
 
 namespace ce = compute_engine;
+using ce::core::Layout;
 
 template <class T, class TBitpacked>
 void test_bconv2d_one_filter(const int input_height, const int input_width,
@@ -47,9 +49,11 @@ void test_bconv2d_one_filter(const int input_height, const int input_width,
             output_expected_value);
 
   using TBGemmFunctor =
-      ce::core::ReferenceBGemmFunctor<TBitpacked, TBitpacked, T>;
+      ce::core::ReferenceBGemmFunctor<TBitpacked, Layout::RowMajor, TBitpacked,
+                                      Layout::RowMajor, T>;
   using TFusedBGemmFunctor =
-      ce::core::FusedBGemmFunctor<T, T, T, TBitpacked, TBGemmFunctor>;
+      ce::core::FusedBGemmFunctor<T, Layout::RowMajor, T, Layout::RowMajor, T,
+                                  TBitpacked, TBGemmFunctor>;
   using TBConv2DFunctor =
       ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
 

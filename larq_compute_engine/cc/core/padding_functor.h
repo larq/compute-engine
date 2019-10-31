@@ -4,6 +4,8 @@
 namespace compute_engine {
 namespace core {
 
+enum class FilterFormat { HWIO, OHWI };
+
 namespace ce = compute_engine;
 
 //
@@ -13,7 +15,7 @@ namespace ce = compute_engine;
 //
 // Reference implementation
 //
-template <class Tdata, class Tfilter>
+template <class Tdata, class Tfilter, FilterFormat filter_format>
 class ReferencePaddingFunctor {
  public:
   void operator()(const int input_batches, const int input_height,
@@ -73,13 +75,22 @@ class ReferencePaddingFunctor {
                   continue;
 
                 for (int in_c = 0; in_c < input_channels; ++in_c) {
-                  // filter_data currently has shape
-                  // [height, width, in_channels, out_channels]
-                  const int filter_idx =
-                      filter_y *
-                          (filter_width * input_channels * filter_count) +
-                      filter_x * (input_channels * filter_count) +
-                      in_c * filter_count + out_c;
+                  int filter_idx;
+                  if (filter_format == FilterFormat::HWIO) {
+                    // filter_data has shape
+                    // [height, width, in_channels, out_channels]
+                    filter_idx = filter_y * (filter_width * input_channels *
+                                              filter_count) +
+                                  filter_x * (input_channels * filter_count) +
+                                  in_c * filter_count + out_c;
+                  } else {
+                    // filter_data has shape
+                    // [out_channels, height, width, in_channels]
+                    filter_idx = out_c * (filter_height * filter_width *
+                                          input_channels) +
+                                 filter_y * (filter_width * input_channels) +
+                                 filter_x * input_channels + in_c;
+                  }
 
                   correction += filter_data[filter_idx];
                 }

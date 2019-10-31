@@ -8,41 +8,45 @@ from tflite_runtime.interpreter import Interpreter
 
 
 def _create_bconv2d_layer(
-    bconv_op,
-    x,
-    filters,
-    kernel_size,
-    hw_strides=(1, 1),
-    padding="VALID",
-    data_format="NHWC",
+    bconv_op, in_channels, filters, kernel_size, hw_strides=(1, 1), padding="VALID"
 ):
-    if data_format == "NHWC":
-        in_channel = x.shape[3]
-        strides = [1] + list(hw_strides) + [1]
-    else:
-        raise ValueError("Unknown data_format: " + str(data_format))
+    strides = [1] + list(hw_strides) + [1]
     sample_list = [-1, 1]
-    fshape = [kernel_size, kernel_size, in_channel, filters]
-    filt = np.random.choice(sample_list, np.prod(fshape))
-    filt = np.reshape(filt, fshape)
-    bconvop = lqce.bconv2d(x, filt, strides, padding, data_format=data_format)
-    return bconvop
+    fshape = [kernel_size, kernel_size, in_channels, filters]
+    filt = np.random.choice(sample_list, fshape)
+
+    # Once we add filter_format support to the model converter
+    # these two layers will be different
+    def _layer_tf(x):
+        return bconv_op(x, filt, strides, padding, data_format="NHWC")
+
+    def _layer_lite(x):
+        return bconv_op(x, filt, strides, padding, data_format="NHWC")
+
+    return _layer_tf, _layer_lite
 
 
 def _create_sample_bconv_model(
-    bconv_op, input_shape, filters, kernel_size, strides, padding, data_format
+    bconv_op, input_shape, filters, kernel_size, strides, padding
 ):
-    img_input = tf.keras.layers.Input(shape=input_shape)
-    out = _create_bconv2d_layer(
-        bconv_op, img_input, filters, kernel_size, strides, padding, data_format
+    layer_tf, layer_lite = _create_bconv2d_layer(
+        bconv_op, input_shape[2], filters, kernel_size, strides, padding
     )
-    return tf.keras.Model(inputs=img_input, outputs=out)
+
+    img_input = tf.keras.layers.Input(shape=input_shape)
+
+    out_tf = layer_tf(img_input)
+    out_lite = layer_lite(img_input)
+
+    model_tf = tf.keras.Model(inputs=img_input, outputs=out_tf)
+    model_lite = tf.keras.Model(inputs=img_input, outputs=out_lite)
+
+    return model_tf, model_lite
 
 
 def invoke_inference(model, data):
     # Convert to tflite
-    converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    converter.allow_custom_ops = True
+    converter = lqce.ModelConverter(model)
     tflite_model = converter.convert()
 
     # Setup tflite
@@ -70,17 +74,15 @@ def invoke_inference(model, data):
 class BConv2DTest(tf.test.TestCase):
     def __test_bconv_op_inference(self, bconv_op):
         data_types = [np.float32]
-        data_formats = ["NHWC"]
         in_channels = [1, 3]
         out_channels = [1, 4]
-        input_sizes = [28]
+        input_sizes = [14]
         kernel_sizes = [3, 5]
         hw_strides = [[1, 1], [2, 2]]
         paddings = ["VALID", "SAME"]
 
         args_lists = [
             data_types,
-            data_formats,
             in_channels,
             out_channels,
             input_sizes,
@@ -90,25 +92,19 @@ class BConv2DTest(tf.test.TestCase):
         ]
         for args in itertools.product(*args_lists):
             print(args)
-            data_type, data_format, in_channel, out_channel, input_size, kernel_size, strides, padding = (
+            data_type, in_channel, out_channel, input_size, kernel_size, strides, padding = (
                 args
             )
             input_shape = [input_size, input_size, in_channel]
-            model = _create_sample_bconv_model(
-                bconv_op,
-                input_shape,
-                out_channel,
-                kernel_size,
-                strides,
-                padding,
-                data_format,
+            model_tf, model_lite = _create_sample_bconv_model(
+                bconv_op, input_shape, out_channel, kernel_size, strides, padding
             )
 
             input_shape = [1] + input_shape
             input_data = np.random.random_sample(input_shape).astype(data_type)
 
-            tflite_result = invoke_inference(model, input_data)
-            tf_result = model.predict(input_data)
+            tflite_result = invoke_inference(model_lite, input_data)
+            tf_result = model_tf.predict(input_data)
 
             self.assertAllClose(tflite_result, tf_result)
 
