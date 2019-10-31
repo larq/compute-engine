@@ -1,15 +1,14 @@
+#include <cstdint>
+
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
+#include "larq_compute_engine/cc/core/bconv2d_functor.h"
+#include "larq_compute_engine/cc/core/padding_functor.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/c/c_api_internal.h"
 #include "tensorflow/lite/kernels/internal/tensor.h"
 #include "tensorflow/lite/kernels/kernel_util.h"
 #include "tensorflow/lite/kernels/op_macros.h"
 #include "tensorflow/lite/kernels/padding.h"
-
-#include "larq_compute_engine/cc/core/bconv2d_functor.h"
-#include "larq_compute_engine/cc/core/padding_functor.h"
-
-#include <cstdint>
 
 using namespace tflite;
 

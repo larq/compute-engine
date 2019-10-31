@@ -2,7 +2,7 @@
 import tensorflow as tf
 import numpy as np
 import larq as lq
-from larq_compute_engine import bsign
+from larq_compute_engine import bsign, bconv2d64
 from larq_compute_engine.python.utils import tf_2_or_newer
 from tensorflow.keras.utils import get_custom_objects
 
@@ -24,6 +24,109 @@ quantizer_replacements = {
     "DoReFaQuantizer": None,
     "dorefa_quantizer": None,
 }
+
+
+def create_bconv_layer(weights, strides, padding, transpose=True, mul_weights=None):
+    """
+    Creates a binary convolution layer for tflite.
+
+    If `transpose` is True, transposes from HWIO to OHWI
+
+    When `mul_weights` is not `None`, it should be a 1D array of size equal to the filter out-channel dimension.
+    In this case, a multiplication op is inserted *after* the convolution.
+    This multiplication op will be merged into the batchnorm op by the converter.
+    This has two purposes:
+    - Implement the multiplication for the back-transformation from {0,1} to {-1,1}
+    - Implement the multiplication for magnitude_aware_sign in BiRealNet
+    """
+    strides = [1, strides[0], strides[1], 1]
+    padding = padding.upper()
+
+    filter_format = "HWIO"
+    if transpose:
+        # Transpose: change from HWIO to OHWI
+        weights = np.moveaxis(weights, 3, 0)
+        filter_format = "OHWI"
+        weights = np.sign(np.sign(weights) + 0.5)
+
+    if mul_weights is not None:
+        if len(mul_weights.shape) != 1 or mul_weights.shape[0] != weights.shape[0]:
+            print(
+                f"ERROR: Argument mul_weights should have shape ({weights.shape[0]}) but has shape {mul_weights.shape}"
+            )
+            mul_weights = None
+
+    def bconv_op(x):
+        y = bconv2d64(
+            x,
+            weights,
+            strides,
+            padding,
+            data_format="NHWC",
+            filter_format=filter_format,
+        )
+        if mul_weights is not None:
+            y = tf.multiply(y, mul_weights)
+        return y
+
+    return bconv_op
+
+
+def replace_layers(model, replacement_dict):
+    """
+    This function is adapted from
+    https://stackoverflow.com/questions/49492255/how-to-replace-or-insert-intermediate-layer-in-keras-model
+
+    Note: it currently fails on complicated networks such as two networks in parallel, i.e. two input tensors, run separate models on them and have two output tensors, but the whole thing viewed as one network.
+
+    However, we will probably switch to another conversion method once we understand grappler and other tensorflow parts, so for now this method is fine because it works on all Larq models.
+    """
+    # Auxiliary dictionary to describe the network graph
+    network_dict = {"input_layers_of": {}, "new_output_tensor_of": {}}
+
+    # Set the input layers of each layer
+    for layer in model.layers:
+        for node in layer.outbound_nodes:
+            layer_name = node.outbound_layer.name
+            if layer_name not in network_dict["input_layers_of"]:
+                network_dict["input_layers_of"].update({layer_name: [layer.name]})
+            else:
+                network_dict["input_layers_of"][layer_name].append(layer.name)
+
+    # Set the output tensor of the input layer
+    network_dict["new_output_tensor_of"].update({model.layers[0].name: model.input})
+
+    # Iterate over all layers after the input
+    for layer in model.layers[1:]:
+
+        if not layer.name in network_dict["input_layers_of"]:
+            print(f"ERROR: {layer.name} not in input_layers_of")
+            return None
+
+        # Determine input tensors
+        layer_input = [
+            network_dict["new_output_tensor_of"][layer_aux]
+            for layer_aux in network_dict["input_layers_of"][layer.name]
+        ]
+        if len(layer_input) == 1:
+            layer_input = layer_input[0]
+
+        # Insert layer if name matches the regular expression
+        if layer.name in replacement_dict:
+            x = layer_input
+
+            new_layer = replacement_dict[layer.name]
+            new_layer.name = "{}_new".format(layer.name)
+
+            x = new_layer(x)
+        else:
+            x = layer(layer_input)
+
+        # Set new output tensor (the original one, or the one of the inserted
+        # layer)
+        network_dict["new_output_tensor_of"].update({layer.name: x})
+
+    return tf.keras.Model(inputs=model.inputs, outputs=x)
 
 
 class ModelConverter:
@@ -84,8 +187,8 @@ class ModelConverter:
         print(f"Keras method: {keras_result}")
 
         if tflite_model is not None:
-            print(f"Saving tf lite model as {filename}")
             if filename is not None:
+                print(f"Saving tf lite model as {filename}")
                 open(filename, "wb").write(tflite_model)
         else:
             print("Did not save tf lite model.")
@@ -94,7 +197,13 @@ class ModelConverter:
 
     def fix_quantizers(self):
         result = True
+
+        replacement_dict = {}
         for l in self.model.layers:
+            supported_input_quantizer = False
+            supported_kernel_quantizer = False
+            mul_weights = None
+
             input_quantizer = None
             try:
                 input_quantizer = l.input_quantizer
@@ -112,6 +221,8 @@ class ModelConverter:
                     result = False
                 else:
                     l.input_quantizer = quantizer_replacements[name]
+                    supported_input_quantizer = True
+
             kernel_quantizer = None
             try:
                 kernel_quantizer = l.kernel_quantizer
@@ -128,18 +239,46 @@ class ModelConverter:
                     w = l.get_weights()[0]
                     absw = np.abs(w)
                     means = np.mean(absw, axis=tuple(range(len(w.shape) - 1)))
-                    l.set_weights([means * np.sign(np.sign(w) + 0.5)])
-                    # TODO: Implement the means in a multiplication layer after the convolution
+                    mul_weights = means
+                    supported_kernel_quantizer = True
+                    # l.set_weights([means * np.sign(np.sign(w) + 0.5)])
                 elif quantizer_replacements[name] is None:
                     print(f"ERROR: Kernel quantizer {name} not yet supported.")
                     result = False
                 else:
-                    l.kernel_quantizer = None
-                    w = l.get_weights()[0]
-                    # wbin = (w >= 0)
-                    # wpacked = np.packbits(wbin, axis=3, bitorder='little')
+                    supported_kernel_quantizer = True
+
+            if supported_input_quantizer and supported_kernel_quantizer:
+                l.kernel_quantizer = None
+                w = l.get_weights()[0]
+
+                if isinstance(l, lq.layers.QuantConv2D):
+                    if len(w.shape) != 4:
+                        print(
+                            f"ERROR: Weights of layer {l.name} have shape {w.shape} which does not have rank 4."
+                        )
+                        result = False
+                    else:
+                        # Create a new layer with those weights
+                        bconvlayer = create_bconv_layer(
+                            w,
+                            l.strides,
+                            l.padding,
+                            transpose=True,
+                            mul_weights=mul_weights,
+                        )
+                        replacement_dict[l.name] = bconvlayer
+                else:
                     binary_weights = np.sign(np.sign(w) + 0.5)
                     l.set_weights([binary_weights])
+
+        if result and replacement_dict:
+            new_model = replace_layers(self.model, replacement_dict)
+            if new_model is None:
+                return False
+            else:
+                self.model = new_model
+
         return result
 
     def convert_kerasmethod(self):

@@ -13,9 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+#include "bconv_shape_inference.h"
 #include "tensorflow/core/framework/common_shape_fns.h"
 #include "tensorflow/core/framework/op.h"
-#include "tensorflow/core/framework/shape_inference.h"
 
 using namespace tensorflow;
 
@@ -33,7 +33,10 @@ REGISTER_OP("LqceBsign")
         R"doc(Computes element-wise sign function where 0 is mapped to +1.)doc")
     .SetShapeFn(shape_inference::UnchangedShape);
 
-#define REGISTER_CONV_BITPACKED_OP(OPNAME)                                                                 \
+// TODO: Allow for uint64 filter type, for TF lite conversion
+// Note: allowing the filter type to be different from the input type
+// is currently not supported by the TF lite converter.
+#define REGISTER_CONV_BITPACKED_OP(OPNAME, BITWIDTH)                                                       \
   REGISTER_OP(OPNAME)                                                                                      \
       .Input("input: T")                                                                                   \
       .Input("filter: T")                                                                                  \
@@ -43,11 +46,15 @@ REGISTER_OP("LqceBsign")
       .Attr(GetPaddingAttrStringWithExplicit())                                                            \
       .Attr(GetExplicitPaddingsAttrString())                                                               \
       .Attr(GetConvnetDataFormatAttrString())                                                              \
+      .Attr("filter_format: { 'HWIO' , 'OHWI' , 'OHWI_PACKED' } = 'HWIO' ")                                \
       .Attr("dilations: list(int) = [1, 1, 1, 1]")                                                         \
       .Doc(                                                                                                \
           R"doc(Computes a 2-D binary convolution by binarizing and bitpacking the input and filter.)doc") \
-      .SetShapeFn(shape_inference::Conv2DShapeWithExplicitPadding);
+      .SetShapeFn([](shape_inference::InferenceContext* c) {                                               \
+        return BConv2DShape(c, BITWIDTH);                                                                  \
+      });
 
-REGISTER_CONV_BITPACKED_OP("LqceBconv2d8");
-REGISTER_CONV_BITPACKED_OP("LqceBconv2d32");
-REGISTER_CONV_BITPACKED_OP("LqceBconv2d64");
+REGISTER_CONV_BITPACKED_OP("LqceBconv2d8", 8);
+REGISTER_CONV_BITPACKED_OP("LqceBconv2d32", 32);
+REGISTER_CONV_BITPACKED_OP("LqceBconv2d64", 64);
+
