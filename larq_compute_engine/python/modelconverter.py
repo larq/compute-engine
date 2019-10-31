@@ -26,52 +26,11 @@ quantizer_replacements = {
 }
 
 
-def bitpack64(weights):
-    """
-    Converts full-precision weights to tflite format by bitpacking along channel (I) dimension to uint64.
-
-    The input should be a (True,False)-valued numpy array.
-    It can be obtained from a full-precision array using `wbinary = (wfull >= 0)`.
-    """
-    # Save shape before bitpacking
-    wshape = weights.shape
-    # Pack bits along the last axis.
-    # First pad the last axis to a multiple of 64
-    channel_dim = wshape[3]
-    channel_dim_bp = (wshape[3] + 63) // 64
-    channel_dim_extra = channel_dim_bp * 64 - channel_dim
-    wbin_pad = np.pad(
-        weights,
-        ((0, 0), (0, 0), (0, 0), (0, channel_dim_extra)),
-        mode="constant",
-        constant_values=False,
-    )
-    # Numpy bitpacking is uint8 by default but we want uint64
-    # For little-endian this would be a simple matter of bitpacking as uint8
-    # and just reinterpreting the result as uint64 (which is why little-endian is great).
-    # But in Python is a bit tricky because most functions in numpy assume big-endian.
-    # So we do some reshaping first to trick numpy
-    wbin_pad_reshaped = wbin_pad.reshape((-1, 8, 8))
-    # Now its collaped to (O*H*W*(I/64), 8, 8)
-    wpacked = np.packbits(wbin_pad_reshaped, axis=2, bitorder="little")
-    # Now it has shape (O*H*W*(I/64), 8, 1), type uint8
-    wpacked = wpacked.reshape((-1, 8))
-    # Now it has shape (O*H*W*(I/64), 8), type uint8
-    wpacked = wpacked.view(np.uint64)
-    # Now it has shape (O*H*W*(I/64), 1), type uint64
-    wpacked = wpacked.reshape((wshape[0], wshape[1], wshape[2], channel_dim_bp))
-    # Now it has shape (O,H,W,(I/64)), type uint64
-    return wpacked
-
-
-def create_bconv_layer(
-    weights, strides, padding, transpose=True, bitpacked=True, mul_weights=None
-):
+def create_bconv_layer(weights, strides, padding, transpose=True, mul_weights=None):
     """
     Creates a binary convolution layer for tflite.
 
-    - If `transpose` is True, transposes from HWIO to OHWI
-    - If `transpose` is True and `bitpacked` is True, bitpacks the weights along the I dimension.
+    If `transpose` is True, transposes from HWIO to OHWI
 
     When `mul_weights` is not `None`, it should be a 1D array of size equal to the filter out-channel dimension.
     In this case, a multiplication op is inserted *after* the convolution.
@@ -88,13 +47,7 @@ def create_bconv_layer(
         # Transpose: change from HWIO to OHWI
         weights = np.moveaxis(weights, 3, 0)
         filter_format = "OHWI"
-        if bitpacked:
-            # Binarize
-            weights = weights >= 0
-            weights = bitpack64(weights)
-            filter_format = "OHWI_PACKED"
-        else:
-            weights = np.sign(np.sign(weights) + 0.5)
+        weights = np.sign(np.sign(weights) + 0.5)
 
     if mul_weights is not None:
         if len(mul_weights.shape) != 1 or mul_weights.shape[0] != weights.shape[0]:
@@ -312,7 +265,6 @@ class ModelConverter:
                             l.strides,
                             l.padding,
                             transpose=True,
-                            bitpacked=False,
                             mul_weights=mul_weights,
                         )
                         replacement_dict[l.name] = bconvlayer
