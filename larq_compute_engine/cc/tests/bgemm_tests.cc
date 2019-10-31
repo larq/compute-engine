@@ -8,6 +8,7 @@ namespace compute_engine {
 namespace testing {
 
 namespace ce = compute_engine;
+using ce::core::Layout;
 
 template <class TIn, class TOut>
 void test_binary_inner_prod() {
@@ -71,8 +72,8 @@ TEST(BGemmTests, BGemmTestUInt8) {
   using TIn = uint8_t;
   using TOut = int32_t;
   using BGemmFunctor =
-      ce::core::ReferenceBGemmFunctor<TIn, ce::core::Layout::RowMajor, TIn,
-                                      ce::core::Layout::RowMajor, TOut>;
+      ce::core::ReferenceBGemmFunctor<TIn, Layout::RowMajor, TIn,
+                                      Layout::RowMajor, TOut>;
   const int m = 20;
   const int k = 200;
   const int n = 30;
@@ -83,8 +84,8 @@ TEST(BGemmTests, BGemmTestUInt32) {
   using TIn = uint32_t;
   using TOut = int32_t;
   using BGemmFunctor =
-      ce::core::ReferenceBGemmFunctor<TIn, ce::core::Layout::RowMajor, TIn,
-                                      ce::core::Layout::RowMajor, TOut>;
+      ce::core::ReferenceBGemmFunctor<TIn, Layout::RowMajor, TIn,
+                                      Layout::RowMajor, TOut>;
   const int m = 20;
   const int k = 200;
   const int n = 30;
@@ -95,8 +96,8 @@ TEST(BGemmTests, BGemmTestUInt64) {
   using TIn = uint64_t;
   using TOut = int32_t;
   using BGemmFunctor =
-      ce::core::ReferenceBGemmFunctor<TIn, ce::core::Layout::RowMajor, TIn,
-                                      ce::core::Layout::RowMajor, TOut>;
+      ce::core::ReferenceBGemmFunctor<TIn, Layout::RowMajor, TIn,
+                                      Layout::RowMajor, TOut>;
   const int m = 20;
   const int k = 200;
   const int n = 30;
@@ -107,8 +108,8 @@ TEST(BGemmTests, BGemmTestUInt64ColMajor) {
   using TIn = uint64_t;
   using TOut = int32_t;
   using BGemmFunctor =
-      ce::core::ReferenceBGemmFunctor<TIn, ce::core::Layout::RowMajor, TIn,
-                                      ce::core::Layout::ColMajor, TOut>;
+      ce::core::ReferenceBGemmFunctor<TIn, Layout::RowMajor, TIn,
+                                      Layout::ColMajor, TOut>;
   const int m = 20;
   const int k = 200;
   const int n = 30;

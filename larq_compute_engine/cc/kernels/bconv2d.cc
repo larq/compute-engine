@@ -163,34 +163,40 @@ class BConv2DOp : public BinaryOp<T> {
 }  // namespace kernels
 }  // namespace compute_engine
 
-#define REGISTER_BITPACKED_KERNEL_CPU(T)                               \
-  REGISTER_KERNEL_BUILDER(                                             \
-      Name("LqceBconv2d8").Device(DEVICE_CPU).TypeConstraint<T>("T"),  \
-      ce::kernels::BConv2DOp<                                          \
-          T, ce::core::Im2ColBConvFunctor<                             \
-                 T, T, T,                                              \
-                 ce::core::FusedBGemmFunctor<                          \
-                     T, ce::core::Layout::RowMajor, T,                 \
-                     ce::core::Layout::RowMajor, T, std::uint8_t,      \
-                     ce::core::ReferenceBGemmFunctor>>>);              \
-  REGISTER_KERNEL_BUILDER(                                             \
-      Name("LqceBconv2d32").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
-      ce::kernels::BConv2DOp<                                          \
-          T, ce::core::Im2ColBConvFunctor<                             \
-                 T, T, T,                                              \
-                 ce::core::FusedBGemmFunctor<                          \
-                     T, ce::core::Layout::RowMajor, T,                 \
-                     ce::core::Layout::RowMajor, T, std::uint32_t,     \
-                     ce::core::ReferenceBGemmFunctor>>>);              \
-  REGISTER_KERNEL_BUILDER(                                             \
-      Name("LqceBconv2d64").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
-      ce::kernels::BConv2DOp<                                          \
-          T, ce::core::Im2ColBConvFunctor<                             \
-                 T, T, T,                                              \
-                 ce::core::FusedBGemmFunctor<                          \
-                     T, ce::core::Layout::RowMajor, T,                 \
-                     ce::core::Layout::RowMajor, T, std::uint64_t,     \
-                     ce::core::ReferenceBGemmFunctor>>>);
+#define REGISTER_BITPACKED_KERNEL_CPU(T)                                    \
+  REGISTER_KERNEL_BUILDER(                                                  \
+      Name("LqceBconv2d8").Device(DEVICE_CPU).TypeConstraint<T>("T"),       \
+      ce::kernels::BConv2DOp<                                               \
+          T, ce::core::Im2ColBConvFunctor<                                  \
+                 T, T, T,                                                   \
+                 ce::core::FusedBGemmFunctor<                               \
+                     T, ce::core::Layout::RowMajor, T,                      \
+                     ce::core::Layout::RowMajor, T, std::uint8_t,           \
+                     ce::core::ReferenceBGemmFunctor<                       \
+                         std::uint8_t, ce::core::Layout::RowMajor,          \
+                         std::uint8_t, ce::core::Layout::ColMajor, T>>>>);  \
+  REGISTER_KERNEL_BUILDER(                                                  \
+      Name("LqceBconv2d32").Device(DEVICE_CPU).TypeConstraint<T>("T"),      \
+      ce::kernels::BConv2DOp<                                               \
+          T, ce::core::Im2ColBConvFunctor<                                  \
+                 T, T, T,                                                   \
+                 ce::core::FusedBGemmFunctor<                               \
+                     T, ce::core::Layout::RowMajor, T,                      \
+                     ce::core::Layout::RowMajor, T, std::uint32_t,          \
+                     ce::core::ReferenceBGemmFunctor<                       \
+                         std::uint32_t, ce::core::Layout::RowMajor,         \
+                         std::uint32_t, ce::core::Layout::ColMajor, T>>>>); \
+  REGISTER_KERNEL_BUILDER(                                                  \
+      Name("LqceBconv2d64").Device(DEVICE_CPU).TypeConstraint<T>("T"),      \
+      ce::kernels::BConv2DOp<                                               \
+          T, ce::core::Im2ColBConvFunctor<                                  \
+                 T, T, T,                                                   \
+                 ce::core::FusedBGemmFunctor<                               \
+                     T, ce::core::Layout::RowMajor, T,                      \
+                     ce::core::Layout::RowMajor, T, std::uint64_t,          \
+                     ce::core::ReferenceBGemmFunctor<                       \
+                         std::uint64_t, ce::core::Layout::RowMajor,         \
+                         std::uint64_t, ce::core::Layout::ColMajor, T>>>>);
 
 TF_CALL_float(REGISTER_BITPACKED_KERNEL_CPU);
 TF_CALL_double(REGISTER_BITPACKED_KERNEL_CPU);

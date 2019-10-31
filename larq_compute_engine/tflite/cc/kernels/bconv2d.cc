@@ -18,6 +18,7 @@ namespace tflite {
 namespace bconv2d {
 
 namespace ce = compute_engine;
+using ce::core::Layout;
 
 enum class KernelType {
   // kReference: the same code base as the reference implementation of BConv2D
@@ -188,10 +189,13 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
       params->padding == TfLitePadding::kTfLitePaddingValid ? 1 : 2;
 
   if (params->filter_format == ce::core::FilterFormat::OHWI) {
+    using TBGemmFunctor =
+        ce::core::ReferenceBGemmFunctor<TBitpacked, Layout::RowMajor,
+                                        TBitpacked, Layout::ColMajor, T>;
+
     using TFusedBGemmFunctor =
-        ce::core::FusedBGemmFunctor<T, ce::core::Layout::RowMajor, T,
-                                    ce::core::Layout::ColMajor, T, TBitpacked,
-                                    ce::core::ReferenceBGemmFunctor>;
+        ce::core::FusedBGemmFunctor<T, Layout::RowMajor, T, Layout::ColMajor, T,
+                                    TBitpacked, TBGemmFunctor>;
     using TConvFunctor =
         ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
     using PaddingFunctor =
@@ -213,10 +217,13 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
                       output->data.f, params->out_height, params->out_width);
     }
   } else {  // HWIO. This support will be dropped later.
+    using TBGemmFunctor =
+        ce::core::ReferenceBGemmFunctor<TBitpacked, Layout::RowMajor,
+                                        TBitpacked, Layout::RowMajor, T>;
+
     using TFusedBGemmFunctor =
-        ce::core::FusedBGemmFunctor<T, ce::core::Layout::RowMajor, T,
-                                    ce::core::Layout::RowMajor, T, TBitpacked,
-                                    ce::core::ReferenceBGemmFunctor>;
+        ce::core::FusedBGemmFunctor<T, Layout::RowMajor, T, Layout::RowMajor, T,
+                                    TBitpacked, TBGemmFunctor>;
     using TConvFunctor =
         ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
     using PaddingFunctor =

@@ -11,6 +11,7 @@ namespace compute_engine {
 namespace testing {
 
 namespace ce = compute_engine;
+using ce::core::Layout;
 
 template <typename TBitpacked, typename T>
 void fused_test_rowmajor() {
@@ -32,7 +33,7 @@ void fused_test_rowmajor() {
                                 1, -1};
   // clang-format on
 
-  // Both matrices above are stored RowMajor so they
+  // Both matrices above are stored row major so they
   // are as they are shaped just as they appear in the code.
   //
   //  3 = -1 + 1 + 1 + 1 - 1 - 1 + 1 + 1 + 1
@@ -48,10 +49,12 @@ void fused_test_rowmajor() {
   const int ldb = n;
   const int ldc = n;
 
+  using TBGemmFunctor =
+      ce::core::ReferenceBGemmFunctor<TBitpacked, Layout::RowMajor, TBitpacked,
+                                      Layout::RowMajor, T>;
   using TFusedBGemmFunctor =
-      ce::core::FusedBGemmFunctor<T, ce::core::Layout::RowMajor, T,
-                                  ce::core::Layout::RowMajor, T, TBitpacked,
-                                  ce::core::ReferenceBGemmFunctor>;
+      ce::core::FusedBGemmFunctor<T, Layout::RowMajor, T, Layout::RowMajor, T,
+                                  TBitpacked, TBGemmFunctor>;
 
   const int c_size = m * n;
   std::vector<T> c(c_size);
@@ -69,14 +72,14 @@ void fused_test_colmajor() {
   const int a_num_cols = 9;
   std::vector<T> a_data_float{1,  1, -1,  1, -1, -1, -1,  1,  1,
                               1, -1,  1, -1, -1, -1,  1,  1, -1};
-  //const int b_num_rows = 9;
+  const int b_num_rows = 9;
   const int b_num_cols = 2;
   std::vector<T> b_data_float{-1,  1, -1,  1,  1,  1, -1, 1,  1,
                                1, -1, -1, -1, -1,  1,  1, 1, -1};
   // clang-format on
 
-  // The `b` matrix is the transposed version of the one in the RowMajor test
-  // so the output should be the same.
+  // The `b` matrix is the transposed version of the one in the row major
+  // test so the output should be the same.
 
   //  3 = -1 + 1 + 1 + 1 - 1 - 1 + 1 + 1 + 1
   // -1 =  1 - 1 + 1 - 1 + 1 - 1 - 1 + 1 - 1
@@ -91,10 +94,12 @@ void fused_test_colmajor() {
   const int ldb = b_num_rows;
   const int ldc = n;
 
+  using TBGemmFunctor =
+      ce::core::ReferenceBGemmFunctor<TBitpacked, Layout::RowMajor, TBitpacked,
+                                      Layout::ColMajor, T>;
   using TFusedBGemmFunctor =
-      ce::core::FusedBGemmFunctor<T, ce::core::Layout::RowMajor, T,
-                                  ce::core::Layout::ColMajor, T, TBitpacked,
-                                  ce::core::ReferenceBGemmFunctor>;
+      ce::core::FusedBGemmFunctor<T, Layout::RowMajor, T, Layout::ColMajor, T,
+                                  TBitpacked, TBGemmFunctor>;
 
   const int c_size = m * n;
   std::vector<T> c(c_size);
@@ -139,10 +144,12 @@ void fused_test_eigen(int m, int n, int k) {
   const int ldb = b_num_rows;
   const int ldc = n;
 
+  using TBGemmFunctor =
+      ce::core::ReferenceBGemmFunctor<TBitpacked, Layout::RowMajor, TBitpacked,
+                                      Layout::ColMajor, T>;
   using TFusedBGemmFunctor =
-      ce::core::FusedBGemmFunctor<T, ce::core::Layout::RowMajor, T,
-                                  ce::core::Layout::ColMajor, T, TBitpacked,
-                                  ce::core::ReferenceBGemmFunctor>;
+      ce::core::FusedBGemmFunctor<T, Layout::RowMajor, T, Layout::ColMajor, T,
+                                  TBitpacked, TBGemmFunctor>;
 
   const int c_size = m * n;
   std::vector<T> c(c_size);

@@ -10,8 +10,7 @@ namespace core {
 
 // this functor just encapsulates the bitpacking and bgemm in one function
 template <class TIn1, Layout SIn1, class TIn2, Layout SIn2, class TOut,
-          class TBitpacked,
-          template <class, Layout, class, Layout, class> class TBGemmFunctor>
+          class TBitpacked, class TBGemmFunctor>
 class FusedBGemmFunctor {
  public:
   void operator()(const size_t m, const size_t n, const size_t k,
@@ -40,7 +39,7 @@ class FusedBGemmFunctor {
       const int lda_bp = k_bp;
       const int ldb_bp = n_bp;
       const int ldc_bp = n_bp;
-      TBGemmFunctor<TBitpacked, SIn1, TBitpacked, SIn2, TOut> bgemm_functor;
+      TBGemmFunctor bgemm_functor;
       bgemm_functor(m_bp, n_bp, k_bp, a_data_bp.data(), lda_bp,
                     b_data_bp.data(), ldb_bp, c_data_out, ldc_bp, a_bitpadding);
     } else {
@@ -56,7 +55,7 @@ class FusedBGemmFunctor {
       const int lda_bp = k_bp;
       const int ldb_bp = b_num_rows_bp;  // Rows instead of cols
       const int ldc_bp = n_bp;
-      TBGemmFunctor<TBitpacked, SIn1, TBitpacked, SIn2, TOut> bgemm_functor;
+      TBGemmFunctor bgemm_functor;
       bgemm_functor(m_bp, n_bp, k_bp, a_data_bp.data(), lda_bp,
                     b_data_bp.data(), ldb_bp, c_data_out, ldc_bp, a_bitpadding);
     }
