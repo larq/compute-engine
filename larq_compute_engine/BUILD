@@ -175,7 +175,6 @@ cc_library(
     ],
 )
 
-
 cc_test(
 	name = "benchmark",
 	linkopts = ["-lrt"],
@@ -188,6 +187,12 @@ cc_test(
 	],
 )
     
+cc_library(
+    name = "bconv_shape_inference",
+    srcs = ["cc/ops/bconv_shape_inference.cc"],
+    hdrs = ["cc/ops/bconv_shape_inference.h"],
+    deps = ["@local_config_tf//:tf_header_lib"],
+)
 
 # MAIN COMPUTE ENGINE LIBRARY
 cc_binary(
@@ -203,6 +208,7 @@ cc_binary(
         "@local_config_tf//:tf_header_lib",
         ":utils",
         ":bconv2d",
+        ":bconv_shape_inference",
     ],
     copts = ["-pthread", "-std=c++11", "-D_GLIBCXX_USE_CXX11_ABI=0"]
 )

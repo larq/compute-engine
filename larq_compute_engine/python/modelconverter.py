@@ -123,6 +123,10 @@ def replace_layers(model, replacement_dict):
     """
     This function is adapted from
     https://stackoverflow.com/questions/49492255/how-to-replace-or-insert-intermediate-layer-in-keras-model
+
+    Note: it currently fails on complicated networks such as two networks in parallel, i.e. two input tensors, run separate models on them and have two output tensors, but the whole thing viewed as one network.
+
+    However, we will probably switch to another conversion method once we understand grappler and other tensorflow parts, so for now this method is fine because it works on all Larq models.
     """
     # Auxiliary dictionary to describe the network graph
     network_dict = {"input_layers_of": {}, "new_output_tensor_of": {}}
