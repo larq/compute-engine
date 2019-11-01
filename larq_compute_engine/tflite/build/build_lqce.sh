@@ -56,7 +56,7 @@ fi
 
 # Check if dependencies need to be downloaded
 if [ ! -d "${TF_DIR}/tensorflow/lite/tools/make/downloads" ]; then
-    ext/tensorflow/tensorflow/lite/tools/make/download_dependencies.sh
+    ${TF_DIR}/tensorflow/lite/tools/make/download_dependencies.sh
 fi
 # Build tflite (will automatically skip when up-to-date
 ${TF_DIR}/tensorflow/lite/tools/make/build_lib.sh
@@ -67,7 +67,7 @@ ${TF_DIR}/tensorflow/lite/tools/make/build_lib.sh
 
 # Optionally build the pip package
 if [ "$fullbuild" == "1" ]; then
-    ext/tensorflow/tensorflow/lite/tools/pip_package/build_pip_package.sh
+    ${TF_DIR}/tensorflow/lite/tools/pip_package/build_pip_package.sh
 fi
 
 
