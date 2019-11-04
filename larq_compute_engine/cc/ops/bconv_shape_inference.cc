@@ -1,5 +1,7 @@
 #include "bconv_shape_inference.h"
 
+#include "tensorflow/core/framework/common_shape_fns.h"
+
 Status BConv2DShape(shape_inference::InferenceContext* c, int bitwidth) {
   using namespace shape_inference;
 
