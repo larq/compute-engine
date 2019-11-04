@@ -65,6 +65,13 @@ Benchmarks of sub-components can be run using
 bazel run larq_compute_engine:benchmark
 ```
 
+To cross-compile the benchmark program for the Raspberry Pi (armv7), use
+``` bash
+bazel build larq_compute_engine:benchmark --config=rpi3
+```
+
+The resulting binary `bazel-bin/larq_compute_engine/benchmark` can then be copied to the Raspberry Pi to be used.
+
 
 ## TF lite
 

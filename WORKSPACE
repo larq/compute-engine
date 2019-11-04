@@ -32,3 +32,26 @@ http_archive(
         "https://bitbucket.org/eigen/eigen/get/89abeb806e2e.tar.gz",
     ],
 )
+
+http_archive(
+    # Note: this is ~250 MB
+    name = "arm_compiler",
+    build_file = "//ext:arm_compiler.BUILD",
+    sha256 = "b9e7d50ffd9996ed18900d041d362c99473b382c0ae049b2fce3290632d2656f",
+    strip_prefix = "rpi-newer-crosstools-eb68350c5c8ec1663b7fe52c742ac4271e3217c5/x64-gcc-6.5.0/arm-rpi-linux-gnueabihf/",
+    urls = [
+        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/rvagg/rpi-newer-crosstools/archive/eb68350c5c8ec1663b7fe52c742ac4271e3217c5.tar.gz",
+        "https://github.com/rvagg/rpi-newer-crosstools/archive/eb68350c5c8ec1663b7fe52c742ac4271e3217c5.tar.gz",
+    ],
+)
+
+
+load("//ext/toolchains/cpus/arm:arm_compiler_configure.bzl", "arm_compiler_configure")
+
+arm_compiler_configure(
+    name = "local_config_arm_compiler",
+    build_file = "//ext/toolchains/cpus/arm:BUILD",
+    remote_config_repo = "../arm_compiler", #This path is relative to some_bazel_dir/external/local_config_arm_compiler/
+)
+
+

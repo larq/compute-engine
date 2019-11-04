@@ -141,52 +141,23 @@ test_suite(
 # Benchmarks
 #
 
-cc_library(
-    name = "bconv2d_bench",
-    srcs = ["cc/benchmark/bconv2d_bench.cc"],
-    deps = [
-        "@googlebenchmark//:benchmark",
-        ":bconv2d",
+cc_binary(
+	name = "benchmark",
+	linkopts = ["-lrt -lm"],
+    srcs = [
+        "cc/benchmark/bconv2d_bench.cc",
+        "cc/benchmark/bgemm_bench.cc",
+        "cc/benchmark/im2col_bench.cc",
+        "cc/benchmark/padding_bench.cc",
     ],
-)
-
-cc_library(
-    name = "bgemm_bench",
-    srcs = ["cc/benchmark/bgemm_bench.cc"],
-    deps = [
+	deps = [
         "@googlebenchmark//:benchmark",
+        "@googlebenchmark//:benchmark_main",
+        ":bconv2d",
         ":bgemm",
         ":fused_bgemm",
-    ],
-)
-
-cc_library(
-    name = "im2col_bench",
-    srcs = ["cc/benchmark/im2col_bench.cc"],
-    deps = [
-        "@googlebenchmark//:benchmark",
-         ":im2col",
-    ],
-)
-
-cc_library(
-    name = "padding_bench",
-    srcs = ["cc/benchmark/padding_bench.cc"],
-    deps = [
-        "@googlebenchmark//:benchmark",
+        ":im2col",
         ":padding",
-    ],
-)
-
-cc_test(
-	name = "benchmark",
-	linkopts = ["-lrt"],
-	deps = [
-        "@googlebenchmark//:benchmark_main",
-		":bconv2d_bench",
-		":bgemm_bench",
-		":im2col_bench",
-		":padding_bench",
 	],
 )
     
