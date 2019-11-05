@@ -1,11 +1,12 @@
 #include "profiling/instrumentation.h"
-#include "tensorflow/lite/kernels/internal/types.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 #include "tensorflow/lite/kernels/internal/optimized/im2col_utils.h"
+#include "tensorflow/lite/kernels/internal/types.h"
+#include "tensorflow/lite/kernels/padding.h"
 
-#include "larq_compute_engine/cc/core/packbits.h"
 #include "bgemm_impl.h"
+#include "larq_compute_engine/cc/core/packbits.h"
 
 using namespace tflite;
 
@@ -15,13 +16,14 @@ namespace ce = compute_engine;
 
 namespace tflite {
 
-template<class TBitpacked>
+template <class TBitpacked>
 inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                     const float* input_data, const RuntimeShape& filter_shape,
                     const float* filter_data, const RuntimeShape& bias_shape,
                     const float* bias_data, const RuntimeShape& output_shape,
                     float* output_data, const RuntimeShape& im2col_shape,
-                    float* im2col_data, CpuBackendContext* cpu_backend_context) {
+                    float* im2col_data,
+                    CpuBackendContext* cpu_backend_context) {
   const int stride_width = params.stride_width;
   const int stride_height = params.stride_height;
   const int dilation_width_factor = params.dilation_width_factor;
@@ -45,20 +47,22 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   const int filter_height = filter_shape.Dims(1);
   const int filter_width = filter_shape.Dims(2);
 
-  const bool need_dilated_im2col =
-      dilation_width_factor != 1 || dilation_height_factor != 1;
-  const bool need_im2col = stride_width != 1 || stride_height != 1 ||
-                           filter_width != 1 || filter_height != 1;
+  // TODO: check this
+  const bool need_dilated_im2col = false;
+  //     dilation_width_factor != 1 || dilation_height_factor != 1;
+  const bool need_im2col = true;  // stride_width != 1 || stride_height != 1 ||
+                                  // filter_width != 1 || filter_height != 1;
 
   if (need_dilated_im2col) {
-    optimized_ops::DilatedIm2col(params, float_zero_byte, input_shape, input_data,
-                                 filter_shape, output_shape, im2col_data);
+    optimized_ops::DilatedIm2col(params, float_zero_byte, input_shape,
+                                 input_data, filter_shape, output_shape,
+                                 im2col_data);
     gemm_input_data = im2col_data;
     gemm_input_shape = &im2col_shape;
   } else if (need_im2col) {
     TFLITE_DCHECK(im2col_data);
-    optimized_ops::Im2col(params, filter_height, filter_width, float_zero_byte, input_shape,
-                          input_data, im2col_shape, im2col_data);
+    optimized_ops::Im2col(params, filter_height, filter_width, float_zero_byte,
+                          input_shape, input_data, im2col_shape, im2col_data);
     gemm_input_data = im2col_data;
     gemm_input_shape = &im2col_shape;
   } else {
@@ -74,15 +78,18 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   //
   // 'output_data' (m, n) = 'gemm_input_data' (m, k) * 'filter_data' (k, n)
   //
-  // We use the 'filter_data' as LHS and assume is stored with RowMajor layout (n, k)
-  // We use 'gemm_input_data' as RHS and assume is stored in ColMajor layout (k, m)
-  // If we assume the 'output_data' is stored in ColMajor layout (m, n), then it can be calculated
-  // as following:
-  // 'output_data' (n, m) = 'filter_data' (n, k) * 'gemm_input_data' (m, k)
+  // We use the 'filter_data' as LHS and assume is stored with RowMajor layout
+  // -> (n, k) We use 'gemm_input_data' as RHS and assume is stored in ColMajor
+  // layout -> (k, m) If we assume the 'output_data' is stored in ColMajor
+  // layout (m, n), then it can be calculated as following:
   //
-  // We perform the bitpacking compression along the k-dimension so the following
-  // is acutally computed in BGEMM:
-  // 'output_data' (m, n) = 'filter_data' (n, k / bitwitdh) * 'gemm_input_data' (k / bitwidth, m)
+  // 'output_data' (m, n) = 'filter_data' (n, k) x 'gemm_input_data' (m, k)
+  //
+  // where `x` is row-wise dotprod of the LHS and RHS.
+  // We perform the bitpacking compression along the k-dimension so the
+  // following is acutally computed in BGEMM: 'output_data' (m, n) =
+  // 'filter_data' (n, k / bitwitdh) x 'gemm_input_data' (m, k / bitwidth)
+
   const int gemm_input_dims = gemm_input_shape->DimensionsCount();
   int m = FlatSizeSkipDim(*gemm_input_shape, gemm_input_dims - 1);
   int n = output_shape.Dims(3);
@@ -94,22 +101,18 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   // RHS is the input values
   const auto* rhs_data = gemm_input_data;
 
-  // rowwise bitpacking of LHS (n, k) -> (n, k / bitwidth)
+  // row-wise bitpacking of LHS (n, k) -> (n, k / bitwidth)
   const int lhs_rows = n;
   const int lhs_cols = k;
   // TODO: pre-allocate the 'lhs_data_bp' buffer
   std::vector<TBitpacked> lhs_data_bp;
   size_t lhs_rows_bp = 0, lhs_cols_bp = 0;
   size_t lhs_bitpadding = 0;
-  ce::core::packbits_matrix(lhs_data, lhs_rows, lhs_cols, lhs_data_bp, lhs_rows_bp,
-                            lhs_cols_bp, lhs_bitpadding, ce::core::Axis::RowWise);
+  ce::core::packbits_matrix(lhs_data, lhs_rows, lhs_cols, lhs_data_bp,
+                            lhs_rows_bp, lhs_cols_bp, lhs_bitpadding,
+                            ce::core::Axis::RowWise);
 
-  cpu_backend_gemm::MatrixParams<TBitpacked> lhs_params;
-  lhs_params.order = cpu_backend_gemm::Order::kRowMajor;
-  lhs_params.rows = lhs_rows_bp;
-  lhs_params.cols = lhs_cols_bp;
-
-  // rowwise bitpacking of RHS (m, k) -> (m, k / bitwidth)
+  // row-wise bitpacking of RHS (m, k) -> (m, k / bitwidth)
   const int rhs_rows = m;
   const int rhs_cols = k;
   // TODO: pre-allocate the 'rhs_data_bp' buffer
@@ -117,30 +120,63 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   size_t rhs_rows_bp = 0, rhs_cols_bp = 0;
   size_t rhs_bitpadding = 0;
   ce::core::packbits_matrix(rhs_data, rhs_rows, rhs_cols, rhs_data_bp,
-                            rhs_rows_bp,
-                            rhs_cols_bp, rhs_bitpadding, ce::core::Axis::RowWise);
+                            rhs_rows_bp, rhs_cols_bp, rhs_bitpadding,
+                            ce::core::Axis::RowWise);
+
+  // LHS (n, k/bitwidth) -> RowMajor -> (n, k/bitwidth)
+  // RHS (m, k/bitwidth) -> ColMajor -> (k/bitwidth, m)
+  // DST (n, m) -> ColMajor -> (m, n)
+  cpu_backend_gemm::MatrixParams<TBitpacked> lhs_params;
+  lhs_params.order = cpu_backend_gemm::Order::kRowMajor;
+  lhs_params.rows = lhs_rows_bp;  // n
+  lhs_params.cols = lhs_cols_bp;  // k/bitwidth
 
   cpu_backend_gemm::MatrixParams<TBitpacked> rhs_params;
   rhs_params.order = cpu_backend_gemm::Order::kColMajor;
   // Since the layout is colmajor, we flip the rows and cols
-  rhs_params.rows = rhs_cols_bp;
-  rhs_params.cols = rhs_rows_bp;
+  rhs_params.rows = rhs_cols_bp;  // k/bitwidth
+  rhs_params.cols = rhs_rows_bp;  // m
 
   cpu_backend_gemm::MatrixParams<float> dst_params;
   dst_params.order = cpu_backend_gemm::Order::kColMajor;
   // Since the layout is colmajor, we flip the rows and cols
-  dst_params.rows = n;
-  dst_params.cols = m;
+  dst_params.rows = m;
+  dst_params.cols = n;
 
-  // TODO: Currently GemmParmas is not used in BGEMM
+  // TODO: Currently GemmParmas is not used the same way as
+  // as its used in the TF Lite codebase. Here, we abuse the
+  // 'multiplier_exponent' which is used only for non-floating-point
+  // cases to pass the bitpadding correction value (int) to BGemm
   cpu_backend_gemm::GemmParams<TBitpacked, float> gemm_params;
+  gemm_params.multiplier_exponent = lhs_bitpadding;
   // gemm_params.bias = bias_data;
   // gemm_params.clamp_min = output_activation_min;
   // gemm_params.clamp_max = output_activation_max;
 
   BGemm(lhs_params, lhs_data_bp.data(), rhs_params, rhs_data_bp.data(),
-        dst_params, output_data, gemm_params,
-        cpu_backend_context);
+        dst_params, output_data, gemm_params, cpu_backend_context);
+
+  if (params.padding_type == PaddingType::kSame) {
+    using T = float;
+    using PaddingFunctor =
+        ce::core::ReferencePaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
+
+    const int stride_width = params.stride_width;
+    const int stride_height = params.stride_height;
+    const int batches = MatchingDim(input_shape, 0, output_shape, 0);
+    const int input_depth = input_shape.Dims(3);
+    const int input_width = input_shape.Dims(2);
+    const int input_height = input_shape.Dims(1);
+    const int output_depth = output_shape.Dims(3);
+    const int output_width = output_shape.Dims(2);
+    const int output_height = output_shape.Dims(1);
+
+    PaddingFunctor padding_functor;
+    padding_functor(batches, input_height, input_width, input_depth,
+                    filter_data, filter_height, filter_width, output_depth,
+                    stride_height, stride_width, output_data, output_height,
+                    output_width);
+  }
 }
 
 }  // namespace tflite
