@@ -76,13 +76,21 @@ def invoke_inference(model, data):
 
 class BConv2DTest(tf.test.TestCase):
     def __test_bconv_op_inference(self, bconv_op):
+        # data_types = [np.float32]
+        # in_channels = [1, 3]
+        # out_channels = [1, 4]
+        # input_sizes = [14]
+        # kernel_sizes = [3, 5]
+        # hw_strides = [[1, 1], [2, 2]]
+        # paddings = ["VALID", "SAME"]
+
         data_types = [np.float32]
-        in_channels = [1, 3]
-        out_channels = [1, 4]
-        input_sizes = [14]
-        kernel_sizes = [3, 5]
-        hw_strides = [[1, 1], [2, 2]]
-        paddings = ["VALID", "SAME"]
+        in_channels = [1]
+        out_channels = [1]
+        input_sizes = [4]
+        kernel_sizes = [3]
+        hw_strides = [[1, 1]]
+        paddings = ["VALID"]
 
         args_lists = [
             data_types,
