@@ -27,6 +27,10 @@ const size_t kMaxChunkSize = (16 * 1024 * 1024);
 // final result.
 template <class T1, class T2, class T3, class TGemmFunctor>
 class Im2ColBConvFunctor {
+  // These are declared here to avoid memory reallocation every inference pass
+  TGemmFunctor gemm_functor;
+  std::vector<T1> im2col_buffer_resource;
+
  public:
   void operator()(const T1* input_data, const int input_batches,
                   const int input_height, const int input_width,
@@ -65,7 +69,6 @@ class Im2ColBConvFunctor {
       const int lda = k;
       const int ldb = filter_count;
       const int ldc = filter_count;
-      TGemmFunctor gemm_functor;
       gemm_functor(m, n, k, input_data, lda, filter_data, ldb, output_data,
                    ldc);
       return;
@@ -78,7 +81,6 @@ class Im2ColBConvFunctor {
       const int lda = k;
       const int ldb = filter_count;
       const int ldc = filter_count;
-      TGemmFunctor gemm_functor;
       gemm_functor(m, n, k, input_data, lda, filter_data, ldb, output_data,
                    ldc);
       return;
@@ -125,7 +127,7 @@ class Im2ColBConvFunctor {
     const int64 chunk_value_count =
         (kMaxChunkSize + (sizeof(T1) - 1)) / sizeof(T1);
 
-    std::vector<T1> im2col_buffer_resource(chunk_value_count);
+    im2col_buffer_resource.resize(chunk_value_count);
     T1* im2col_buffer = im2col_buffer_resource.data();
 
     const int64 patch_count = (input_batches * output_height * output_width);
@@ -218,7 +220,6 @@ class Im2ColBConvFunctor {
       const int ldb = filter_count;
       const int ldc = filter_count;
       T3* chunk_output_data = output_data + (patch_index_start * filter_count);
-      TGemmFunctor gemm_functor;
       gemm_functor(m, n, k, im2col_buffer, lda, filter_data, ldb,
                    chunk_output_data, ldc);
     }
