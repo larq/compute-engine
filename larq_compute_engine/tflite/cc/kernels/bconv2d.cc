@@ -189,7 +189,12 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
 
   // pre-allocate temporary tensors for optimized version
   if (kernel_type == KernelType::kGenericOptimized) {
-    conv_params->need_im2col = true;
+    conv_params->need_im2col =
+        (conv_params->strides[2] /* width */ != 1 ||
+         conv_params->strides[1] /* height */ != 1 ||
+         conv_params->dilations[2] /* width */ != 1 ||
+         conv_params->dilations[1] /* height */ != 1 ||
+         conv_params->filter_width != 1 || conv_params->filter_height != 1);
 
     int temporaries_count = 0;
     if (conv_params->need_im2col) {

@@ -56,8 +56,8 @@ inline std::int32_t compute_binary_inner_prod<std::uint64_t, std::int32_t>(
 
 // A naive implementation of binary matrix multiplication, useful for
 // debugging and understanding the algorithm.
-template <class TLhs = std::uint64_t, Layout LIn1 = Layout::RowMajor,
-          class TRhs = std::uint64_t, Layout LIn2 = Layout::RowMajor,
+template <class TLhs = std::uint64_t, Layout LLhs = Layout::RowMajor,
+          class TRhs = std::uint64_t, Layout LRhs = Layout::RowMajor,
           class TOut = float, Layout LOut = Layout::RowMajor,
           class TAccum = std::int32_t>
 class ReferenceBGemmFunctor {
@@ -75,10 +75,10 @@ class ReferenceBGemmFunctor {
     static_assert(std::is_signed<TOut>::value,
                   "Output of BGEMM should be of a signed type.");
 
-    const std::size_t a_i_stride = (LIn1 == Layout::RowMajor ? lda : 1);
-    const std::size_t a_l_stride = (LIn1 == Layout::RowMajor ? 1 : lda);
-    const std::size_t b_j_stride = (LIn2 == Layout::RowMajor ? 1 : ldb);
-    const std::size_t b_l_stride = (LIn2 == Layout::RowMajor ? ldb : 1);
+    const std::size_t a_i_stride = (LLhs == Layout::RowMajor ? lda : 1);
+    const std::size_t a_l_stride = (LLhs == Layout::RowMajor ? 1 : lda);
+    const std::size_t b_j_stride = (LRhs == Layout::RowMajor ? 1 : ldb);
+    const std::size_t b_l_stride = (LRhs == Layout::RowMajor ? ldb : 1);
     const std::size_t c_i_stride = (LOut == Layout::RowMajor ? ldc : 1);
     const std::size_t c_j_stride = (LOut == Layout::RowMajor ? 1 : ldc);
 

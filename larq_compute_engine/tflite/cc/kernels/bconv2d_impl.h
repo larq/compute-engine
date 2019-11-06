@@ -47,11 +47,10 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   const int filter_height = filter_shape.Dims(1);
   const int filter_width = filter_shape.Dims(2);
 
-  // TODO: check this
-  const bool need_dilated_im2col = false;
-  //     dilation_width_factor != 1 || dilation_height_factor != 1;
-  const bool need_im2col = true;  // stride_width != 1 || stride_height != 1 ||
-                                  // filter_width != 1 || filter_height != 1;
+  const bool need_dilated_im2col =
+      dilation_width_factor != 1 || dilation_height_factor != 1;
+  const bool need_im2col = stride_width != 1 || stride_height != 1 ||
+                           filter_width != 1 || filter_height != 1;
 
   if (need_dilated_im2col) {
     optimized_ops::DilatedIm2col(params, float_zero_byte, input_shape,
