@@ -138,7 +138,8 @@ class BConv2DOp : public BinaryOp<T> {
     const T* filter_data = filter.flat<T>().data();
     T* output_data = output->flat<T>().data();
 
-    TConvFunctor conv_functor;
+    // static to avoid memory reallocation every inference pass
+    static TConvFunctor conv_functor;
     conv_functor(input_data, batch, input_rows, input_cols, in_depth,
                  filter_data, filter_rows, filter_cols, out_depth, stride_rows,
                  stride_cols, padding_, output_data, out_rows, out_cols);

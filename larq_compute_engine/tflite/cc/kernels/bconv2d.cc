@@ -200,7 +200,8 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
     using PaddingFunctor =
         ce::core::ReferencePaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
 
-    TConvFunctor conv_functor;
+    // static to avoid memory reallocation every inference pass
+    static TConvFunctor conv_functor;
     conv_functor(input->data.f, params->batch, params->input_height,
                  params->input_width, params->channels_in, filter->data.f,
                  params->filter_height, params->filter_width,
@@ -228,7 +229,8 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
     using PaddingFunctor =
         ce::core::ReferencePaddingFunctor<T, T, ce::core::FilterFormat::HWIO>;
 
-    TConvFunctor conv_functor;
+    // static to avoid memory reallocation every inference pass
+    static TConvFunctor conv_functor;
     conv_functor(input->data.f, params->batch, params->input_height,
                  params->input_width, params->channels_in, filter->data.f,
                  params->filter_height, params->filter_width,
