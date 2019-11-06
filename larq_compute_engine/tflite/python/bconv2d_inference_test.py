@@ -2,7 +2,7 @@
 import numpy as np
 import tensorflow as tf
 import larq_compute_engine as lqce
-import itertools
+import pytest
 
 from tflite_runtime.interpreter import Interpreter
 
@@ -73,51 +73,36 @@ def invoke_inference(model, data):
     return interpreter.get_tensor(output_details[0]["index"])
 
 
-class BConv2DTest(tf.test.TestCase):
-    def __test_bconv_op_inference(self, bconv_op):
-        data_types = [np.float32]
-        in_channels = [1, 3]
-        out_channels = [1, 4]
-        input_sizes = [14]
-        kernel_sizes = [3, 5]
-        hw_strides = [[1, 1], [2, 2]]
-        paddings = ["VALID", "SAME"]
+@pytest.mark.parametrize("bconv_op", [lqce.bconv2d8, lqce.bconv2d32, lqce.bconv2d64])
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("in_channel", [1, 3])
+@pytest.mark.parametrize("out_channel", [1, 4])
+@pytest.mark.parametrize("input_size", [14])
+@pytest.mark.parametrize("kernel_size", [3, 5])
+@pytest.mark.parametrize("strides", [[1, 1], [2, 2]])
+@pytest.mark.parametrize("padding", ["VALID", "SAME"])
+def test_bconv2d_op_inference(
+    bconv_op,
+    data_type,
+    in_channel,
+    out_channel,
+    input_size,
+    kernel_size,
+    strides,
+    padding,
+):
+    input_shape = [input_size, input_size, in_channel]
+    model_tf, model_lite = _create_sample_bconv_model(
+        bconv_op, input_shape, out_channel, kernel_size, strides, padding
+    )
 
-        args_lists = [
-            data_types,
-            in_channels,
-            out_channels,
-            input_sizes,
-            kernel_sizes,
-            hw_strides,
-            paddings,
-        ]
-        for args in itertools.product(*args_lists):
-            print(args)
-            data_type, in_channel, out_channel, input_size, kernel_size, strides, padding = (
-                args
-            )
-            input_shape = [input_size, input_size, in_channel]
-            model_tf, model_lite = _create_sample_bconv_model(
-                bconv_op, input_shape, out_channel, kernel_size, strides, padding
-            )
+    input_shape = [1] + input_shape
+    input_data = np.random.choice([-1, 1], input_shape).astype(data_type)
 
-            input_shape = [1] + input_shape
-            input_data = np.random.choice([-1, 1], input_shape).astype(data_type)
+    tflite_result = invoke_inference(model_lite, input_data)
+    tf_result = model_tf.predict(input_data)
 
-            tflite_result = invoke_inference(model_lite, input_data)
-            tf_result = model_tf.predict(input_data)
-
-            self.assertAllClose(tflite_result, tf_result)
-
-    def test_bconv2d8(self):
-        self.__test_bconv_op_inference(lqce.bconv2d8)
-
-    def test_bconv2d32(self):
-        self.__test_bconv_op_inference(lqce.bconv2d32)
-
-    def test_bconv2d64(self):
-        self.__test_bconv_op_inference(lqce.bconv2d64)
+    np.testing.assert_allclose(tflite_result, tf_result)
 
 
 if __name__ == "__main__":
