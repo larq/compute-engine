@@ -22,8 +22,8 @@ struct BGemmImplRef {
       const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
       const GemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
       CpuBackendContext* context) {
-    // these checkes are already done in bgemm_functor but does not hurt to do
-    // it here too!
+    // these checkes will be also done in BGEMM functor but we do it here as
+    // well to be on the safe side.
     static_assert(std::is_same<LhsScalar, RhsScalar>::value,
                   "Inputs to BGEMM should have the same type.");
     static_assert(std::is_unsigned<LhsScalar>::value &&
@@ -36,9 +36,9 @@ struct BGemmImplRef {
     // This code assumes specific memory layout
     // assert(rhs_params.order == cpu_backend_gemm::Order::kColMajor);
     using TBGemmFunctor =
-        ce::core::ReferenceBGemmFunctor<TBitpacked, ce::core::Layout::RowMajor,
-                                        TBitpacked, ce::core::Layout::ColMajor,
-                                        DstScalar>;
+        ce::core::ReferenceBGemmFunctor<LhsScalar, ce::core::Layout::RowMajor,
+                                        RhsScalar, ce::core::Layout::ColMajor,
+                                        DstScalar, ce::core::Layout::ColMajor>;
 
     // LHS (n, k) -> RowMajor -> (n, k)
     // RHS (m, k) -> ColMajor -> (k, m)

@@ -165,11 +165,13 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
   // computing the padding and output values (height, width)
   int out_width, out_height;
   conv_params->padding_values = ComputePaddingHeightWidth(
-      conv_params->strides[1] /* strides height */, conv_params->strides[2] /* strides width */,
-      conv_params->dilations[1] /* dil. height */, conv_params->dilations[2] /* dil. width */,
-      conv_params->input_height, conv_params->input_width,
-      conv_params->filter_height, conv_params->filter_width,
-      conv_params->padding_type, &out_height, &out_width);
+      conv_params->strides[1] /* strides height */,
+      conv_params->strides[2] /* strides width */,
+      conv_params->dilations[1] /* dil. height */,
+      conv_params->dilations[2] /* dil. width */, conv_params->input_height,
+      conv_params->input_width, conv_params->filter_height,
+      conv_params->filter_width, conv_params->padding_type, &out_height,
+      &out_width);
 
   conv_params->out_width = out_width;
   conv_params->out_height = out_height;
@@ -182,7 +184,8 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
   output_shape->data[3] = conv_params->channels_out;
 
   // allocate the output buffer
-  TF_LITE_ENSURE_OK(context, context->ResizeTensor(context, output, output_shape));
+  TF_LITE_ENSURE_OK(context,
+                    context->ResizeTensor(context, output, output_shape));
 
   // pre-allocate temporary tensors for optimized version
   if (kernel_type == KernelType::kGenericOptimized) {
@@ -210,15 +213,19 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
     im2col_size->data[0] = conv_params->batch;
     im2col_size->data[1] = conv_params->out_height;
     im2col_size->data[2] = conv_params->out_width;
-    im2col_size->data[3] = conv_params->channels_in * conv_params->filter_height * conv_params->filter_width;
+    im2col_size->data[3] = conv_params->channels_in *
+                           conv_params->filter_height *
+                           conv_params->filter_width;
 
     // get the pointer to im2col tensor
-    TfLiteTensor* im2col = GetTemporary(context, node, conv_params->im2col_index);
+    TfLiteTensor* im2col =
+        GetTemporary(context, node, conv_params->im2col_index);
 
     // allocate the im2col tensor
     im2col->type = input->type;
     im2col->allocation_type = kTfLiteArenaRw;
-    TF_LITE_ENSURE_OK(context, context->ResizeTensor(context, im2col, im2col_size));
+    TF_LITE_ENSURE_OK(context,
+                      context->ResizeTensor(context, im2col, im2col_size));
   }
 
   return kTfLiteOk;
@@ -339,18 +346,18 @@ inline void GetConvParamsType(const TfLiteBConv2DParams& conv_params,
 
 template <class T, class TBitpacked>
 void EvalOpt(TfLiteContext* context, TfLiteNode* node,
-                const TfLiteBConv2DParams* params) {
+             const TfLiteBConv2DParams* params) {
   const auto* input = GetInput(context, node, 0);
   const auto* filter = GetInput(context, node, 1);
   auto* output = GetOutput(context, node, 0);
 
   // TODO: investigate how to use the biases
   bool has_bias = node->inputs->size == 3;
-  const TfLiteTensor* bias =
-      has_bias ? GetInput(context, node, 2) : nullptr;
+  const TfLiteTensor* bias = has_bias ? GetInput(context, node, 2) : nullptr;
 
-  TfLiteTensor* im2col =
-      params->need_im2col ? GetTemporary(context, node, params->im2col_index) : nullptr;
+  TfLiteTensor* im2col = params->need_im2col
+                             ? GetTemporary(context, node, params->im2col_index)
+                             : nullptr;
 
   // Using the standard TF Lite ConvParams struct.
   // This requires extra step of converting the TfLiteBConv2DParams
@@ -360,13 +367,12 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   ConvParams op_params;
   GetConvParamsType(*params, op_params);
 
-  BConv2D<TBitpacked>(op_params, GetTensorShape(input),
-                      GetTensorData<float>(input), GetTensorShape(filter),
-                      GetTensorData<float>(filter), GetTensorShape(bias),
-                      GetTensorData<float>(bias), GetTensorShape(output),
-                      GetTensorData<float>(output), GetTensorShape(im2col),
-                      GetTensorData<float>(im2col),
-                      CpuBackendContext::GetFromContext(context));
+  BConv2D<TBitpacked>(
+      op_params, GetTensorShape(input), GetTensorData<float>(input),
+      GetTensorShape(filter), GetTensorData<float>(filter),
+      GetTensorShape(bias), GetTensorData<float>(bias), GetTensorShape(output),
+      GetTensorData<float>(output), GetTensorShape(im2col),
+      GetTensorData<float>(im2col), CpuBackendContext::GetFromContext(context));
 }
 
 template <KernelType kernel_type, class TBitpacked>
@@ -419,7 +425,7 @@ TfLiteRegistration* Register_BCONV_2D8_OPT() {
 }
 
 TfLiteRegistration* Register_BCONV_2D32_OPT() {
-    static TfLiteRegistration r = {
+  static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
       bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized>,
       bconv2d::Eval<bconv2d::KernelType::kGenericOptimized, std::uint32_t>};

@@ -56,59 +56,47 @@ inline std::int32_t compute_binary_inner_prod<std::uint64_t, std::int32_t>(
 
 // A naive implementation of binary matrix multiplication, useful for
 // debugging and understanding the algorithm.
-template <class TIn1, Layout SIn1, class TIn2, Layout SIn2, class TOut>
+template <class TLhs = std::uint64_t, Layout LIn1 = Layout::RowMajor,
+          class TRhs = std::uint64_t, Layout LIn2 = Layout::RowMajor,
+          class TOut = float, Layout LOut = Layout::RowMajor,
+          class TAccum = std::int32_t>
 class ReferenceBGemmFunctor {
  public:
-  void operator()(const size_t m, const size_t n, const size_t k, const TIn1* a,
-                  const size_t lda, const TIn2* b, const size_t ldb, TOut* c,
-                  const size_t ldc, const int bitpaddding = 0) {
-    static_assert(SIn1 == Layout::RowMajor,
-                  "Left-hand input should be stored row major.");
-
+  void operator()(const std::size_t m, const std::size_t n, const std::size_t k,
+                  const TLhs* a, const std::size_t lda, const TRhs* b,
+                  const std::size_t ldb, TOut* c, const std::size_t ldc,
+                  const int bitpaddding = 0) {
     // for now accept only unsigned {8,32,64}-bits values as input.
-    static_assert(std::is_same<TIn2, TIn1>::value,
+    static_assert(std::is_same<TRhs, TLhs>::value,
                   "Inputs to BGEMM should have the same type.");
     static_assert(
-        std::is_unsigned<TIn1>::value && std::is_integral<TIn1>::value,
+        std::is_unsigned<TLhs>::value && std::is_integral<TLhs>::value,
         "Input to BGEMM should be of type unsigned integral.");
     static_assert(std::is_signed<TOut>::value,
                   "Output of BGEMM should be of a signed type.");
 
-    const size_t a_i_stride = lda;
-    const size_t a_l_stride = 1;
-    const size_t b_j_stride = (SIn2 == Layout::RowMajor ? 1 : ldb);
-    const size_t b_l_stride = (SIn2 == Layout::RowMajor ? ldb : 1);
-    const size_t c_i_stride = ldc;
-    const size_t c_j_stride = 1;
+    const std::size_t a_i_stride = (LIn1 == Layout::RowMajor ? lda : 1);
+    const std::size_t a_l_stride = (LIn1 == Layout::RowMajor ? 1 : lda);
+    const std::size_t b_j_stride = (LIn2 == Layout::RowMajor ? 1 : ldb);
+    const std::size_t b_l_stride = (LIn2 == Layout::RowMajor ? ldb : 1);
+    const std::size_t c_i_stride = (LOut == Layout::RowMajor ? ldc : 1);
+    const std::size_t c_j_stride = (LOut == Layout::RowMajor ? 1 : ldc);
 
-    size_t i, j, l;
+    std::size_t i, j, l;
     // The j-loop should be the inner loop for weight-stationary computations
     for (i = 0; i < m; ++i) {
       for (j = 0; j < n; ++j) {
-        if (SIn2 == Layout::RowMajor) {
-          int32_t total = 0;
-          for (l = 0; l < k; ++l) {
-            const size_t a_index = ((i * a_i_stride) + (l * a_l_stride));
-            const size_t b_index = ((j * b_j_stride) + (l * b_l_stride));
-            total +=
-                compute_binary_inner_prod<TIn1, int32_t>(a[a_index], b[b_index]);
-          }
-          const size_t c_index = ((i * c_i_stride) + (j * c_j_stride));
-          c[c_index] = static_cast<TOut>(total - bitpaddding);
-        } else {  // ColMajor
-          int32_t total = 0;
-          // Because of this nice memory layout we can just increment pointers
-          const TIn1* a_ptr = &a[i * a_i_stride];
-          const TIn1* b_ptr = &b[j * b_j_stride];
-          for (l = 0; l < k; ++l) {
-            total +=
-                compute_binary_inner_prod<TIn1, int32_t>(*a_ptr++, *b_ptr++);
-          }
-          const size_t c_index = ((i * c_i_stride) + (j * c_j_stride));
-          c[c_index] = static_cast<TOut>(total - bitpaddding);
+        TAccum total(0);
+        for (l = 0; l < k; ++l) {
+          const std::size_t a_index = ((i * a_i_stride) + (l * a_l_stride));
+          const std::size_t b_index = ((j * b_j_stride) + (l * b_l_stride));
+          total +=
+              compute_binary_inner_prod<TLhs, TAccum>(a[a_index], b[b_index]);
         }
-      }
-    }
+        const std::size_t c_index = ((i * c_i_stride) + (j * c_j_stride));
+        c[c_index] = static_cast<TOut>(total - bitpaddding);
+      }  // end of j loop
+    }    // end of i loop
   }
 };
 

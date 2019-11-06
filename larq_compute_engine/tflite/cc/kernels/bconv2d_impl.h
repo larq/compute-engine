@@ -104,8 +104,13 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   // row-wise bitpacking of LHS (n, k) -> (n, k / bitwidth)
   const int lhs_rows = n;
   const int lhs_cols = k;
-  // TODO: pre-allocate the 'lhs_data_bp' buffer
-  std::vector<TBitpacked> lhs_data_bp;
+  // TODO: pre-allocate the 'lhs_data_bp' buffer in prepare
+  // 'packbits_matrix' function call the resize function of the container
+  // in case that bitpadding is required. Therefore, in order to pre-allocate
+  // bitpacked buffer, we need to redesign the packbits_matrix and movded the
+  // all the calculations regarding the size of the bitpacked buffer outside the
+  // funciton. For now we just the define the vector static.
+  static std::vector<TBitpacked> lhs_data_bp;
   size_t lhs_rows_bp = 0, lhs_cols_bp = 0;
   size_t lhs_bitpadding = 0;
   ce::core::packbits_matrix(lhs_data, lhs_rows, lhs_cols, lhs_data_bp,
@@ -116,7 +121,11 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   const int rhs_rows = m;
   const int rhs_cols = k;
   // TODO: pre-allocate the 'rhs_data_bp' buffer
-  std::vector<TBitpacked> rhs_data_bp;
+  // 'packbits_matrix' function call the resize function of the container
+  // in case that bitpadding is required. Therefore, in order to pre-allocate
+  // bitpacked buffer, we need to redesign the packbits_matrix. so for now
+  // we just use define the vector static.
+  static std::vector<TBitpacked> rhs_data_bp;
   size_t rhs_rows_bp = 0, rhs_cols_bp = 0;
   size_t rhs_bitpadding = 0;
   ce::core::packbits_matrix(rhs_data, rhs_rows, rhs_cols, rhs_data_bp,
@@ -139,9 +148,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
 
   cpu_backend_gemm::MatrixParams<float> dst_params;
   dst_params.order = cpu_backend_gemm::Order::kColMajor;
-  // Since the layout is colmajor, we flip the rows and cols
-  dst_params.rows = m;
-  dst_params.cols = n;
+  dst_params.rows = n;
+  dst_params.cols = m;
 
   // TODO: Currently GemmParmas is not used the same way as
   // as its used in the TF Lite codebase. Here, we abuse the
@@ -152,6 +160,15 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   // gemm_params.bias = bias_data;
   // gemm_params.clamp_min = output_activation_min;
   // gemm_params.clamp_max = output_activation_max;
+
+  // #if defined(TF_LITE_USE_CBLAS) && defined(__APPLE__)
+
+  // TODO: TF lite, on devices which provide optimized BLAS library,
+  // uses BLAS instead of the RUY GEMM kernels. For benchmarking we
+  // should keep that in mind and also consider developing a
+  // BLAS-inspired binary GEMM
+
+  // #endif  //  defined(TF_LITE_USE_CBLAS) && defined(__APPLE__)
 
   BGemm(lhs_params, lhs_data_bp.data(), rhs_params, rhs_data_bp.data(),
         dst_params, output_data, gemm_params, cpu_backend_context);
