@@ -67,7 +67,8 @@ struct BGemmImplUsingRuy {
     MakeRuySpec(params, &ruy_spec);
 
     // TODO: need to be modified to pickup the bgemm kernel
-    // ruy::Mul<ruy::kAllPaths>(ruy_lhs, ruy_rhs, ruy_spec, context->ruy_context(),
+    // ruy::Mul<ruy::kAllPaths>(ruy_lhs, ruy_rhs, ruy_spec,
+    // context->ruy_context(),
     //                          &ruy_dst);
   }
 };

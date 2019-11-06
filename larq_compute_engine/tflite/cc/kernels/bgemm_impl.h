@@ -21,13 +21,13 @@ namespace tflite {
 #ifndef TFLITE_WITH_RUY
 template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
           typename DstScalar, QuantizationFlavor quantization_flavor>
-struct BGemmImpl : BGemmImplRef<LhsScalar, RhsScalar, AccumScalar,
-                                     DstScalar, quantization_flavor> {};
+struct BGemmImpl : BGemmImplRef<LhsScalar, RhsScalar, AccumScalar, DstScalar,
+                                quantization_flavor> {};
 #else
 template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
           typename DstScalar, QuantizationFlavor quantization_flavor>
-struct BGemmImpl : BGemmImplRef<LhsScalar, RhsScalar, AccumScalar,
-                                     DstScalar, quantization_flavor> {};
+struct BGemmImpl : BGemmImplRef<LhsScalar, RhsScalar, AccumScalar, DstScalar,
+                                quantization_flavor> {};
 // TODO: currently only ref. impl. is supported
 // template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
 //           typename DstScalar, QuantizationFlavor quantization_flavor>
@@ -37,11 +37,12 @@ struct BGemmImpl : BGemmImplRef<LhsScalar, RhsScalar, AccumScalar,
 
 template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
           typename DstScalar, QuantizationFlavor quantization_flavor>
-void BGemm(const MatrixParams<LhsScalar>& lhs_params, const LhsScalar* lhs_data,
-           const MatrixParams<RhsScalar>& rhs_params, const RhsScalar* rhs_data,
-           const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
-           const GemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
-           CpuBackendContext* context) {
+void BGemm(
+    const MatrixParams<LhsScalar>& lhs_params, const LhsScalar* lhs_data,
+    const MatrixParams<RhsScalar>& rhs_params, const RhsScalar* rhs_data,
+    const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
+    const GemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
+    CpuBackendContext* context) {
   gemmlowp::ScopedProfilingLabel label("bgemm_impl::BGemm");
   ValidateParams(lhs_params, rhs_params, dst_params, params);
   // TODO: special fast bgemm impl. for matrix-vector multiplication
@@ -54,8 +55,9 @@ void BGemm(const MatrixParams<LhsScalar>& lhs_params, const LhsScalar* lhs_data,
   // }
   gemmlowp::ScopedProfilingLabel label2("bgemm_impl::BGemm: general BGEMM");
   BGemmImpl<LhsScalar, RhsScalar, AccumScalar, DstScalar,
-           quantization_flavor>::Run(lhs_params, lhs_data, rhs_params, rhs_data,
-                                     dst_params, dst_data, params, context);
+            quantization_flavor>::Run(lhs_params, lhs_data, rhs_params,
+                                      rhs_data, dst_params, dst_data, params,
+                                      context);
 }
 
 }  // namespace tflite
