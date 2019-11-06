@@ -16,20 +16,20 @@ namespace ce = compute_engine;
 
 namespace tflite {
 
-template <class TBitpacked>
+template <class T, class TBitpacked>
 inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
-                    const float* input_data, const RuntimeShape& filter_shape,
-                    const float* filter_data, const RuntimeShape& bias_shape,
-                    const float* bias_data, const RuntimeShape& output_shape,
-                    float* output_data, const RuntimeShape& im2col_shape,
-                    float* im2col_data,
+                    const T* input_data, const RuntimeShape& filter_shape,
+                    const T* filter_data, const RuntimeShape& bias_shape,
+                    const T* bias_data, const RuntimeShape& output_shape,
+                    T* output_data, const RuntimeShape& im2col_shape,
+                    T* im2col_data,
                     CpuBackendContext* cpu_backend_context) {
   const int stride_width = params.stride_width;
   const int stride_height = params.stride_height;
   const int dilation_width_factor = params.dilation_width_factor;
   const int dilation_height_factor = params.dilation_height_factor;
-  const float output_activation_min = params.float_activation_min;
-  const float output_activation_max = params.float_activation_max;
+  const T output_activation_min = params.float_activation_min;
+  const T output_activation_max = params.float_activation_max;
 
   TFLITE_DCHECK_EQ(input_shape.DimensionsCount(), 4);
   TFLITE_DCHECK_EQ(filter_shape.DimensionsCount(), 4);
@@ -41,7 +41,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
 
   // NB: the float 0.0f value is represented by all zero bytes.
   const uint8 float_zero_byte = 0x00;
-  const float* gemm_input_data = nullptr;
+  const T* gemm_input_data = nullptr;
   const RuntimeShape* gemm_input_shape = nullptr;
 
   const int filter_height = filter_shape.Dims(1);
@@ -145,7 +145,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   rhs_params.rows = rhs_cols_bp;  // k/bitwidth
   rhs_params.cols = rhs_rows_bp;  // m
 
-  cpu_backend_gemm::MatrixParams<float> dst_params;
+  cpu_backend_gemm::MatrixParams<T> dst_params;
   dst_params.order = cpu_backend_gemm::Order::kColMajor;
   dst_params.rows = n;
   dst_params.cols = m;
@@ -154,7 +154,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   // as its used in the TF Lite codebase. Here, we abuse the
   // 'multiplier_exponent' which is used only for non-floating-point
   // cases to pass the bitpadding correction value (int) to BGemm
-  cpu_backend_gemm::GemmParams<TBitpacked, float> gemm_params;
+  cpu_backend_gemm::GemmParams<TBitpacked, T> gemm_params;
   gemm_params.multiplier_exponent = lhs_bitpadding;
   // gemm_params.bias = bias_data;
   // gemm_params.clamp_min = output_activation_min;
@@ -173,7 +173,6 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
         dst_params, output_data, gemm_params, cpu_backend_context);
 
   if (params.padding_type == PaddingType::kSame) {
-    using T = float;
     using PaddingFunctor =
         ce::core::ReferencePaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
 

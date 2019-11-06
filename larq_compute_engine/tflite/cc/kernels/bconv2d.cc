@@ -374,12 +374,12 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   ConvParams op_params;
   GetConvParamsType(*params, op_params);
 
-  BConv2D<TBitpacked>(
-      op_params, GetTensorShape(input), GetTensorData<float>(input),
-      GetTensorShape(filter), GetTensorData<float>(filter),
-      GetTensorShape(bias), GetTensorData<float>(bias), GetTensorShape(output),
-      GetTensorData<float>(output), GetTensorShape(im2col),
-      GetTensorData<float>(im2col), CpuBackendContext::GetFromContext(context));
+  BConv2D<T, TBitpacked>(
+      op_params, GetTensorShape(input), GetTensorData<T>(input),
+      GetTensorShape(filter), GetTensorData<T>(filter),
+      GetTensorShape(bias), GetTensorData<T>(bias), GetTensorShape(output),
+      GetTensorData<T>(output), GetTensorShape(im2col),
+      GetTensorData<T>(im2col), CpuBackendContext::GetFromContext(context));
 }
 
 template <KernelType kernel_type, class TBitpacked>
