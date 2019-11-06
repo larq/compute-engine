@@ -45,6 +45,14 @@ http_archive(
     ],
 )
 
+http_archive(
+    # Note: this is ~260 MB
+    name = "aarch64_compiler",
+    build_file = "//ext:aarch64_compiler.BUILD",
+    sha256 = "8ce3e7688a47d8cd2d8e8323f147104ae1c8139520eca50ccf8a7fa933002731",
+    strip_prefix = "gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu/",
+    url = "https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu.tar.xz?revision=2e88a73f-d233-4f96-b1f4-d8b36e9bb0b9&la=en&hash=167687FADA00B73D20EED2A67D0939A197504ACD",
+)
 
 load("//ext/toolchains/cpus/arm:arm_compiler_configure.bzl", "arm_compiler_configure")
 
@@ -53,5 +61,4 @@ arm_compiler_configure(
     build_file = "//ext/toolchains/cpus/arm:BUILD",
     remote_config_repo = "../arm_compiler", #This path is relative to some_bazel_dir/external/local_config_arm_compiler/
 )
-
 

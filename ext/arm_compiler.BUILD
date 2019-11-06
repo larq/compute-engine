@@ -59,9 +59,9 @@ filegroup(
 filegroup(
     name = "compiler_pieces",
     srcs = glob([
-        "arm-linux-gnueabihf/**",
+        "arm-rpi-linux-gnueabihf/**",
         "libexec/**",
-        "lib/gcc/arm-linux-gnueabihf/**",
+        "lib/gcc/arm-rpi-linux-gnueabihf/**",
         "include/**",
     ]),
 )

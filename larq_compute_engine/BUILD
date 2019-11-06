@@ -137,6 +137,17 @@ test_suite(
     ],
 )
 
+# For running the ARM tests using qemu
+sh_test(
+    name = "cc_tests_qemu",
+    srcs = ["cc_tests_qemu.sh"],
+    data = [
+        ":cc_tests",
+        "@arm_compiler//:compiler_pieces",
+    ],
+)
+
+
 #
 # Benchmarks
 #

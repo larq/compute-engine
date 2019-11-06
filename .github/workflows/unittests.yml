@@ -73,3 +73,19 @@ jobs:
           # and not use the local larq_compute_engine directory
           cd larq_compute_engine/tflite
           python3 -m pytest . -n auto
+
+  ARMv7:
+    runs-on: ubuntu-latest
+    container:
+      image: tensorflow/tensorflow:custom-op-ubuntu16
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install qemu-user
+        run: apt-get update && apt-get install -y qemu-user
+      - name: Configure Bazel
+        run: ./configure.sh <<< $'yes\nyes\n' #yes,yes for tf2
+        shell: bash
+      - name: Cross-compile and run unit tests in qemu
+        run: bazel run larq_compute_engine:cc_tests_qemu --config=rpi3
+
