@@ -17,7 +17,7 @@ except ImportError:
     from ..utils import eval_op
 
 
-def _get_args_list():
+def _get_test_cases():
     bconv_op = [bconv2d8, bconv2d32, bconv2d64]
     data_types = [np.float32, np.float64]
     data_formats = ["NHWC"]
@@ -42,7 +42,7 @@ def _get_args_list():
 
 
 class BConv2DTest(tf.test.TestCase, parameterized.TestCase):
-    @parameterized.parameters(args for args in itertools.product(*_get_args_list()))
+    @parameterized.parameters(itertools.product(*_get_test_cases()))
     def test_bconv(
         self,
         bconv_op,
