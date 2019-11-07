@@ -74,7 +74,7 @@ jobs:
           cd larq_compute_engine/tflite
           python3 -m pytest . -n auto
 
-  ARMv7:
+  ARM:
     runs-on: ubuntu-latest
     container:
       image: tensorflow/tensorflow:custom-op-ubuntu16
@@ -86,6 +86,8 @@ jobs:
       - name: Configure Bazel
         run: ./configure.sh <<< $'yes\nyes\n' #yes,yes for tf2
         shell: bash
-      - name: Cross-compile and run unit tests in qemu
+      - name: "Arm32: Cross-compile and run unit tests in qemu"
         run: bazel run larq_compute_engine:cc_tests_arm32_qemu --config=rpi3
+      - name: "Aarch64: Cross-compile and run unit tests in qemu"
+        run: bazel run larq_compute_engine:cc_tests_aarch64_qemu --config=aarch64
 
