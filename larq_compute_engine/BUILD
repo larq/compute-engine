@@ -6,6 +6,7 @@ cc_library(
     name = "utils",
     hdrs = [
         "cc/utils/macros.h",
+        "cc/utils/types.h",
     ],
 )
 
@@ -37,6 +38,9 @@ cc_library(
     hdrs = [
         "cc/core/packbits.h",
     ],
+    deps = [
+        ":utils",
+    ]
 )
 
 cc_test(
@@ -47,7 +51,6 @@ cc_test(
     deps = [
          "@googletest//:gtest_main",
          ":packbits",
-         ":utils",
     ],
 )
 

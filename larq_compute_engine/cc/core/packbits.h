@@ -7,10 +7,10 @@
 #include <vector>
 #include <cstring>
 
+#include "larq_compute_engine/cc/utils/types.h"
+
 namespace compute_engine {
 namespace core {
-
-enum class Axis { RowWise, ColWise };
 
 #define GET_POINTER_TO_ROW(array_pointer, lda, row_index) \
   ((array_pointer) + ((row_index) * (lda)))

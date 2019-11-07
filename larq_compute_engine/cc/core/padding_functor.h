@@ -1,10 +1,10 @@
 #ifndef COMPUTE_ENGINE_KERNELS_PADDING_H_
 #define COMPUTE_ENGINE_KERNELS_PADDING_H_
 
+#include "larq_compute_engine/cc/utils/types.h"
+
 namespace compute_engine {
 namespace core {
-
-enum class FilterFormat { HWIO, OHWI };
 
 namespace ce = compute_engine;
 

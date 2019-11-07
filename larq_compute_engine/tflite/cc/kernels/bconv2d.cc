@@ -9,6 +9,7 @@
 #include "tensorflow/lite/kernels/op_macros.h"
 #include "tensorflow/lite/kernels/padding.h"
 
+#include "larq_compute_engine/cc/utils/types.h"
 #include "larq_compute_engine/cc/core/bconv2d_functor.h"
 #include "larq_compute_engine/cc/core/padding_functor.h"
 
@@ -61,7 +62,7 @@ typedef struct {
   int64_t out_width{0};
   int64_t out_height{0};
 
-  ce::core::FilterFormat filter_format;
+  ce::core::FilterFormat filter_format {ce::core::FilterFormat::Unknown};
 
   bool need_im2col = false;
   // IDs are the arbitrary identifiers used by TF Lite to identify and access
@@ -79,8 +80,6 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
   const uint8_t* buffer_t = reinterpret_cast<const uint8_t*>(buffer);
   const flexbuffers::Map& m = flexbuffers::GetRoot(buffer_t, length).AsMap();
 
-  // For now we allow both filter format to allow for easier comparison
-  // in benchmarks and tests.
   // Later we can change this so that we only allow "OHWI_PACKED" (prepacked)
   if (m["filter_format"].IsNull() || m["filter_format"].ToString() == "HWIO") {
     conv_params->filter_format = ce::core::FilterFormat::HWIO;
@@ -149,18 +148,13 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
   conv_params->channels_in = input->dims->data[3];
 
   // reading the filter dimensions
-  // Assumes OHWI layout
-  if (conv_params->filter_format == ce::core::FilterFormat::OHWI) {
-    conv_params->channels_out = filter->dims->data[0];
-    conv_params->filter_height = filter->dims->data[1];
-    conv_params->filter_width = filter->dims->data[2];
-    TF_LITE_ENSURE_EQ(context, conv_params->channels_in, filter->dims->data[3]);
-  } else {  // HWIO. This support will be dropped later.
-    conv_params->filter_height = filter->dims->data[0];
-    conv_params->filter_width = filter->dims->data[1];
-    TF_LITE_ENSURE_EQ(context, conv_params->channels_in, filter->dims->data[2]);
-    conv_params->channels_out = filter->dims->data[3];
-  }
+  // only OHWI layout is supported for filters
+  TF_LITE_ENSURE_EQ(context, conv_params->filter_format, ce::core::FilterFormat::OHWI);
+
+  conv_params->channels_out = filter->dims->data[0];
+  conv_params->filter_height = filter->dims->data[1];
+  conv_params->filter_width = filter->dims->data[2];
+  TF_LITE_ENSURE_EQ(context, conv_params->channels_in, filter->dims->data[3]);
 
   // computing the padding and output values (height, width)
   int out_width, out_height;
@@ -253,64 +247,31 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   const int padding =
       params->padding_type == TfLitePadding::kTfLitePaddingValid ? 1 : 2;
 
-  if (params->filter_format == ce::core::FilterFormat::OHWI) {
-    using TBGemmFunctor =
-        ce::core::ReferenceBGemmFunctor<TBitpacked, Layout::RowMajor,
-                                        TBitpacked, Layout::ColMajor, T>;
+  using TBGemmFunctor =
+      ce::core::ReferenceBGemmFunctor<TBitpacked, Layout::RowMajor,
+                                      TBitpacked, Layout::ColMajor, T>;
+  using TFusedBGemmFunctor =
+      ce::core::FusedBGemmFunctor<T, Layout::RowMajor, T, Layout::ColMajor, T,
+                                  TBitpacked, TBGemmFunctor>;
+  using TConvFunctor =
+      ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
+  using PaddingFunctor =
+      ce::core::ReferencePaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
 
-    using TFusedBGemmFunctor =
-        ce::core::FusedBGemmFunctor<T, Layout::RowMajor, T, Layout::ColMajor, T,
-                                    TBitpacked, TBGemmFunctor>;
-    using TConvFunctor =
-        ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
-    using PaddingFunctor =
-        ce::core::ReferencePaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
+  static TConvFunctor conv_functor;
+  conv_functor(input->data.f, params->batch, params->input_height,
+               params->input_width, params->channels_in, filter->data.f,
+               params->filter_height, params->filter_width,
+               params->channels_out, stride_height, stride_width, padding,
+               output->data.f, params->out_height, params->out_width);
 
-    // static to avoid memory reallocation every inference pass
-    static TConvFunctor conv_functor;
-    conv_functor(input->data.f, params->batch, params->input_height,
-                 params->input_width, params->channels_in, filter->data.f,
-                 params->filter_height, params->filter_width,
-                 params->channels_out, stride_height, stride_width, padding,
-                 output->data.f, params->out_height, params->out_width);
-
-    if (params->padding_type == TfLitePadding::kTfLitePaddingSame) {
-      PaddingFunctor padding_functor;
-      padding_functor(params->batch, params->input_height, params->input_width,
-                      params->channels_in, filter->data.f,
-                      params->filter_height, params->filter_width,
-                      params->channels_out, stride_height, stride_width,
-                      output->data.f, params->out_height, params->out_width);
-    }
-  } else {  // HWIO. This support will be dropped later.
-    using TBGemmFunctor =
-        ce::core::ReferenceBGemmFunctor<TBitpacked, Layout::RowMajor,
-                                        TBitpacked, Layout::RowMajor, T>;
-
-    using TFusedBGemmFunctor =
-        ce::core::FusedBGemmFunctor<T, Layout::RowMajor, T, Layout::RowMajor, T,
-                                    TBitpacked, TBGemmFunctor>;
-    using TConvFunctor =
-        ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
-    using PaddingFunctor =
-        ce::core::ReferencePaddingFunctor<T, T, ce::core::FilterFormat::HWIO>;
-
-    // static to avoid memory reallocation every inference pass
-    static TConvFunctor conv_functor;
-    conv_functor(input->data.f, params->batch, params->input_height,
-                 params->input_width, params->channels_in, filter->data.f,
-                 params->filter_height, params->filter_width,
-                 params->channels_out, stride_height, stride_width, padding,
-                 output->data.f, params->out_height, params->out_width);
-
-    if (params->padding_type == TfLitePadding::kTfLitePaddingSame) {
-      PaddingFunctor padding_functor;
-      padding_functor(params->batch, params->input_height, params->input_width,
-                      params->channels_in, filter->data.f,
-                      params->filter_height, params->filter_width,
-                      params->channels_out, stride_height, stride_width,
-                      output->data.f, params->out_height, params->out_width);
-    }
+  if (params->padding_type == TfLitePadding::kTfLitePaddingSame) {
+    PaddingFunctor padding_functor;
+    padding_functor(params->batch, params->input_height, params->input_width,
+                    params->channels_in, filter->data.f,
+                    params->filter_height, params->filter_width,
+                    params->channels_out, stride_height, stride_width,
+                    output->data.f, params->out_height, params->out_width);
   }
 }
 
