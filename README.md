@@ -48,7 +48,7 @@ print(lqce.bsign([[1,-2], [-3,-4]], [[-1,-2], [3,4]]))
 
 Run CC unit tests
 ``` bash
-bazel test larq_compute_engine:cc_tests
+bazel test larq_compute_engine:cc_tests_general
 ```
 
 Run Python unit tests
