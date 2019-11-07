@@ -1,8 +1,8 @@
 """Tests for compute engine ops."""
 import numpy as np
 import tensorflow as tf
-import itertools
-from absl.testing import parameterized
+import sys
+import pytest
 
 
 try:
@@ -11,38 +11,22 @@ try:
         bconv2d32,
         bconv2d64,
     )
-    from larq_compute_engine.python.utils import eval_op
+    from larq_compute_engine.python.utils import eval_op, TestCase
 except ImportError:
     from compute_engine_ops import bconv2d8, bconv2d32, bconv2d64
-    from ..utils import eval_op
+    from ..utils import eval_op, TestCase
 
 
-def _get_test_cases():
-    bconv_op = [bconv2d8, bconv2d32, bconv2d64]
-    data_types = [np.float32, np.float64]
-    data_formats = ["NHWC"]
-    in_sizes = [[10, 10], [11, 11], [10, 11]]
-    filter_sizes = [[3, 3], [4, 5]]
-    in_channels = [1, 31, 32, 33, 64]
-    out_channels = [1, 16]
-    hw_strides = [[1, 1], [2, 2]]
-    paddings = ["VALID", "SAME"]
-
-    return (
-        bconv_op,
-        data_types,
-        data_formats,
-        in_sizes,
-        filter_sizes,
-        in_channels,
-        out_channels,
-        hw_strides,
-        paddings,
-    )
-
-
-class BConv2DTest(tf.test.TestCase, parameterized.TestCase):
-    @parameterized.parameters(itertools.product(*_get_test_cases()))
+class BConv2DTest(TestCase):
+    @pytest.mark.parameterize("bconv_op", [bconv2d8, bconv2d32, bconv2d64])
+    @pytest.mark.parameterize("data_type", [np.float32, np.float64])
+    @pytest.mark.parameterize("data_format", ["NHWC"])
+    @pytest.mark.parameterize("in_size", [[10, 10], [11, 11], [10, 11]])
+    @pytest.mark.parameterize("filter_size", [[3, 3], [4, 5]])
+    @pytest.mark.parameterize("in_channel", [1, 31, 32, 33, 64])
+    @pytest.mark.parameterize("out_channel", [1, 16])
+    @pytest.mark.parameterize("hw_stride", [[1, 1], [2, 2]])
+    @pytest.mark.parameterize("padding", ["VALID", "SAME"])
     def test_bconv(
         self,
         bconv_op,
@@ -83,4 +67,4 @@ class BConv2DTest(tf.test.TestCase, parameterized.TestCase):
 
 
 if __name__ == "__main__":
-    tf.test.main()
+    sys.exit(pytest.main([__file__]))
