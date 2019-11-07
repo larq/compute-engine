@@ -5,32 +5,34 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}/../../.."
 TF_DIR="${ROOT_DIR}/ext/tensorflow"
 
-# Take the first argument as modelfile
-# but use a default when its not given.
-MODELFILE=${1:-benchmarking_models/benchmarknet_bin_kernel_3_stride_1_features_64.tflite}
-OUTPUTFILE=${2:-benchmarknet_results.txt}
-
-if [ ! -f "${MODELFILE}" ]; then
-    echo "File not found: ${MODELFILE}."
-    echo "Usage: $0 model_filename ouput_filename"
-
-    read -p "Do you want to generate benchmarking tflite models? Y to generate and then benchmark, N to quit. [y/N] " INPUT
-    case $INPUT in
-        [Yy]* ) echo "Generating tflite models."; GENERATE=1;;
-        [Nn]* ) echo "Not generating tflite models."; GENERATE=0;;
-        "" ) echo "Not generating tflite models."; GENERATE=0;;
-        * ) echo "Invalid selection: " $INPUT;;
-    esac
-    if [ "$GENERATE" = "1" ]; then
-        python3 benchmarknet.py
-    else
+if [ "$1" != "" ]; then
+    if [ ! -f "$1" ]; then
+        echo "File not found: $1."
+        echo "Usage:"
+        echo "    $0 model_filename     Benchmark one model"
+        echo "    $0                    Benchmark all models in benchmarking_models/"
         exit 1
     fi
+    ALLMODELS="$1"
+else
+    if ! compgen -G "benchmarking_models/*.tflite*" > /dev/null; then
+        echo "No models found in benchmarking_models/"
+        read -p "Do you want to generate benchmarking tflite models? Y to generate and then benchmark, N to quit. [y/N] " INPUT
+        case $INPUT in
+            [Yy]* ) echo "Generating tflite models."; GENERATE=1;;
+            [Nn]* ) echo "Not generating tflite models."; GENERATE=0;;
+            "" ) echo "Not generating tflite models."; GENERATE=0;;
+            * ) echo "Invalid selection: " $INPUT;;
+        esac
+        if [ "$GENERATE" = "1" ]; then
+            python3 benchmarknet.py
+        else
+            exit 1
+        fi
+    fi
+    ALLMODELS=$(ls benchmarking_models/*.tflite)
 fi
 
-if [ ! -f "${MODELFILE}" ]; then
-    exit 0
-fi
 
 # Try to figure out the host system
 HOST_OS="unknown"
@@ -43,9 +45,20 @@ fi
 HOST_ARCH="$(if uname -m | grep -q i[345678]86; then echo x86_32; else uname -m; fi)"
 
 BENCHMARK_MODEL="${TF_DIR}/tensorflow/lite/tools/make/gen/${HOST_OS}_${HOST_ARCH}/bin/benchmark_model"
-if [ -f "${BENCHMARK_MODEL}" ]; then
-    ${BENCHMARK_MODEL} --graph="${MODELFILE}" --enable_op_profiling=true | tee ${OUTPUTFILE}
-else
+if [ ! -f "${BENCHMARK_MODEL}" ]; then
     echo "${HOST_OS}_${HOST_ARCH} benchmark binary not found. Please build the larq compute engine (tf lite part) first."
     exit 1
 fi
+
+
+OUTPUTFILE="benchmarking_results.txt"
+
+if [ -f "$OUTPUTFILE" ]; then
+    rm ${OUTPUTFILE}
+fi
+
+for MODELFILE in ${ALLMODELS}
+do
+    ${BENCHMARK_MODEL} --graph="${MODELFILE}" --enable_op_profiling=true | tee --append ${OUTPUTFILE}
+done
+
