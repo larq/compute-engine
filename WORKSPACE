@@ -34,7 +34,10 @@ http_archive(
 )
 
 http_archive(
-    # Note: this is ~250 MB
+    # This is the "raspberry pi compiler" as used in the tensorflow repository
+    # Download size: 250 MB compressed
+    # The archive contains GCC versions 4.9.4 (160 MB), 6.5.0 (290 MB) and 8.3.0 (270 MB)
+    # Only gcc 6.5.0 is used, the rest is ignored, see the `strip_prefix` parameter.
     name = "arm_compiler",
     build_file = "//ext:arm_compiler.BUILD",
     sha256 = "b9e7d50ffd9996ed18900d041d362c99473b382c0ae049b2fce3290632d2656f",
@@ -46,7 +49,10 @@ http_archive(
 )
 
 http_archive(
-    # Note: this is ~260 MB
+    # This is the latest `aarch64-linux-gnu` compiler provided by ARM
+    # See https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a/downloads
+    # Download size: 260 MB compressed, 1.5 GB uncompressed
+    # The archive contains GCC version 8.3.0
     name = "aarch64_compiler",
     build_file = "//ext:aarch64_compiler.BUILD",
     sha256 = "8ce3e7688a47d8cd2d8e8323f147104ae1c8139520eca50ccf8a7fa933002731",
