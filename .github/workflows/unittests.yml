@@ -14,7 +14,7 @@ jobs:
         run: ./configure.sh <<< $'yes\nno\n' #yes,no for tf1
         shell: bash
       - name: Run CC Unit Tests
-        run: bazel test larq_compute_engine:cc_tests
+        run: bazel test larq_compute_engine:cc_tests_general
       - name: Build Bazel Package Creator Binary
         run: bazel build :build_pip_pkg
       - name: Build PIP Package
@@ -35,7 +35,7 @@ jobs:
         run: ./configure.sh <<< $'yes\nyes\n' #yes,yes for tf2
         shell: bash
       - name: Run CC Unit Tests
-        run: bazel test larq_compute_engine:cc_tests
+        run: bazel test larq_compute_engine:cc_tests_general
       - name: Build Bazel Package Creator Binary
         run: bazel build :build_pip_pkg
       - name: Build PIP Package
@@ -73,3 +73,19 @@ jobs:
           # and not use the local larq_compute_engine directory
           cd larq_compute_engine/tflite
           python3 -m pytest . -n auto
+
+  ARMv7:
+    runs-on: ubuntu-latest
+    container:
+      image: tensorflow/tensorflow:custom-op-ubuntu16
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install qemu-user
+        run: apt-get update && apt-get install -y qemu-user
+      - name: Configure Bazel
+        run: ./configure.sh <<< $'yes\nyes\n' #yes,yes for tf2
+        shell: bash
+      - name: Cross-compile and run unit tests in qemu
+        run: bazel run larq_compute_engine:cc_tests_arm32_qemu --config=rpi3
+

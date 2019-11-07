@@ -32,3 +32,39 @@ http_archive(
         "https://bitbucket.org/eigen/eigen/get/89abeb806e2e.tar.gz",
     ],
 )
+
+http_archive(
+    # This is the "raspberry pi compiler" as used in the tensorflow repository
+    # Download size: 250 MB compressed
+    # The archive contains GCC versions 4.9.4 (160 MB), 6.5.0 (290 MB) and 8.3.0 (270 MB)
+    # Only gcc 6.5.0 is used, the rest is ignored, see the `strip_prefix` parameter.
+    name = "arm_compiler",
+    build_file = "//ext:arm_compiler.BUILD",
+    sha256 = "b9e7d50ffd9996ed18900d041d362c99473b382c0ae049b2fce3290632d2656f",
+    strip_prefix = "rpi-newer-crosstools-eb68350c5c8ec1663b7fe52c742ac4271e3217c5/x64-gcc-6.5.0/arm-rpi-linux-gnueabihf/",
+    urls = [
+        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/rvagg/rpi-newer-crosstools/archive/eb68350c5c8ec1663b7fe52c742ac4271e3217c5.tar.gz",
+        "https://github.com/rvagg/rpi-newer-crosstools/archive/eb68350c5c8ec1663b7fe52c742ac4271e3217c5.tar.gz",
+    ],
+)
+
+http_archive(
+    # This is the latest `aarch64-linux-gnu` compiler provided by ARM
+    # See https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a/downloads
+    # Download size: 260 MB compressed, 1.5 GB uncompressed
+    # The archive contains GCC version 8.3.0
+    name = "aarch64_compiler",
+    build_file = "//ext:aarch64_compiler.BUILD",
+    sha256 = "8ce3e7688a47d8cd2d8e8323f147104ae1c8139520eca50ccf8a7fa933002731",
+    strip_prefix = "gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu/",
+    url = "https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu.tar.xz?revision=2e88a73f-d233-4f96-b1f4-d8b36e9bb0b9&la=en&hash=167687FADA00B73D20EED2A67D0939A197504ACD",
+)
+
+load("//ext/toolchains/cpus/arm:arm_compiler_configure.bzl", "arm_compiler_configure")
+
+arm_compiler_configure(
+    name = "local_config_arm_compiler",
+    build_file = "//ext/toolchains/cpus/arm:BUILD",
+    remote_config_repo = "../arm_compiler", #This path is relative to some_bazel_dir/external/local_config_arm_compiler/
+)
+

@@ -48,7 +48,7 @@ print(lqce.bsign([[1,-2], [-3,-4]], [[-1,-2], [3,4]]))
 
 Run CC unit tests
 ``` bash
-bazel test larq_compute_engine:cc_tests
+bazel test larq_compute_engine:cc_tests_general
 ```
 
 Run Python unit tests
@@ -64,6 +64,13 @@ Benchmarks of sub-components can be run using
 ``` bash
 bazel run larq_compute_engine:benchmark
 ```
+
+To cross-compile the benchmark program for the Raspberry Pi (armv7), use
+``` bash
+bazel build larq_compute_engine:benchmark --config=rpi3
+```
+
+The resulting binary `bazel-bin/larq_compute_engine/benchmark` can then be copied to the Raspberry Pi to be used.
 
 
 ## TF lite

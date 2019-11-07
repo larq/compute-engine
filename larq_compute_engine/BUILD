@@ -127,7 +127,7 @@ cc_test(
 # COLLECTION OF ALL CC TESTS
 # each new cc test needs to be added here
 test_suite(
-    name = "cc_tests",
+    name = "cc_tests_general",
     tests = [
         "bgemm_tests",
         "packbits_tests",
@@ -137,56 +137,119 @@ test_suite(
     ],
 )
 
-#
-# Benchmarks
-#
-
 cc_library(
-    name = "bconv2d_bench",
-    srcs = ["cc/benchmark/bconv2d_bench.cc"],
-    deps = [
-        "@googlebenchmark//:benchmark",
-        ":bconv2d",
-    ],
-)
-
-cc_library(
-    name = "bgemm_bench",
-    srcs = ["cc/benchmark/bgemm_bench.cc"],
-    deps = [
-        "@googlebenchmark//:benchmark",
-        ":bgemm",
-        ":fused_bgemm",
-    ],
-)
-
-cc_library(
-    name = "im2col_bench",
-    srcs = ["cc/benchmark/im2col_bench.cc"],
-    deps = [
-        "@googlebenchmark//:benchmark",
-         ":im2col",
-    ],
-)
-
-cc_library(
-    name = "padding_bench",
-    srcs = ["cc/benchmark/padding_bench.cc"],
-    deps = [
-        "@googlebenchmark//:benchmark",
-        ":padding",
+    name = "bgemm_arm32",
+    hdrs = [
+        "cc/core/arm32/bgemm.h",
     ],
 )
 
 cc_test(
+    name = "bgemm_arm32_tests",
+    size = "small",
+    srcs = ["cc/tests/bgemm_arm32_tests.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = [
+         "@googletest//:gtest_main",
+         ":bgemm_arm32",
+         ":bgemm",
+    ],
+)
+
+cc_library(
+    name = "packbits_arm32",
+    hdrs = [
+        "cc/core/arm32/packbits.h",
+    ],
+)
+
+cc_test(
+    name = "packbits_arm32_tests",
+    size = "small",
+    srcs = ["cc/tests/packbits_arm32_tests.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = [
+         "@googletest//:gtest_main",
+         ":packbits_arm32",
+         ":packbits",
+    ],
+)
+
+test_suite(
+    name = "cc_tests_arm32",
+    tests = [
+        "bgemm_arm32_tests",
+        "packbits_arm32_tests",
+    ],
+)
+
+# For running the ARM tests using qemu
+# The script automatically runs every file that ends with _tests
+sh_test(
+    name = "cc_tests_arm32_qemu",
+    srcs = ["cc_tests_arm32_qemu.sh"],
+    data = [
+        ":cc_tests_arm32",
+        "@arm_compiler//:compiler_pieces",
+    ],
+)
+
+cc_library(
+    name = "packbits_aarch64",
+    hdrs = [
+        "cc/core/aarch64/packbits.h",
+    ],
+)
+
+cc_test(
+    name = "packbits_aarch64_tests",
+    size = "small",
+    srcs = ["cc/tests/packbits_aarch64_tests.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = [
+         "@googletest//:gtest_main",
+         ":packbits_aarch64",
+         ":packbits",
+    ],
+)
+
+test_suite(
+    name = "cc_tests_aarch64",
+    tests = [
+        "packbits_aarch64_tests",
+    ],
+)
+
+sh_test(
+    name = "cc_tests_aarch64_qemu",
+    srcs = ["cc_tests_aarch64_qemu.sh"],
+    data = [
+        ":cc_tests_aarch64",
+        "@aarch64_compiler//:compiler_pieces",
+    ],
+)
+
+#
+# Benchmarks
+#
+
+cc_binary(
 	name = "benchmark",
-	linkopts = ["-lrt"],
+	linkopts = ["-lrt -lm"],
+    srcs = [
+        "cc/benchmark/bconv2d_bench.cc",
+        "cc/benchmark/bgemm_bench.cc",
+        "cc/benchmark/im2col_bench.cc",
+        "cc/benchmark/padding_bench.cc",
+    ],
 	deps = [
+        "@googlebenchmark//:benchmark",
         "@googlebenchmark//:benchmark_main",
-		":bconv2d_bench",
-		":bgemm_bench",
-		":im2col_bench",
-		":padding_bench",
+        ":bconv2d",
+        ":bgemm",
+        ":fused_bgemm",
+        ":im2col",
+        ":padding",
 	],
 )
     
