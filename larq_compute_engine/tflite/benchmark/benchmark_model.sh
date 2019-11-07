@@ -7,29 +7,29 @@ TF_DIR="${ROOT_DIR}/ext/tensorflow"
 
 # Take the first argument as modelfile
 # but use a default when its not given.
-MODELFILE=${1:-benchmarknet_ohwi.tflite}
+MODELFILE=${1:-benchmarknet_ohwi_kernel_3_stride_1_filters64.tflite}
 OUTPUTFILE=${2:-benchmarknet_results.txt}
 
 if [ ! -f "${MODELFILE}" ]; then
     echo "File not found: ${MODELFILE}."
     echo "Usage: $0 model_filename ouput_filename"
 
-    if [ "$MODELFILE" = "benchmarknet_ohwi.tflite" ]; then
-        read -p "Do you want to generate benchmarknet_ohwi.tflite? Y to generate and then benchmark, N to quit. [y/N] " INPUT
-        case $INPUT in
-            [Yy]* ) echo "Generating tflite model."; GENERATE=1;;
-            [Nn]* ) echo "Not generating tflite model."; GENERATE=0;;
-            "" ) echo "Not generating tflite model."; GENERATE=0;;
-            * ) echo "Invalid selection: " $INPUT;;
-        esac
-        if [ "$GENERATE" = "1" ]; then
-            python3 benchmarknet.py
-        else
-            exit 1
-        fi
+    read -p "Do you want to generate benchmarknet files? Y to generate and then benchmark, N to quit. [y/N] " INPUT
+    case $INPUT in
+        [Yy]* ) echo "Generating tflite models."; GENERATE=1;;
+        [Nn]* ) echo "Not generating tflite models."; GENERATE=0;;
+        "" ) echo "Not generating tflite models."; GENERATE=0;;
+        * ) echo "Invalid selection: " $INPUT;;
+    esac
+    if [ "$GENERATE" = "1" ]; then
+        python3 benchmarknet.py
     else
         exit 1
     fi
+fi
+
+if [ ! -f "${MODELFILE}" ]; then
+    exit 0
 fi
 
 # Try to figure out the host system
