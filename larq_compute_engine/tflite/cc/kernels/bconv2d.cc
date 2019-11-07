@@ -36,7 +36,6 @@ enum class KernelType {
 const int kTensorNotAllocated = -1;
 
 typedef struct {
-  // TODO: double check the type of each variable
   // input tensor dimensions
   int64_t batch{0};
   int64_t input_width{0};
@@ -275,9 +274,6 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   }
 }
 
-// TODO: We can directly use the PaddingType in our
-// TfLiteBConv2DParams struct instead of the TfLitePadding.
-// In that case, we don't need this conversion anymore.
 inline PaddingType RuntimePaddingType(TfLitePadding padding) {
   switch (padding) {
     case TfLitePadding::kTfLitePaddingSame:
@@ -331,7 +327,6 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   // This requires extra step of converting the TfLiteBConv2DParams
   // but unifies the interface with the default TF lite API for CONV params
   // which is used in internal TF lite im2col functions.
-  // TODO: maybe we should use ConvParams for Ref. impl. as well
   ConvParams op_params;
   GetConvParamsType(*params, op_params);
 
