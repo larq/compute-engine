@@ -66,10 +66,10 @@ jobs:
       - name: "TFLite test dependency: Build PIP Package"
         run: bazel-bin/build_pip_pkg artifacts
       - name: "TFLite test dependency: Install PIP Package"
-        run: pip3 install larq pytest artifacts/*.whl
+        run: pip3 install larq pytest pytest-xdist artifacts/*.whl
       - name: "TFLite: Run Python Tests"
         run: |
           # Go to a different directory to force it to use the installed package
           # and not use the local larq_compute_engine directory
           cd larq_compute_engine/tflite
-          python3 -m pytest .
+          python3 -m pytest . -n auto
