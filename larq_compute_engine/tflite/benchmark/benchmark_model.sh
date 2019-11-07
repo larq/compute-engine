@@ -7,7 +7,7 @@ TF_DIR="${ROOT_DIR}/ext/tensorflow"
 
 # Take the first argument as modelfile
 # but use a default when its not given.
-MODELFILE=${1:-benchmarknet_ohwi_kernel_3_stride_1_filters64.tflite}
+MODELFILE=${1:-benchmarknet_ohwi_kernel_3_stride_1_features_64.tflite}
 OUTPUTFILE=${2:-benchmarknet_results.txt}
 
 if [ ! -f "${MODELFILE}" ]; then
