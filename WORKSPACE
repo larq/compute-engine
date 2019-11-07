@@ -68,3 +68,8 @@ arm_compiler_configure(
     remote_config_repo = "../arm_compiler", #This path is relative to some_bazel_dir/external/local_config_arm_compiler/
 )
 
+arm_compiler_configure(
+    name = "local_config_aarch64_compiler",
+    build_file = "//ext/toolchains/cpus/arm:BUILD",
+    remote_config_repo = "../aarch64_compiler",
+)
