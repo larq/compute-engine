@@ -127,7 +127,7 @@ cc_test(
 # COLLECTION OF ALL CC TESTS
 # each new cc test needs to be added here
 test_suite(
-    name = "cc_tests",
+    name = "cc_tests_general",
     tests = [
         "bgemm_tests",
         "packbits_tests",
@@ -137,16 +137,97 @@ test_suite(
     ],
 )
 
+cc_library(
+    name = "bgemm_arm32",
+    hdrs = [
+        "cc/core/arm32/bgemm.h",
+    ],
+)
+
+cc_test(
+    name = "bgemm_arm32_tests",
+    size = "small",
+    srcs = ["cc/tests/bgemm_arm32_tests.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = [
+         "@googletest//:gtest_main",
+         ":bgemm_arm32",
+         ":bgemm",
+    ],
+)
+
+cc_library(
+    name = "packbits_arm32",
+    hdrs = [
+        "cc/core/arm32/packbits.h",
+    ],
+)
+
+cc_test(
+    name = "packbits_arm32_tests",
+    size = "small",
+    srcs = ["cc/tests/packbits_arm32_tests.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = [
+         "@googletest//:gtest_main",
+         ":packbits_arm32",
+         ":packbits",
+    ],
+)
+
+test_suite(
+    name = "cc_tests_arm32",
+    tests = [
+        "bgemm_arm32_tests",
+        "packbits_arm32_tests",
+    ],
+)
+
 # For running the ARM tests using qemu
+# The script automatically runs every file that ends with _tests
 sh_test(
-    name = "cc_tests_qemu",
-    srcs = ["cc_tests_qemu.sh"],
+    name = "cc_tests_arm32_qemu",
+    srcs = ["cc_tests_arm32_qemu.sh"],
     data = [
-        ":cc_tests",
+        ":cc_tests_arm32",
         "@arm_compiler//:compiler_pieces",
     ],
 )
 
+cc_library(
+    name = "packbits_aarch64",
+    hdrs = [
+        "cc/core/aarch64/packbits.h",
+    ],
+)
+
+cc_test(
+    name = "packbits_aarch64_tests",
+    size = "small",
+    srcs = ["cc/tests/packbits_aarch64_tests.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = [
+         "@googletest//:gtest_main",
+         ":packbits_aarch64",
+         ":packbits",
+    ],
+)
+
+test_suite(
+    name = "cc_tests_aarch64",
+    tests = [
+        "packbits_aarch64_tests",
+    ],
+)
+
+sh_test(
+    name = "cc_tests_aarch64_qemu",
+    srcs = ["cc_tests_aarch64_qemu.sh"],
+    data = [
+        ":cc_tests_aarch64",
+        "@aarch64_compiler//:compiler_pieces",
+    ],
+)
 
 #
 # Benchmarks

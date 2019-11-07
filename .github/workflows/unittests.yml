@@ -87,5 +87,5 @@ jobs:
         run: ./configure.sh <<< $'yes\nyes\n' #yes,yes for tf2
         shell: bash
       - name: Cross-compile and run unit tests in qemu
-        run: bazel run larq_compute_engine:cc_tests_qemu --config=rpi3
+        run: bazel run larq_compute_engine:cc_tests_arm32_qemu --config=rpi3
 
