@@ -44,7 +44,7 @@ elif [ "$UNAME" = "Darwin" ] ; then
 fi
 HOST_ARCH="$(if uname -m | grep -q i[345678]86; then echo x86_32; else uname -m; fi)"
 
-if [ "$HOST_OS" = "linux" && "$HOST_ARCH" == "armv7l" ]; then
+if [ "$HOST_OS" = "linux" ] && [ "$HOST_ARCH" == "armv7l" ]; then
     # Probably this is a 32-bit Raspberry Pi
     # In this case check the rpi_armv7l folder instead
     HOST_OS="rpi"
