@@ -54,7 +54,7 @@ def generate_benchmark_nets():
         for out, label in zip(outs, ["bin", "float"]):
             model = tf.keras.Model(inputs=img, outputs=out)
 
-            filename = f"benchmarking_models/benchmarknet_{label}_input_{in_shape[0]}_kernel_{kernel_size}_stride_{stride}_features_{f}.tflite"
+            filename = f"benchmarking_models/benchmarknet_input_{in_shape[0]}_kernel_{kernel_size}_stride_{stride}_features_{f}_{label}.tflite"
 
             conv = lqce.ModelConverter(model)
             conv.convert(filename)
