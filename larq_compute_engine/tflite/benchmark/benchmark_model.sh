@@ -44,7 +44,19 @@ elif [ "$UNAME" = "Darwin" ] ; then
 fi
 HOST_ARCH="$(if uname -m | grep -q i[345678]86; then echo x86_32; else uname -m; fi)"
 
-BENCHMARK_MODEL="${TF_DIR}/tensorflow/lite/tools/make/gen/${HOST_OS}_${HOST_ARCH}/bin/benchmark_model"
+if [[ $HOST_ARCH == armv7* ]]; then
+    # Probably this is a 32-bit Raspberry Pi
+    # In this case, also check the rpi_armv7l folder
+    BENCHMARK_MODEL="${TF_DIR}/tensorflow/lite/tools/make/gen/rpi_armv7l/bin/benchmark_model"
+    if [ ! -f "${BENCHMARK_MODEL}" ]; then
+        echo "rpi_armv7l benchmark binary not found. Trying other binary as well."
+        unset BENCHMARK_MODEL
+    fi
+fi
+
+# The := will not change BENCHMARK_MODEL when it was already set
+# So if the rpi_armv7l binary was found then that one is used
+BENCHMARK_MODEL:="${TF_DIR}/tensorflow/lite/tools/make/gen/${HOST_OS}_${HOST_ARCH}/bin/benchmark_model"
 if [ ! -f "${BENCHMARK_MODEL}" ]; then
     echo "${HOST_OS}_${HOST_ARCH} benchmark binary not found. Please build the larq compute engine (tf lite part) first."
     exit 1
