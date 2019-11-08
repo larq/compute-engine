@@ -44,6 +44,12 @@ elif [ "$UNAME" = "Darwin" ] ; then
 fi
 HOST_ARCH="$(if uname -m | grep -q i[345678]86; then echo x86_32; else uname -m; fi)"
 
+if [ "$HOST_OS" = "linux" ] && [ "$HOST_ARCH" == "armv7l" ]; then
+    # Probably this is a 32-bit Raspberry Pi
+    # In this case check the rpi_armv7l folder instead
+    HOST_OS="rpi"
+fi
+
 BENCHMARK_MODEL="${TF_DIR}/tensorflow/lite/tools/make/gen/${HOST_OS}_${HOST_ARCH}/bin/benchmark_model"
 if [ ! -f "${BENCHMARK_MODEL}" ]; then
     echo "${HOST_OS}_${HOST_ARCH} benchmark binary not found. Please build the larq compute engine (tf lite part) first."
@@ -56,6 +62,8 @@ OUTPUTFILE="benchmarking_results_${current_time}.txt"
 if [ -f "$OUTPUTFILE" ]; then
     rm ${OUTPUTFILE}
 fi
+
+echo -e "Using benchmark binary: ${BENCHMARK_MODEL}\n\n" | tee --append ${OUTPUTFILE}
 
 for MODELFILE in ${ALLMODELS}
 do

@@ -22,7 +22,7 @@ cd compute_engine
 ### Build PIP package
 You can build the pip package with Bazel.
 
-For the configure script, answer Yes to the manylinux2010 question when you want to build for Tensorflow 2.x, and No for Tensorflow 1.x.
+For the configure script, answer Yes to the manylinux2010 question when you want to build for Tensorflow 2.x or Tensorflow 1.15, and No for Tensorflow 1.14 and below.
 ``` bash
 ./configure.sh
 bazel build :build_pip_pkg
@@ -81,4 +81,6 @@ This is independent of the normal tensorflow part of the compute engine. It does
 
 Please see the [TF lite readme](larq_compute_engine/tflite/build/README.md) for more information.
 
-To benchmark the TF lite ops, see [benchmarking](larq_compute_engine/tflite/benchmark).
+To benchmark the TF lite ops, see [benchmarking](larq_compute_engine/tflite/benchmark/README.md).
+
+To run unit tests for TF lite, see [TF lite unittests](larq_compute_engine/tflite/python/README.md).

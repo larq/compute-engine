@@ -1,21 +1,60 @@
 #!/bin/bash
 set -e
 
-# Use --fullbuild to also build the pip package
 
-# Use --benchmark to compile with gemmlowp profiling enabled
-# Note: if you have previously build the library without benchmarking
-# then you should pass --cleanbuild to do a complete rebuild
+if [ "$@" == "" or "$@" == "-h" or "$@" == "--help" ]; then
+cat << EOF
+Usage: build_lqce.sh [--native] [--rpi] [--ios] [--aarch64] [--benchmark] [--cleanbuild] [--pip]
 
-fullbuild=0
+--native        Build for the host platform
+--rpi           Cross-compile for Raspberry Pi (32-bit armv7)
+--ios           Cross-compile for iOS
+--aarch64       Cross-compile for Aarch64 (e.g. 64-bit Raspberry Pi)
+
+When building on a 32-bit Raspberry Pi, it is advised to use the --rpi option in order to set the correct compiler optimization flags.
+
+For cross-compiling, the relevant toolchains have to be installed using the systems package manager.
+The --rpi option requires the arm-linux-gnueabihf toolchain.
+The --aarch64 option requires the aarch64-linux-gnu toolchain.
+The --ios option requires the iOS SDK.
+
+--benchmark     Compile with gemmlowp profiling enabled
+--cleanbuild    Delete intermediate build files
+--pip           Also build the pip package
+
+If doing a benchmark build when you have previously built without --benchmark
+then you should pass --cleanbuild to do a complete rebuild.
+
+Building the pip package is only available for the --native target.
+EOF
+exit 0
+fi
+
+native=0
+rpi=0
+ios=0
+aarch64=0
 benchmark=0
 cleanbuild=0
+pip=0
 
 for arg in "$@"
 do
 case $arg in
-    --fullbuild)
-	fullbuild=1
+    --native)
+	native=1
+    shift
+    ;;
+    --rpi)
+	rpi=1
+    shift
+    ;;
+    --ios)
+	ios=1
+    shift
+    ;;
+    --aarch64)
+	aarch64=1
     shift
     ;;
     --benchmark)
@@ -24,6 +63,10 @@ case $arg in
     ;;
     --cleanbuild)
     cleanbuild=1
+    shift
+    ;;
+    --pip)
+	pip=1
     shift
     ;;
     *)
@@ -58,42 +101,54 @@ fi
 if [ ! -d "${TF_DIR}/tensorflow/lite/tools/make/downloads" ]; then
     ${TF_DIR}/tensorflow/lite/tools/make/download_dependencies.sh
 fi
-# Build tflite (will automatically skip when up-to-date
-${TF_DIR}/tensorflow/lite/tools/make/build_lib.sh
-# Build our kernels
-make -j 8 BUILD_WITH_NNAPI=false -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
-# Rebuild tflite binaries such as benchmarking libs to include our ops
-${TF_DIR}/tensorflow/lite/tools/make/build_lib.sh
 
-# Optionally build the pip package
-if [ "$fullbuild" == "1" ]; then
-    ${TF_DIR}/tensorflow/lite/tools/pip_package/build_pip_package.sh
+if [ "$native" == "1" ]; then
+    # Build tflite (will automatically skip when up-to-date
+    ${TF_DIR}/tensorflow/lite/tools/make/build_lib.sh
+    # Build our kernels
+    make -j 8 BUILD_WITH_NNAPI=false -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
+    # Rebuild tflite binaries such as benchmarking libs to include our ops
+    ${TF_DIR}/tensorflow/lite/tools/make/build_lib.sh
+
+    # Optionally build the pip package
+    if [ "$pip" == "1" ]; then
+        ${TF_DIR}/tensorflow/lite/tools/pip_package/build_pip_package.sh
+    fi
 fi
 
-
-#
-# Everything below is for cross-compilation only.
-# By default it won't run, except if that cross-compiled target already existed,
-# in which case it will add our kernels to it.
-#
-
-
-# Check if we need to cross-compile to raspberry pi
-if [ -f "${TF_DIR}/tensorflow/lite/tools/make/gen/rpi_armv7l/lib/libtensorflow-lite.a" ]; then
+if [ "$rpi" == "1" ]; then
+    # Stored in gen/rpi_armv7l
+    ${TF_DIR}/tensorflow/lite/tools/make/build_rpi_lib.sh
     make -j 8 TARGET=rpi -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
     ${TF_DIR}/tensorflow/lite/tools/make/build_rpi_lib.sh
+
+    # Optionally build the pip package
+    if [ "$pip" == "1" ]; then
+        # This will only work if we are running this natively on a raspberry pi
+        if [[ $HOST_ARCH == armv7* ]]; then
+            ${TF_DIR}/tensorflow/lite/tools/pip_package/build_pip_package.sh
+        fi
+    fi
 fi
 
-# Check if we need to compile for iOS
-IOS_BUILT=false
-IOS_ARCHS="x86_64 armv7 armv7s arm64"
-for arch in $BUILD_ARCHS
-do
-    if [ -f "${TF_DIR}/tensorflow/lite/tools/make/gen/ios_${arch}/lib/libtensorflow-lite.a" ]; then
-        IOS_BUILT=true
-        make -j 8 TARGET=ios TARGET_ARCH=${arch} -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
+if [ "$ios" == "1" ]; then
+    profiling_opt=""
+    if [ "$benchmark" == "1" ]; then
+        profiling_opt="-p"
     fi
-done
-if [ "$IOS_BUILT" = true ] ; then
-    ${TF_DIR}/tensorflow/lite/tools/make/build_ios_universal_lib.sh
+    ${TF_DIR}/tensorflow/lite/tools/make/build_ios_universal_lib.sh $profiling_opt
+    IOS_ARCHS="x86_64 armv7 armv7s arm64"
+    for arch in $BUILD_ARCHS
+    do
+        # Stored in gen/ios_$arch
+        make -j 8 TARGET=ios TARGET_ARCH=${arch} -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
+    done
+    ${TF_DIR}/tensorflow/lite/tools/make/build_ios_universal_lib.sh $profiling_opt
+fi
+
+if [ "$aarch64" == "1" ]; then
+    # Stored in gen/aarch64_armv8-a
+    ${TF_DIR}/tensorflow/lite/tools/make/build_aarch64_lib.sh
+    make -j 8 TARGET=aarch64 -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
+    ${TF_DIR}/tensorflow/lite/tools/make/build_aarch64_lib.sh
 fi
