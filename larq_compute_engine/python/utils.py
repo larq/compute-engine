@@ -9,7 +9,4 @@ def tf_2_or_newer():
 
 
 def eval_op(op):
-    try:
-        return op.numpy()
-    except:
-        return op.eval()
+    return tf.keras.backend.get_value(op)
