@@ -59,6 +59,7 @@ fi
 
 for MODELFILE in ${ALLMODELS}
 do
+    echo -e "\nBenchmark for: ${MODELFILE}\n" | tee --append ${OUTPUTFILE}
     ${BENCHMARK_MODEL} --graph="${MODELFILE}" --enable_op_profiling=true | tee --append ${OUTPUTFILE}
 done
 
