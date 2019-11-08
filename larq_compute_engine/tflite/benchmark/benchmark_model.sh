@@ -64,7 +64,7 @@ if [ -f "$OUTPUT_FILE" ]; then
     rm ${OUTPUT_FILE}
 fi
 
-OUTPUT_PREFIX="Using benchmark binary:"
+OUTPUT_PREFIX="Using benchmark model:"
 
 for MODELFILE in ${ALLMODELS}
 do
