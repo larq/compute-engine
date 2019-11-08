@@ -65,11 +65,7 @@ load("//ext/toolchains/cpus/arm:arm_compiler_configure.bzl", "arm_compiler_confi
 arm_compiler_configure(
     name = "local_config_arm_compiler",
     build_file = "//ext/toolchains/cpus/arm:BUILD",
-    remote_config_repo = "../arm_compiler", #This path is relative to some_bazel_dir/external/local_config_arm_compiler/
-)
-
-arm_compiler_configure(
-    name = "local_config_aarch64_compiler",
-    build_file = "//ext/toolchains/cpus/arm:BUILD",
-    remote_config_repo = "../aarch64_compiler",
+    #These paths are relative to some_bazel_dir/external/local_config_arm_compiler/
+    remote_config_repo_arm = "../arm_compiler",
+    remote_config_repo_aarch64 = "../aarch64_compiler",
 )

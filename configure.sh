@@ -156,7 +156,7 @@ build:rpi3 --crosstool_top=@local_config_arm_compiler//:toolchain
 build:rpi3 --cpu=armeabi
 build:rpi3 -c opt  \
   --copt=-march=armv7-a --copt=-mfpu=neon-vfpv4 \
-  --copt=-std=gnu11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR \
+  --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR \
   --copt=-O3 --copt=-fno-tree-pre \
   --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 \
   --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 \
@@ -167,11 +167,11 @@ build:rpi3 -c opt  \
   --copt=-fomit-frame-pointer \
   --verbose_failures
 
-build:aarch64 --crosstool_top=@local_config_aarch64_compiler//:toolchain
+build:aarch64 --crosstool_top=@local_config_arm_compiler//:toolchain
 build:aarch64 --cpu=aarch64
 build:aarch64 -c opt  \
   --copt=-march=armv8-a \
-  --copt=-std=gnu11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR \
+  --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR \
   --copt=-O3 --copt=-fno-tree-pre \
   --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 \
   --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 \

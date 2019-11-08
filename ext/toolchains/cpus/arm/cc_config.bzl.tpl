@@ -490,16 +490,16 @@ def _impl(ctx):
                             flags = [
                                 "-std=c++11",
                                 "-isystem",
-                                "%{ARM_COMPILER_PATH}%/aarch64-linux-gnu/include/c++/8.3.0/",
+                                "%{AARCH64_COMPILER_PATH}%/aarch64-linux-gnu/include/c++/8.3.0/",
                                 #"%{ARM_COMPILER_PATH}%/arm-rpi-linux-gnueabihf/include/c++/6.5.0/",
                                 "-isystem",
-                                "%{ARM_COMPILER_PATH}%/lib/gcc/aarch64-linux-gnu/8.3.0/include",
+                                "%{AARCH64_COMPILER_PATH}%/lib/gcc/aarch64-linux-gnu/8.3.0/include",
                                 #"%{ARM_COMPILER_PATH}%/lib/gcc/arm-rpi-linux-gnueabihf/6.5.0/include",
                                 "-isystem",
-                                "%{ARM_COMPILER_PATH}%/lib/gcc/aarch64-linux-gnu/8.3.0/include-fixed",
+                                "%{AARCH64_COMPILER_PATH}%/lib/gcc/aarch64-linux-gnu/8.3.0/include-fixed",
                                 #"%{ARM_COMPILER_PATH}%/lib/gcc/arm-rpi-linux-gnueabihf/6.5.0/include-fixed",
                                 "-isystem",
-                                "%{ARM_COMPILER_PATH}%/aarch64-linux-gnu/libc/usr/include/",
+                                "%{AARCH64_COMPILER_PATH}%/aarch64-linux-gnu/libc/usr/include/",
                                 #"%{ARM_COMPILER_PATH}%/arm-rpi-linux-gnueabihf/sysroot/usr/include/",
                                 "-isystem",
                                 "%{PYTHON_INCLUDE_PATH}%",
@@ -775,13 +775,13 @@ def _impl(ctx):
         # I checked the directories of both compilers to confirm they have the same files
         # It is crucial that we change the order of the C++ directory to come *before* the others
         cxx_builtin_include_directories = [
-		"%{ARM_COMPILER_PATH}%/aarch64-linux-gnu/include/c++/8.3.0/",
+		"%{AARCH64_COMPILER_PATH}%/aarch64-linux-gnu/include/c++/8.3.0/",
 		#"%{ARM_COMPILER_PATH}%/arm-rpi-linux-gnueabihf/include/c++/6.5.0/",
-                "%{ARM_COMPILER_PATH}%/lib/gcc/aarch64-linux-gnu/8.3.0/include",
+                "%{AARCH64_COMPILER_PATH}%/lib/gcc/aarch64-linux-gnu/8.3.0/include",
                 #"%{ARM_COMPILER_PATH}%/lib/gcc/arm-rpi-linux-gnueabihf/6.5.0/include",
-                "%{ARM_COMPILER_PATH}%/lib/gcc/aarch64-linux-gnu/8.3.0/include-fixed",
+                "%{AARCH64_COMPILER_PATH}%/lib/gcc/aarch64-linux-gnu/8.3.0/include-fixed",
                 #"%{ARM_COMPILER_PATH}%/lib/gcc/arm-rpi-linux-gnueabihf/6.5.0/include-fixed",
-                "%{ARM_COMPILER_PATH}%/aarch64-linux-gnu/libc/usr/include/",
+                "%{AARCH64_COMPILER_PATH}%/aarch64-linux-gnu/libc/usr/include/",
                 #"%{ARM_COMPILER_PATH}%/arm-rpi-linux-gnueabihf/sysroot/usr/include/",
                 "%{PYTHON_INCLUDE_PATH}%",
                 #"/usr/include",
@@ -844,44 +844,44 @@ def _impl(ctx):
         tool_paths = [
             tool_path(
                 name = "ar",
-                path = "%{ARM_COMPILER_PATH}%/bin/aarch64-linux-gnu-ar",
+                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-ar",
             ),
             tool_path(name = "compat-ld", path = "/bin/false"),
             tool_path(
                 name = "cpp",
-                path = "%{ARM_COMPILER_PATH}%/bin/aarch64-linux-gnu-cpp",
+                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-cpp",
             ),
             tool_path(
                 name = "dwp",
-                path = "%{ARM_COMPILER_PATH}%/bin/aarch64-linux-gnu-dwp",
+                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-dwp",
             ),
             tool_path(
                 name = "gcc",
-                path = "%{ARM_COMPILER_PATH}%/bin/aarch64-linux-gnu-gcc",
+                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-gcc",
             ),
             tool_path(
                 name = "gcov",
-                path = "%{ARM_COMPILER_PATH}%/bin/aarch64-linux-gnu-gcov",
+                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-gcov",
             ),
             tool_path(
                 name = "ld",
-                path = "%{ARM_COMPILER_PATH}%/bin/aarch64-linux-gnu-ld",
+                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-ld",
             ),
             tool_path(
                 name = "nm",
-                path = "%{ARM_COMPILER_PATH}%/bin/aarch64-linux-gnu-nm",
+                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-nm",
             ),
             tool_path(
                 name = "objcopy",
-                path = "%{ARM_COMPILER_PATH}%/bin/aarch64-linux-gnu-objcopy",
+                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-objcopy",
             ),
             tool_path(
                 name = "objdump",
-                path = "%{ARM_COMPILER_PATH}%/bin/aarch64-linux-gnu-objdump",
+                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-objdump",
             ),
             tool_path(
                 name = "strip",
-                path = "%{ARM_COMPILER_PATH}%/bin/aarch64-linux-gnu-strip",
+                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-strip",
             ),
         ]
     elif (ctx.attr.cpu == "local"):
