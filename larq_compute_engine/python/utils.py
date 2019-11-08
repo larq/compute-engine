@@ -9,14 +9,7 @@ def tf_2_or_newer():
 
 
 def eval_op(op):
-    if tf_2_or_newer():
-        return op  # op.numpy() also works
-    else:
+    try:
+        return op.numpy()
+    except:
         return op.eval()
-
-
-class TestCase(tf.test.TestCase):
-    """A test case that can be run with pytest parameterized tests"""
-
-    def run(self, **kargs):
-        pass
