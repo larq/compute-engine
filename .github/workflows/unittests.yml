@@ -55,7 +55,7 @@ jobs:
         with:
           submodules: true
       - name: "TFLite: Download dependencies and build"
-        run: larq_compute_engine/tflite/build/build_lqce.sh --fullbuild
+        run: larq_compute_engine/tflite/build/build_lqce.sh --native --pip
       - name: "TFLite: Install Python wrapper"
         run: pip3 install /tmp/tflite_pip/python3/dist/*.whl
       - name: "TFLite test dependency: Configure Bazel"

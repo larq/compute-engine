@@ -7,32 +7,19 @@ First, make sure the tensorflow submodule is loaded. This only has to be done on
 git submodule update --init
 ```
 
-This build system is designed to be independent from the original TF lite build system. We will use the original build scripts whenever possible.
-
-The build tools for TF lite are available in `ext/tensorflow/tensorflow/lite/tools/make`.
-
-Start by downloading the tflite dependencies. This only has to be done once.
-``` bash
-ext/tensorflow/tensorflow/lite/tools/make/download_dependencies.sh
-```
-
-Now we can build the TF lite library
+To build the library and C++ example programs, run
 
 ```bash
-ext/tensorflow/tensorflow/lite/tools/make/build_lib.sh
+larq_compute_engine/tflite/build/build_lqce.sh --native
 ```
 
-The resulting compiled files will be stored in `ext/tensorflow/tensorflow/lite/tools/make/gen/TARGET/` where `TARGET` can be `linux_x86_64` or `rpi_armv7l` and so on.
+The resulting compiled files will be stored in `ext/tensorflow/tensorflow/lite/tools/make/gen/TARGET/` where `TARGET` can be `linux_x86_64`, `rpi_armv7l`, `aarch64_armv8-a` and so on.
 
-The static library that is produced by this process is `libtensorflow-lite.a`, an archive of compiled `*.o` files.
+In the `bin` folder there is the `benchmark_model` example program that can be used to benchmark models and measure times of individual ops.
 
-We will separately compile our own tflite-related files and simply append them to this archive, possibly overwriting certain source files if we would want to.
+In the `lib` folder is the static library `libtensorflow-lite.a` which can be used to build the Python package.
 
-```bash
-larq_compute_engine/tflite/build/build_lqce.sh
-```
-
-This will update the file `ext/tensorflow/tensorflow/lite/tools/make/gen/TARGET/lib/libtensorflow-lite.a` with our modifications, which can be used to build the Python, Android or iOS wrapper.
+When building natively on a 32-bit Raspberry Pi, replace `--native` by `--rpi`.
 
 
 ## Building the Python package
@@ -40,10 +27,12 @@ This will update the file `ext/tensorflow/tensorflow/lite/tools/make/gen/TARGET/
 The python wrapper package can be built with
 
 ``` bash
-ext/tensorflow/tensorflow/lite/tools/pip_package/build_pip_package.sh
+larq_compute_engine/tflite/build/build_lqce.sh --native --pip
 ```
 
 The resulting package file will be saved in `/tmp/tflite_pip/python3/dist/`.
+
+When building natively on a 32-bit Raspberry Pi, replace `--native` by `--rpi`.
 
 
 ## Building for Android
@@ -53,18 +42,18 @@ Please see the [official instructions](https://www.tensorflow.org/lite/guide/and
 
 ## Building for iOS
 
-Please see the [official instructions](https://www.tensorflow.org/lite/guide/build_ios).
+Please see the [official instructions](https://www.tensorflow.org/lite/guide/build_ios) for how to get the iOS SDK.
 
-After running `ext/tensorflow/tensorflow/lite/tools/make/build_ios_universal_lib.sh` as instructed, run
+Run
 ```bash
-larq_compute_engine/tflite/build/build_lqce.sh
+larq_compute_engine/tflite/build/build_lqce.sh --ios
 ```
-Now it will include our modifications.
+to build the iOS library.
+The compiled files will be stored in `ext/tensorflow/tensorflow/lite/tools/make/gen/ios_ARCH/` where `ARCH` can be `x86_64`, `armv7`, `armv8s` or `arm64`.
 
 
 ## Cross-compiling for Raspberry Pi or other ARM based systems
 
-You can either follow the above procedure on a Raspberry Pi, or you can cross-compile from another machine.
 To cross-compile make sure the cross compiler is installed:
 ``` bash
 sudo apt-get update
@@ -74,14 +63,13 @@ On non-Debian based systems, the package could be called `arm-linux-gnueabihf`.
 
 To cross-compile, run
 ```bash
-ext/tensorflow/tensorflow/lite/tools/make/build_rpi_lib.sh
-larq_compute_engine/tflite/build/build_lqce.sh
+larq_compute_engine/tflite/build/build_lqce.sh --rpi
 ```
 
 The Python package depends on `swig` and currently does not seem to support cross-compiling.
 It can be built as follows:
 
-- Compile `libtensorflow-lite.a` as above using `build_rpi_lib.sh` from another machine.
+- Compile `libtensorflow-lite.a` as above using `build_rpi_lib.sh --rpi` from another machine.
 - Copy the cross-compiled `gen/rpi_armv7l/lib/libtensorflow-lite.a` file to a Raspberry Pi and put it in `ext/tensorflow/tensorflow/lite/tools/make/gen/linux_armv7l/lib/`.
 - On the Raspberry Pi navigate to `ext/tensorflow/tensorflow/lite/tools/pip_package/`.
 - Open `setup.py` and find the class `CustomBuildExt`. Uncomment the line `make()` in the member function `run`.
