@@ -57,17 +57,18 @@ if [ ! -f "${BENCHMARK_MODEL}" ]; then
 fi
 
 current_time=$(date "+%Y_%m_%d-%H_%M_%S")
-OUTPUTFILE="benchmarking_results_${current_time}.txt"
+OUTPUT_FILE="benchmarking_results_${current_time}.txt"
+OUTPUT_FILE_SUMMARY="benchmarking_results_${current_time}_summary.txt"
 
-if [ -f "$OUTPUTFILE" ]; then
-    rm ${OUTPUTFILE}
+if [ -f "$OUTPUT_FILE" ]; then
+    rm ${OUTPUT_FILE}
 fi
 
-echo -e "Using benchmark binary: ${BENCHMARK_MODEL}\n\n" | tee --append ${OUTPUTFILE}
+OUTPUT_PREFIX="Using benchmark model:"
 
 for MODELFILE in ${ALLMODELS}
 do
-    echo -e "\nBenchmark for: ${MODELFILE}\n" | tee --append ${OUTPUTFILE}
-    ${BENCHMARK_MODEL} --graph="${MODELFILE}" --enable_op_profiling=true | tee --append ${OUTPUTFILE}
+    echo -e "\n${OUTPUT_PREFIX}: ${MODELFILE}\n" | tee --append ${OUTPUT_FILE} ${OUTPUT_FILE_SUMMARY}
+    ${BENCHMARK_MODEL} --graph="${MODELFILE}" --enable_op_profiling=true | tee --append ${OUTPUT_FILE} | grep -e LqceBconv -e CONV | tee --append ${OUTPUT_FILE_SUMMARY}
 done
 
