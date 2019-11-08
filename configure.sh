@@ -149,17 +149,33 @@ if [[ "$PIP_MANYLINUX2010" == "1" ]]; then
 fi
 
 cat << EOM >> .bazelrc
-# These can be activated using --config=rpi3
+
+# These can be activated using --config=rpi3 and --config=aarch64
+
 build:rpi3 --crosstool_top=@local_config_arm_compiler//:toolchain
 build:rpi3 --cpu=armeabi
 build:rpi3 -c opt  \
   --copt=-march=armv7-a --copt=-mfpu=neon-vfpv4 \
-  --copt=-std=gnu11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR \
+  --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR \
   --copt=-O3 --copt=-fno-tree-pre \
   --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 \
   --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 \
   --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 \
   --define=raspberry_pi_with_neon=true \
+  --define=framework_shared_object=false \
+  --copt=-funsafe-math-optimizations --copt=-ftree-vectorize \
+  --copt=-fomit-frame-pointer \
+  --verbose_failures
+
+build:aarch64 --crosstool_top=@local_config_arm_compiler//:toolchain
+build:aarch64 --cpu=aarch64
+build:aarch64 -c opt  \
+  --copt=-march=armv8-a \
+  --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR \
+  --copt=-O3 --copt=-fno-tree-pre \
+  --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 \
+  --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 \
+  --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 \
   --define=framework_shared_object=false \
   --copt=-funsafe-math-optimizations --copt=-ftree-vectorize \
   --copt=-fomit-frame-pointer \
