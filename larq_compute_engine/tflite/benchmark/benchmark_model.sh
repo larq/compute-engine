@@ -50,8 +50,8 @@ if [ ! -f "${BENCHMARK_MODEL}" ]; then
     exit 1
 fi
 
-
-OUTPUTFILE="benchmarking_results.txt"
+current_time=$(date "+%Y_%m_%d-%H_%M_%S")
+OUTPUTFILE="benchmarking_results_${current_time}.txt"
 
 if [ -f "$OUTPUTFILE" ]; then
     rm ${OUTPUTFILE}
