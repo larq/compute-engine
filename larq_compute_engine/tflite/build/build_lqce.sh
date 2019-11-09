@@ -1,10 +1,9 @@
 #!/bin/bash
 set -e
 
-
-if [ "$@" == "" or "$@" == "-h" or "$@" == "--help" ]; then
-cat << EOF
-Usage: build_lqce.sh [--native] [--rpi] [--ios] [--aarch64] [--benchmark] [--cleanbuild] [--pip]
+usage()
+{
+    echo "Usage: build_lqce.sh [--native] [--rpi] [--ios] [--aarch64] [--benchmark] [--cleanbuild] [--pip]
 
 --native        Build for the host platform
 --rpi           Cross-compile for Raspberry Pi (32-bit armv7)
@@ -25,10 +24,8 @@ The --ios option requires the iOS SDK.
 If doing a benchmark build when you have previously built without --benchmark
 then you should pass --cleanbuild to do a complete rebuild.
 
-Building the pip package is only available for the --native target.
-EOF
-exit 0
-fi
+Building the pip package is only available for the --native target."
+}
 
 native=0
 rpi=0
@@ -38,41 +35,41 @@ benchmark=0
 cleanbuild=0
 pip=0
 
-for arg in "$@"
-do
-case $arg in
-    --native)
-	native=1
+while [ "$1" != "" ]; do
+    case $1 in
+        --native)
+	    native=1
+            ;;
+        --rpi)
+	    rpi=1
+            ;;
+        --ios)
+	    ios=1
+            ;;
+        --aarch64)
+	    aarch64=1
+            ;;
+        --benchmark)
+	    benchmark=1
+            ;;
+        --cleanbuild)
+            cleanbuild=1
+            ;;
+        --pip)
+	    pip=1
+            ;;
+        -h | --help )
+            usage
+            exit
+            ;;
+        * )
+            usage
+            exit 1
+            ;;
+    esac
     shift
-    ;;
-    --rpi)
-	rpi=1
-    shift
-    ;;
-    --ios)
-	ios=1
-    shift
-    ;;
-    --aarch64)
-	aarch64=1
-    shift
-    ;;
-    --benchmark)
-	benchmark=1
-    shift
-    ;;
-    --cleanbuild)
-    cleanbuild=1
-    shift
-    ;;
-    --pip)
-	pip=1
-    shift
-    ;;
-    *)
-    ;;
-esac
 done
+
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}/../../.."
@@ -94,6 +91,7 @@ if [ "$benchmark" == "1" ]; then
 fi
 
 if [ "$cleanbuild" == "1" ]; then
+    echo " --> clean build"
     rm -rf "${TF_DIR}/tensorflow/lite/tools/make/gen"
 fi
 
@@ -103,6 +101,7 @@ if [ ! -d "${TF_DIR}/tensorflow/lite/tools/make/downloads" ]; then
 fi
 
 if [ "$native" == "1" ]; then
+    echo " --> native build"
     # Build tflite (will automatically skip when up-to-date
     ${TF_DIR}/tensorflow/lite/tools/make/build_lib.sh
     # Build our kernels
@@ -117,6 +116,7 @@ if [ "$native" == "1" ]; then
 fi
 
 if [ "$rpi" == "1" ]; then
+    echo " --> rpi build"
     # Stored in gen/rpi_armv7l
     ${TF_DIR}/tensorflow/lite/tools/make/build_rpi_lib.sh
     make -j 8 TARGET=rpi -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
@@ -132,6 +132,7 @@ if [ "$rpi" == "1" ]; then
 fi
 
 if [ "$ios" == "1" ]; then
+    echo " --> ios build"
     profiling_opt=""
     if [ "$benchmark" == "1" ]; then
         profiling_opt="-p"
@@ -147,6 +148,7 @@ if [ "$ios" == "1" ]; then
 fi
 
 if [ "$aarch64" == "1" ]; then
+    echo " --> aarch64 build"
     # Stored in gen/aarch64_armv8-a
     ${TF_DIR}/tensorflow/lite/tools/make/build_aarch64_lib.sh
     make -j 8 TARGET=aarch64 -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
