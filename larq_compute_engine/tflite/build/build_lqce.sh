@@ -3,7 +3,7 @@ set -e
 
 usage()
 {
-    echo "Usage: build_lqce.sh [--native] [--rpi] [--ios] [--aarch64] [--benchmark] [--cleanbuild] [--pip]
+    echo "Usage: build_lqce.sh [--native] [--rpi] [--ios] [--aarch64] [--benchmark] [--clean] [--pip]
 
 --native        Build for the host platform
 --rpi           Cross-compile for Raspberry Pi (32-bit armv7)
@@ -18,11 +18,11 @@ The --aarch64 option requires the aarch64-linux-gnu toolchain.
 The --ios option requires the iOS SDK.
 
 --benchmark     Compile with gemmlowp profiling enabled
---cleanbuild    Delete intermediate build files
+--clean         Delete intermediate build files
 --pip           Also build the pip package
 
 If doing a benchmark build when you have previously built without --benchmark
-then you should pass --cleanbuild to do a complete rebuild.
+then you should pass --clean to do a complete rebuild.
 
 Building the pip package is only available for the --native target."
 }
@@ -38,7 +38,7 @@ rpi=0
 ios=0
 aarch64=0
 benchmark=0
-cleanbuild=0
+clean=0
 pip=0
 
 while [ "$1" != "" ]; do
@@ -58,8 +58,8 @@ while [ "$1" != "" ]; do
         --benchmark)
 	    benchmark=1
             ;;
-        --cleanbuild)
-            cleanbuild=1
+        --clean)
+            clean=1
             ;;
         --pip)
 	    pip=1
@@ -96,8 +96,8 @@ if [ "$benchmark" == "1" ]; then
 	export EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS} -DGEMMLOWP_PROFILING"
 fi
 
-if [ "$cleanbuild" == "1" ]; then
-    echo " --> clean build"
+if [ "$clean" == "1" ]; then
+    echo " --> clean"
     rm -rf "${TF_DIR}/tensorflow/lite/tools/make/gen"
 fi
 
