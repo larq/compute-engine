@@ -23,12 +23,18 @@ class ReferencePaddingFunctor {
                   const Tfilter* filter_data, const int filter_height,
                   const int filter_width, const int filter_count,
                   const int stride_rows, const int stride_cols,
+                  const int dilation_rows, const int dilation_cols,
                   Tdata* output_data, const int output_height,
                   const int output_width) {
-    const int filter_left_offset =
-        ((output_width - 1) * stride_cols + filter_width - input_width) / 2;
-    const int filter_top_offset =
-        ((output_height - 1) * stride_rows + filter_height - input_height) / 2;
+    const int effective_filter_width = (filter_width - 1) * dilation_cols + 1;
+    const int effective_filter_height = (filter_height - 1) * dilation_rows + 1;
+
+    const int filter_left_offset = ((output_width - 1) * stride_cols +
+                                    effective_filter_width - input_width) /
+                                   2;
+    const int filter_top_offset = ((output_height - 1) * stride_rows +
+                                   effective_filter_height - input_height) /
+                                  2;
 
     // We assume that the input numbers are correct because they
     // are already checked by the bconv functor
@@ -36,26 +42,34 @@ class ReferencePaddingFunctor {
     for (int batch = 0; batch < input_batches; ++batch) {
       for (int out_y = 0; out_y < output_height; ++out_y) {
         const int in_y_start = out_y * stride_rows - filter_top_offset;
-        const int in_y_end = in_y_start + filter_height - 1;  // inclusive
+        const int in_y_end =
+            in_y_start + effective_filter_height - 1;  // inclusive
         for (int out_x = 0; out_x < output_width; ++out_x) {
           const int in_x_start = out_x * stride_cols - filter_left_offset;
-          const int in_x_end = in_x_start + filter_width - 1;  // inclusive
+          const int in_x_end =
+              in_x_start + effective_filter_width - 1;  // inclusive
 
           if (in_x_start >= 0 && in_x_end < input_width && in_y_start >= 0 &&
               in_y_end < input_height) {
+            // clang-format off
             // This output pixel corresponds to a completely 'valid' region
             // of the input and there is no padding: we are entering the inside
             // of the image.
-            // Therefore we now *skip* from the left to the right edge of the
-            // image We want to find `out_x` such that `in_x_end >= input_width`
-            // i.e.
-            // out_x * stride_cols >= input_with + filter_left_offset -
-            // filter_width + 1 So we want it to be the ceiling of (input_with +
-            // filter_left_offset - filter_width + 1) / stride_cols
-            out_x = (input_width + filter_left_offset - filter_width + 1 +
-                     stride_cols - 1) /
-                        stride_cols -
-                    1;  // -1 because the for-loop will increment it again
+            // We now *skip* from the left to the right edge of the image.
+            // We want to find `out_x` such that `in_x_end >= input_width`
+            // We have
+            // end = out_x * stride - offset + effective_filter_width - 1
+            // So we want
+            // out_x * stride >= input_with + offset - effective_filter_width + 1
+            // So we want `out_x` to be the ceiling of
+            // (input_with + offset - effective_filter_width + 1) / stride
+            // clang-format on
+            int new_out_x = (input_width + filter_left_offset -
+                             effective_filter_width + stride_cols - 1) /
+                                stride_cols -
+                            1;
+            // The extra -1 is because the for-loop will increment it again
+            if (new_out_x > out_x) out_x = new_out_x;
             continue;
           }
 
@@ -65,9 +79,9 @@ class ReferencePaddingFunctor {
             // TODO: The correction factors that are computed in these loops
             // can be pre-computed in tf lite.
             for (int filter_y = 0; filter_y < filter_height; ++filter_y) {
-              const int in_y = in_y_start + filter_y;
+              const int in_y = in_y_start + dilation_rows * filter_y;
               for (int filter_x = 0; filter_x < filter_width; ++filter_x) {
-                const int in_x = in_x_start + filter_x;
+                const int in_x = in_x_start + dilation_cols * filter_x;
 
                 // Check if this filter pixel is 'inside' the input image
                 if (in_x >= 0 && in_x < input_width && in_y >= 0 &&

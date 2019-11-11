@@ -19,6 +19,7 @@ class BConv2DOp : public BinaryOp<T> {
  public:
   explicit BConv2DOp(OpKernelConstruction* context) : BinaryOp<T>(context) {
     OP_REQUIRES_OK(context, context->GetAttr("strides", &strides_));
+    OP_REQUIRES_OK(context, context->GetAttr("dilations", &dilations_));
     string data_format;
     OP_REQUIRES_OK(context, context->GetAttr("data_format", &data_format));
     OP_REQUIRES(context, FormatFromString(data_format, &data_format_),
@@ -29,12 +30,24 @@ class BConv2DOp : public BinaryOp<T> {
     OP_REQUIRES(context, strides_.size() == 4,
                 errors::InvalidArgument("Sliding window strides field must "
                                         "specify 4 dimensions"));
+    OP_REQUIRES(
+        context, dilations_.size() == 4,
+        errors::InvalidArgument("Dilations field must specify 4 dimensions"));
+
     const int64 stride_n = GetTensorDim(strides_, data_format_, 'N');
     const int64 stride_c = GetTensorDim(strides_, data_format_, 'C');
     OP_REQUIRES(
         context, stride_n == 1 && stride_c == 1,
         errors::InvalidArgument("Current implementation does not yet support "
                                 "strides in the batch and depth dimensions."));
+
+    const int64 dilation_n = GetTensorDim(dilations_, data_format_, 'N');
+    const int64 dilation_c = GetTensorDim(dilations_, data_format_, 'C');
+    OP_REQUIRES(
+        context, dilation_n == 1 && dilation_c == 1,
+        errors::InvalidArgument("Current implementation does not yet support "
+                                "dilation in the batch and depth dimensions."));
+
     OP_REQUIRES_OK(context, context->GetAttr("padding", &padding_));
   }
 
@@ -105,6 +118,13 @@ class BConv2DOp : public BinaryOp<T> {
     const int stride_rows = GetTensorDim(strides_, data_format_, 'H');
     const int stride_cols = GetTensorDim(strides_, data_format_, 'W');
 
+    const int dilation_rows = GetTensorDim(dilations_, data_format_, 'H');
+    const int dilation_cols = GetTensorDim(dilations_, data_format_, 'W');
+
+    OP_REQUIRES(
+        context, dilation_rows == 1 && dilation_cols == 1,
+        errors::InvalidArgument("Currently dilation != 1 is not supported."));
+
     int64 out_rows = 0, out_cols = 0, pad_rows = 0, pad_cols = 0;
     OP_REQUIRES_OK(context,
                    GetWindowedOutputSize(input_rows, filter_rows, stride_rows,
@@ -127,6 +147,8 @@ class BConv2DOp : public BinaryOp<T> {
             << ", filter_rows = " << filter_rows
             << ", stride_rows = " << stride_rows
             << ", stride_cols = " << stride_cols
+            << ", dilation_rows = " << dilation_rows
+            << ", dilation_cols = " << dilation_cols
             << ", out_depth = " << out_depth;
 
     // If there is nothing to compute, return.
@@ -149,12 +171,14 @@ class BConv2DOp : public BinaryOp<T> {
           padding_functor;
       padding_functor(batch, input_rows, input_cols, in_depth, filter_data,
                       filter_rows, filter_cols, out_depth, stride_rows,
-                      stride_cols, output_data, out_rows, out_cols);
+                      stride_cols, dilation_rows, dilation_cols, output_data,
+                      out_rows, out_cols);
     }
   }
 
  private:
   std::vector<int32> strides_;
+  std::vector<int32> dilations_;
   Padding padding_;
   TensorFormat data_format_;
 

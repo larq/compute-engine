@@ -268,8 +268,8 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
     padding_functor(params->batch, params->input_height, params->input_width,
                     params->channels_in, filter->data.f, params->filter_height,
                     params->filter_width, params->channels_out, stride_height,
-                    stride_width, output->data.f, params->out_height,
-                    params->out_width);
+                    stride_width, params->dilations[1], params->dilations[2],
+                    output->data.f, params->out_height, params->out_width);
   }
 }
 
