@@ -267,6 +267,7 @@ py_test(
         ":compute_engine_ops_py",
         ":compute_engine_utils_py",
     ],
+    size = "small",
     python_version = "PY3",
     srcs_version = "PY3",
 )
@@ -281,6 +282,7 @@ py_test(
         ":compute_engine_ops_py",
         ":compute_engine_utils_py",
     ],
+    size = "large",
     python_version = "PY3",
     srcs_version = "PY3",
 )
