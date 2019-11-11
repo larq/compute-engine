@@ -43,7 +43,7 @@ pip=0
 
 while [ "$1" != "" ]; do
     case $1 in
-        --native)
+        -n | --native)
 	    native=1
             ;;
         --rpi)
@@ -55,10 +55,10 @@ while [ "$1" != "" ]; do
         --aarch64)
 	    aarch64=1
             ;;
-        --benchmark)
+        -b | --benchmark)
 	    benchmark=1
             ;;
-        --clean)
+        -c | --clean)
             clean=1
             ;;
         --pip)
@@ -93,7 +93,7 @@ HOST_ARCH="$(if uname -m | grep -q i[345678]86; then echo x86_32; else uname -m;
 
 export EXTRA_CXXFLAGS="-DTFLITE_WITH_RUY"
 if [ "$benchmark" == "1" ]; then
-	export EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS} -DGEMMLOWP_PROFILING"
+    export EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS} -DGEMMLOWP_PROFILING"
 fi
 
 if [ "$clean" == "1" ]; then
