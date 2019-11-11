@@ -22,8 +22,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                     const T* filter_data, const RuntimeShape& bias_shape,
                     const T* bias_data, const RuntimeShape& output_shape,
                     T* output_data, const RuntimeShape& im2col_shape,
-                    T* im2col_data,
-                    CpuBackendContext* cpu_backend_context) {
+                    T* im2col_data, CpuBackendContext* cpu_backend_context) {
   const int stride_width = params.stride_width;
   const int stride_height = params.stride_height;
   const int dilation_width_factor = params.dilation_width_factor;
@@ -106,8 +105,9 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   // TODO: pre-allocate the 'lhs_data_bp' buffer in prepare
   // 'packbits_matrix' function calls the 'resize' method of the container
   // in case that bitpadding is required. Therefore, in order to pre-allocate
-  // bitpacked buffer, we need to redesign the packbits_matrix and move computing the size of the bitpacked buffer outside the
-  // 'packbits_matrix' function. For now we just define the bitpacking buffer as static.
+  // bitpacked buffer, we need to redesign the packbits_matrix and move
+  // computing the size of the bitpacked buffer outside the 'packbits_matrix'
+  // function. For now we just define the bitpacking buffer as static.
   static std::vector<TBitpacked> lhs_data_bp;
   size_t lhs_rows_bp = 0, lhs_cols_bp = 0;
   size_t lhs_bitpadding = 0;
@@ -121,8 +121,9 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   // TODO: pre-allocate the 'rhs_data_bp' buffer
   // 'packbits_matrix' function calls the 'resize' method of the container
   // in case that bitpadding is required. Therefore, in order to pre-allocate
-  // bitpacked buffer, we need to redesign the packbits_matrix and move computing the size of the bitpacked buffer outside the
-  // 'packbits_matrix' function. For now we just define the bitpacking buffer as static.
+  // bitpacked buffer, we need to redesign the packbits_matrix and move
+  // computing the size of the bitpacked buffer outside the 'packbits_matrix'
+  // function. For now we just define the bitpacking buffer as static.
   static std::vector<TBitpacked> rhs_data_bp;
   size_t rhs_rows_bp = 0, rhs_cols_bp = 0;
   size_t rhs_bitpadding = 0;
