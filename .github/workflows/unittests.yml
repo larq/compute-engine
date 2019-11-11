@@ -20,7 +20,7 @@ jobs:
       - name: Build PIP Package
         run: bazel-bin/build_pip_pkg artifacts
       - name: Install PIP Package
-        run: pip3 install artifacts/*.whl
+        run: pip3 install pytest artifacts/*.whl
       - name: Run Python Tests
         run: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime --test_output=errors
 
@@ -41,7 +41,7 @@ jobs:
       - name: Build PIP Package
         run: bazel-bin/build_pip_pkg artifacts
       - name: Install PIP Package
-        run: pip3 install artifacts/*.whl
+        run: pip3 install pytest artifacts/*.whl
       - name: Run Python Tests
         run: bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime --test_output=errors
 
