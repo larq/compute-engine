@@ -1,4 +1,5 @@
 #include <gmock/gmock.h>
+
 #include <numeric>
 
 #include "larq_compute_engine/cc/core/im2col_functor.h"

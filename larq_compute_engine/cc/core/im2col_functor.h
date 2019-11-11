@@ -2,8 +2,6 @@
 #define COMPUTE_ENGINE_KERNELS_IM2COL_H_
 #include <cstring>
 
-#include <cstring>
-
 namespace compute_engine {
 namespace core {
 

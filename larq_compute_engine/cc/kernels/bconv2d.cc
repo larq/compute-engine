@@ -1,5 +1,5 @@
-#include "larq_compute_engine/cc/core/bgemm_functor.h"
 #include "larq_compute_engine/cc/core/bconv2d_functor.h"
+#include "larq_compute_engine/cc/core/bgemm_functor.h"
 #include "larq_compute_engine/cc/core/padding_functor.h"
 #include "tensorflow/core/framework/bounds_check.h"
 #include "tensorflow/core/framework/common_shape_fns.h"

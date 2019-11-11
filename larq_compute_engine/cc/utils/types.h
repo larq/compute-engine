@@ -5,7 +5,7 @@ namespace compute_engine {
 namespace core {
 
 // defines the memory layout of the filter values
-enum class FilterFormat { Unknown, HWIO, OHWI};
+enum class FilterFormat { Unknown, HWIO, OHWI };
 
 // defines the operating dimension
 enum class Axis { RowWise, ColWise };

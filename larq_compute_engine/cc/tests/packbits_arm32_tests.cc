@@ -29,7 +29,7 @@ TEST(BitpackingTests, BitpackingARM32) {
   ce::core::packbits_arm32(input.data(), n, output.data());
 
   // Currently it doesn't output anything meaningful
-  //EXPECT_THAT(output, ::testing::ElementsAreArray(expected));
+  // EXPECT_THAT(output, ::testing::ElementsAreArray(expected));
 
   // The test assembly that I put in will compute input[0] ^ input[1]
   // So we check that here
