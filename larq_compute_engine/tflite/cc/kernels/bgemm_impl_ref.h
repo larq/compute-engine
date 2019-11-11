@@ -1,6 +1,7 @@
 #ifndef COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_REF_H_
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_REF_H_
 
+#include "larq_compute_engine/cc/core/bgemm_functor.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 
