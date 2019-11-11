@@ -27,6 +27,12 @@ then you should pass --cleanbuild to do a complete rebuild.
 Building the pip package is only available for the --native target."
 }
 
+
+if [[ $# -eq 0 ]] ; then
+    usage
+    exit 0
+fi
+
 native=0
 rpi=0
 ios=0
