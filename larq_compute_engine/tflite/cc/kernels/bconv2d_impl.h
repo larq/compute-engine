@@ -1,5 +1,6 @@
 #include "bgemm_impl.h"
 #include "larq_compute_engine/cc/core/packbits.h"
+#include "larq_compute_engine/cc/core/padding_functor.h"
 #include "profiling/instrumentation.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
