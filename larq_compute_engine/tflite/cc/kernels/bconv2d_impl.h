@@ -111,10 +111,12 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   static std::vector<TBitpacked> lhs_data_bp;
   size_t lhs_rows_bp = 0, lhs_cols_bp = 0;
   size_t lhs_bitpadding = 0;
-  ce::core::packbits_matrix(lhs_data, lhs_rows, lhs_cols, lhs_data_bp,
-                            lhs_rows_bp, lhs_cols_bp, lhs_bitpadding,
-                            ce::core::Axis::RowWise);
-
+  {
+    gemmlowp::ScopedProfilingLabel label1("PackbitLHS");
+    ce::core::packbits_matrix(lhs_data, lhs_rows, lhs_cols, lhs_data_bp,
+                              lhs_rows_bp, lhs_cols_bp, lhs_bitpadding,
+                              ce::core::Axis::RowWise);
+  }
   // row-wise bitpacking of RHS (m, k) -> (m, k / bitwidth)
   const int rhs_rows = m;
   const int rhs_cols = k;
@@ -127,10 +129,12 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   static std::vector<TBitpacked> rhs_data_bp;
   size_t rhs_rows_bp = 0, rhs_cols_bp = 0;
   size_t rhs_bitpadding = 0;
-  ce::core::packbits_matrix(rhs_data, rhs_rows, rhs_cols, rhs_data_bp,
-                            rhs_rows_bp, rhs_cols_bp, rhs_bitpadding,
-                            ce::core::Axis::RowWise);
-
+  {
+    gemmlowp::ScopedProfilingLabel label2("PackbitRHS");
+    ce::core::packbits_matrix(rhs_data, rhs_rows, rhs_cols, rhs_data_bp,
+                              rhs_rows_bp, rhs_cols_bp, rhs_bitpadding,
+                              ce::core::Axis::RowWise);
+  }
   // LHS (n, k/bitwidth) -> RowMajor -> (n, k/bitwidth)
   // RHS (m, k/bitwidth) -> ColMajor -> (k/bitwidth, m)
   // DST (n, m) -> ColMajor -> (m, n)
@@ -187,10 +191,13 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
     const int output_height = output_shape.Dims(1);
 
     PaddingFunctor padding_functor;
-    padding_functor(batches, input_height, input_width, input_depth,
-                    filter_data, filter_height, filter_width, output_depth,
-                    stride_height, stride_width, output_data, output_height,
-                    output_width);
+    {
+      gemmlowp::ScopedProfilingLabel label3("ZeroPaddingCorrection");
+      padding_functor(batches, input_height, input_width, input_depth,
+                      filter_data, filter_height, filter_width, output_depth,
+                      stride_height, stride_width, output_data, output_height,
+                      output_width);
+    }
   }
 }
 

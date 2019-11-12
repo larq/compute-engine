@@ -43,7 +43,7 @@ void BGemm(
     const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
     const GemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
     CpuBackendContext* context) {
-  gemmlowp::ScopedProfilingLabel label("bgemm_impl::BGemm");
+  gemmlowp::ScopedProfilingLabel label("BGemm");
   ValidateParams(lhs_params, rhs_params, dst_params, params);
   // TODO: special fast bgemm impl. for matrix-vector multiplication
   // if (dst_params.cols == 1) {
@@ -53,7 +53,7 @@ void BGemm(
   //     return;
   //   }
   // }
-  gemmlowp::ScopedProfilingLabel label2("bgemm_impl::BGemm: general BGEMM");
+  gemmlowp::ScopedProfilingLabel label2("BGemm/GeneralBGEMM");
   BGemmImpl<LhsScalar, RhsScalar, AccumScalar, DstScalar,
             quantization_flavor>::Run(lhs_params, lhs_data, rhs_params,
                                       rhs_data, dst_params, dst_data, params,

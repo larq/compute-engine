@@ -22,6 +22,8 @@ struct BGemmImplRef {
       const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
       const GemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
       CpuBackendContext* context) {
+    gemmlowp::ScopedProfilingLabel label("BGemmRef");
+
     // these checkes will be also done in BGEMM functor but we do it here as
     // well to be on the safe side.
     static_assert(std::is_same<LhsScalar, RhsScalar>::value,
