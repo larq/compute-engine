@@ -63,11 +63,16 @@ typedef struct {
 
   bool need_im2col = false;
   // IDs are the arbitrary identifiers used by TF Lite to identify and access
-  // memory buffers.
+  // memory buffers. They are unique in the entire TF Lite context.
   int im2col_id = kTensorNotAllocated;
-  // Indexes are the offset to the memory buffer in the array used to keep track
-  // of the allocated temporaries.
+  int padding_buffer_id = kTensorNotAllocated;
+  // In node->temporaries there is a list of tensor id's that are part
+  // of this node in particular. The indices below are offsets into this array.
+  // So in pseudo-code: `node->temporaries[index] = id;`
   int32_t im2col_index;
+  int32_t padding_buffer_index;
+
+  bool padding_cache_filled = false;
 
 } TfLiteBConv2DParams;
 
@@ -188,23 +193,39 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
          conv_params->dilations[1] /* height */ != 1 ||
          conv_params->filter_width != 1 || conv_params->filter_height != 1);
 
+    // Figure out how many temporary buffers we need
     int temporaries_count = 0;
     if (conv_params->need_im2col) {
-      conv_params->im2col_index = temporaries_count;
-      if (conv_params->im2col_id == kTensorNotAllocated) {
-        context->AddTensors(context, 1, &conv_params->im2col_id);
-      }
-      ++temporaries_count;
+      conv_params->im2col_index = temporaries_count++;
+    }
+    if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame) {
+      conv_params->padding_buffer_index = temporaries_count++;
     }
 
+    // Allocate int array of that size
     TfLiteIntArrayFree(node->temporaries);
     node->temporaries = TfLiteIntArrayCreate(temporaries_count);
+
+    // Now allocate the buffers
+    if (conv_params->need_im2col) {
+      if (conv_params->im2col_id == kTensorNotAllocated) {
+        context->AddTensors(context, 1, &conv_params->im2col_id);
+        node->temporaries->data[conv_params->im2col_index] =
+            conv_params->im2col_id;
+      }
+    }
+
+    if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame) {
+      if (conv_params->padding_buffer_id == kTensorNotAllocated) {
+        context->AddTensors(context, 1, &conv_params->padding_buffer_id);
+        node->temporaries->data[conv_params->padding_buffer_index] =
+            conv_params->padding_buffer_id;
+      }
+    }
   }
 
-  // pre-allocate the im2col tensor
+  // Resize the im2col tensor
   if (conv_params->need_im2col) {
-    node->temporaries->data[conv_params->im2col_index] = conv_params->im2col_id;
-
     // determine the im2col buffer size
     TfLiteIntArray* im2col_size = TfLiteIntArrayCreate(4);
     im2col_size->data[0] = conv_params->batch;
@@ -218,11 +239,38 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
     TfLiteTensor* im2col =
         GetTemporary(context, node, conv_params->im2col_index);
 
-    // allocate the im2col tensor
+    // resize the im2col tensor
     im2col->type = input->type;
     im2col->allocation_type = kTfLiteArenaRw;
     TF_LITE_ENSURE_OK(context,
                       context->ResizeTensor(context, im2col, im2col_size));
+  }
+
+  // Resize the padding buffer tensor and pre-compute the cache
+  if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame) {
+    TfLiteTensor* padding_buffer =
+        GetTemporary(context, node, conv_params->padding_buffer_index);
+
+    using PaddingFunctor =
+        ce::core::PaddingFunctor<float, float, ce::core::FilterFormat::OHWI>;
+    PaddingFunctor padding_functor;
+
+    // Allocate it as a 1-D array
+    TfLiteIntArray* padding_size = TfLiteIntArrayCreate(1);
+    padding_size->data[0] = padding_functor.get_cache_size(
+        conv_params->filter_height, conv_params->filter_width,
+        conv_params->channels_out, conv_params->dilations[1],
+        conv_params->dilations[2]);
+
+    padding_buffer->type = input->type;  // currently still float
+    padding_buffer->allocation_type = kTfLiteArenaRw;
+    TF_LITE_ENSURE_OK(
+        context, context->ResizeTensor(context, padding_buffer, padding_size));
+
+    // Ideally we would like to fill the cache now
+    // However the padding_buffer is not ready yet, because the `ResizeTensor`
+    // function only *requests* a resize but does not actually do it yet.
+    // So we do it in Eval but only once.
   }
 
   return kTfLiteOk;
@@ -254,7 +302,7 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   using TConvFunctor =
       ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
   using PaddingFunctor =
-      ce::core::ReferencePaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
+      ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
 
   static TConvFunctor conv_functor;
   conv_functor(input->data.f, params->batch, params->input_height,
@@ -265,11 +313,22 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
 
   if (params->padding_type == TfLitePadding::kTfLitePaddingSame) {
     PaddingFunctor padding_functor;
+    auto size = padding_functor.get_cache_size(
+        params->filter_height, params->filter_width, params->channels_out,
+        params->dilations[1], params->dilations[2]);
+
+    std::vector<float> padding_cache(size);
+    padding_functor.create_cache(filter->data.f, params->filter_height,
+                                 params->filter_width, params->channels_out,
+                                 params->channels_in, params->dilations[1],
+                                 params->dilations[2], padding_cache.data());
+
     padding_functor(params->batch, params->input_height, params->input_width,
-                    params->channels_in, filter->data.f, params->filter_height,
-                    params->filter_width, params->channels_out, stride_height,
-                    stride_width, params->dilations[1], params->dilations[2],
-                    output->data.f, params->out_height, params->out_width);
+                    params->channels_in, padding_cache.data(),
+                    params->filter_height, params->filter_width,
+                    params->channels_out, stride_height, stride_width,
+                    params->dilations[1], params->dilations[2], output->data.f,
+                    params->out_height, params->out_width);
   }
 }
 
@@ -309,7 +368,7 @@ inline void GetConvParamsType(const TfLiteBConv2DParams& conv_params,
 
 template <class T, class TBitpacked>
 void EvalOpt(TfLiteContext* context, TfLiteNode* node,
-             const TfLiteBConv2DParams* params) {
+             TfLiteBConv2DParams* params) {
   const auto* input = GetInput(context, node, 0);
   const auto* filter = GetInput(context, node, 1);
   auto* output = GetOutput(context, node, 0);
@@ -321,6 +380,24 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   TfLiteTensor* im2col = params->need_im2col
                              ? GetTemporary(context, node, params->im2col_index)
                              : nullptr;
+
+  TfLiteTensor* padding_buffer =
+      params->padding_type == TfLitePadding::kTfLitePaddingSame
+          ? GetTemporary(context, node, params->padding_buffer_index)
+          : nullptr;
+
+  if (!params->padding_cache_filled &&
+      params->padding_type == TfLitePadding::kTfLitePaddingSame) {
+    // In the first run, fill the cache
+    using PaddingFunctor =
+        ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
+    PaddingFunctor padding_functor;
+    padding_functor.create_cache(
+        GetTensorData<T>(filter), params->filter_height, params->filter_width,
+        params->channels_out, params->channels_in, params->dilations[1],
+        params->dilations[2], GetTensorData<T>(padding_buffer));
+    params->padding_cache_filled = true;
+  }
 
   // Using the standard TF Lite ConvParams struct.
   // This requires extra step of converting the TfLiteBConv2DParams
@@ -334,6 +411,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
       GetTensorShape(filter), GetTensorData<T>(filter), GetTensorShape(bias),
       GetTensorData<T>(bias), GetTensorShape(output), GetTensorData<T>(output),
       GetTensorShape(im2col), GetTensorData<T>(im2col),
+      GetTensorData<T>(padding_buffer),
       CpuBackendContext::GetFromContext(context));
 }
 
