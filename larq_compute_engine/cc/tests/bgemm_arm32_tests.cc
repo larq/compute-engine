@@ -46,7 +46,7 @@ TEST(BGemmTests, BGemmArm32) {
   ce::core::bgemm_arm32(m, n, k, a.data(), lda, b.data(), ldb, c.data(), ldc);
 
   // TODO: Enable this after we implemented bgemm_arm32
-  //EXPECT_THAT(c, ::testing::ElementsAreArray(c_expected));
+  // EXPECT_THAT(c, ::testing::ElementsAreArray(c_expected));
 }
 
 }  // end namespace testing

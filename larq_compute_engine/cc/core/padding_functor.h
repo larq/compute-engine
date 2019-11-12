@@ -80,9 +80,9 @@ class ReferencePaddingFunctor {
                     // filter_data has shape
                     // [height, width, in_channels, out_channels]
                     filter_idx = filter_y * (filter_width * input_channels *
-                                              filter_count) +
-                                  filter_x * (input_channels * filter_count) +
-                                  in_c * filter_count + out_c;
+                                             filter_count) +
+                                 filter_x * (input_channels * filter_count) +
+                                 in_c * filter_count + out_c;
                   } else {
                     // filter_data has shape
                     // [out_channels, height, width, in_channels]

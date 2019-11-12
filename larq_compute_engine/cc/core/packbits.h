@@ -1,11 +1,10 @@
 #ifndef COMPUTE_ENGINE_KERNELS_PACKBITS_H_
 #define COMPUTE_ENGINE_KERNELS_PACKBITS_H_
 
-#include <limits>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <vector>
-#include <cstring>
 
 #include "larq_compute_engine/cc/utils/types.h"
 

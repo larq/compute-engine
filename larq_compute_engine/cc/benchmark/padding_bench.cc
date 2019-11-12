@@ -47,7 +47,9 @@ static void padding(benchmark::State& state) {
   }
 }
 
-BENCHMARK_TEMPLATE(padding, float)->Ranges({{16,32},{1,3},{64,128},{16,32}});
-BENCHMARK_TEMPLATE(padding, float)->Ranges({{16,32},{1,3},{64,128},{16,32}});
-BENCHMARK_TEMPLATE(padding, float)->Ranges({{16,32},{1,3},{64,128},{16,32}});
-
+BENCHMARK_TEMPLATE(padding, float)
+    ->Ranges({{16, 32}, {1, 3}, {64, 128}, {16, 32}});
+BENCHMARK_TEMPLATE(padding, float)
+    ->Ranges({{16, 32}, {1, 3}, {64, 128}, {16, 32}});
+BENCHMARK_TEMPLATE(padding, float)
+    ->Ranges({{16, 32}, {1, 3}, {64, 128}, {16, 32}});

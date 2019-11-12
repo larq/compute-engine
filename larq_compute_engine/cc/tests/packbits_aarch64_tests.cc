@@ -29,7 +29,7 @@ TEST(BitpackingTests, BitpackingAarch64) {
   ce::core::packbits_aarch64(input.data(), n, output.data());
 
   // Currently it doesn't output anything meaningful
-  //EXPECT_THAT(output, ::testing::ElementsAreArray(expected));
+  // EXPECT_THAT(output, ::testing::ElementsAreArray(expected));
 }
 
 }  // end namespace testing

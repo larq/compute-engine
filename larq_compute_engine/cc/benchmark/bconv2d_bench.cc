@@ -71,8 +71,11 @@ static void bconv2d(benchmark::State& state) {
 
 // We have to choose realistic sizes here for an honest benchmark
 // For all argumentgs, it will choose powers-of-two between those numbers
-// Note that we get all possible combinations, so the number of benchmarks grows large quickly!
-BENCHMARK_TEMPLATE(bconv2d, float, uint8_t )->Ranges({{16,32},{1,3},{64,128},{16,32}});
-BENCHMARK_TEMPLATE(bconv2d, float, uint32_t)->Ranges({{16,32},{1,3},{64,128},{16,32}});
-BENCHMARK_TEMPLATE(bconv2d, float, uint64_t)->Ranges({{16,32},{1,3},{64,128},{16,32}});
-
+// Note that we get all possible combinations, so the number of benchmarks grows
+// large quickly!
+BENCHMARK_TEMPLATE(bconv2d, float, uint8_t)
+    ->Ranges({{16, 32}, {1, 3}, {64, 128}, {16, 32}});
+BENCHMARK_TEMPLATE(bconv2d, float, uint32_t)
+    ->Ranges({{16, 32}, {1, 3}, {64, 128}, {16, 32}});
+BENCHMARK_TEMPLATE(bconv2d, float, uint64_t)
+    ->Ranges({{16, 32}, {1, 3}, {64, 128}, {16, 32}});

@@ -1,6 +1,10 @@
 #include <cstdint>
 
+#include "bconv2d_impl.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
+#include "larq_compute_engine/cc/core/bconv2d_functor.h"
+#include "larq_compute_engine/cc/core/padding_functor.h"
+#include "larq_compute_engine/cc/utils/types.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/c/c_api_internal.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
@@ -8,12 +12,6 @@
 #include "tensorflow/lite/kernels/kernel_util.h"
 #include "tensorflow/lite/kernels/op_macros.h"
 #include "tensorflow/lite/kernels/padding.h"
-
-#include "larq_compute_engine/cc/utils/types.h"
-#include "larq_compute_engine/cc/core/bconv2d_functor.h"
-#include "larq_compute_engine/cc/core/padding_functor.h"
-
-#include "bconv2d_impl.h"
 
 using namespace tflite;
 
@@ -61,7 +59,7 @@ typedef struct {
   int64_t out_width{0};
   int64_t out_height{0};
 
-  ce::core::FilterFormat filter_format {ce::core::FilterFormat::Unknown};
+  ce::core::FilterFormat filter_format{ce::core::FilterFormat::Unknown};
 
   bool need_im2col = false;
   // IDs are the arbitrary identifiers used by TF Lite to identify and access
@@ -148,7 +146,8 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
 
   // reading the filter dimensions
   // only OHWI layout is supported for filters
-  TF_LITE_ENSURE_EQ(context, conv_params->filter_format, ce::core::FilterFormat::OHWI);
+  TF_LITE_ENSURE_EQ(context, conv_params->filter_format,
+                    ce::core::FilterFormat::OHWI);
 
   conv_params->channels_out = filter->dims->data[0];
   conv_params->filter_height = filter->dims->data[1];
@@ -247,8 +246,8 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
       params->padding_type == TfLitePadding::kTfLitePaddingValid ? 1 : 2;
 
   using TBGemmFunctor =
-      ce::core::ReferenceBGemmFunctor<TBitpacked, Layout::RowMajor,
-                                      TBitpacked, Layout::ColMajor, T>;
+      ce::core::ReferenceBGemmFunctor<TBitpacked, Layout::RowMajor, TBitpacked,
+                                      Layout::ColMajor, T>;
   using TFusedBGemmFunctor =
       ce::core::FusedBGemmFunctor<T, Layout::RowMajor, T, Layout::ColMajor, T,
                                   TBitpacked, TBGemmFunctor>;
@@ -267,10 +266,10 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   if (params->padding_type == TfLitePadding::kTfLitePaddingSame) {
     PaddingFunctor padding_functor;
     padding_functor(params->batch, params->input_height, params->input_width,
-                    params->channels_in, filter->data.f,
-                    params->filter_height, params->filter_width,
-                    params->channels_out, stride_height, stride_width,
-                    output->data.f, params->out_height, params->out_width);
+                    params->channels_in, filter->data.f, params->filter_height,
+                    params->filter_width, params->channels_out, stride_height,
+                    stride_width, output->data.f, params->out_height,
+                    params->out_width);
   }
 }
 
@@ -332,10 +331,10 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
 
   BConv2D<T, TBitpacked>(
       op_params, GetTensorShape(input), GetTensorData<T>(input),
-      GetTensorShape(filter), GetTensorData<T>(filter),
-      GetTensorShape(bias), GetTensorData<T>(bias), GetTensorShape(output),
-      GetTensorData<T>(output), GetTensorShape(im2col),
-      GetTensorData<T>(im2col), CpuBackendContext::GetFromContext(context));
+      GetTensorShape(filter), GetTensorData<T>(filter), GetTensorShape(bias),
+      GetTensorData<T>(bias), GetTensorShape(output), GetTensorData<T>(output),
+      GetTensorShape(im2col), GetTensorData<T>(im2col),
+      CpuBackendContext::GetFromContext(context));
 }
 
 template <KernelType kernel_type, class TBitpacked>
