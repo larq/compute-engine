@@ -2,37 +2,52 @@
 import numpy as np
 import tensorflow as tf
 import larq_compute_engine as lqce
+import sys
 import pytest
 
 from tflite_runtime.interpreter import Interpreter
 
 
 def _create_bconv2d_layer(
-    bconv_op, in_channels, filters, kernel_size, hw_strides=(1, 1), padding="VALID"
+    bconv_op,
+    in_channels,
+    filters,
+    kernel_size,
+    hw_strides=(1, 1),
+    padding="VALID",
+    dilations=(1, 1),
 ):
     strides = [1] + list(hw_strides) + [1]
+    dilations = [1] + list(dilations) + [1]
     fshape = [kernel_size, kernel_size, in_channels, filters]
     filt_tf = np.random.choice([-1, 1], fshape)
     filt_lite = np.copy(np.moveaxis(filt_tf, 3, 0))
 
     def _layer_tf(x):
-        return bconv_op(
-            x, filt_tf, strides, padding, data_format="NHWC", filter_format="HWIO"
+        # Use native tf op because it supports dilations
+        return tf.nn.conv2d(
+            x, filt_tf, strides, padding, data_format="NHWC", dilations=dilations
         )
 
     def _layer_lite(x):
         return bconv_op(
-            x, filt_lite, strides, padding, data_format="NHWC", filter_format="OHWI"
+            x,
+            filt_lite,
+            strides,
+            padding,
+            data_format="NHWC",
+            filter_format="OHWI",
+            dilations=dilations,
         )
 
     return _layer_tf, _layer_lite
 
 
 def _create_sample_bconv_model(
-    bconv_op, input_shape, filters, kernel_size, strides, padding
+    bconv_op, input_shape, filters, kernel_size, strides, padding, dilations
 ):
     layer_tf, layer_lite = _create_bconv2d_layer(
-        bconv_op, input_shape[2], filters, kernel_size, strides, padding
+        bconv_op, input_shape[2], filters, kernel_size, strides, padding, dilations
     )
 
     img_input = tf.keras.layers.Input(shape=input_shape)
@@ -79,8 +94,9 @@ def invoke_inference(model, data):
 @pytest.mark.parametrize("out_channel", [1, 4])
 @pytest.mark.parametrize("input_size", [14])
 @pytest.mark.parametrize("kernel_size", [3, 5])
-@pytest.mark.parametrize("strides", [[1, 1], [2, 2]])
+@pytest.mark.parametrize("strides", [[1, 1], [2, 3]])
 @pytest.mark.parametrize("padding", ["VALID", "SAME"])
+@pytest.mark.parametrize("dilations", [[1, 1], [2, 3]])
 def test_bconv2d_op_inference(
     bconv_op,
     data_type,
@@ -89,11 +105,12 @@ def test_bconv2d_op_inference(
     input_size,
     kernel_size,
     strides,
+    dilations,
     padding,
 ):
     input_shape = [input_size, input_size, in_channel]
     model_tf, model_lite = _create_sample_bconv_model(
-        bconv_op, input_shape, out_channel, kernel_size, strides, padding
+        bconv_op, input_shape, out_channel, kernel_size, strides, padding, dilations
     )
 
     input_shape = [1] + input_shape
@@ -106,4 +123,4 @@ def test_bconv2d_op_inference(
 
 
 if __name__ == "__main__":
-    tf.test.main()
+    sys.exit(pytest.main([__file__]))
