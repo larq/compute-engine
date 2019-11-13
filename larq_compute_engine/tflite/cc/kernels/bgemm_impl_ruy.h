@@ -5,6 +5,8 @@
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 
+#include <iostream>
+
 using namespace tflite;
 using namespace tflite::cpu_backend_gemm;
 
@@ -67,10 +69,14 @@ struct BGemmImplUsingRuy {
     ruy::BasicSpec<AccumScalar, DstScalar> ruy_spec;
     MakeRuySpec(params, &ruy_spec);
 
+    // std::cout << "LHS:\n" << ruy_lhs << std::endl;
+    // std::cout << "RHS:\n" << ruy_rhs << std::endl;
+
     // TODO: need to be modified to pickup the bgemm kernel
-    // ruy::Mul<ruy::kAllPaths>(ruy_lhs, ruy_rhs, ruy_spec,
-    // context->ruy_context(),
-    //                          &ruy_dst);
+    ruy::Mul<ruy::kAllPaths>(ruy_lhs, ruy_rhs, ruy_spec, context->ruy_context(),
+                             &ruy_dst);
+
+    // std::cout << "DST:\n" << ruy_dst << std::endl;
   }
 };
 
