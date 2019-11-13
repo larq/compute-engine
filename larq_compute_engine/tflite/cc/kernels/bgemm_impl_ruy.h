@@ -5,6 +5,8 @@
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 
+#include "tensorflow/lite/experimental/ruy/ruy_advanced.h"
+
 #include <iostream>
 
 using namespace tflite;
@@ -12,6 +14,19 @@ using namespace tflite::cpu_backend_gemm;
 
 namespace compute_engine {
 namespace tflite {
+
+// Simple allocator for allocating pre-packed matrices.
+class SimpleAllocator {
+ public:
+  void* AllocateBytes(std::size_t num_bytes) {
+    char* p = new char[num_bytes];
+    buffers_.emplace_back(p);
+    return static_cast<void*>(p);
+  }
+
+ private:
+  std::vector<std::unique_ptr<char[]>> buffers_;
+};
 
 template <typename Scalar, typename DataPointer>
 void MakeRuyMatrix(const MatrixParams<Scalar>& params, DataPointer data_ptr,
@@ -59,24 +74,75 @@ struct BGemmImplUsingRuy {
       const GemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
       CpuBackendContext* context) {
     gemmlowp::ScopedProfilingLabel label("BGemmRuy");
-    ruy::Matrix<LhsScalar> ruy_lhs;
-    ruy::Matrix<RhsScalar> ruy_rhs;
-    ruy::Matrix<DstScalar> ruy_dst;
-    MakeRuyMatrix(lhs_params, lhs_data, &ruy_lhs);
-    MakeRuyMatrix(rhs_params, rhs_data, &ruy_rhs);
-    MakeRuyMatrix(dst_params, dst_data, &ruy_dst);
+    // ruy::Matrix<LhsScalar> ruy_lhs;
+    // ruy::Matrix<RhsScalar> ruy_rhs;
 
-    ruy::BasicSpec<AccumScalar, DstScalar> ruy_spec;
-    MakeRuySpec(params, &ruy_spec);
+    // ruy::Matrix<DstScalar> ruy_dst;
+    // MakeRuyMatrix(lhs_params, lhs_data, &ruy_lhs);
+    // MakeRuyMatrix(rhs_params, rhs_data, &ruy_rhs);
+    // MakeRuyMatrix(dst_params, dst_data, &ruy_dst);
 
+    // ruy::BasicSpec<AccumScalar, DstScalar> ruy_spec;
+
+    // MakeRuySpec(params, &ruy_spec);
+
+    // // TODO: need to be modified to pickup the bgemm kernel
+    // ruy::Mul<ruy::kAllPaths>(ruy_lhs, ruy_rhs, ruy_spec, context->ruy_context(),
+    //                          &ruy_dst);
     // std::cout << "LHS:\n" << ruy_lhs << std::endl;
     // std::cout << "RHS:\n" << ruy_rhs << std::endl;
-
-    // TODO: need to be modified to pickup the bgemm kernel
-    ruy::Mul<ruy::kAllPaths>(ruy_lhs, ruy_rhs, ruy_spec, context->ruy_context(),
-                             &ruy_dst);
-
     // std::cout << "DST:\n" << ruy_dst << std::endl;
+
+    // convert to float
+    // using T = std::uint8_t;
+    using T = float;
+    using TAccum = T;
+
+    std::vector<LhsScalar> lhs_data_int_vec(lhs_data, lhs_data + sizeof lhs_data / sizeof lhs_data[0]);
+    std::vector<RhsScalar> rhs_data_int_vec(rhs_data, rhs_data + sizeof rhs_data / sizeof rhs_data[0]);
+    std::vector<T> ruy_lhs_fl (lhs_data_int_vec.begin(), lhs_data_int_vec.end());
+    std::vector<T> ruy_rhs_fl (rhs_data_int_vec.begin(), rhs_data_int_vec.end());
+    const T* lhs_data_fl = ruy_lhs_fl.data();
+    const T* rhs_data_fl = ruy_rhs_fl.data();
+
+    // Set up the matrix layouts and spec.
+    ruy::Matrix<T> lhs;
+    ruy::MakeSimpleLayout(lhs_params.rows, lhs_params.cols, ruy::Order::kRowMajor, &lhs.layout);
+    ruy::Matrix<T> rhs;
+    ruy::MakeSimpleLayout(rhs_params.rows, rhs_params.cols, ruy::Order::kColMajor, &rhs.layout);
+    ruy::Matrix<DstScalar> dst;
+    ruy::MakeSimpleLayout(dst_params.rows, dst_params.cols, ruy::Order::kColMajor, &dst.layout);
+    ruy::BasicSpec<TAccum, DstScalar> spec;
+
+    SimpleAllocator allocator;
+    auto alloc_fn = [&allocator](std::size_t num_bytes) -> void* {
+                      return allocator.AllocateBytes(num_bytes);
+                    };
+
+    ruy::PrepackedMatrix prepacked_lhs;
+    lhs.data = lhs_data_fl;
+
+    ruy::PrepackedMatrix prepacked_rhs;
+    rhs.data = rhs_data_fl;
+
+    ruy::PrePackForMul<ruy::kAllPaths>(lhs, rhs, spec, context->ruy_context(), &dst,
+                                       &prepacked_lhs, &prepacked_rhs,
+                                       alloc_fn);
+
+    lhs.data = nullptr;
+    rhs.data = nullptr;
+    dst.data = dst_data;
+    ruy::MulWithPrepacked<ruy::kAllPaths>(lhs, rhs, spec, context->ruy_context(), &dst,
+                                          &prepacked_lhs,
+                                          &prepacked_rhs);
+    lhs.data = lhs_data_fl;
+    rhs.data = rhs_data_fl;
+
+    // Print out the results.
+    std::cout << "LHS:\n" << lhs;
+    std::cout << "RHS:\n" << rhs;
+    std::cout << "Result:\n" << dst << "\n";
+
   }
 };
 
