@@ -229,6 +229,20 @@ sh_test(
     ],
 )
 
+cc_binary(
+    name = "benchmark_aarch64",
+    linkopts = ["-lrt -lm"],
+    srcs = [
+        "cc/benchmark/aarch64/packbits_bench.cc",
+    ],
+    deps = [
+        "@googlebenchmark//:benchmark",
+        "@googlebenchmark//:benchmark_main",
+        ":packbits",
+        ":packbits_aarch64",
+    ],
+)
+
 #
 # Benchmarks
 #
