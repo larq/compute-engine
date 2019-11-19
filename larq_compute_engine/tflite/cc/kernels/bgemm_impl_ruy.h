@@ -1,13 +1,11 @@
 #ifndef COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_RUY_H_
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_RUY_H_
 
+#include "larq_compute_engine/cc/core/bgemm_functor.h"
 #include "tensorflow/lite/experimental/ruy/ruy.h"
+#include "tensorflow/lite/experimental/ruy/ruy_advanced.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
-
-#include "tensorflow/lite/experimental/ruy/ruy_advanced.h"
-
-#include "larq_compute_engine/cc/core/bgemm_functor.h"
 
 // #include <iostream>
 
@@ -26,14 +24,15 @@ struct BinaryKernel {};
 
 template <typename LhsScalar, typename RhsScalar, typename DstScalar,
           typename Spec>
-struct BinaryKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar, Spec> {
+struct BinaryKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
+                    Spec> {
   using AccumScalar = typename Spec::AccumScalar;
   using LhsLayout = typename Spec::StandardCppKernelLhsLayout;
   using RhsLayout = typename Spec::StandardCppKernelRhsLayout;
   explicit BinaryKernel(ruy::Tuning) {}
   void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
-           const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec, int start_row,
-           int start_col, int end_row, int end_col,
+           const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
+           int start_row, int start_col, int end_row, int end_col,
            ruy::Matrix<DstScalar>* dst) const {
     // See the comment in RunKernelTyped. end_row may be larger than
     // dst->layout.rows. It's the responsibility of the kernel to avoid
@@ -65,7 +64,8 @@ struct BinaryKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar, Sp
           // after elements are passed as TBitpacked instead of float
           TBitpacked lhs_val = Element(lhs, k, i);
           TBitpacked rhs_val = Element(rhs, k, j);
-          accum += ce::core::compute_binary_inner_prod<TBitpacked, AccumScalar>(lhs_val, rhs_val);
+          accum += ce::core::compute_binary_inner_prod<TBitpacked, AccumScalar>(
+              lhs_val, rhs_val);
           // std::cout << "ACCUM: " << accum << std::endl;
         }
         if (spec.bias) {
@@ -84,7 +84,8 @@ struct BinaryKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar, Sp
         // accum += dst->zero_point;
         // accum = std::min<AccumScalar>(accum, spec.clamp_max);
         // accum = std::max<AccumScalar>(accum, spec.clamp_min);
-        *ElementPtr(dst, i, j) = static_cast<DstScalar>(accum) - spec.multiplier_exponent;
+        *ElementPtr(dst, i, j) =
+            static_cast<DstScalar>(accum) - spec.multiplier_exponent;
       }
     }
   }
@@ -92,9 +93,11 @@ struct BinaryKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar, Sp
 
 template <ruy::Path ThePath, typename LhsScalar, typename RhsScalar,
           typename DstScalar, typename Spec>
-void RunBinaryKernelTyped(ruy::Tuning tuning, const ruy::PackedMatrix<LhsScalar>& lhs,
-                          const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
-                          int start_row, int start_col, int end_row, int end_col,
+void RunBinaryKernelTyped(ruy::Tuning tuning,
+                          const ruy::PackedMatrix<LhsScalar>& lhs,
+                          const ruy::PackedMatrix<RhsScalar>& rhs,
+                          const Spec& spec, int start_row, int start_col,
+                          int end_row, int end_col,
                           ruy::Matrix<DstScalar>* dst) {
   // std::cout << "RUN BINARY KERNEL TYPED\n";
   using BKernel = BinaryKernel<ThePath, LhsScalar, RhsScalar, DstScalar, Spec>;
@@ -116,16 +119,18 @@ void RunBinaryKernelTyped(ruy::Tuning tuning, const ruy::PackedMatrix<LhsScalar>
   RUY_DCHECK_LT(end_col, dst->layout.cols + RhsLayout::kCols);
   RUY_DCHECK_EQ((end_col - start_col) % RhsLayout::kCols, 0);
 #if RUY_OPT_ENABLED(RUY_OPT_FAT_KERNEL)
-  // std::cout << "RUNING fat kernel: ROW(" << start_row << " , " << end_row << ")\n";
-  // std::cout << "                 : COL(" << start_col << " , " << end_col << ")\n";
+  // std::cout << "RUNING fat kernel: ROW(" << start_row << " , " << end_row <<
+  // ")\n"; std::cout << "                 : COL(" << start_col << " , " <<
+  // end_col << ")\n";
   kernel.Run(lhs, rhs, spec, start_row, start_col, end_row, end_col, dst);
 #else
   for (int col = start_col; col < end_col; col += RhsLayout::kCols) {
     int block_end_col = std::min(col + RhsLayout::kCols, end_col);
     for (int row = start_row; row < end_row; row += LhsLayout::kCols) {
       int block_end_row = std::min(row + LhsLayout::kCols, end_row);
-      // std::cout << "RUNING kernel: ROW(" << row << " , " << block_end_row << ")\n";
-      // std::cout << "             : COL(" << col << " , " << block_end_col << ")\n";
+      // std::cout << "RUNING kernel: ROW(" << row << " , " << block_end_row <<
+      // ")\n"; std::cout << "             : COL(" << col << " , " <<
+      // block_end_col << ")\n";
       kernel.Run(lhs, rhs, spec, row, col, block_end_row, block_end_col, dst);
     }
   }
@@ -134,16 +139,17 @@ void RunBinaryKernelTyped(ruy::Tuning tuning, const ruy::PackedMatrix<LhsScalar>
 
 template <ruy::Path ThePath, typename LhsScalar, typename RhsScalar,
           typename DstScalar, typename Spec>
-void RunBinaryKernel(ruy::Tuning tuning, const ruy::SidePair<ruy::PMatrix>& src, void* spec,
-                     const ruy::SidePair<int>& start, const ruy::SidePair<int>& end,
-                     ruy::DMatrix* dst) {
+void RunBinaryKernel(ruy::Tuning tuning, const ruy::SidePair<ruy::PMatrix>& src,
+                     void* spec, const ruy::SidePair<int>& start,
+                     const ruy::SidePair<int>& end, ruy::DMatrix* dst) {
   // std::cout << "RUN BINARY KERNEL" << std::endl;
   ruy::Matrix<DstScalar> mdst = ruy::ToMatrix<DstScalar>(*dst);
   RunBinaryKernelTyped<ThePath, LhsScalar, RhsScalar, DstScalar, Spec>(
       tuning, ruy::ToPackedMatrix<LhsScalar>(src[ruy::Side::kLhs]),
       ruy::ToPackedMatrix<RhsScalar>(src[ruy::Side::kRhs]),
-      *static_cast<const Spec*>(spec), start[ruy::Side::kLhs], start[ruy::Side::kRhs],
-      end[ruy::Side::kLhs], end[ruy::Side::kRhs], &mdst);
+      *static_cast<const Spec*>(spec), start[ruy::Side::kLhs],
+      start[ruy::Side::kRhs], end[ruy::Side::kLhs], end[ruy::Side::kRhs],
+      &mdst);
 }
 
 // Simple allocator for allocating pre-packed matrices.
@@ -177,22 +183,28 @@ struct BGemmImplUsingRuy {
     using TAccum = std::int32_t;
     using TSpec = ruy::BasicSpec<TAccum, DstScalar>;
 
-    // TODO: conversion to float is temporary to avoid executing of RUY 8-bit quantized GEMM
-    // until we manually replace the kernel function pointers with our binary kernels
-    std::vector<LhsScalar> lhs_data_int_vec(lhs_data, lhs_data + sizeof lhs_data / sizeof lhs_data[0]);
-    std::vector<RhsScalar> rhs_data_int_vec(rhs_data, rhs_data + sizeof rhs_data / sizeof rhs_data[0]);
-    std::vector<T> ruy_lhs_fl (lhs_data_int_vec.begin(), lhs_data_int_vec.end());
-    std::vector<T> ruy_rhs_fl (rhs_data_int_vec.begin(), rhs_data_int_vec.end());
+    // TODO: conversion to float is temporary to avoid executing of RUY 8-bit
+    // quantized GEMM until we manually replace the kernel function pointers
+    // with our binary kernels
+    std::vector<LhsScalar> lhs_data_int_vec(
+        lhs_data, lhs_data + sizeof lhs_data / sizeof lhs_data[0]);
+    std::vector<RhsScalar> rhs_data_int_vec(
+        rhs_data, rhs_data + sizeof rhs_data / sizeof rhs_data[0]);
+    std::vector<T> ruy_lhs_fl(lhs_data_int_vec.begin(), lhs_data_int_vec.end());
+    std::vector<T> ruy_rhs_fl(rhs_data_int_vec.begin(), rhs_data_int_vec.end());
     const T* lhs_data_fl = ruy_lhs_fl.data();
     const T* rhs_data_fl = ruy_rhs_fl.data();
 
     // Set up the matrix layouts and spec.
     ruy::Matrix<T> lhs;
-    ruy::MakeSimpleLayout(lhs_params.rows, lhs_params.cols, ruy::Order::kRowMajor, &lhs.layout);
+    ruy::MakeSimpleLayout(lhs_params.rows, lhs_params.cols,
+                          ruy::Order::kRowMajor, &lhs.layout);
     ruy::Matrix<T> rhs;
-    ruy::MakeSimpleLayout(rhs_params.rows, rhs_params.cols, ruy::Order::kColMajor, &rhs.layout);
+    ruy::MakeSimpleLayout(rhs_params.rows, rhs_params.cols,
+                          ruy::Order::kColMajor, &rhs.layout);
     ruy::Matrix<DstScalar> dst;
-    ruy::MakeSimpleLayout(dst_params.rows, dst_params.cols, ruy::Order::kColMajor, &dst.layout);
+    ruy::MakeSimpleLayout(dst_params.rows, dst_params.cols,
+                          ruy::Order::kColMajor, &dst.layout);
 
     TSpec spec;
 
@@ -200,8 +212,8 @@ struct BGemmImplUsingRuy {
     // TODO: needs aligned allocator for NEON SIMD?
     SimpleAllocator allocator;
     auto alloc_fn = [&allocator](std::size_t num_bytes) -> void* {
-                      return allocator.AllocateBytes(num_bytes);
-                    };
+      return allocator.AllocateBytes(num_bytes);
+    };
 
     ruy::PrepackedMatrix prepacked_lhs;
     lhs.data = lhs_data_fl;
@@ -221,24 +233,23 @@ struct BGemmImplUsingRuy {
     ruy::Path the_path = ruy_context->GetPathToTake<ruy::kAllPaths>();
     RUY_CHECK_NE(the_path, ruy::Path::kReference);
 
-
-
     // Here, we abuse the
     // 'multiplier_exponent' which is used only for non-floating-point
     // cases to pass the bitpadding correction value (int) to bgemm kernel
     spec.multiplier_exponent = params.multiplier_exponent;
 
-    // In Ruy, TrMul is computed instead of Mul, therefore the lhs needs to be transposed.
-    // Transpose function is cheap since it does not shuffle data around and only
-    // changes the matrix layout.
+    // In Ruy, TrMul is computed instead of Mul, therefore the lhs needs to be
+    // transposed. Transpose function is cheap since it does not shuffle data
+    // around and only changes the matrix layout.
     ruy::Matrix<T> transposed_lhs(lhs);
     ruy::Transpose(&transposed_lhs);
 
     // Based on the Path, kernel function pointers are set in TrMulParams
-    constexpr ruy::Path TrMulCompiledPaths = ruy::kAllPaths & ~ruy::Path::kReference;
+    constexpr ruy::Path TrMulCompiledPaths =
+        ruy::kAllPaths & ~ruy::Path::kReference;
     ruy::TrMulParams trmul_params;
-    ruy::CreateTrMulParams<TrMulCompiledPaths>(transposed_lhs, rhs, spec, ruy_context, &dst,
-                                               the_path, &trmul_params);
+    ruy::CreateTrMulParams<TrMulCompiledPaths>(
+        transposed_lhs, rhs, spec, ruy_context, &dst, the_path, &trmul_params);
 
     // set the pre-packed params
     trmul_params.packed[ruy::Side::kLhs].data = prepacked_lhs.data;
@@ -253,7 +264,9 @@ struct BGemmImplUsingRuy {
     // of the corresponding path (architecture) determind on the compiled time
     using PackedLhsScalar = ruy::PackedType<ruy::Path::kStandardCpp, T>;
     using PackedRhsScalar = ruy::PackedType<ruy::Path::kStandardCpp, T>;
-    trmul_params.run_kernel = &RunBinaryKernel<ruy::Path::kStandardCpp, PackedLhsScalar, PackedRhsScalar, DstScalar, TSpec>;
+    trmul_params.run_kernel =
+        &RunBinaryKernel<ruy::Path::kStandardCpp, PackedLhsScalar,
+                         PackedRhsScalar, DstScalar, TSpec>;
 
     ruy::TrMul(&trmul_params, ruy_context);
 
@@ -265,7 +278,6 @@ struct BGemmImplUsingRuy {
     // std::cout << "LHS:\n" << lhs;
     // std::cout << "RHS:\n" << rhs;
     // std::cout << "Result:\n" << dst << "\n";
-
   }
 };
 
