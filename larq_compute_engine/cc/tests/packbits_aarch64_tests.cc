@@ -27,9 +27,9 @@ void test_bitpacking() {
     // Try to get the position of bit i by packing the one-hot vector e_i
     for (auto j = 0; j < n; ++j) {
       if (j == i)
-        input[j] = -1.2345f;
-      else
         input[j] = 1.2345f;
+      else
+        input[j] = -1.2345f;
     }
     // Run bitpacking
     packing_func(input, n / blocksize, output);

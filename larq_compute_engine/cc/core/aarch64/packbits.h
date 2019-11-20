@@ -7,6 +7,36 @@
 
 #include <cstdint>
 
+//
+// Benchmarking.
+// WARNING: Make sure to disable cpu frequency scaling before testing these!
+//      sudo cpupower frequency-set --governor performance
+//      ./benchmark_aarch64
+//      sudo cpupower frequency-set --governor powersave
+//
+// Time in nanoseconds
+//                           128 |   512 |   64K |
+//                          -----|-------|-------|
+//  64bit  no `prfm`          53 |   210 | 28375 |
+//  64bit  no prfm  bitflip   57 |   225 | 30400 |
+//  64bit  pldl1strm before   51 |   210 | 28381 |
+//  64bit  pldl1strm start    54 |   216 | 28850 |
+//  64bit  pldl1keep start    55 |   215 | 28830 |
+//  64bit  pldl1strm mid      53 |   210 | 28470 |
+//  64bit  pldl1keep mid      53 |   210 | 28380 |
+// 128bit  no `prfm`          53 |   210 | 28344 |
+// 128bit  no prfm  bitflip   54 |   213 | 28342 |
+// 128bit  pldl1strm before   54 |   210 | 28354 |
+// 128bit  pldl1keep v1       53 |   210 | 28194 |
+// 128bit  pldl1strm v1       53 |   210 | 28200 |
+// 128bit  pldl1strm 8times   55 |   215 | 32092 |
+// 128bit  pldl1strm 4times   54 |   210 | 35930 |
+//  dabnn                     54 |   212 | 37600 |
+//
+// From these numbers, it looks as if the Raspberry Pi 4 CPU does not benefit
+// from the prefetch instruction so we should leave it out.
+// Furthermore, the extra bitflip has more impact in the 64-bit packing.
+
 // General purpose registers:
 // x0...x30 are 64-bit registers
 // w0...w30 are the 32-bit bottom halves of the same registers
@@ -42,6 +72,20 @@
 
 // PDF with all the instructions
 // https://static.docs.arm.com/ddi0596/a/DDI_0596_ARM_a64_instruction_set_architecture.pdf
+//
+
+// Prefetch memory instructions:
+//  prfm pldl1keep, [pointer]
+//  prfm pldl1strm, [pointer]
+//
+// Explanation:
+// pld       - preLOAD instead of preSTORE
+// l1        - to L1 cache
+// keep/strm - "keep in cache policy" or "streaming data policy"
+//
+// The keep policy seems to be if we want to keep reading/writing to this.
+// The stream policy is meant for data that is only read once, for example
+// by functions like memcpy. This suggests we should also use strm.
 
 namespace compute_engine {
 namespace core {
@@ -55,17 +99,8 @@ void packbits_aarch64_128(const float* input, size_t num_blocks, void* output) {
   // This is based on daBNN bitpacking for Aarch64
   // https://github.com/JDAI-CV/dabnn/blob/master/dabnn/bitpack.h
   asm volatile(
+      //"prfm   pldl1strm, [%0]     \n"
       "0: \n"
-      // Prefetch memory.
-      // %0 is the input pointer
-      // pld  - preLOAD instead of preSTORE
-      // l1   - to L1 cache
-      // keep - "keep in cache policy". Can also be STRM for "streaming data"
-      // TODO: It seems that keep should be STRM. This is used for things
-      // like memcpy which only read the data once (no reuse) and write it back
-      // which is exactly what we do!!!
-      "prfm   pldl1keep, [%0]     \n"
-
       // Load memory into registers
       // http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0802a/LD1_advsimd_sngl_vector.html
       //
@@ -142,8 +177,19 @@ void packbits_aarch64_128(const float* input, size_t num_blocks, void* output) {
       // Checkpoint8
 
       // From this point on we only do `sri` so lets try
-      // to preload things while we do the computations
-      "prfm   pldl1keep, [%0]     \n"
+      // to preload things for the next loop while we do the computations.
+      // It is completely unclear how many bytes are prefetched by this
+      // instruction. It might be one cache line which is 64 bytes on the
+      // Cortex-A72. Since we read 8 cache lines in total, lets try to call it 8
+      // times.
+      //"prfm   pldl1strm, [%0]     \n"
+      //"prfm   pldl1strm, [%0, 64] \n"
+      //"prfm   pldl1strm, [%0,128] \n"
+      //"prfm   pldl1strm, [%0,192] \n"
+      //"prfm   pldl1strm, [%0,256] \n"
+      //"prfm   pldl1strm, [%0,320] \n"
+      //"prfm   pldl1strm, [%0,384] \n"
+      //"prfm   pldl1strm, [%0,448] \n"
 
       "sri     v8.4s, v12.4s, #1    \n"
       "sri     v9.4s, v13.4s, #1    \n"
@@ -231,8 +277,10 @@ void packbits_aarch64_128(const float* input, size_t num_blocks, void* output) {
       //  25  57  89 121  17  49  81 113 |   9  41  73 105   1  33  65  97 |  24  56  88 120  16  48  80 112 |   8  40  72 104   0  32  64  96
       // clang-format on
 
+      // Flip all bits: TODO: flip bgemm instead
+      "not    v0.16b, v0.16b        \n"
       // Store in output. %1 is the output pointer, increment it by 16 bytes
-      "st1    {v0.4s}, [%1], #16         \n"
+      "st1    {v0.4s}, [%1], #16    \n"
 
       // Subtract the packed_elements counter by one
       "subs   %2, %2, #1          \n"
@@ -253,8 +301,8 @@ void packbits_aarch64_128(const float* input, size_t num_blocks, void* output) {
 // Same as above but in blocks of size 64
 void packbits_aarch64_64(const float* input, size_t num_blocks, void* output) {
   asm volatile(
+      //"prfm   pldl1strm, [%0]     \n"
       "0: \n"
-      "prfm   pldl1strm, [%0]     \n"
       "ld1    {v0.4s, v1.4s, v2.4s, v3.4s}, [%0], #64    \n"
       "ld1    {v4.4s, v5.4s, v6.4s, v7.4s}, [%0], #64    \n"
       "sri    v0.4s, v4.4s, #1    \n"
@@ -301,9 +349,12 @@ void packbits_aarch64_64(const float* input, size_t num_blocks, void* output) {
       // v0.h[7] -- signs --------/
       "mov    v0.h[0], v0.h[5] \n"
       "mov    v0.h[2], v0.h[7] \n"
+      // Flip all bits: TODO: flip bgemm instead
+      "not    v0.8b, v0.8b   \n"
       // Store in output. %1 is the output pointer, post-increment it
       "st1    {v0.1d}, [%1], #8 \n"
 
+      // clang-format off
       // Final result:
       //Bit i comes from input:
       //  62  46  30  14  54  38  22   6 |  58  42  26  10  50  34  18   2 |  60  44  28  12  52  36  20   4 |  56  40  24   8  48  32  16   0
@@ -312,6 +363,7 @@ void packbits_aarch64_64(const float* input, size_t num_blocks, void* output) {
       //Input i goes to bit:
       //  31  63  15  47  23  55   7  39 |  27  59  11  43  19  51   3  35 |  30  62  14  46  22  54   6  38 |  26  58  10  42  18  50   2  34
       //  29  61  13  45  21  53   5  37 |  25  57   9  41  17  49   1  33 |  28  60  12  44  20  52   4  36 |  24  56   8  40  16  48   0  32
+      // clang-format on
 
       // Subtract the packed_elements counter by one
       "subs   %2, %2, #1          \n"
@@ -329,7 +381,6 @@ void packbits_aarch64_64(const float* input, size_t num_blocks, void* output) {
   return;
 }
 
-
 }  // namespace core
 
 namespace benchmarking {
@@ -338,14 +389,16 @@ namespace benchmarking {
 // The ones below are for benchmarking only
 //
 // Ordering:
-// The least significant bit of out (i.e.  x & 0x01) should be the sign of the *first* input
+// The least significant bit of out (i.e.  x & 0x01) should be the sign of the
+// *first* input
 
 // Benchmarks performed on Raspberry Pi 4 (Cortex-A72)
 
-
 // From the manual at
 // https://developer.arm.com/docs/100069/0607/a64-general-instructions/bfm
-// BitfieldInsert copies any number of low-order bits from a source register into the same number of adjacent bits at any position in the destination register, leaving other bits unchanged.
+// BitfieldInsert copies any number of low-order bits from a source register
+// into the same number of adjacent bits at any position in the destination
+// register, leaving other bits unchanged.
 
 //
 // Version 1
@@ -480,9 +533,9 @@ uint64_t pack64bits_v4(float* in) {
       // now %0 contains the correct lower 32 bits
       // and w2 contains the 32 bits that should go into the higher part of %0
       "orr %0, %0, x2, lsl 32 \n"
-      : "+r"(x),                 // %0
-        "+r"(in),                // %1
-        "+r"(in_end)             // %2
+      : "+r"(x),      // %0
+        "+r"(in),     // %1
+        "+r"(in_end)  // %2
       :
       : "cc", "memory", "w1", "w2");
   return x;
@@ -529,12 +582,84 @@ uint64_t pack64bits_v5(float* in) {
       // now %0 contains the correct lower 32 bits
       // and w2 contains the 32 bits that should go into the higher part of %0
       "orr %0, %0, x2, lsl 32 \n"
-      : "+r"(x),                 // %0
-        "+r"(in),                // %1
-        "+r"(in_end)             // %2
+      : "+r"(x),      // %0
+        "+r"(in),     // %1
+        "+r"(in_end)  // %2
       :
       : "cc", "memory", "w1", "w2", "w3");
   return x;
+}
+
+// This is a direct copy of the daBNN code, only used for comparison.
+void packbits_dabnn_128(const float* float_ptr, size_t nn_size,
+                        void* binary_ptr) {
+  asm volatile(
+      "0:     \n"
+      "prfm   pldl1keep, [%0]     \n"
+      "ld1    {v0.4s, v1.4s, v2.4s, v3.4s}, [%0], #64    \n"
+      "ld1    {v4.4s, v5.4s, v6.4s, v7.4s}, [%0], #64    \n"
+      "sri    v0.4s, v4.4s, #1    \n"
+      "sri    v1.4s, v5.4s, #1    \n"
+      "sri    v2.4s, v6.4s, #1    \n"
+      "sri    v3.4s, v7.4s, #1    \n"
+
+      "ld1    {v8.4s, v9.4s, v10.4s, v11.4s}, [%0], #64    \n"
+      "prfm   pldl1keep, [%0, #64]     \n"
+      "ld1    {v12.4s, v13.4s, v14.4s, v15.4s}, [%0], #64    \n"
+      "sri    v8.4s, v12.4s, #1    \n"
+      "sri    v9.4s, v13.4s, #1    \n"
+      "sri    v10.4s, v14.4s, #1    \n"
+      "sri    v11.4s, v15.4s, #1    \n"
+
+      "subs   %2, %2, #1          \n"
+
+      "ld1    {v16.4s, v17.4s, v18.4s, v19.4s}, [%0], #64    \n"
+      "prfm   pldl1keep, [%0, #64]     \n"
+      "ld1    {v20.4s, v21.4s, v22.4s, v23.4s}, [%0], #64    \n"
+
+      "sri    v0.4s, v8.4s, #2    \n"
+      "sri    v1.4s, v9.4s, #2    \n"
+      "sri    v2.4s, v10.4s, #2   \n"
+      "sri    v3.4s, v11.4s, #2   \n"
+
+      "sri    v16.4s, v20.4s, #1    \n"
+      "sri    v17.4s, v21.4s, #1    \n"
+      "sri    v18.4s, v22.4s, #1    \n"
+      "sri    v19.4s, v23.4s, #1    \n"
+
+      "ld1    {v8.4s, v9.4s, v10.4s, v11.4s}, [%0], #64    \n"
+      "prfm   pldl1keep, [%0, #64]     \n"
+      "ld1    {v12.4s, v13.4s, v14.4s, v15.4s}, [%0], #64    \n"
+      "sri    v8.4s, v12.4s, #1    \n"
+      "sri    v9.4s, v13.4s, #1    \n"
+      "sri    v10.4s, v14.4s, #1    \n"
+      "sri    v11.4s, v15.4s, #1    \n"
+
+      "sri    v16.4s, v8.4s, #2   \n"
+      "sri    v17.4s, v9.4s, #2   \n"
+      "sri    v18.4s, v10.4s, #2   \n"
+      "sri    v19.4s, v11.4s, #2   \n"
+
+      "sri    v0.4s, v16.4s, #4   \n"
+      "sri    v1.4s, v17.4s, #4   \n"
+      "sri    v2.4s, v18.4s, #4   \n"
+      "sri    v3.4s, v19.4s, #4   \n"
+
+      "sri    v0.4s, v1.4s, #8    \n"
+      "sri    v2.4s, v3.4s, #8    \n"
+      "sri    v0.4s, v2.4s, #16    \n"
+
+      "not    v0.16b, v0.16b        \n"
+
+      "st1    {v0.4s}, [%1], #16         \n"
+      "bne    0b                  \n"
+      : "+r"(float_ptr),   // %0
+        "+r"(binary_ptr),  // %1
+        "+r"(nn_size)      // %2
+      :
+      : "cc", "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8",
+        "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18",
+        "v19", "v20", "v21", "v22", "v23", "x0");
 }
 
 }  // namespace benchmarking
