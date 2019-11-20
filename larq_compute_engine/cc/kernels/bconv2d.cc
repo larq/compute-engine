@@ -167,7 +167,7 @@ class BConv2DOp : public BinaryOp<T> {
                  stride_cols, padding_, output_data, out_rows, out_cols);
 
     if (padding_ != 1) {
-      ce::core::ReferencePaddingFunctor<T, T, ce::core::FilterFormat::HWIO>
+      ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::HWIO>
           padding_functor;
       padding_functor(batch, input_rows, input_cols, in_depth, filter_data,
                       filter_rows, filter_cols, out_depth, stride_rows,

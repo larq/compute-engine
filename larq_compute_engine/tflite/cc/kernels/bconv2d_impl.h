@@ -22,7 +22,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                     const T* filter_data, const RuntimeShape& bias_shape,
                     const T* bias_data, const RuntimeShape& output_shape,
                     T* output_data, const RuntimeShape& im2col_shape,
-                    T* im2col_data, CpuBackendContext* cpu_backend_context) {
+                    T* im2col_data, T* padding_buffer,
+                    CpuBackendContext* cpu_backend_context) {
   const int stride_width = params.stride_width;
   const int stride_height = params.stride_height;
   const int dilation_width_factor = params.dilation_width_factor;
@@ -178,7 +179,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
 
   if (params.padding_type == PaddingType::kSame) {
     using PaddingFunctor =
-        ce::core::ReferencePaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
+        ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
 
     const int stride_width = params.stride_width;
     const int stride_height = params.stride_height;
@@ -197,7 +198,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                       filter_data, filter_height, filter_width, output_depth,
                       stride_height, stride_width, dilation_height_factor,
                       dilation_width_factor, output_data, output_height,
-                      output_width);
+                      output_width, padding_buffer);
     }
   }
 }
