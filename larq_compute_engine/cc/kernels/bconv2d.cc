@@ -169,19 +169,10 @@ class BConv2DOp : public BinaryOp<T> {
     if (padding_ != 1) {
       ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::HWIO>
           padding_functor;
-
-      auto size = padding_functor.get_cache_size(
-          filter_rows, filter_cols, out_depth, dilation_rows, dilation_cols);
-
-      std::vector<T> padding_cache(size);
-      padding_functor.create_cache(filter_data, filter_rows, filter_cols,
-                                   out_depth, in_depth, dilation_rows,
-                                   dilation_cols, padding_cache.data());
-
-      padding_functor(batch, input_rows, input_cols, in_depth,
-                      padding_cache.data(), filter_rows, filter_cols, out_depth,
-                      stride_rows, stride_cols, dilation_rows, dilation_cols,
-                      output_data, out_rows, out_cols);
+      padding_functor(batch, input_rows, input_cols, in_depth, filter_data,
+                      filter_rows, filter_cols, out_depth, stride_rows,
+                      stride_cols, dilation_rows, dilation_cols, output_data,
+                      out_rows, out_cols, nullptr);
     }
   }
 

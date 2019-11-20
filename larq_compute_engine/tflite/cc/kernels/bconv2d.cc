@@ -313,22 +313,12 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
 
   if (params->padding_type == TfLitePadding::kTfLitePaddingSame) {
     PaddingFunctor padding_functor;
-    auto size = padding_functor.get_cache_size(
-        params->filter_height, params->filter_width, params->channels_out,
-        params->dilations[1], params->dilations[2]);
-
-    std::vector<float> padding_cache(size);
-    padding_functor.create_cache(filter->data.f, params->filter_height,
-                                 params->filter_width, params->channels_out,
-                                 params->channels_in, params->dilations[1],
-                                 params->dilations[2], padding_cache.data());
-
     padding_functor(params->batch, params->input_height, params->input_width,
-                    params->channels_in, padding_cache.data(),
-                    params->filter_height, params->filter_width,
-                    params->channels_out, stride_height, stride_width,
-                    params->dilations[1], params->dilations[2], output->data.f,
-                    params->out_height, params->out_width);
+                    params->channels_in, filter->data.f, params->filter_height,
+                    params->filter_width, params->channels_out, stride_height,
+                    stride_width, params->dilations[1], params->dilations[2],
+                    output->data.f, params->out_height, params->out_width,
+                    nullptr);
   }
 }
 
@@ -392,7 +382,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
     using PaddingFunctor =
         ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
     PaddingFunctor padding_functor;
-    padding_functor.create_cache(
+    padding_functor.cache_correction_values(
         GetTensorData<T>(filter), params->filter_height, params->filter_width,
         params->channels_out, params->channels_in, params->dilations[1],
         params->dilations[2], GetTensorData<T>(padding_buffer));

@@ -16,28 +16,30 @@ namespace ce = compute_engine;
 template <class Tdata, class Tfilter, FilterFormat filter_format>
 class PaddingFunctor {
  public:
-  std::size_t get_cache_size(const int filter_height, const int filter_width,
-                             const int filter_count, const int dilation_rows,
-                             const int dilation_cols) {
+  static std::size_t get_cache_size(const int filter_height,
+                                    const int filter_width,
+                                    const int filter_count,
+                                    const int dilation_rows,
+                                    const int dilation_cols) {
     const int effective_filter_width = (filter_width - 1) * dilation_cols + 1;
     const int effective_filter_height = (filter_height - 1) * dilation_rows + 1;
 
     return 4 * effective_filter_height * effective_filter_width * filter_count;
   }
 
-  void create_cache(const Tfilter* filter_data, const int filter_height,
-                    const int filter_width, const int filter_count,
-                    const int input_channels, const int dilation_rows,
-                    const int dilation_cols, Tdata* output_cache) {
+  static void cache_correction_values(
+      const Tfilter* filter_data, const int filter_height,
+      const int filter_width, const int filter_count, const int input_channels,
+      const int dilation_rows, const int dilation_cols, Tdata* output_cache) {
     const int effective_filter_width = (filter_width - 1) * dilation_cols + 1;
     const int effective_filter_height = (filter_height - 1) * dilation_rows + 1;
 
     // Given an (out_x, out_y) for which you want to compute the correction:
     //
-    // Let Xl = filter_left_offset - out_x * stride_cols
-    // Let Yt = filter_top_offset - out_y * stride_rows
-    // Let Xr = -Xl + effecitve_filter_width - input_width
-    // Let Yb = -Yt + effecitve_filter_height - input_height
+    // Let Xl = Xleft  = filter_left_offset - out_x * stride_cols
+    // Let Yt = Ytop   = filter_top_offset - out_y * stride_rows
+    // Let Xr = Xright = -Xleft + effecitve_filter_width - input_width
+    // Let Yb = Ybot   = -Ytop + effecitve_filter_height - input_height
     //
     // Basically:
     //  Xl: how many pixels the kernel sticks out at the left
@@ -162,12 +164,13 @@ class PaddingFunctor {
 
   void operator()(const int input_batches, const int input_height,
                   const int input_width, const int input_channels,
-                  const Tdata* padding_cache, const int filter_height,
+                  const Tfilter* filter_data, const int filter_height,
                   const int filter_width, const int filter_count,
                   const int stride_rows, const int stride_cols,
                   const int dilation_rows, const int dilation_cols,
                   Tdata* output_data, const int output_height,
-                  const int output_width) {
+                  const int output_width,
+                  const Tdata* padding_cache = nullptr) {
     const int effective_filter_width = (filter_width - 1) * dilation_cols + 1;
     const int effective_filter_height = (filter_height - 1) * dilation_rows + 1;
 
@@ -178,6 +181,17 @@ class PaddingFunctor {
                                    effective_filter_height - input_height) /
                                   2;
 
+    std::vector<Tdata> temp_cache;
+    if (padding_cache == nullptr) {
+      temp_cache.resize(get_cache_size(filter_height, filter_width,
+                                       filter_count, dilation_rows,
+                                       dilation_cols));
+      cache_correction_values(filter_data, filter_height, filter_width,
+                              filter_count, input_channels, dilation_rows,
+                              dilation_cols, temp_cache.data());
+      padding_cache = temp_cache.data();
+    }
+
     // We assume that the input numbers are correct because they
     // are already checked by the bconv functor
 
@@ -187,13 +201,13 @@ class PaddingFunctor {
         // parameters:
         // How many pixels does the kernel stick out at the
         // left, top, right, bottom
-        const int Yt = filter_top_offset - out_y * stride_rows;
-        const int Yb = -Yt - input_height + effective_filter_height;
+        const int Ytop = filter_top_offset - out_y * stride_rows;
+        const int Ybot = -Ytop - input_height + effective_filter_height;
         for (int out_x = 0; out_x < output_width; ++out_x) {
-          const int Xl = filter_left_offset - out_x * stride_cols;
-          const int Xr = -Xl - input_width + effective_filter_width;
+          const int Xleft = filter_left_offset - out_x * stride_cols;
+          const int Xright = -Xleft - input_width + effective_filter_width;
 
-          if (Xl <= 0 && Xr <= 0 && Yt <= 0 && Yb <= 0) {
+          if (Xleft <= 0 && Xright <= 0 && Ytop <= 0 && Ybot <= 0) {
             // clang-format off
             // The kernel does not stick out.
             // This output pixel corresponds to a completely 'valid' region
@@ -220,22 +234,22 @@ class PaddingFunctor {
           int case_num;
           int cache_X;
           int cache_Y;
-          if (Xr <= 0 && Yt > 0 && Yb < 0) {
+          if (Xright <= 0 && Ytop > 0 && Ybot < 0) {
             case_num = 0;
-            cache_X = (Xl >= 0 ? Xl : 0);
-            cache_Y = Yt;
-          } else if (Xl < 0 && Xr > 0 && Yb <= 0) {
+            cache_X = (Xleft >= 0 ? Xleft : 0);
+            cache_Y = Ytop;
+          } else if (Xleft < 0 && Xright > 0 && Ybot <= 0) {
             case_num = 1;
-            cache_X = Xr;
-            cache_Y = (Yt >= 0 ? Yt : 0);
-          } else if (Xl > 0 && Xr < 0 && Yt <= 0) {
+            cache_X = Xright;
+            cache_Y = (Ytop >= 0 ? Ytop : 0);
+          } else if (Xleft > 0 && Xright < 0 && Ytop <= 0) {
             case_num = 2;
-            cache_X = Xl;
-            cache_Y = (Yb >= 0 ? Yb : 0);
-          } else if (Xl <= 0 && Yt < 0 && Yb > 0) {
+            cache_X = Xleft;
+            cache_Y = (Ybot >= 0 ? Ybot : 0);
+          } else if (Xleft <= 0 && Ytop < 0 && Ybot > 0) {
             case_num = 3;
-            cache_X = (Xr >= 0 ? Xr : 0);
-            cache_Y = Yb;
+            cache_X = (Xright >= 0 ? Xright : 0);
+            cache_Y = Ybot;
           } else {
             // This can not happen.
             continue;
