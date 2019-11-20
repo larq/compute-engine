@@ -36,37 +36,41 @@ class PaddingFunctor {
 
     // Given an (out_x, out_y) for which you want to compute the correction:
     //
-    // Let Xl = Xleft  = filter_left_offset - out_x * stride_cols
-    // Let Yt = Ytop   = filter_top_offset - out_y * stride_rows
-    // Let Xr = Xright = -Xleft + effecitve_filter_width - input_width
-    // Let Yb = Ybot   = -Ytop + effecitve_filter_height - input_height
+    // Define:
+    // overflow_left  = filter_left_offset - out_x * stride_cols
+    // overflow_top   = filter_top_offset - out_y * stride_rows
+    // overflow_right = -overflow_left + effective_filter_width - input_width
+    // overflow_bot   = -overflow_top + effective_filter_height - input_height
     //
-    // Basically:
-    //  Xl: how many pixels the kernel sticks out at the left
-    //  Yt: how many pixels the kernel sticks out at the top
-    //  Xr: how many pixels the kernel sticks out at the right
-    //  Yb: how many pixels the kernel sticks out at the bottom
+    // These numbers say (for a particular out_x,out_y) how many pixels the
+    // kernel sticks out at each side.
     //
-    // The correction that we need to apply depends on (Xl,Yt,Xr,Yb).
+    // The correction that we need to apply depends on the overflow_ values.
     //
     // The correction is a sum over values in the kernel.
     // Now we describe which kernel pixels contribute to this correction.
     //
-    // Let efx = dilation_rows * filter_x  //effective filter x
-    // Let efy = dilation_cols * filter_y  //effective filter y
+    // Define:
+    // effective_filter_x = dilation_rows * filter_x
+    // effective_filter_y = dilation_cols * filter_y
     //
-    // So fix a (Xl,Yt,Xr,Yb) tuple and loop over filter_x, filter_y
-    // If one of the 4 following are satisfied then this
-    // filter value is counted for this tuple as correction.
-    // (T)        efy <  Yt     this pixel sticks out at Top
-    // (B)  efh - efy <= Yb     this pixel sticks out at Bottom
-    // (L)        efx <  Xl     this pixel sticks out at Left
-    // (R)  efw - efx <= Xr     this pixel sticks out at Right
+    // So fix a (overflow_left,overflow_top,overflow_right,overflow_bot) tuple
+    // and loop over filter_x, filter_y.
+    // If one of the 4 following are satisfied then this filter value is counted
+    // for this tuple as correction.
+    //
+    // (T)                           effective_filter_y <  overflow_top
+    // (B) effective_filter_height - effective_filter_y <= overflow_bot
+    // (L)                           effective_filter_x <  overflow_left
+    // (R)  effective_filter_width - effective_filter_x <= overflow_right
+    //
+    // For example when (L) is satisfied then this particular pixel in the
+    // filter sticks out at the left.
     //
     // So we sum this over all kernel pixels that stick out somewhere
     // to obtain our correction value.
     //
-    // So we could save this value for every (Xl,Yt,Xr,Yb) tuple.
+    // So we could save this value for every tuple.
     // However (T) and (B) can not be both true at the same time,
     // and neither can (L) and (R) because we will assume that the (effective)
     // filter size is always smaller than the image.
@@ -79,23 +83,24 @@ class PaddingFunctor {
     // 22..11
     // 223333
     // 223333
+    //                       overflow_
+    //           | left    right   top     bot
+    // ----------|-----------------------------
+    // Case 0    | *       <= 0    >  0    <  0
+    // Case 1    | <  0    >  0    *       <= 0
+    // Case 2    | >  0    <  0    <= 0    *
+    // Case 3    | <= 0    *       <  0    >  0
     //
-    //          Xl      Xr      Yt      Yb
-    // Case 0   *       <= 0    >  0    <  0
-    // Case 1   <  0    >  0    *       <= 0
-    // Case 2   >  0    <  0    <= 0    *
-    // Case 3   <= 0    *       <  0    >  0
-    //
-    // For pixels in the top middle, we have Xl < 0,
+    // For pixels in the top middle, we have overflow_left < 0,
     // but they all share the same correction, namely the
-    // correction for Xl = 0.
+    // correction for overflow_left = 0.
     // The same happens for every * in the table.
     //
-    // Therefore, if there is a * then we should take x=relu(x)
+    // Therefore, if there is a * then we should clamp it to 0.
     //
 
-    for (int Y = 0; Y < effective_filter_height; ++Y) {
-      for (int X = 0; X < effective_filter_width; ++X) {
+    for (int y = 0; y < effective_filter_height; ++y) {
+      for (int x = 0; x < effective_filter_width; ++x) {
         for (int out_c = 0; out_c < filter_count; ++out_c) {
           Tdata corrections[4] = {0, 0, 0, 0};
 
@@ -124,23 +129,25 @@ class PaddingFunctor {
                 cur_correction += filter_data[filter_idx];
               }
 
-              const int efx = dilation_cols * filter_x;
-              const int efy = dilation_rows * filter_y;
-              // Case 0: Xl = X; Yt = Y
-              if (efy < Y || efx < X) {
+              const int effective_filter_x = dilation_cols * filter_x;
+              const int effective_filter_y = dilation_rows * filter_y;
+              // Case 0: overflow_left = x; overflow_top = y
+              if (effective_filter_y < y || effective_filter_x < x) {
                 corrections[0] += cur_correction;
               }
-              // Case 1: Xr = X; Yt = Y
-              if (efy < Y || (effective_filter_width - efx) <= X) {
+              // Case 1: overflow_right = x; overflow_top = y
+              if (effective_filter_y < y ||
+                  (effective_filter_width - effective_filter_x) <= x) {
                 corrections[1] += cur_correction;
               }
-              // Case 2: Xl = X; Yb = Y
-              if ((effective_filter_height - efy) <= Y || efx < X) {
+              // Case 2: overflow_left = x; overflow_bot = y
+              if ((effective_filter_height - effective_filter_y) <= y ||
+                  effective_filter_x < x) {
                 corrections[2] += cur_correction;
               }
-              // Case 3: Xr = X; Yb = Y
-              if ((effective_filter_height - efy) <= Y ||
-                  (effective_filter_width - efx) <= X) {
+              // Case 3: overflow_right = x; overflow_bot = y
+              if ((effective_filter_height - effective_filter_y) <= y ||
+                  (effective_filter_width - effective_filter_x) <= x) {
                 corrections[3] += cur_correction;
               }
             }
@@ -152,7 +159,7 @@ class PaddingFunctor {
             int output_idx =
                 direction * (effective_filter_height * effective_filter_width *
                              filter_count) +
-                Y * (effective_filter_width * filter_count) + X * filter_count +
+                y * (effective_filter_width * filter_count) + x * filter_count +
                 out_c;
             output_cache[output_idx] = corrections[direction];
           }
@@ -201,22 +208,25 @@ class PaddingFunctor {
         // parameters:
         // How many pixels does the kernel stick out at the
         // left, top, right, bottom
-        const int Ytop = filter_top_offset - out_y * stride_rows;
-        const int Ybot = -Ytop - input_height + effective_filter_height;
+        const int overflow_top = filter_top_offset - out_y * stride_rows;
+        const int overflow_bot =
+            -overflow_top - input_height + effective_filter_height;
         for (int out_x = 0; out_x < output_width; ++out_x) {
-          const int Xleft = filter_left_offset - out_x * stride_cols;
-          const int Xright = -Xleft - input_width + effective_filter_width;
+          const int overflow_left = filter_left_offset - out_x * stride_cols;
+          const int overflow_right =
+              -overflow_left - input_width + effective_filter_width;
 
-          if (Xleft <= 0 && Xright <= 0 && Ytop <= 0 && Ybot <= 0) {
+          if (overflow_left <= 0 && overflow_right <= 0 && overflow_top <= 0 &&
+              overflow_bot <= 0) {
             // clang-format off
             // The kernel does not stick out.
             // This output pixel corresponds to a completely 'valid' region
             // of the input and there is no padding: we are entering the inside
             // of the image.
             // We now *skip* from the left to the right edge of the image.
-            // We want to find `out_x` such that `Xr >= 1`
+            // We want to find `out_x` such that `overflow_right >= 1`
             // We have
-            // Xr = out_x * stride - offset + effective_filter_width - width
+            // overflow_right = out_x * stride - offset + effective_filter_width - width
             // So we want
             // out_x * stride >= width + offset - effective_filter_width + 1
             // So we want `out_x` to be the ceiling of
@@ -234,22 +244,25 @@ class PaddingFunctor {
           int case_num;
           int cache_X;
           int cache_Y;
-          if (Xright <= 0 && Ytop > 0 && Ybot < 0) {
+          if (overflow_right <= 0 && overflow_top > 0 && overflow_bot < 0) {
             case_num = 0;
-            cache_X = (Xleft >= 0 ? Xleft : 0);
-            cache_Y = Ytop;
-          } else if (Xleft < 0 && Xright > 0 && Ybot <= 0) {
+            cache_X = (overflow_left >= 0 ? overflow_left : 0);
+            cache_Y = overflow_top;
+          } else if (overflow_left < 0 && overflow_right > 0 &&
+                     overflow_bot <= 0) {
             case_num = 1;
-            cache_X = Xright;
-            cache_Y = (Ytop >= 0 ? Ytop : 0);
-          } else if (Xleft > 0 && Xright < 0 && Ytop <= 0) {
+            cache_X = overflow_right;
+            cache_Y = (overflow_top >= 0 ? overflow_top : 0);
+          } else if (overflow_left > 0 && overflow_right < 0 &&
+                     overflow_top <= 0) {
             case_num = 2;
-            cache_X = Xleft;
-            cache_Y = (Ybot >= 0 ? Ybot : 0);
-          } else if (Xleft <= 0 && Ytop < 0 && Ybot > 0) {
+            cache_X = overflow_left;
+            cache_Y = (overflow_bot >= 0 ? overflow_bot : 0);
+          } else if (overflow_left <= 0 && overflow_top < 0 &&
+                     overflow_bot > 0) {
             case_num = 3;
-            cache_X = (Xright >= 0 ? Xright : 0);
-            cache_Y = Ybot;
+            cache_X = (overflow_right >= 0 ? overflow_right : 0);
+            cache_Y = overflow_bot;
           } else {
             // This can not happen.
             continue;
