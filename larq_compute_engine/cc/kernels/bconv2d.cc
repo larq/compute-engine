@@ -172,7 +172,7 @@ class BConv2DOp : public BinaryOp<T> {
       padding_functor(batch, input_rows, input_cols, in_depth, filter_data,
                       filter_rows, filter_cols, out_depth, stride_rows,
                       stride_cols, dilation_rows, dilation_cols, output_data,
-                      out_rows, out_cols, nullptr);
+                      out_rows, out_cols);
     }
   }
 

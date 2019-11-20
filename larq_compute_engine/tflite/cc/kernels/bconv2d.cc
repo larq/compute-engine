@@ -317,8 +317,7 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
                     params->channels_in, filter->data.f, params->filter_height,
                     params->filter_width, params->channels_out, stride_height,
                     stride_width, params->dilations[1], params->dilations[2],
-                    output->data.f, params->out_height, params->out_width,
-                    nullptr);
+                    output->data.f, params->out_height, params->out_width);
   }
 }
 
