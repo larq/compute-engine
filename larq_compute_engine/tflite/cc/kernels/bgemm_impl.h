@@ -8,7 +8,6 @@
 #ifndef TFLITE_WITH_RUY
 #include "bgemm_impl_ref.h"
 #else
-#include "bgemm_impl_ref.h"
 #include "bgemm_impl_ruy.h"
 #endif
 
@@ -24,11 +23,6 @@ template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
 struct BGemmImpl : BGemmImplRef<LhsScalar, RhsScalar, AccumScalar, DstScalar,
                                 quantization_flavor> {};
 #else
-// template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
-//           typename DstScalar, QuantizationFlavor quantization_flavor>
-// struct BGemmImpl : BGemmImplRef<LhsScalar, RhsScalar, AccumScalar, DstScalar,
-//                                 quantization_flavor> {};
-
 template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
           typename DstScalar, QuantizationFlavor quantization_flavor>
 struct BGemmImpl : BGemmImplUsingRuy<LhsScalar, RhsScalar, AccumScalar,
