@@ -14,10 +14,15 @@
 # limitations under the License.
 # ==============================================================================
 set -e
-
-PLATFORM="$(uname -s | tr 'A-Z' 'a-z')"
+set -x
 
 PIP_FILE_PREFIX="bazel-bin/build_pip_pkg.runfiles/__main__/"
+
+function abspath() {
+  cd "$(dirname $1)"
+  echo "$PWD/$(basename $1)"
+  cd "$OLDPWD"
+}
 
 function main() {
   while [[ ! -z "${1}" ]]; do
@@ -35,15 +40,11 @@ function main() {
     exit 1
   fi
 
-  # Create the directory, then do dirname on a non-existent file inside it to
-  # give us an absolute paths with tilde characters resolved to the destination
-  # directory.
   mkdir -p ${DEST}
-  DEST=$(readlink -f "${DEST}")
+  DEST=$(abspath "${DEST}")
   echo "=== destination directory: ${DEST}"
 
   TMPDIR=$(mktemp -d -t tmp.XXXXXXXXXX)
-
   echo $(date) : "=== Using tmpdir: ${TMPDIR}"
 
   echo "=== Copy Larq Compute Engine files"
