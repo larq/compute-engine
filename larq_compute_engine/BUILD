@@ -2,6 +2,25 @@ licenses(["notice"])  # Apache 2.0
 
 package(default_visibility = ["//visibility:public"])
 
+
+
+# If some file should only be included for a particular platform
+# then this can be done as follows:
+#    deps = select({
+#        ":arm32_build": [":some_dep"],
+#        ":aarch64_build": [":some_other_dep"],
+#        "//conditions:default": [":generic_dep"],
+#    }),
+config_setting(
+    name = "arm32_build",
+    values = {"cpu": "armeabi"},
+)
+config_setting(
+    name = "aarch64_build",
+    values = {"cpu": "aarch64"},
+)
+
+
 cc_library(
     name = "utils",
     hdrs = [
@@ -35,12 +54,16 @@ cc_test(
 # BUILDING PACKBITS
 cc_library(
     name = "packbits",
-    hdrs = [
-        "cc/core/packbits.h",
-    ],
-    deps = [
-        ":utils",
-    ]
+    hdrs = select({
+        ":aarch64_build": [
+            "cc/core/aarch64/packbits.h",
+            "cc/core/packbits.h",
+        ],
+        "//conditions:default": [
+            "cc/core/packbits.h",
+        ],
+    }),
+    deps = [":utils"],
 )
 
 cc_test(
@@ -208,7 +231,6 @@ cc_test(
     copts = ["-Iexternal/gtest/include"],
     deps = [
          "@googletest//:gtest_main",
-         ":packbits_aarch64",
          ":packbits",
     ],
 )
@@ -216,7 +238,8 @@ cc_test(
 test_suite(
     name = "cc_tests_aarch64",
     tests = [
-        "packbits_aarch64_tests",
+            ":packbits_aarch64_tests",
+            ":packbits_tests",
     ],
 )
 

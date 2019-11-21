@@ -98,12 +98,6 @@ void packbits_dabnn(benchmark::State& state) {
   state.counters["alignment"] = (reinterpret_cast<uint64_t>(&in[0]) % 64);
 }
 
-// TODO:
-// Cache clean assembly instructions:
-// http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0488d/CIHGGBGB.html
-// Other instructions for benchmarking with regards to caching:
-// https://stackoverflow.com/questions/34460744/flushing-the-cache-to-prevent-benchmarking-fluctiations
-
 constexpr size_t min_size = 128;
 constexpr size_t max_size = 1 << 16;  // 64K
 BENCHMARK(packbits_lqce)->Range(min_size, max_size);

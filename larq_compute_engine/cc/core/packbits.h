@@ -7,6 +7,9 @@
 #include <vector>
 
 #include "larq_compute_engine/cc/utils/types.h"
+#ifdef __aarch64__
+#include "larq_compute_engine/cc/core/aarch64/packbits.h"
+#endif
 
 namespace compute_engine {
 namespace core {
@@ -293,18 +296,52 @@ inline void packbits_array(const TIn* input_array, std::size_t n,
     input_elem_ptr += bitwidth;
   }
 
+  const auto num_remaining_elems = n - num_bpacked_elems * bitwidth;
+
   // if needs padding, copy the remaining elements in a buffer and add enough
   // zero padding to fill the bitwidth. This function assumes enough memory for
   // padding, is already allocatd for "bitpacked_array" argument.
-  // TODO: Avoid memory allocation and memory copy
-  if (n % bitwidth != 0) {
-    std::vector<TIn> padding_buffer(bitwidth, 0);
-    const auto num_remaining_elems = n - num_bpacked_elems * bitwidth;
-    memcpy(padding_buffer.data(), input_elem_ptr,
-           num_remaining_elems * sizeof(TIn));
-    pack_bitfield<TIn>(padding_buffer.data(), bpacked_elem_ptr);
+  if (num_remaining_elems) {
+    TIn padding_buffer[bitwidth] = {0};
+    memcpy(padding_buffer, input_elem_ptr, num_remaining_elems * sizeof(TIn));
+    pack_bitfield<TIn>(padding_buffer, bpacked_elem_ptr);
   }
 }
+
+#ifdef __aarch64__
+// Overload the above function
+template <class TOut>
+inline void packbits_array(const float* input_array, std::size_t n,
+                           TOut* bitpacked_array) {
+  constexpr size_t bitwidth = std::numeric_limits<TOut>::digits;
+
+  const float* in = input_array;
+  TOut* out = bitpacked_array;
+
+  // Start by packing blocks of size 64
+  size_t num_fastblocks = n / 64;
+  if (num_fastblocks) {
+    const size_t num_floats = num_fastblocks * 64;
+    packbits_aarch64_64(in, num_fastblocks, out);
+    in += num_floats;
+    out += num_floats / bitwidth;
+    n -= num_floats;
+  }
+  // The remaining floats can be manually packed
+  size_t full_blocks = n / bitwidth;
+  n -= full_blocks * bitwidth;
+  while (full_blocks--) {
+      pack_bitfield<float>(in, out++);
+      in += bitwidth;
+  }
+  if (n) {
+      // Padding
+      float padding_buffer[bitwidth] = {0};
+      memcpy(padding_buffer, in, n * sizeof(float));
+      pack_bitfield<float>(padding_buffer, out);
+  }
+}
+#endif
 
 // input/output matrices are stored in row-major mode
 // bitpacking_axis argument specifies the dimension in matrix where
