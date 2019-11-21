@@ -81,6 +81,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}/../../.."
 TF_DIR="${ROOT_DIR}/ext/tensorflow"
 
+# number of hyper threads
+NUM_HYPERTHREADS=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
+
 # Try to figure out the host system
 HOST_OS="unknown"
 UNAME="$(uname -s)"
@@ -109,9 +112,10 @@ fi
 if [ "$native" == "1" ]; then
     echo " --> native build"
     # Build tflite (will automatically skip when up-to-date
-    ${TF_DIR}/tensorflow/lite/tools/make/build_lib.sh
-    # Build our kernels
-    make -j 8 BUILD_WITH_NNAPI=false -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
+    # this line is taken from "tensorflow/lite/tools/make/build_lib.sh"
+    make -j ${NUM_HYPERTHREADS} BUILD_WITH_NNAPI=false -C "${TF_DIR}" -f tensorflow/lite/tools/make/Makefile
+    # Build compute-engine kernels
+    make -j ${NUM_HYPERTHREADS} BUILD_WITH_NNAPI=false -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
     # Rebuild tflite binaries such as benchmarking libs to include our ops
     ${TF_DIR}/tensorflow/lite/tools/make/build_lib.sh
 
@@ -124,8 +128,10 @@ fi
 if [ "$rpi" == "1" ]; then
     echo " --> rpi build"
     # Stored in gen/rpi_armv7l
-    ${TF_DIR}/tensorflow/lite/tools/make/build_rpi_lib.sh
-    make -j 8 TARGET=rpi -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
+    # This line is taken form "tensorflow/lite/tools/make/build_rpi_lib.sh"
+    make -j ${NUM_HYPERTHREADS} TARGET=rpi -C "${TF_DIR}" -f tensorflow/lite/tools/make/Makefile
+    # Build compute-engine kernels
+    make -j ${NUM_HYPERTHREADS} TARGET=rpi -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
     ${TF_DIR}/tensorflow/lite/tools/make/build_rpi_lib.sh
 
     # Optionally build the pip package
@@ -148,7 +154,7 @@ if [ "$ios" == "1" ]; then
     for arch in $BUILD_ARCHS
     do
         # Stored in gen/ios_$arch
-        make -j 8 TARGET=ios TARGET_ARCH=${arch} -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
+        make -j ${NUM_HYPERTHREADS} TARGET=ios TARGET_ARCH=${arch} -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
     done
     ${TF_DIR}/tensorflow/lite/tools/make/build_ios_universal_lib.sh $profiling_opt
 fi
@@ -156,7 +162,9 @@ fi
 if [ "$aarch64" == "1" ]; then
     echo " --> aarch64 build"
     # Stored in gen/aarch64_armv8-a
-    ${TF_DIR}/tensorflow/lite/tools/make/build_aarch64_lib.sh
-    make -j 8 TARGET=aarch64 -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
+    # This line is taken from "tensorflow/lite/tools/make/build_aarch64_lib.sh"
+    make -j ${NUM_HYPERTHREADS} TARGET=aarch64 -C "${TF_DIR}" -f tensorflow/lite/tools/make/Makefile
+    # Build compute-engine kernels
+    make -j ${NUM_HYPERTHREADS} TARGET=aarch64 -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
     ${TF_DIR}/tensorflow/lite/tools/make/build_aarch64_lib.sh
 fi
