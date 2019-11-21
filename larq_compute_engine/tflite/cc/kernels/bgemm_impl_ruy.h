@@ -13,19 +13,6 @@ using namespace tflite::cpu_backend_gemm;
 namespace compute_engine {
 namespace tflite {
 
-// Simple allocator for allocating pre-packed matrices.
-class SimpleAllocator {
- public:
-  void* AllocateBytes(std::size_t num_bytes) {
-    char* p = new char[num_bytes];
-    buffers_.emplace_back(p);
-    return static_cast<void*>(p);
-  }
-
- private:
-  std::vector<std::unique_ptr<char[]>> buffers_;
-};
-
 template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
           typename DstScalar, QuantizationFlavor quantization_flavor>
 struct BGemmImplUsingRuy {
@@ -82,8 +69,7 @@ struct BGemmImplUsingRuy {
     spec.multiplier_exponent = params.multiplier_exponent;
 
     // The allocator is used to allocate memory for pre-packed matrices
-    // TODO: needs aligned allocator for NEON SIMD?
-    SimpleAllocator allocator;
+    ruy::Allocator allocator;
     auto alloc_fn = [&allocator](std::size_t num_bytes) -> void* {
       return allocator.AllocateBytes(num_bytes);
     };
