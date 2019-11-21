@@ -138,6 +138,7 @@ if [ "$rpi" == "1" ]; then
     if [ "$pip" == "1" ]; then
         # This will only work if we are running this natively on a raspberry pi
         if [[ $HOST_ARCH == armv7* ]]; then
+            export TENSORFLOW_TARGET="rpi"
             ${TF_DIR}/tensorflow/lite/tools/pip_package/build_pip_package.sh
         fi
     fi
@@ -167,4 +168,9 @@ if [ "$aarch64" == "1" ]; then
     # Build compute-engine kernels
     make -j ${NUM_HYPERTHREADS} TARGET=aarch64 -C "${ROOT_DIR}" -f larq_compute_engine/tflite/build/Makefile
     ${TF_DIR}/tensorflow/lite/tools/make/build_aarch64_lib.sh
+
+    if [ "$pip" == "1" ]; then
+        export TENSORFLOW_TARGET="aarch64"
+        ${TF_DIR}/tensorflow/lite/tools/pip_package/build_pip_package.sh
+    fi
 fi

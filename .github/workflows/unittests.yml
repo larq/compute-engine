@@ -71,8 +71,10 @@ jobs:
         run: |
           # Go to a different directory to force it to use the installed package
           # and not use the local larq_compute_engine directory
-          cd larq_compute_engine/tflite
+          cd larq_compute_engine/tflite/python
+          python3 bconv2d_generate_test_models.py
           python3 -m pytest . -n auto
+          ./run_tests_native.sh
 
   ARM:
     runs-on: ubuntu-latest
