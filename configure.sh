@@ -146,6 +146,9 @@ fi
 if [[ "$PIP_MANYLINUX2010" == "1" ]]; then
   write_to_bazelrc "build --config=manylinux2010"
   write_to_bazelrc "test --config=manylinux2010"
+  # By default, build TF in C++ 14 mode.
+  write_to_bazelrc "build --cxxopt=-std=c++14"
+  write_to_bazelrc "build --host_cxxopt=-std=c++14"
 fi
 
 cat << EOM >> .bazelrc
@@ -180,4 +183,13 @@ build:aarch64 -c opt  \
   --copt=-funsafe-math-optimizations --copt=-ftree-vectorize \
   --copt=-fomit-frame-pointer \
   --verbose_failures
+
+# Options to build TensorFlow 1.x or 2.x.
+build:v1 --define=tf_api_version=1
+build:v2 --define=tf_api_version=2
+test:v1 --action_env=TF2_BEHAVIOR=0
+test:v2 --action_env=TF2_BEHAVIOR=1
+build --config=v2
+test --config=v2
+
 EOM

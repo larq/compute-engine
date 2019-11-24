@@ -234,15 +234,15 @@ sh_test(
 #
 
 cc_binary(
-	name = "benchmark",
-	linkopts = ["-lrt -lm"],
+        name = "benchmark",
+        linkopts = ["-lrt -lm"],
     srcs = [
         "cc/benchmark/bconv2d_bench.cc",
         "cc/benchmark/bgemm_bench.cc",
         "cc/benchmark/im2col_bench.cc",
         "cc/benchmark/padding_bench.cc",
     ],
-	deps = [
+        deps = [
         "@googlebenchmark//:benchmark",
         "@googlebenchmark//:benchmark_main",
         ":bconv2d",
@@ -250,9 +250,9 @@ cc_binary(
         ":fused_bgemm",
         ":im2col",
         ":padding",
-	],
+        ],
 )
-    
+
 cc_library(
     name = "bconv_shape_inference",
     srcs = ["cc/ops/bconv_shape_inference.cc"],
