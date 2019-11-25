@@ -103,7 +103,7 @@ test_suite(
     ],
 )
 
-# The script automatically runs every file that ends with _test*
+# The script automatically runs every file that ends with _test
 sh_test(
     name = "cc_tests_arm32_qemu",
     srcs = ["cc_tests_arm32_qemu.sh"],
@@ -113,7 +113,7 @@ sh_test(
     ],
 )
 
-# The script automatically runs every file that ends with _test*
+# The script automatically runs every file that ends with _test
 sh_test(
     name = "cc_tests_aarch64_qemu",
     srcs = ["cc_tests_aarch64_qemu.sh"],

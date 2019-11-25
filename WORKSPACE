@@ -67,17 +67,20 @@ arm_compiler_configure(
 )
 
 # To update TensorFlow to a new revision.
-# 1. Update the 'git_commit' args below to include the new git hash.
+# 1. Update the git hash in the urls and the 'strip_prefix' parameter.
 # 2. Get the sha256 hash of the archive with a command such as...
 #    curl -L https://github.com/tensorflow/tensorflow/archive/<git hash>.tar.gz | sha256sum
 #    and update the 'sha256' arg with the result.
 # 3. Request the new archive to be mirrored on mirror.bazel.build for more
 #    reliable downloads.
-load("//ext:repo.bzl", "tensorflow_http_archive")
-tensorflow_http_archive(
+http_archive(
     name = "org_tensorflow",
     sha256 = "bdbe31d6de69964e364612de466b4624b292788988f95c5d27dabdc339fe50f1",
-    git_commit = "597a30bc61134ee1deec0b439b3649f346f1f119",
+    urls = [
+        "https://mirror.bazel.build/github.com/tensorflow/tensorflow/archive/597a30bc61134ee1deec0b439b3649f346f1f119.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/597a30bc61134ee1deec0b439b3649f346f1f119.tar.gz",
+    ],
+    strip_prefix = "tensorflow-597a30bc61134ee1deec0b439b3649f346f1f119",
 )
 
 # load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
@@ -100,6 +103,5 @@ http_archive(
 )  # https://github.com/bazelbuild/bazel-skylib/releases
 # END: Upstream TensorFlow dependencies
 
-load("@org_tensorflow//third_party:repo.bzl", "tf_http_archive")
 load("@org_tensorflow//tensorflow:workspace.bzl", "tf_workspace")
 tf_workspace(path_prefix = "", tf_repo_name = "org_tensorflow")
