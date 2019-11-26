@@ -2,9 +2,8 @@
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_RUY_H_
 
 #include "larq_compute_engine/cc/core/bgemm_functor.h"
-#include "tensorflow/lite/experimental/ruy/ruy.h"
-
 #include "tensorflow/lite/experimental/ruy/platform.h"
+#include "tensorflow/lite/experimental/ruy/ruy.h"
 
 namespace compute_engine {
 namespace tflite {
@@ -24,7 +23,8 @@ struct BgemmKernel {};
 
 template <typename LhsScalar, typename RhsScalar, typename DstScalar,
           typename Spec>
-struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar, Spec> {
+struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
+                   Spec> {
   using AccumScalar = typename Spec::AccumScalar;
   using LhsLayout = typename Spec::StandardCppKernelLhsLayout;
   using RhsLayout = typename Spec::StandardCppKernelRhsLayout;

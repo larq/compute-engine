@@ -20,8 +20,7 @@
 
 template <typename LhsScalar, typename RhsScalar, typename DstScalar,
           typename Spec>
-struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar,
-                   Spec> {
+struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar, Spec> {
   Tuning tuning = Tuning::kAuto;
   using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
   using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
@@ -50,8 +49,7 @@ struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar,
 
 template <typename LhsScalar, typename RhsScalar, typename DstScalar,
           typename Spec>
-struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar,
-                   Spec> {
+struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar, Spec> {
   Tuning tuning = Tuning::kAuto;
   using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
   using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 4>;
@@ -83,8 +81,7 @@ struct BgemmKernel<ruy::Path::kNeonDotprod, LhsScalar, RhsScalar, DstScalar,
   ruy::Tuning tuning = Tuning::kAuto;
   using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
   using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
-  using Base =
-      BgemmKernel<Path::kNeon, LhsLayout, RhsLayout, DstScalar, Spec>;
+  using Base = BgemmKernel<Path::kNeon, LhsLayout, RhsLayout, DstScalar, Spec>;
   explicit BgemmKernel(ruy::Tuning tuning_) : tuning(tuning_) {}
   void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
            const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
@@ -101,7 +98,6 @@ struct BgemmKernel<ruy::Path::kNeonDotprod, LhsScalar, RhsScalar, DstScalar,
     // TODO: not implemented
   }
 };
-
 
 #endif  // RUY_PLATFORM(NEON) && RUY_OPT_ENABLED(RUY_OPT_ASM)
 

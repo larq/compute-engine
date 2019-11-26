@@ -17,8 +17,7 @@ using namespace ruy;
 
 template <typename LhsScalar, typename RhsScalar, typename DstScalar,
           typename Spec>
-struct BgemmKernel<ruy::Path::kAvx2, LhsScalar, RhsScalar, DstScalar,
-                   Spec> {
+struct BgemmKernel<ruy::Path::kAvx2, LhsScalar, RhsScalar, DstScalar, Spec> {
   Tuning tuning = Tuning::kAuto;
   using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
   using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
@@ -31,7 +30,7 @@ struct BgemmKernel<ruy::Path::kAvx2, LhsScalar, RhsScalar, DstScalar,
                   "Inputs to binary kernel should have the same type.");
     static_assert(
         // std::is_unsigned<LhsScalar>::value &&
-            std::is_integral<LhsScalar>::value,
+        std::is_integral<LhsScalar>::value,
         "Input to binary kernel should be of type unsigned integral.");
     static_assert(std::is_signed<DstScalar>::value,
                   "Output of binary kernel should be of a signed type.");
@@ -41,8 +40,7 @@ struct BgemmKernel<ruy::Path::kAvx2, LhsScalar, RhsScalar, DstScalar,
 
 template <typename LhsScalar, typename RhsScalar, typename DstScalar,
           typename Spec>
-struct BgemmKernel<ruy::Path::kAvx512, LhsScalar, RhsScalar, DstScalar,
-                   Spec> {
+struct BgemmKernel<ruy::Path::kAvx512, LhsScalar, RhsScalar, DstScalar, Spec> {
   Tuning tuning = Tuning::kAuto;
   using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 16>;
   using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 16>;
@@ -55,7 +53,7 @@ struct BgemmKernel<ruy::Path::kAvx512, LhsScalar, RhsScalar, DstScalar,
                   "Inputs to binary kernel should have the same type.");
     static_assert(
         // std::is_unsigned<LhsScalar>::value &&
-            std::is_integral<LhsScalar>::value,
+        std::is_integral<LhsScalar>::value,
         "Input to binary kernel should be of type unsigned integral.");
     static_assert(std::is_signed<DstScalar>::value,
                   "Output of binary kernel should be of a signed type.");

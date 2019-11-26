@@ -1,14 +1,10 @@
 #ifndef COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_RUY_H_
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_RUY_H_
 
-// #include "tensorflow/lite/experimental/ruy/dispatch.h"
-// #include "tensorflow/lite/experimental/ruy/ruy_advanced.h"
+#include "bgemm_trmul_params.h"
 #include "tensorflow/lite/experimental/ruy/matrix.h"
-
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
-// #include "bgemm_kernels_ruy.h"
-#include "bgemm_trmul_params.h"
 
 using namespace tflite;
 using namespace tflite::cpu_backend_gemm;
@@ -43,9 +39,6 @@ struct BGemmImplUsingRuy {
     // getting ruy context
     auto ruy_context = context->ruy_context();
 
-    // TODO: binary path should be determined on compile time
-    // constexpr auto binary_path = ruy::Path::kAvx2;
-
     // Set up the matrix layouts and spec.
     ruy::Matrix<LhsScalar> lhs;
     ruy::MakeSimpleLayout(lhs_params.rows, lhs_params.cols,
@@ -72,27 +65,30 @@ struct BGemmImplUsingRuy {
       return allocator.AllocateBytes(num_bytes);
     };
 
-    constexpr auto TrMulCompiledPaths = ruy::kAllPaths & ~ruy::Path::kReference;
+    constexpr auto BGemmCompiledPaths = ruy::kAllPaths & ~ruy::Path::kReference;
 
     // avoid the reference path for production code
-    ruy::Path the_path = ruy_context->GetPathToTake<ruy::kAllPaths>();
-    RUY_CHECK_NE(the_path, ruy::Path::kReference);
+    ruy::Path bgemm_runtime_path = ruy_context->GetPathToTake<ruy::kAllPaths>();
+    RUY_CHECK_NE(bgemm_runtime_path, ruy::Path::kReference);
 
     ruy::Matrix<LhsScalar> transposed_lhs(lhs);
     Transpose(&transposed_lhs);
 
     ruy::TrMulParams binary_trmul_params;
-    CreateBinaryTrMulParams<TrMulCompiledPaths>(transposed_lhs, rhs, spec, ruy_context, &dst,
-                                                the_path, &binary_trmul_params);
+    CreateBinaryTrMulParams<BGemmCompiledPaths>(
+        transposed_lhs, rhs, spec, ruy_context, &dst, bgemm_runtime_path,
+        &binary_trmul_params);
 
     // pre-pack the lhs and rhs matrices
     ruy::PrepackedMatrix prepacked_lhs;
     ruy::PrepackedMatrix prepacked_rhs;
-    ruy::SidePair<ruy::PrepackedMatrix*> prepacked(&prepacked_lhs, &prepacked_rhs);
+    ruy::SidePair<ruy::PrepackedMatrix*> prepacked(&prepacked_lhs,
+                                                   &prepacked_rhs);
 
     const ruy::SidePair<int> origin{0, 0};
-    const ruy::SidePair<int> rounded_dims{binary_trmul_params.packed[ruy::Side::kLhs].layout.cols,
-                                          binary_trmul_params.packed[ruy::Side::kRhs].layout.cols};
+    const ruy::SidePair<int> rounded_dims{
+        binary_trmul_params.packed[ruy::Side::kLhs].layout.cols,
+        binary_trmul_params.packed[ruy::Side::kRhs].layout.cols};
 
     ruy::Tuning tuning = ruy_context->GetMainThreadTuning();
     for (ruy::Side side : {ruy::Side::kLhs, ruy::Side::kRhs}) {
@@ -103,39 +99,11 @@ struct BGemmImplUsingRuy {
         prepacked[side]->sums = alloc_fn(prepacked[side]->sums_size);
         binary_trmul_params.packed[side].data = prepacked[side]->data;
         binary_trmul_params.packed[side].sums = prepacked[side]->sums;
-        binary_trmul_params.RunPack(side, tuning, origin[side], rounded_dims[side]);
+        binary_trmul_params.RunPack(side, tuning, origin[side],
+                                    rounded_dims[side]);
         binary_trmul_params.is_prepacked[side] = true;
       }
     }
-    // }
-    // // In Ruy, TrMul is computed instead of Mul, therefore the lhs needs to be
-    // // transposed. Transpose function is cheap since it does not shuffle data
-    // // around and only changes the matrix layout.
-    // ruy::Matrix<LhsScalar> transposed_lhs(lhs);
-    // ruy::Transpose(&transposed_lhs);
-
-    // // Based on the Path, kernel function pointers are set in TrMulParams
-    // // constexpr ruy::Path TrMulCompiledPaths =
-    // //     ruy::kAllPaths & ~ruy::Path::kReference;
-    // ruy::TrMulParams trmul_params;
-    // ruy::CreateTrMulParams<binary_path>(transposed_lhs, rhs, spec, ruy_context,
-    //                                     &dst, binary_path, &trmul_params);
-
-    // set the pre-packed params
-    // binary_trmul_params.packed[ruy::Side::kLhs].data = prepacked_lhs.data;
-    // binary_trmul_params.packed[ruy::Side::kLhs].sums = prepacked_lhs.sums;
-    // binary_trmul_params.is_prepacked[ruy::Side::kLhs] = true;
-
-    // binary_trmul_params.packed[ruy::Side::kRhs].data = prepacked_rhs.data;
-    // binary_trmul_params.packed[ruy::Side::kRhs].sums = prepacked_rhs.sums;
-    // binary_trmul_params.is_prepacked[ruy::Side::kRhs] = true;
-
-    // // redirect the kernel function pointer to the binary kernel
-    // using PackedLhsScalar = ruy::PackedType<binary_path, LhsScalar>;
-    // using PackedRhsScalar = ruy::PackedType<binary_path, RhsScalar>;
-    // trmul_params.run_kernel =
-    //     &RunBgemmKernel<binary_path, PackedLhsScalar, PackedRhsScalar,
-    //                     DstScalar, TSpec>;
 
     ruy::TrMul(&binary_trmul_params, ruy_context);
   }
