@@ -4,6 +4,8 @@
 #include "larq_compute_engine/cc/core/bgemm_functor.h"
 #include "tensorflow/lite/experimental/ruy/ruy.h"
 
+#include "tensorflow/lite/experimental/ruy/platform.h"
+
 namespace compute_engine {
 namespace tflite {
 
@@ -13,10 +15,16 @@ template <ruy::Path ThePath, typename LhsScalar, typename RhsScalar,
           typename DstScalar, typename Spec>
 struct BgemmKernel {};
 
+// TODO: this is hacky
+#if RUY_PLATFORM(NEON)
+#include "bgemm_kernels_arm.h"
+#elif RUY_PLATFORM(X86)
+#include "bgemm_kernels_x86.h"
+#endif
+
 template <typename LhsScalar, typename RhsScalar, typename DstScalar,
           typename Spec>
-struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
-                   Spec> {
+struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar, Spec> {
   using AccumScalar = typename Spec::AccumScalar;
   using LhsLayout = typename Spec::StandardCppKernelLhsLayout;
   using RhsLayout = typename Spec::StandardCppKernelRhsLayout;
