@@ -3,6 +3,7 @@
 
 #include "bgemm_trmul_params.h"
 #include "tensorflow/lite/experimental/ruy/matrix.h"
+#include "tensorflow/lite/experimental/ruy/platform.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 
@@ -70,6 +71,20 @@ struct BGemmImplUsingRuy {
     // avoid the reference path for production code
     ruy::Path bgemm_runtime_path = ruy_context->GetPathToTake<ruy::kAllPaths>();
     RUY_CHECK_NE(bgemm_runtime_path, ruy::Path::kReference);
+
+    // fallback to standard cpp kernel for all architectures that are not
+    // supported yet.
+    // TODO: this needs to be modified as soon as architecture-specific
+    // optimized kernels are added.
+#if RUY_PLATFORM(ARM)
+    if (bgemm_runtime_path == ruy::Path::kNeon ||
+        bgemm_runtime_path == ruy::Path::kNeonDotprod)
+      bgemm_runtime_path = ruy::Path::kStandardCpp;
+#elif RUY_PLATFORM(X86)
+    if (bgemm_runtime_path == ruy::Path::kAvx2 ||
+        bgemm_runtime_path == ruy::Path::kAvx512)
+      bgemm_runtime_path = ruy::Path::kStandardCpp;
+#endif
 
     ruy::Matrix<LhsScalar> transposed_lhs(lhs);
     Transpose(&transposed_lhs);
