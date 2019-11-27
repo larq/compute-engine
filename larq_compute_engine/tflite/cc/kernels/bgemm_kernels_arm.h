@@ -13,6 +13,8 @@
 #include "tensorflow/lite/experimental/ruy/spec.h"
 #include "tensorflow/lite/experimental/ruy/tune.h"
 
+using namespace ruy;
+
 #if RUY_PLATFORM(NEON) && RUY_OPT_ENABLED(RUY_OPT_ASM)
 
 #if RUY_PLATFORM(NEON_64)
@@ -22,10 +24,10 @@ template <typename LhsScalar, typename RhsScalar, typename DstScalar,
           typename Spec>
 struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar, Spec> {
   Tuning tuning = Tuning::kAuto;
+  // TODO: whats the best kernel layout for ARM64 and int{8|32|64} data types?
   using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
   using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
-  explicit Kernel(Tuning tuning_) : tuning(tuning_) {}
-  explicit BgemmKernel(ruy::Tuning) {}
+  explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
   void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
            const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
            int start_row, int start_col, int end_row, int end_col,
@@ -33,7 +35,7 @@ struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar, Spec> {
     static_assert(std::is_same<LhsScalar, RhsScalar>::value,
                   "Inputs to binary kernel should have the same type.");
     static_assert(
-        std::is_unsigned<LhsScalar>::value &&
+        /* std::is_unsigned<LhsScalar>::value && */
             std::is_integral<LhsScalar>::value,
         "Input to binary kernel should be of type unsigned integral.");
     static_assert(std::is_signed<DstScalar>::value,
@@ -54,7 +56,6 @@ struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar, Spec> {
   using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
   using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 4>;
   explicit Kernel(Tuning tuning_) : tuning(tuning_) {}
-  explicit BgemmKernel(ruy::Tuning) {}
   void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
            const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
            int start_row, int start_col, int end_row, int end_col,
@@ -90,7 +91,7 @@ struct BgemmKernel<ruy::Path::kNeonDotprod, LhsScalar, RhsScalar, DstScalar,
     static_assert(std::is_same<LhsScalar, RhsScalar>::value,
                   "Inputs to binary kernel should have the same type.");
     static_assert(
-        std::is_unsigned<LhsScalar>::value &&
+        /* std::is_unsigned<LhsScalar>::value && */
             std::is_integral<LhsScalar>::value,
         "Input to binary kernel should be of type unsigned integral.");
     static_assert(std::is_signed<DstScalar>::value,
