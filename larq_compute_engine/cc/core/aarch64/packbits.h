@@ -44,7 +44,6 @@
 // from the prefetch instruction so we should leave it out.
 // Furthermore, the extra bitflip has more impact in the 64-bit packing.
 
-
 //
 // --------------------------------
 //

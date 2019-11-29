@@ -369,7 +369,7 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(
         ::testing::Values(1),                         // batches
         ::testing::Values(std::array<int, 2>{4, 4}),  // input height/width
-        ::testing::Values(1, 3),                      // input depth
+        ::testing::Values(1, 3, 130),                 // input depth
         ::testing::Values(std::array<int, 2>{2, 2},
                           std::array<int, 2>{3, 3}),  // filter height/width
         ::testing::Values(1, 4),                      // filter count

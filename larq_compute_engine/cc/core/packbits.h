@@ -331,14 +331,14 @@ inline void packbits_array(const float* input_array, std::size_t n,
   size_t full_blocks = n / bitwidth;
   n -= full_blocks * bitwidth;
   while (full_blocks--) {
-      pack_bitfield<float>(in, out++);
-      in += bitwidth;
+    pack_bitfield<float>(in, out++);
+    in += bitwidth;
   }
   if (n) {
-      // Padding
-      float padding_buffer[bitwidth] = {0};
-      memcpy(padding_buffer, in, n * sizeof(float));
-      pack_bitfield<float>(padding_buffer, out);
+    // Padding
+    float padding_buffer[bitwidth] = {0};
+    memcpy(padding_buffer, in, n * sizeof(float));
+    pack_bitfield<float>(padding_buffer, out);
   }
 }
 #endif
