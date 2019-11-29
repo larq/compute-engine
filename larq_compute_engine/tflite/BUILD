@@ -20,6 +20,7 @@ cc_library(
     name = "bgemm_kernels_ruy",
     hdrs = [
         "cc/kernels/bgemm_kernels_ruy.h",
+        "cc/kernels/bgemm_kernels_arm.h",
     ],
     deps = [
         "//larq_compute_engine:bgemm",
@@ -30,6 +31,7 @@ cc_library(
     name = "bgemm_ruy",
     hdrs = [
         "cc/kernels/bgemm_impl_ruy.h",
+        "cc/kernels/bgemm_trmul_params.h",
     ],
     deps = [
         ":bgemm_kernels_ruy",

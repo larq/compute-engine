@@ -2,6 +2,7 @@
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_RUY_H_
 
 #include "larq_compute_engine/cc/core/bgemm_functor.h"
+#include "tensorflow/lite/experimental/ruy/platform.h"
 #include "tensorflow/lite/experimental/ruy/ruy.h"
 
 namespace compute_engine {
@@ -12,6 +13,13 @@ namespace ce = compute_engine;
 template <ruy::Path ThePath, typename LhsScalar, typename RhsScalar,
           typename DstScalar, typename Spec>
 struct BgemmKernel {};
+
+// TODO: this is hacky
+#if RUY_PLATFORM(NEON)
+#include "bgemm_kernels_arm.h"
+#elif RUY_PLATFORM(X86)
+#include "bgemm_kernels_x86.h"
+#endif
 
 template <typename LhsScalar, typename RhsScalar, typename DstScalar,
           typename Spec>
