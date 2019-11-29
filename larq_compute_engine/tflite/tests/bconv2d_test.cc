@@ -147,8 +147,8 @@ struct TestParam {
     param_input_oss << param.input_batch_count << "x" << param.input_height
                     << "x" << param.input_width << "x" << param.input_depth;
     std::ostringstream param_filter_oss;
-    param_filter_oss << "_In" << param.filter_height << "x"
-                     << param.filter_width << "x" << param.filter_count;
+    param_filter_oss << param.filter_height << "x" << param.filter_width << "x"
+                     << param.filter_count;
     std::ostringstream param_strides_oss;
     param_strides_oss << param.stride_height << "x" << param.stride_width;
     std::ostringstream param_dilation_oss;
