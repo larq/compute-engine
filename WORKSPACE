@@ -1,9 +1,5 @@
 load("//ext/tf:tf_configure.bzl", "tf_configure")
-load("//ext/gpu:cuda_configure.bzl", "cuda_configure")
-
 tf_configure(name = "local_config_tf")
-
-cuda_configure(name = "local_config_cuda")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
@@ -69,3 +65,41 @@ arm_compiler_configure(
     remote_config_repo_arm = "../arm_compiler",
     remote_config_repo_aarch64 = "../aarch64_compiler",
 )
+
+# To update TensorFlow to a new revision.
+# 1. Update the 'git_commit' args below to include the new git hash.
+# 2. Get the sha256 hash of the archive with a command such as...
+#    curl -L https://github.com/tensorflow/tensorflow/archive/<git hash>.tar.gz | sha256sum
+#    and update the 'sha256' arg with the result.
+# 3. Request the new archive to be mirrored on mirror.bazel.build for more
+#    reliable downloads.
+load("//ext:repo.bzl", "tensorflow_http_archive")
+tensorflow_http_archive(
+    name = "org_tensorflow",
+    sha256 = "bdbe31d6de69964e364612de466b4624b292788988f95c5d27dabdc339fe50f1",
+    git_commit = "597a30bc61134ee1deec0b439b3649f346f1f119",
+)
+
+# load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+# START: Upstream TensorFlow dependencies
+# TensorFlow build depends on these dependencies.
+# Needs to be in-sync with TensorFlow sources.
+http_archive(
+    name = "io_bazel_rules_closure",
+    sha256 = "5b00383d08dd71f28503736db0500b6fb4dda47489ff5fc6bed42557c07c6ba9",
+    strip_prefix = "rules_closure-308b05b2419edb5c8ee0471b67a40403df940149",
+    urls = [
+        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/rules_closure/archive/308b05b2419edb5c8ee0471b67a40403df940149.tar.gz",
+        "https://github.com/bazelbuild/rules_closure/archive/308b05b2419edb5c8ee0471b67a40403df940149.tar.gz",  # 2019-06-13
+    ],
+)
+http_archive(
+    name = "bazel_skylib",
+    sha256 = "2ef429f5d7ce7111263289644d233707dba35e39696377ebab8b0bc701f7818e",
+    urls = ["https://github.com/bazelbuild/bazel-skylib/releases/download/0.8.0/bazel-skylib.0.8.0.tar.gz"],
+)  # https://github.com/bazelbuild/bazel-skylib/releases
+# END: Upstream TensorFlow dependencies
+
+load("@org_tensorflow//third_party:repo.bzl", "tf_http_archive")
+load("@org_tensorflow//tensorflow:workspace.bzl", "tf_workspace")
+tf_workspace(path_prefix = "", tf_repo_name = "org_tensorflow")
