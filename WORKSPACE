@@ -75,12 +75,11 @@ arm_compiler_configure(
 #    reliable downloads.
 http_archive(
     name = "org_tensorflow",
-    sha256 = "bdbe31d6de69964e364612de466b4624b292788988f95c5d27dabdc339fe50f1",
+    sha256 = "674cc90223f1d6b7fa2969e82636a630ce453e48a9dec39d73d6dba2fd3fd243",
     urls = [
-        "https://mirror.bazel.build/github.com/tensorflow/tensorflow/archive/597a30bc61134ee1deec0b439b3649f346f1f119.tar.gz",
-        "https://github.com/tensorflow/tensorflow/archive/597a30bc61134ee1deec0b439b3649f346f1f119.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/v2.1.0-rc0.tar.gz",
     ],
-    strip_prefix = "tensorflow-597a30bc61134ee1deec0b439b3649f346f1f119",
+    strip_prefix = "tensorflow-2.1.0-rc0",
 )
 
 # load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
