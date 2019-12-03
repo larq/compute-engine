@@ -19,5 +19,5 @@ jobs:
       - name: Black code style
         run: black larq_compute_engine --check --target-version py36 --exclude 'build/|buck-out/|dzzist/|_build/|\.git/|\.hg/|\.mypy_cache/|\.tox/|\.venv/|larq/snapshots/'
       - name: clang-format lint
-        uses: DoozyX/clang-format-lint-action@v0.3.1
+        uses: DoozyX/clang-format-lint-action@v0.4.1
 
