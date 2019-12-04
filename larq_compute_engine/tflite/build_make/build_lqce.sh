@@ -103,10 +103,18 @@ fi
 if [ "$clean" == "1" ]; then
     echo " --> clean"
     rm -rf "${TF_DIR}/tensorflow/lite/tools/make/gen"
+    rm -rf "${TF_DIR}/tensorflow/lite/tools/make/downloads"
 fi
 
 # Check if dependencies need to be downloaded
 if [ ! -d "${TF_DIR}/tensorflow/lite/tools/make/downloads" ]; then
+    # TODO: Remove this ugly hack once Tensorflow fixes their eigen URL's
+
+    # Replace
+    #   grep -v mirror.tensorflow
+    # by
+    #   grep mirror.tensorflow
+    sed -i -e "s#grep -v mirror#grep mirror#" "${TF_DIR}/tensorflow/lite/tools/make/download_dependencies.sh"
     ${TF_DIR}/tensorflow/lite/tools/make/download_dependencies.sh
 fi
 
