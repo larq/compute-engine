@@ -339,6 +339,11 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   m_lce.SetFilter(filters_data);
   m_lce.Invoke();
 
+  auto lce_output = m_lce.GetOutput();
+  // Do the transformation from {0,1} back to {-1,+1}
+  const T dotproduct_size = filter_height * filter_width * input_depth;
+  for (auto& x : lce_output) x = dotproduct_size - 2 * x;
+
   ConvolutionOpModel m_builtin(
       ::tflite::ops::builtin::
           Register_CONVOLUTION_GENERIC_OPT(),  // registration
@@ -355,7 +360,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   m_builtin.SetBias(bias_data);
   m_builtin.Invoke();
 
-  EXPECT_THAT(m_lce.GetOutput(), ElementsAreArray(m_builtin.GetOutput()));
+  EXPECT_THAT(lce_output, ElementsAreArray(m_builtin.GetOutput()));
 }
 
 INSTANTIATE_TEST_SUITE_P(

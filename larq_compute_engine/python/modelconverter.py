@@ -42,6 +42,9 @@ def create_bconv_layer(weights, strides, padding, transpose=True, mul_weights=No
     strides = [1, strides[0], strides[1], 1]
     padding = padding.upper()
 
+    # Here the weights are still HWIO
+    dotproduct_size = weights.shape[0] * weights.shape[1] * weights.shape[2]
+
     filter_format = "HWIO"
     if transpose:
         # Transpose: change from HWIO to OHWI
@@ -65,8 +68,21 @@ def create_bconv_layer(weights, strides, padding, transpose=True, mul_weights=No
             data_format="NHWC",
             filter_format=filter_format,
         )
+        # Do the {0,1} -> {-1,1} transformation
+        # If a,b are {-1,1} vectors then A = (a+1)/2 and B = (b+1)/2
+        # are the corresponding {0,1} vectors.
+        # We have
+        #   dot(a,b) = n - 2 * XOR(A,B)
+        # where n is the size of the vector.
+        # The convolution will compute XOR(A,B) so we have to transform it back
+        # One awesome property about this is that it already takes care of bitpadding,
+        # so we can ignore that in the C++ code.
+
+        # TODO: Detect if there is a batchnorm and merge this with that
+        y = dotproduct_size - 2 * y
+
         if mul_weights is not None:
-            y = tf.multiply(y, mul_weights)
+            y *= mul_weights
         return y
 
     return bconv_op
