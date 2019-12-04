@@ -103,7 +103,6 @@ fi
 if [ "$clean" == "1" ]; then
     echo " --> clean"
     rm -rf "${TF_DIR}/tensorflow/lite/tools/make/gen"
-    rm -rf "${TF_DIR}/tensorflow/lite/tools/make/downloads"
 fi
 
 # Check if dependencies need to be downloaded

@@ -318,30 +318,19 @@ class PaddingFunctor {
           // Let n = kernel_height * kernel_width * input_channels
           //
           // For the inside part we have
-          // y   =  popcount(XOR(input,filter))     y is in {0,1} space
-          // z   =  n - 2 * y                       z is in {-1,1} space
+          //    y = popcount(XOR(input,filter))     y is in {0,1} space
+          //    z = n - 2 * y                       z is in {-1,1} space
           //
           // For the outside zero-padding parts we have
-          //
-          //        m elements       n-m elements
-          // y   = correct_part + popcount(XOR(0,
-          // binarized_outside_filter_values))
-          //     = correct_part + popcount(binarized_outside_filter_values)
-          //
-          // z1  = n - 2 * y                This is what will be computed
-          // z2  = m - 2 * correct_part     This is what we *want* to be
-          // computed
+          //    y = correct_part + popcount(XOR(0,outside_filter))
+          //    z = n - 2 * y
+          // But we *want* it to be
+          //    z = m - 2 * correct_part
+          // where m is the number of filter parts inside the input.
           //
           // Now define
-          // fix = - popcount(binarized_outside_filter_values) + (n-m)/2
-          //
-          // Adding this fix will make z1 equal to z2:
-          //
-          // z1  = n - 2 * (y + fix)
-          //     = n - 2 * (correct_part + (n-m)/2)
-          //     = n - 2 * correct_part - (n-m)
-          //     = z2
-          //
+          //    fix = (n-m)/2 - popcount(binarized_outside_filter_values)
+          // Then choosing y = y + fix will make z correct.
           // We compute that fix in the caching part.
 
         }  // out_x
