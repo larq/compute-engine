@@ -63,8 +63,8 @@ struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar, Spec> {
     static_assert(std::is_same<LhsScalar, RhsScalar>::value,
                   "Inputs to binary kernel should have the same type.");
     static_assert(
-        //std::is_unsigned<LhsScalar>::value &&
-            std::is_integral<LhsScalar>::value,
+        // std::is_unsigned<LhsScalar>::value &&
+        std::is_integral<LhsScalar>::value,
         "Input to binary kernel should be of type unsigned integral.");
     static_assert(std::is_signed<DstScalar>::value,
                   "Output of binary kernel should be of a signed type.");
