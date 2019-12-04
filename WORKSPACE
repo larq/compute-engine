@@ -21,11 +21,11 @@ http_archive(
 http_archive(
     name = "eigen_archive",
     build_file = "@//ext:eigen.BUILD",
-    sha256 = "a126a1af9ec3b3f646c4896bf69a4bb71e9ebfb30c50c3182f01270a704a4093",
-    strip_prefix = "eigen-eigen-89abeb806e2e",
+    sha256 = "091d1a3124ea41ac2e70e30028365d78d43a1c617a26445aef15e140e4fab1dd",
+    strip_prefix = "eigen-eigen-afc120bc03bd",
     urls = [
-        "https://storage.googleapis.com/mirror.tensorflow.org/bitbucket.org/eigen/eigen/get/89abeb806e2e.tar.gz",
-        "https://bitbucket.org/eigen/eigen/get/89abeb806e2e.tar.gz",
+        "https://storage.googleapis.com/mirror.tensorflow.org/bitbucket.org/eigen/eigen/get/afc120bc03bd.tar.gz",
+        "https://bitbucket.org/eigen/eigen/get/afc120bc03bd.tar.gz",
     ],
 )
 
