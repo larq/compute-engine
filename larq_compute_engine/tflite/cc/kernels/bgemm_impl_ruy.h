@@ -54,6 +54,11 @@ struct BGemmImplUsingRuy {
     rhs.data = rhs_data;
     dst.data = dst_data;
 
+    // std::cout << "LHS:" << lhs_params.rows << " " <<  lhs_params.cols << std::endl;
+    // std::cout << lhs << std::endl;
+    // std::cout << "RHS:" << rhs_params.rows << " " << rhs_params.cols << std::endl;
+    // std::cout << rhs << std::endl;
+
     // Here, we abuse the 'multiplier_exponent' which is used only for
     // non-floating-point cases to pass the bitpadding correction value (int) to
     // bgemm kernel
@@ -77,13 +82,12 @@ struct BGemmImplUsingRuy {
     // TODO: this needs to be modified as soon as architecture-specific
     // optimized kernels are added.
 #if RUY_PLATFORM(ARM)
-    if (bgemm_runtime_path == ruy::Path::kNeon ||
-        bgemm_runtime_path == ruy::Path::kNeonDotprod)
-      bgemm_runtime_path = ruy::Path::kStandardCpp;
+    if (bgemm_runtime_path == ruy::Path::kNeonDotprod)
+      bgemm_runtime_path = ruy::Path::kNeon;
 #elif RUY_PLATFORM(X86)
     if (bgemm_runtime_path == ruy::Path::kAvx2 ||
         bgemm_runtime_path == ruy::Path::kAvx512)
-      bgemm_runtime_path = ruy::Path::kStandardCpp;
+       bgemm_runtime_path = ruy::Path::kStandardCpp;
 #endif
 
     ruy::Matrix<LhsScalar> transposed_lhs(lhs);

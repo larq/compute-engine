@@ -1,4 +1,6 @@
 load("@org_tensorflow//tensorflow/lite:build_def.bzl", "tflite_linkopts")
+load(":build_defs.bzl", "ruy_copts_base")
+
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],  # Apache 2.0
@@ -17,6 +19,24 @@ cc_library(
 )
 
 cc_library(
+    name = "bgemm_kernels_common",
+    hdrs = [
+        "cc/kernels/bgemm_kernels_common.h",
+    ],
+)
+
+cc_library(
+    name = "bgemm_kernels_arm",
+    hdrs = [
+        "cc/kernels/bgemm_kernels_arm.h",
+        "cc/kernels/bgemm_kernels_arm64.h",
+    ],
+    deps = [
+        ":bgemm_kernels_common"
+    ]
+)
+
+cc_library(
     name = "bgemm_kernels_ruy",
     hdrs = [
         "cc/kernels/bgemm_kernels_arm.h",
@@ -25,6 +45,7 @@ cc_library(
     ],
     deps = [
         "//larq_compute_engine:bgemm",
+        ":bgemm_kernels_arm"
     ]
 )
 
@@ -67,6 +88,22 @@ cc_library(
         "@org_tensorflow//tensorflow/lite/kernels:padding",
         "@org_tensorflow//tensorflow/lite/kernels/internal:optimized_base",
     ]
+)
+
+cc_library(
+    name = "kernel_arm",
+    srcs = [
+        # "kernel_arm32.cc",
+        "kernel_arm64.cc",
+    ],
+    copts = ruy_copts_base(),
+    deps = [
+        # ":common",
+        # ":kernel_common",
+        # ":opt_set",
+        # ":platform",
+        "@gemmlowp//:profiler",
+    ],
 )
 
 cc_library(

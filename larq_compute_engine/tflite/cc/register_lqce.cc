@@ -13,9 +13,9 @@ namespace compute_engine {
 namespace tflite {
 
 TfLiteRegistration* Register_BSIGN();
-TfLiteRegistration* Register_BCONV_2D8();
+// TfLiteRegistration* Register_BCONV_2D8();
 TfLiteRegistration* Register_BCONV_2D32();
-TfLiteRegistration* Register_BCONV_2D64();
+// TfLiteRegistration* Register_BCONV_2D64();
 
 }  // namespace tflite
 }  // namespace compute_engine
@@ -287,9 +287,9 @@ BuiltinOpResolver::BuiltinOpResolver() {
             tflite::ops::custom::Register_DETECTION_POSTPROCESS());
 
   AddCustom("LqceBsign", compute_engine::tflite::Register_BSIGN());
-  AddCustom("LqceBconv2d8", compute_engine::tflite::Register_BCONV_2D8());
+  // AddCustom("LqceBconv2d8", compute_engine::tflite::Register_BCONV_2D8());
   AddCustom("LqceBconv2d32", compute_engine::tflite::Register_BCONV_2D32());
-  AddCustom("LqceBconv2d64", compute_engine::tflite::Register_BCONV_2D64());
+  // AddCustom("LqceBconv2d64", compute_engine::tflite::Register_BCONV_2D64());
 }
 
 }  // namespace builtin
