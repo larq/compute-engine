@@ -367,14 +367,16 @@ INSTANTIATE_TEST_SUITE_P(
     BConv2DTests, BConv2DOpTest,
     // WARNING: ::testing::Combine accepts max 10 arguments!!!
     ::testing::Combine(
-        ::testing::Values(1),                         // batches
-        ::testing::Values(std::array<int, 2>{4, 4}),  // input height/width
-        ::testing::Values(1, 3, 130),                 // input depth
+        ::testing::Values(1),                           // batches
+        ::testing::Values(std::array<int, 2>{10, 10}),  // input height/width
+        ::testing::Values(1, 64, 130),                  // input depth
         ::testing::Values(std::array<int, 2>{2, 2},
                           std::array<int, 2>{3, 3}),  // filter height/width
-        ::testing::Values(1, 4),                      // filter count
-        ::testing::Values(std::array<int, 2>{1, 1}),  // strides height/width
-        ::testing::Values(std::array<int, 2>{1, 1}),  // dilation height/width
+        ::testing::Values(1, 64),                     // filter count
+        ::testing::Values(std::array<int, 2>{1, 1},
+                          std::array<int, 2>{2, 3}),  // strides height/width
+        ::testing::Values(std::array<int, 2>{1, 1},
+                          std::array<int, 2>{2, 3}),  // dilation height/width
         ::testing::Values(Padding_VALID),             // padding
         ::testing::Values(1, 2),                      // number of threads
         ::testing::ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
