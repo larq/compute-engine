@@ -31,8 +31,8 @@ class LargeModelTest(InferenceTest):
         out = tf.keras.layers.GlobalAvgPool2D()(out)
         out = tf.keras.layers.Dense(10, activation="softmax")(out)
 
-        model = tf.keras.Model(inputs=img_input, outputs=out)
-        self.run_inference(model)
+        # model = tf.keras.Model(inputs=img_input, outputs=out)
+        # self.run_inference(model)
 
 
 if __name__ == "__main__":

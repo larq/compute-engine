@@ -91,7 +91,7 @@ def invoke_inference(model, data):
     return interpreter.get_tensor(output_details[0]["index"])
 
 
-@pytest.mark.parametrize("bconv_op", [lqce.bconv2d8, lqce.bconv2d32, lqce.bconv2d64])
+@pytest.mark.parametrize("bconv_op", [lqce.bconv2d32])  # , lqce.bconv2d64])
 @pytest.mark.parametrize("data_type", [np.float32])
 @pytest.mark.parametrize("in_channel", [1, 3])
 @pytest.mark.parametrize("out_channel", [1, 4])
