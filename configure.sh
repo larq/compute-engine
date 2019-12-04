@@ -152,6 +152,7 @@ if [[ "$PIP_MANYLINUX2010" == "1" ]]; then
 fi
 
 cat << EOM >> .bazelrc
+build --copt=-DTFLITE_WITH_RUY
 
 # These can be activated using --config=rpi3 and --config=aarch64
 
