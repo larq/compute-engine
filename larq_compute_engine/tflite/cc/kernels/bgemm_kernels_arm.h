@@ -55,7 +55,7 @@ struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar, Spec> {
   Tuning tuning = Tuning::kAuto;
   using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
   using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 4>;
-  explicit Kernel(Tuning tuning_) : tuning(tuning_) {}
+  explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
   void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
            const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
            int start_row, int start_col, int end_row, int end_col,
@@ -63,7 +63,7 @@ struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar, Spec> {
     static_assert(std::is_same<LhsScalar, RhsScalar>::value,
                   "Inputs to binary kernel should have the same type.");
     static_assert(
-        std::is_unsigned<LhsScalar>::value &&
+        //std::is_unsigned<LhsScalar>::value &&
             std::is_integral<LhsScalar>::value,
         "Input to binary kernel should be of type unsigned integral.");
     static_assert(std::is_signed<DstScalar>::value,
