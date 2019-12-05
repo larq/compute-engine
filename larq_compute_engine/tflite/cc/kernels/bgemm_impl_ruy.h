@@ -54,11 +54,6 @@ struct BGemmImplUsingRuy {
     rhs.data = rhs_data;
     dst.data = dst_data;
 
-    // std::cout << "LHS:" << lhs_params.rows << " " <<  lhs_params.cols << std::endl;
-    // std::cout << lhs << std::endl;
-    // std::cout << "RHS:" << rhs_params.rows << " " << rhs_params.cols << std::endl;
-    // std::cout << rhs << std::endl;
-
     // Here, we abuse the 'multiplier_exponent' which is used only for
     // non-floating-point cases to pass the bitpadding correction value (int) to
     // bgemm kernel
@@ -84,10 +79,14 @@ struct BGemmImplUsingRuy {
 #if RUY_PLATFORM(ARM)
     if (bgemm_runtime_path == ruy::Path::kNeonDotprod)
       bgemm_runtime_path = ruy::Path::kNeon;
+#if RUY_PLATFORM(NEON_32)
+    // 32-bit NEON optimized code is not available yet
+    bgemm_runtime_path = ruy::Path::kStandardCpp;
+#endif
 #elif RUY_PLATFORM(X86)
     if (bgemm_runtime_path == ruy::Path::kAvx2 ||
         bgemm_runtime_path == ruy::Path::kAvx512)
-       bgemm_runtime_path = ruy::Path::kStandardCpp;
+      bgemm_runtime_path = ruy::Path::kStandardCpp;
 #endif
 
     ruy::Matrix<LhsScalar> transposed_lhs(lhs);

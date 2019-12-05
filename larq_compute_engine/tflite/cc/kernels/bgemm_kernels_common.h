@@ -7,7 +7,6 @@
 
 using namespace ruy;
 
-
 template <int LhsCols, int RhsCols>
 struct BinaryKernelParams32 {
   const std::uint32_t* lhs_base_ptr;
@@ -32,12 +31,12 @@ struct BinaryKernelParams32 {
 };
 
 template <int LhsCols, int RhsCols>
-inline void MakeBinaryKernelParams32(const PackedMatrix<std::uint32_t>& lhs,
-                                   const PackedMatrix<std::uint32_t>& rhs,
-                                   const BasicSpec<std::int32_t, float>& spec,
-                                   int start_row, int start_col, int end_row,
-                                   int end_col, Matrix<float>* dst,
-                                   BinaryKernelParams32<LhsCols, RhsCols>* params) {
+inline void MakeBinaryKernelParams32(
+    const PackedMatrix<std::uint32_t>& lhs,
+    const PackedMatrix<std::uint32_t>& rhs,
+    const BasicSpec<std::int32_t, float>& spec, int start_row, int start_col,
+    int end_row, int end_col, Matrix<float>* dst,
+    BinaryKernelParams32<LhsCols, RhsCols>* params) {
   const int depth = lhs.layout.rows;
   RUY_DCHECK_EQ(start_row % LhsCols, 0);
   RUY_DCHECK_EQ(start_col % RhsCols, 0);
