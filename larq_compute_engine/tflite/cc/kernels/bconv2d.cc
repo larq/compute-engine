@@ -1,5 +1,6 @@
 #include <cstdint>
 
+
 #include "bconv2d_impl.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
 #include "larq_compute_engine/cc/core/bconv2d_functor.h"
@@ -66,13 +67,16 @@ typedef struct {
   // memory buffers. They are unique in the entire TF Lite context.
   int im2col_id = kTensorNotAllocated;
   int padding_buffer_id = kTensorNotAllocated;
+  int packed_weights_buffer_id = kTensorNotAllocated;
   // In node->temporaries there is a list of tensor id's that are part
   // of this node in particular. The indices below are offsets into this array.
   // So in pseudo-code: `node->temporaries[index] = id;`
   int32_t im2col_index;
   int32_t padding_buffer_index;
+  int32_t packed_weights_buffer_index;
 
   bool padding_cache_filled = false;
+  bool packed_weights = false;
 
 } TfLiteBConv2DParams;
 
@@ -125,8 +129,8 @@ void Free(TfLiteContext* context, void* buffer) {
   delete reinterpret_cast<TfLiteBConv2DParams*>(buffer);
 }
 
-TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
-                     TfLiteNode* node) {
+TfLiteStatus Prepare(KernelType kernel_type, int bitwidth,
+                     TfLiteContext* context, TfLiteNode* node) {
   auto* conv_params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
 
   const auto* input = GetInput(context, node, 0);
@@ -201,6 +205,7 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
     if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame) {
       conv_params->padding_buffer_index = temporaries_count++;
     }
+    conv_params->packed_weights_buffer_index = temporaries_count++;
 
     // Allocate int array of that size
     TfLiteIntArrayFree(node->temporaries);
@@ -221,6 +226,11 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
         node->temporaries->data[conv_params->padding_buffer_index] =
             conv_params->padding_buffer_id;
       }
+    }
+    if (conv_params->packed_weights_buffer_id == kTensorNotAllocated) {
+      context->AddTensors(context, 1, &conv_params->packed_weights_buffer_id);
+      node->temporaries->data[conv_params->packed_weights_buffer_index] =
+          conv_params->packed_weights_buffer_id;
     }
   }
 
@@ -273,12 +283,41 @@ TfLiteStatus Prepare(KernelType kernel_type, TfLiteContext* context,
     // So we do it in Eval but only once.
   }
 
+  // Resize the packed weight tensor
+  if (kernel_type == KernelType::kGenericOptimized) {
+    TfLiteTensor* packed_weights_buffer =
+        GetTemporary(context, node, conv_params->packed_weights_buffer_index);
+
+    TfLiteIntArray* packed_weights_shape = TfLiteIntArrayCreate(2);
+    packed_weights_shape->data[0] = filter->dims->data[0];
+    const auto num_floats =
+        filter->dims->data[1] * filter->dims->data[2] * filter->dims->data[3];
+    const auto num_packed_elements = (num_floats + bitwidth - 1) / bitwidth;
+    packed_weights_shape->data[1] = num_packed_elements;
+
+    // We could use one of these types
+    if (bitwidth == 8)
+      packed_weights_buffer->type = kTfLiteInt8;
+    else if (bitwidth == 32)
+      packed_weights_buffer->type = kTfLiteInt32;
+    else if (bitwidth == 64)
+      packed_weights_buffer->type = kTfLiteInt64;
+    else
+      TF_LITE_ENSURE(context, false);
+
+    packed_weights_buffer->allocation_type = kTfLiteArenaRw;
+
+    TF_LITE_ENSURE_OK(context,
+                      context->ResizeTensor(context, packed_weights_buffer,
+                                            packed_weights_shape));
+  }
+
   return kTfLiteOk;
 }
 
-template <KernelType kernel_type>
+template <KernelType kernel_type, int bitwidth>
 TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
-  return Prepare(kernel_type, context, node);
+  return Prepare(kernel_type, bitwidth, context, node);
 }
 
 template <class T, class TBitpacked>
@@ -388,6 +427,36 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
     params->padding_cache_filled = true;
   }
 
+  TfLiteTensor* packed_weights =
+      GetTemporary(context, node, params->packed_weights_buffer_index);
+  if (!params->packed_weights) {
+    // The filters have shape
+    // [output channels, height, width, input channels]
+    // and we now view it as a matrix of shape
+    // [output channels, height * width * input_channels]
+    // and bitpack it along the last dimension
+
+    int cols =
+        params->channels_in * params->filter_height * params->filter_width;
+    int rows = params->channels_out;
+
+    std::vector<TBitpacked> filter_data_bp;
+    size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
+    ce::core::packbits_matrix(GetTensorData<T>(filter), rows, cols,
+                              filter_data_bp, filter_rows_bp, filter_cols_bp,
+                              filter_bitpadding, ce::core::Axis::RowWise);
+
+    size_t num_bytes = filter_data_bp.size() * sizeof(TBitpacked);
+
+    if (num_bytes != packed_weights->bytes) {
+      context->ReportError(context,
+                           "Error in computation of filter bitpacking size.");
+    } else {
+      memcpy(GetTensorData<TBitpacked>(packed_weights), filter_data_bp.data(),
+             num_bytes);
+    }
+  }
+
   // Using the standard TF Lite ConvParams struct.
   // This requires extra step of converting the TfLiteBConv2DParams
   // but unifies the interface with the default TF lite API for CONV params
@@ -395,12 +464,15 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   ConvParams op_params;
   GetConvParamsType(*params, op_params);
 
+  // We pass the shape of the original unpacked filter, so that all the shape
+  // information is correct (number of channels etc), but we pass the packed
+  // weights data
   BConv2D<T, TBitpacked>(
       op_params, GetTensorShape(input), GetTensorData<T>(input),
-      GetTensorShape(filter), GetTensorData<T>(filter), GetTensorShape(bias),
-      GetTensorData<T>(bias), GetTensorShape(output), GetTensorData<T>(output),
-      GetTensorShape(im2col), GetTensorData<T>(im2col),
-      GetTensorData<T>(padding_buffer),
+      GetTensorShape(filter), GetTensorData<TBitpacked>(packed_weights),
+      GetTensorShape(bias), GetTensorData<T>(bias), GetTensorShape(output),
+      GetTensorData<T>(output), GetTensorShape(im2col),
+      GetTensorData<T>(im2col), GetTensorData<T>(padding_buffer),
       CpuBackendContext::GetFromContext(context));
 }
 
@@ -424,7 +496,7 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
 TfLiteRegistration* Register_BCONV_2D8_REF() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kReference>,
+      bconv2d::Prepare<bconv2d::KernelType::kReference, 8>,
       bconv2d::Eval<bconv2d::KernelType::kReference, std::uint8_t>};
   return &r;
 }
@@ -432,7 +504,7 @@ TfLiteRegistration* Register_BCONV_2D8_REF() {
 TfLiteRegistration* Register_BCONV_2D32_REF() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kReference>,
+      bconv2d::Prepare<bconv2d::KernelType::kReference, 32>,
       bconv2d::Eval<bconv2d::KernelType::kReference, std::uint32_t>};
   return &r;
 }
@@ -440,7 +512,7 @@ TfLiteRegistration* Register_BCONV_2D32_REF() {
 TfLiteRegistration* Register_BCONV_2D64_REF() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kReference>,
+      bconv2d::Prepare<bconv2d::KernelType::kReference, 64>,
       bconv2d::Eval<bconv2d::KernelType::kReference, std::uint64_t>};
   return &r;
 }
@@ -448,7 +520,7 @@ TfLiteRegistration* Register_BCONV_2D64_REF() {
 TfLiteRegistration* Register_BCONV_2D8_OPT() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized>,
+      bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized, 8>,
       bconv2d::Eval<bconv2d::KernelType::kGenericOptimized, std::uint8_t>};
   return &r;
 }
@@ -456,7 +528,7 @@ TfLiteRegistration* Register_BCONV_2D8_OPT() {
 TfLiteRegistration* Register_BCONV_2D32_OPT() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized>,
+      bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized, 32>,
       bconv2d::Eval<bconv2d::KernelType::kGenericOptimized, std::uint32_t>};
   return &r;
 }
@@ -464,7 +536,7 @@ TfLiteRegistration* Register_BCONV_2D32_OPT() {
 TfLiteRegistration* Register_BCONV_2D64_OPT() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized>,
+      bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized, 64>,
       bconv2d::Eval<bconv2d::KernelType::kGenericOptimized, std::uint64_t>};
   return &r;
 }

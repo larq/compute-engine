@@ -19,11 +19,11 @@ namespace tflite {
 template <class T, class TBitpacked>
 inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                     const T* input_data, const RuntimeShape& filter_shape,
-                    const T* filter_data, const RuntimeShape& bias_shape,
-                    const T* bias_data, const RuntimeShape& output_shape,
-                    T* output_data, const RuntimeShape& im2col_shape,
-                    T* im2col_data, T* padding_buffer,
-                    CpuBackendContext* cpu_backend_context) {
+                    const TBitpacked* packed_filter_data,
+                    const RuntimeShape& bias_shape, const T* bias_data,
+                    const RuntimeShape& output_shape, T* output_data,
+                    const RuntimeShape& im2col_shape, T* im2col_data,
+                    T* padding_buffer, CpuBackendContext* cpu_backend_context) {
   const int stride_width = params.stride_width;
   const int stride_height = params.stride_height;
   const int dilation_width_factor = params.dilation_width_factor;
@@ -191,31 +191,10 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   // following is acutally computed in BGEMM: 'output_data' (m, n) =
   // 'filter_data' (n, k / bitwitdh) x 'gemm_input_data' (m, k / bitwidth)
 
-  // LHS is the filter values with shape
-  // [output channels, height, width, input channels]
-  // and we now view it as a matrix of shape
-  // [output channels, height * width * input_channels]
-  // and bitpack it along the last dimension
-  const auto* lhs_data = filter_data;
-
-  // row-wise bitpacking of LHS (n, k) -> (n, k / bitwidth)
-  const int lhs_rows = filter_shape.Dims(0);
-  const int lhs_cols = gemm_depth_dimension;
-  // TODO: pre-allocate the 'lhs_data_bp' buffer in prepare
-  // 'packbits_matrix' function calls the 'resize' method of the container
-  // in case that bitpadding is required. Therefore, in order to pre-allocate
-  // bitpacked buffer, we need to redesign the packbits_matrix and move
-  // computing the size of the bitpacked buffer outside the 'packbits_matrix'
-  // function. For now we just define the bitpacking buffer as static.
-  static std::vector<TBitpacked> lhs_data_bp;
-  size_t lhs_rows_bp = 0, lhs_cols_bp = 0;
-  size_t lhs_bitpadding = 0;
-  {
-    gemmlowp::ScopedProfilingLabel label1("PackbitLHS");
-    ce::core::packbits_matrix(lhs_data, lhs_rows, lhs_cols, lhs_data_bp,
-                              lhs_rows_bp, lhs_cols_bp, lhs_bitpadding,
-                              ce::core::Axis::RowWise);
-  }
+  // LHS is the filter values
+  const auto* lhs_data = packed_filter_data;
+  const int lhs_rows_bp = filter_shape.Dims(0);
+  const int lhs_cols_bp = (gemm_depth_dimension + bitwidth - 1) / bitwidth;
 
   // LHS (n, k/bitwidth) -> RowMajor -> (n, k/bitwidth)
   // RHS (m, k/bitwidth) -> ColMajor -> (k/bitwidth, m)
@@ -235,12 +214,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   dst_params.rows = lhs_rows_bp;
   dst_params.cols = gemm_input_cols;
 
-  // TODO: Currently GemmParams is not used the same way
-  // as it is used in the TF Lite codebase. Here, we abuse the
-  // 'multiplier_exponent' which is used only for non-floating-point
-  // cases, to pass the bitpadding correction value (int) to BGemm
   cpu_backend_gemm::GemmParams<TBitpacked, T> gemm_params;
-  gemm_params.multiplier_exponent = lhs_bitpadding;
   // gemm_params.bias = bias_data;
   // gemm_params.clamp_min = output_activation_min;
   // gemm_params.clamp_max = output_activation_max;
@@ -254,7 +228,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
 
   // #endif  //  defined(TF_LITE_USE_CBLAS) && defined(__APPLE__)
 
-  BGemm(lhs_params, lhs_data_bp.data(), rhs_params, gemm_input_data, dst_params,
+  BGemm(lhs_params, lhs_data, rhs_params, gemm_input_data, dst_params,
         output_data, gemm_params, cpu_backend_context);
 
   if (params.padding_type == PaddingType::kSame) {
@@ -274,9 +248,9 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
     PaddingFunctor padding_functor;
     {
       gemmlowp::ScopedProfilingLabel label3("ZeroPaddingCorrection");
-      padding_functor(batches, input_height, input_width, input_depth,
-                      filter_data, filter_height, filter_width, output_depth,
-                      stride_height, stride_width, dilation_height_factor,
+      padding_functor(batches, input_height, input_width, input_depth, nullptr,
+                      filter_height, filter_width, output_depth, stride_height,
+                      stride_width, dilation_height_factor,
                       dilation_width_factor, output_data, output_height,
                       output_width, padding_buffer);
     }
