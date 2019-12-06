@@ -2,15 +2,6 @@ licenses(["notice"])  # Apache 2.0
 
 package(default_visibility = ["//visibility:public"])
 
-
-
-# If some file should only be included for a particular platform
-# then this can be done as follows:
-#    deps = select({
-#        ":arm32_build": [":some_dep"],
-#        ":aarch64_build": [":some_other_dep"],
-#        "//conditions:default": [":generic_dep"],
-#    }),
 config_setting(
     name = "arm32_build",
     values = {"cpu": "armeabi"},

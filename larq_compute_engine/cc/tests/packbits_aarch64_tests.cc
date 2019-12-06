@@ -11,9 +11,9 @@ namespace compute_engine {
 namespace testing {
 
 using namespace compute_engine::core;
-using namespace compute_engine::benchmarking;
 
-template <void (*packing_func)(const float*, size_t, void*), size_t blocksize>
+template <void (*packing_func)(const float*, size_t, uint64_t*),
+          size_t blocksize>
 void test_bitpacking() {
   constexpr size_t n = 512;
 
@@ -54,18 +54,6 @@ void test_bitpacking() {
 
 TEST(BitpackingAarch64, 64Blocks) {
   test_bitpacking<packbits_aarch64_64, 64>();
-}
-
-TEST(BitpackingAarch64, 64BlocksV2) {
-  test_bitpacking<packbits_aarch64_64_v2, 64>();
-}
-
-TEST(BitpackingAarch64, 64BlocksV3) {
-  test_bitpacking<packbits_aarch64_64_v3, 64>();
-}
-
-TEST(BitpackingAarch64, 128Blocks) {
-  test_bitpacking<packbits_aarch64_128, 128>();
 }
 
 }  // end namespace testing

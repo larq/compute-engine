@@ -1,6 +1,7 @@
 #ifndef COMPUTE_ENGINE_KERNELS_PACKBITS_H_
 #define COMPUTE_ENGINE_KERNELS_PACKBITS_H_
 
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <limits>
@@ -301,10 +302,11 @@ inline void packbits_array(const TIn* input_array, std::size_t n,
   // if needs padding, copy the remaining elements in a buffer and add enough
   // zero padding to fill the bitwidth. This function assumes enough memory for
   // padding, is already allocatd for "bitpacked_array" argument.
-  if (num_remaining_elems) {
-    TIn padding_buffer[bitwidth] = {0};
-    memcpy(padding_buffer, input_elem_ptr, num_remaining_elems * sizeof(TIn));
-    pack_bitfield<TIn>(padding_buffer, bpacked_elem_ptr);
+  if (num_remaining_elems != 0) {
+    std::array<TIn, bitwidth> padding_buffer = {0};
+    memcpy(padding_buffer.data(), input_elem_ptr,
+           num_remaining_elems * sizeof(TIn));
+    pack_bitfield<TIn>(padding_buffer.data(), bpacked_elem_ptr);
   }
 }
 
@@ -320,14 +322,15 @@ inline void packbits_array(const float* input_array, std::size_t n,
 
   // Start by packing blocks of size 64
   size_t num_fastblocks = n / 64;
-  if (num_fastblocks) {
+  if (num_fastblocks != 0) {
     const size_t num_floats = num_fastblocks * 64;
-    packbits_aarch64_64(in, num_fastblocks, out);
+    packbits_aarch64_64(in, num_fastblocks, reinterpret_cast<uint64_t*>(out));
     in += num_floats;
     out += num_floats / bitwidth;
     n -= num_floats;
   }
-  // The remaining floats can be manually packed
+  // The remaining floats of blocksize TOut can be manually packed
+  // (This wont happen when TOut = uint64_t)
   size_t full_blocks = n / bitwidth;
   n -= full_blocks * bitwidth;
   while (full_blocks--) {
@@ -335,10 +338,10 @@ inline void packbits_array(const float* input_array, std::size_t n,
     in += bitwidth;
   }
   if (n) {
-    // Padding
-    float padding_buffer[bitwidth] = {0};
-    memcpy(padding_buffer, in, n * sizeof(float));
-    pack_bitfield<float>(padding_buffer, out);
+    // Bitpadding
+    std::array<float, bitwidth> padding_buffer = {0};
+    memcpy(padding_buffer.data(), in, n * sizeof(float));
+    pack_bitfield<float>(padding_buffer.data(), out);
   }
 }
 #endif
