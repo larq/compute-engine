@@ -300,14 +300,6 @@ inline void packbits_array(const TIn* input_array, std::size_t n,
   const TIn* in = input_array;
   TOut* out = bitpacked_array;
 
-  // Start by packing parts of size 64
-  while (n >= 64) {
-    pack_bitfield(in, reinterpret_cast<uint64_t*>(out));
-    in += 64;
-    n -= 64;
-    out += 64 / bitwidth;
-  }
-
   while (n >= bitwidth) {
     pack_bitfield(in, out++);
     in += bitwidth;
@@ -315,9 +307,8 @@ inline void packbits_array(const TIn* input_array, std::size_t n,
   }
 
   // If padding is needed, copy the remaining elements to a buffer and add
-  // enough zero padding to fill the bitwidth. This function assumes enough
-  // memory for padding is already allocatd in the output array
-  // `bitpacked_array`.
+  // enough zeros to fill the bitwidth. This function assumes enough memory for
+  // padding is already allocatd in the output array `bitpacked_array`.
   if (n != 0) {
     std::array<TIn, bitwidth> padding_buffer = {0};
     memcpy(padding_buffer.data(), in, n * sizeof(TIn));
