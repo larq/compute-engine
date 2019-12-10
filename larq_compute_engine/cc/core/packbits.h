@@ -293,25 +293,27 @@ inline void pack_bitfield(const float* in, std::uint64_t* out) {
 #endif
 
 template <class TIn, class TOut>
-inline void packbits_array(const TIn* input_array, std::size_t n,
+inline void packbits_array(const TIn* input_array, const std::size_t n,
                            TOut* bitpacked_array) {
   constexpr size_t bitwidth = std::numeric_limits<TOut>::digits;
+
+  int num_packed_elems = n / bitwidth;
+  int elements_left = n - bitwidth * num_packed_elems;
 
   const TIn* in = input_array;
   TOut* out = bitpacked_array;
 
-  while (n >= bitwidth) {
+  while (num_packed_elems--) {
     pack_bitfield(in, out++);
     in += bitwidth;
-    n -= bitwidth;
   }
 
   // If padding is needed, copy the remaining elements to a buffer and add
   // enough zeros to fill the bitwidth. This function assumes enough memory for
   // padding is already allocatd in the output array `bitpacked_array`.
-  if (n != 0) {
+  if (elements_left != 0) {
     std::array<TIn, bitwidth> padding_buffer = {0};
-    memcpy(padding_buffer.data(), in, n * sizeof(TIn));
+    memcpy(padding_buffer.data(), in, elements_left * sizeof(TIn));
     pack_bitfield(padding_buffer.data(), out);
   }
 }
