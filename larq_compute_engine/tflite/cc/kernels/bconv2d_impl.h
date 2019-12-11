@@ -23,7 +23,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                     const RuntimeShape& bias_shape, const T* bias_data,
                     const RuntimeShape& output_shape, T* output_data,
                     const RuntimeShape& im2col_shape, T* im2col_data,
-                    T* padding_buffer, CpuBackendContext* cpu_backend_context) {
+                    bool bitpack_first, T* padding_buffer,
+                    CpuBackendContext* cpu_backend_context) {
   const int stride_width = params.stride_width;
   const int stride_height = params.stride_height;
   const int dilation_width_factor = params.dilation_width_factor;
@@ -31,11 +32,11 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   const T output_activation_min = params.float_activation_min;
   const T output_activation_max = params.float_activation_max;
 
-  TFLITE_DCHECK_EQ(input_shape.DimensionsCount(), 4);
-  TFLITE_DCHECK_EQ(filter_shape.DimensionsCount(), 4);
-  TFLITE_DCHECK_EQ(output_shape.DimensionsCount(), 4);
+  TF_LITE_ASSERT_EQ(input_shape.DimensionsCount(), 4);
+  TF_LITE_ASSERT_EQ(filter_shape.DimensionsCount(), 4);
+  TF_LITE_ASSERT_EQ(output_shape.DimensionsCount(), 4);
 
-  TFLITE_DCHECK_EQ(input_shape.Dims(3), filter_shape.Dims(3));
+  TF_LITE_ASSERT_EQ(input_shape.Dims(3), filter_shape.Dims(3));
 
   gemmlowp::ScopedProfilingLabel label("BConv2D");
 
@@ -47,15 +48,32 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   const int filter_height = filter_shape.Dims(1);
   const int filter_width = filter_shape.Dims(2);
   const int in_channels = input_shape.Dims(3);
-  const int gemm_depth_dimension = filter_height * filter_width * in_channels;
 
   const bool need_dilated_im2col =
       dilation_width_factor != 1 || dilation_height_factor != 1;
   const bool need_im2col = stride_width != 1 || stride_height != 1 ||
                            filter_width != 1 || filter_height != 1;
 
+  // `filter_data` is a matrix with dimensions (n, k)
+  // `gemm_input_data` is a matrix with dimensions (m, k)
+  // `output_data` is a matrix with dimensions (n, m)
+  // We would like to compute the following matrix-matrix mulitplicaiton:
+  //
+  // 'output_data' (m, n) = 'gemm_input_data' (m, k) * 'filter_data' (k, n)
+  //
+  // We use the 'filter_data' as LHS and assume is stored with RowMajor layout
+  // -> (n, k). We use 'gemm_input_data' as RHS and assume is stored in
+  // ColMajor layout -> (k, m). If we assume the 'output_data' is stored in
+  // ColMajor layout (m, n), then it can be calculated as following:
+  //
+  // 'output_data' (m, n) = 'filter_data' (n, k) x 'gemm_input_data' (m, k)
+  //
+  // where `x` is row-wise dotprod of the LHS and RHS.
+  // We perform the bitpacking compression along the k-dimension so the
+  // following is acutally computed in BGEMM: 'output_data' (m, n) =
+  // 'filter_data' (n, k / bitwitdh) x 'gemm_input_data' (m, k / bitwidth)
+
   constexpr auto bitwidth = std::numeric_limits<TBitpacked>::digits;
-  bool bitpack_first = (in_channels % bitwidth == 0);
 
   static std::vector<TBitpacked> rhs_data_bp;
 
@@ -66,7 +84,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
     // [batch * input height * input width, channels]
     // and bitpack it along the channels dimension.
     const int rhs_rows = FlatSizeSkipDim(input_shape, 3);
-    const int rhs_cols = in_channels;
+    const int rhs_cols = input_shape.Dims(3);
+
     size_t rhs_rows_bp = 0, rhs_cols_bp = 0;
     size_t rhs_bitpadding = 0;
     {
@@ -76,27 +95,24 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                                 rhs_rows_bp, rhs_cols_bp, rhs_bitpadding,
                                 ce::core::Axis::RowWise);
     }
-    TFLITE_DCHECK_EQ(rhs_bitpadding, 0);
 
     const TBitpacked* packed_input_data = rhs_data_bp.data();
-    const int packed_in_channels = in_channels / bitwidth;
+
+    // Now we proceed with im2col as usual, but we must
+    // change the input shapes to the new packed shapes.
+
+    const size_t packed_in_channels = (in_channels + bitwidth - 1) / bitwidth;
+    TF_LITE_ASSERT_EQ(packed_in_channels, rhs_cols_bp);
 
     RuntimeShape packed_input_shape(input_shape);
     RuntimeShape packed_filter_shape(filter_shape);
     packed_input_shape.SetDim(3, packed_in_channels);
     packed_filter_shape.SetDim(3, packed_in_channels);
 
-    // With bitpacking first, we could in principle allocate a *smaller*
-    // im2col_data buffer, but we will keep the bigger buffer fow now,
-    // and just change the shape.
+    // Get the im2col data buffer.
+    // For bitpack first it has type `TBitpacked*`
+    // but for im2col first it has type `T*`, so we cast it.
     TBitpacked* packed_im2col_data = reinterpret_cast<TBitpacked*>(im2col_data);
-    // im2col_shape:
-    // [batch, output height, output width, channels_in * filter_h * filter_w]
-    RuntimeShape packed_im2col_shape(im2col_shape);
-    packed_im2col_shape.SetDim(3, im2col_shape.Dims(3) / bitwidth);
-
-    TFLITE_DCHECK_EQ(packed_im2col_shape.Dims(3),
-                     gemm_depth_dimension / bitwidth);
 
     const RuntimeShape* gemm_input_shape = nullptr;
     if (need_dilated_im2col) {
@@ -104,17 +120,17 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
           params, float_zero_byte, packed_input_shape, packed_input_data,
           packed_filter_shape, output_shape, packed_im2col_data);
       gemm_input_data = packed_im2col_data;
-      gemm_input_shape = &packed_im2col_shape;
+      gemm_input_shape = &im2col_shape;
     } else if (need_im2col) {
-      TFLITE_DCHECK(im2col_data);
+      TF_LITE_ASSERT(im2col_data);
       optimized_ops::Im2col<TBitpacked>(params, filter_height, filter_width,
                                         float_zero_byte, packed_input_shape,
-                                        packed_input_data, packed_im2col_shape,
+                                        packed_input_data, im2col_shape,
                                         packed_im2col_data);
       gemm_input_data = packed_im2col_data;
-      gemm_input_shape = &packed_im2col_shape;
+      gemm_input_shape = &im2col_shape;
     } else {
-      TFLITE_DCHECK(!im2col_data);
+      TF_LITE_ASSERT(!im2col_data);
       gemm_input_data = packed_input_data;
       gemm_input_shape = &packed_input_shape;
     }
@@ -131,26 +147,33 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
       rhs_data = im2col_data;
       gemm_input_shape = &im2col_shape;
     } else if (need_im2col) {
-      TFLITE_DCHECK(im2col_data);
+      TF_LITE_ASSERT(im2col_data);
       optimized_ops::Im2col(params, filter_height, filter_width,
                             float_zero_byte, input_shape, input_data,
                             im2col_shape, im2col_data);
       rhs_data = im2col_data;
       gemm_input_shape = &im2col_shape;
     } else {
-      TFLITE_DCHECK(!im2col_data);
+      TF_LITE_ASSERT(!im2col_data);
       rhs_data = input_data;
       gemm_input_shape = &input_shape;
     }
 
-    const int gemm_input_dims = gemm_input_shape->DimensionsCount();
-    int m = FlatSizeSkipDim(*gemm_input_shape, gemm_input_dims - 1);
+    // Now the RHS tensor has shape
+    // [batch, output_height, output_width,
+    //      in_channels * filter_height * filter_width]
+    // and we view it as a matrix of size
+    // [batch * output_height * output_width,
+    //      in_channels * filter_height * filter_width]
+
+    int m = FlatSizeSkipDim(*gemm_input_shape, 3);
     int n = output_shape.Dims(3);
-    int k = gemm_input_shape->Dims(gemm_input_dims - 1);
+    int k = gemm_input_shape->Dims(3);
 
     // row-wise bitpacking of RHS (m, k) -> (m, k / bitwidth)
-    const int rhs_rows = m;
-    const int rhs_cols = k;
+    const int rhs_rows = FlatSizeSkipDim(*gemm_input_shape, 3);
+    const int rhs_cols = gemm_input_shape->Dims(3);
+
     size_t rhs_rows_bp = 0, rhs_cols_bp = 0;
     size_t rhs_bitpadding = 0;
     // TODO: pre-allocate the 'rhs_data_bp' buffer
@@ -172,37 +195,16 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
     gemm_input_cols = rhs_rows_bp;
   }
 
-  // `filter_data` is a matrix with dimensions (n, k)
-  // `gemm_input_data` is a matrix with dimensions (m, k)
-  // `output_data` is a matrix with dimensions (n, m)
-  // We would like to compute the following matrix-matrix mulitplicaiton:
-  //
-  // 'output_data' (m, n) = 'gemm_input_data' (m, k) * 'filter_data' (k, n)
-  //
-  // We use the 'filter_data' as LHS and assume is stored with RowMajor layout
-  // -> (n, k). We use 'gemm_input_data' as RHS and assume is stored in
-  // ColMajor layout -> (k, m). If we assume the 'output_data' is stored in
-  // ColMajor layout (m, n), then it can be calculated as following:
-  //
-  // 'output_data' (m, n) = 'filter_data' (n, k) x 'gemm_input_data' (m, k)
-  //
-  // where `x` is row-wise dotprod of the LHS and RHS.
-  // We perform the bitpacking compression along the k-dimension so the
-  // following is acutally computed in BGEMM: 'output_data' (m, n) =
-  // 'filter_data' (n, k / bitwitdh) x 'gemm_input_data' (m, k / bitwidth)
-
-  // LHS is the filter values
   const auto* lhs_data = packed_filter_data;
-  const int lhs_rows_bp = filter_shape.Dims(0);
-  const int lhs_cols_bp = (gemm_depth_dimension + bitwidth - 1) / bitwidth;
+  const int output_filters = filter_shape.Dims(0);
 
   // LHS (n, k/bitwidth) -> RowMajor -> (n, k/bitwidth)
   // RHS (m, k/bitwidth) -> ColMajor -> (k/bitwidth, m)
   // DST (n, m) -> ColMajor -> (m, n)
   cpu_backend_gemm::MatrixParams<TBitpacked> lhs_params;
   lhs_params.order = cpu_backend_gemm::Order::kRowMajor;
-  lhs_params.rows = lhs_rows_bp;  // n
-  lhs_params.cols = lhs_cols_bp;  // k/bitwidth
+  lhs_params.rows = output_filters;   // n
+  lhs_params.cols = gemm_input_rows;  // k/bitwidth
 
   cpu_backend_gemm::MatrixParams<TBitpacked> rhs_params;
   rhs_params.order = cpu_backend_gemm::Order::kColMajor;
@@ -211,7 +213,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
 
   cpu_backend_gemm::MatrixParams<T> dst_params;
   dst_params.order = cpu_backend_gemm::Order::kColMajor;
-  dst_params.rows = lhs_rows_bp;
+  dst_params.rows = output_filters;
   dst_params.cols = gemm_input_cols;
 
   cpu_backend_gemm::GemmParams<TBitpacked, T> gemm_params;

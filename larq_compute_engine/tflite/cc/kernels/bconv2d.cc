@@ -1,6 +1,5 @@
 #include <cstdint>
 
-
 #include "bconv2d_impl.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
 #include "larq_compute_engine/cc/core/bconv2d_functor.h"
@@ -62,6 +61,7 @@ typedef struct {
 
   ce::core::FilterFormat filter_format{ce::core::FilterFormat::Unknown};
 
+  bool bitpack_first = false;
   bool need_im2col = false;
   // IDs are the arbitrary identifiers used by TF Lite to identify and access
   // memory buffers. They are unique in the entire TF Lite context.
@@ -188,6 +188,15 @@ TfLiteStatus Prepare(KernelType kernel_type, int bitwidth,
   TF_LITE_ENSURE_OK(context,
                     context->ResizeTensor(context, output, output_shape));
 
+  // Decide if we do bitpacking before or after im2col
+  // TODO: More benchmarking once we have optimized bgemm
+  // so we can make a better decision here.
+  if (conv_params->channels_in >= bitwidth / 2) {
+    conv_params->bitpack_first = true;
+  } else {
+    conv_params->bitpack_first = false;
+  }
+
   // pre-allocate temporary tensors for optimized version
   if (kernel_type == KernelType::kGenericOptimized) {
     conv_params->need_im2col =
@@ -236,21 +245,36 @@ TfLiteStatus Prepare(KernelType kernel_type, int bitwidth,
 
   // Resize the im2col tensor
   if (conv_params->need_im2col) {
+    int in_channels = conv_params->channels_in;
+    if (conv_params->bitpack_first)
+      in_channels = (in_channels + bitwidth - 1) / bitwidth;
+
     // determine the im2col buffer size
     TfLiteIntArray* im2col_size = TfLiteIntArrayCreate(4);
     im2col_size->data[0] = conv_params->batch;
     im2col_size->data[1] = conv_params->out_height;
     im2col_size->data[2] = conv_params->out_width;
-    im2col_size->data[3] = conv_params->channels_in *
-                           conv_params->filter_height *
-                           conv_params->filter_width;
+    im2col_size->data[3] =
+        in_channels * conv_params->filter_height * conv_params->filter_width;
 
     // get the pointer to im2col tensor
     TfLiteTensor* im2col =
         GetTemporary(context, node, conv_params->im2col_index);
 
-    // resize the im2col tensor
-    im2col->type = input->type;
+    // Determine the type
+    if (conv_params->bitpack_first) {
+      if (bitwidth == 8)
+        im2col->type = kTfLiteInt8;
+      else if (bitwidth == 32)
+        im2col->type = kTfLiteInt32;
+      else if (bitwidth == 64)
+        im2col->type = kTfLiteInt64;
+      else
+        TF_LITE_ENSURE(context, false);
+    } else {
+      // im2col before bitpacking so use the same type as the input
+      im2col->type = input->type;
+    }
     im2col->allocation_type = kTfLiteArenaRw;
     TF_LITE_ENSURE_OK(context,
                       context->ResizeTensor(context, im2col, im2col_size));
@@ -289,13 +313,20 @@ TfLiteStatus Prepare(KernelType kernel_type, int bitwidth,
         GetTemporary(context, node, conv_params->packed_weights_buffer_index);
 
     TfLiteIntArray* packed_weights_shape = TfLiteIntArrayCreate(2);
-    packed_weights_shape->data[0] = filter->dims->data[0];
-    const auto num_floats =
-        filter->dims->data[1] * filter->dims->data[2] * filter->dims->data[3];
-    const auto num_packed_elements = (num_floats + bitwidth - 1) / bitwidth;
-    packed_weights_shape->data[1] = num_packed_elements;
+    if (conv_params->bitpack_first) {
+      packed_weights_shape->data[0] =
+          filter->dims->data[0] * filter->dims->data[1] * filter->dims->data[2];
+      const auto num_floats = filter->dims->data[3];
+      const auto num_packed_elements = (num_floats + bitwidth - 1) / bitwidth;
+      packed_weights_shape->data[1] = num_packed_elements;
+    } else {
+      packed_weights_shape->data[0] = filter->dims->data[0];
+      const auto num_floats =
+          filter->dims->data[1] * filter->dims->data[2] * filter->dims->data[3];
+      const auto num_packed_elements = (num_floats + bitwidth - 1) / bitwidth;
+      packed_weights_shape->data[1] = num_packed_elements;
+    }
 
-    // We could use one of these types
     if (bitwidth == 8)
       packed_weights_buffer->type = kTfLiteInt8;
     else if (bitwidth == 32)
@@ -433,12 +464,19 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
     // The filters have shape
     // [output channels, height, width, input channels]
     // and we now view it as a matrix of shape
-    // [output channels, height * width * input_channels]
+    // bitpack first: [output channels * height * width, input_channels]
+    // im2col first:  [output channels, height * width * input_channels]
     // and bitpack it along the last dimension
 
-    int cols =
-        params->channels_in * params->filter_height * params->filter_width;
-    int rows = params->channels_out;
+    int cols, rows;
+    if (params->bitpack_first) {
+      cols = params->channels_in;
+      rows =
+          params->channels_out * params->filter_height * params->filter_width;
+    } else {
+      cols = params->channels_in * params->filter_height * params->filter_width;
+      rows = params->channels_out;
+    }
 
     std::vector<TBitpacked> filter_data_bp;
     size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
@@ -472,7 +510,8 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
       GetTensorShape(filter), GetTensorData<TBitpacked>(packed_weights),
       GetTensorShape(bias), GetTensorData<T>(bias), GetTensorShape(output),
       GetTensorData<T>(output), GetTensorShape(im2col),
-      GetTensorData<T>(im2col), GetTensorData<T>(padding_buffer),
+      GetTensorData<T>(im2col), params->bitpack_first,
+      GetTensorData<T>(padding_buffer),
       CpuBackendContext::GetFromContext(context));
 }
 
