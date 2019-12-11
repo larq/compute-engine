@@ -2,6 +2,16 @@ licenses(["notice"])  # Apache 2.0
 
 package(default_visibility = ["//visibility:public"])
 
+config_setting(
+    name = "arm32_build",
+    values = {"cpu": "armeabi"},
+)
+config_setting(
+    name = "aarch64_build",
+    values = {"cpu": "aarch64"},
+)
+
+
 cc_library(
     name = "utils",
     hdrs = [
@@ -35,12 +45,16 @@ cc_test(
 # BUILDING PACKBITS
 cc_library(
     name = "packbits",
-    hdrs = [
-        "cc/core/packbits.h",
-    ],
-    deps = [
-        ":utils",
-    ]
+    hdrs = select({
+        ":aarch64_build": [
+            "cc/core/aarch64/packbits.h",
+            "cc/core/packbits.h",
+        ],
+        "//conditions:default": [
+            "cc/core/packbits.h",
+        ],
+    }),
+    deps = [":utils"],
 )
 
 cc_test(
@@ -208,7 +222,6 @@ cc_test(
     copts = ["-Iexternal/gtest/include"],
     deps = [
          "@googletest//:gtest_main",
-         ":packbits_aarch64",
          ":packbits",
     ],
 )
@@ -216,7 +229,8 @@ cc_test(
 test_suite(
     name = "cc_tests_aarch64",
     tests = [
-        "packbits_aarch64_tests",
+            ":packbits_aarch64_tests",
+            ":packbits_tests",
     ],
 )
 
@@ -226,6 +240,20 @@ sh_test(
     data = [
         ":cc_tests_aarch64",
         "@aarch64_compiler//:compiler_pieces",
+    ],
+)
+
+cc_binary(
+    name = "benchmark_aarch64",
+    linkopts = ["-lrt -lm"],
+    srcs = [
+        "cc/benchmark/aarch64/packbits_bench.cc",
+    ],
+    deps = [
+        "@googlebenchmark//:benchmark",
+        "@googlebenchmark//:benchmark_main",
+        ":packbits",
+        ":packbits_aarch64",
     ],
 )
 

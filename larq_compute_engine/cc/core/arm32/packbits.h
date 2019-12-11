@@ -4,12 +4,8 @@
 namespace compute_engine {
 namespace core {
 
-// TODO: Checkout daBNN bitpacking
-// https://github.com/JDAI-CV/dabnn/blob/master/dabnn/bitpack.h
-// They seem to use un-vectorized `sri` instructions ??
-// They discuss the vectorized `vsri` here:
+// They discuss the vectorized `vsri` for arm32 here:
 // https://stackoverflow.com/questions/49918746/efficiently-accumulate-sign-bits-in-arm-neon
-//
 
 // Output should be allocated by caller
 // It should have size equal to (n+63)/64

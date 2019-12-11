@@ -1,12 +1,16 @@
 #ifndef COMPUTE_ENGINE_KERNELS_PACKBITS_H_
 #define COMPUTE_ENGINE_KERNELS_PACKBITS_H_
 
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <limits>
 #include <vector>
 
 #include "larq_compute_engine/cc/utils/types.h"
+#ifdef __aarch64__
+#include "larq_compute_engine/cc/core/aarch64/packbits.h"
+#endif
 
 namespace compute_engine {
 namespace core {
@@ -280,29 +284,37 @@ inline void pack_bitfield(const T* fptr, std::uint64_t* buf) {
   *buf = u.u64;
 }
 
-template <class TIn, class TOut>
-inline void packbits_array(const TIn* input_array, std::size_t n,
-                           TOut* bitpacked_array) {
-  const size_t bitwidth = std::numeric_limits<TOut>::digits;
-  const int num_bpacked_elems = n / bitwidth;
+#ifdef __aarch64__
+// Template specialization for the float -> uint64 case
+template <>
+inline void pack_bitfield(const float* in, std::uint64_t* out) {
+  return packbits_aarch64_64(in, out);
+}
+#endif
 
-  TOut* bpacked_elem_ptr = bitpacked_array;
-  const TIn* input_elem_ptr = input_array;
-  for (int bpacked_elem = 0; bpacked_elem < num_bpacked_elems; ++bpacked_elem) {
-    pack_bitfield<TIn>(input_elem_ptr, bpacked_elem_ptr++);
-    input_elem_ptr += bitwidth;
+template <class TIn, class TOut>
+inline void packbits_array(const TIn* input_array, const std::size_t n,
+                           TOut* bitpacked_array) {
+  constexpr size_t bitwidth = std::numeric_limits<TOut>::digits;
+
+  int num_packed_elems = n / bitwidth;
+  int elements_left = n - bitwidth * num_packed_elems;
+
+  const TIn* in = input_array;
+  TOut* out = bitpacked_array;
+
+  while (num_packed_elems--) {
+    pack_bitfield(in, out++);
+    in += bitwidth;
   }
 
-  // if needs padding, copy the remaining elements in a buffer and add enough
-  // zero padding to fill the bitwidth. This function assumes enough memory for
-  // padding, is already allocatd for "bitpacked_array" argument.
-  // TODO: Avoid memory allocation and memory copy
-  if (n % bitwidth != 0) {
-    std::vector<TIn> padding_buffer(bitwidth, 0);
-    const auto num_remaining_elems = n - num_bpacked_elems * bitwidth;
-    memcpy(padding_buffer.data(), input_elem_ptr,
-           num_remaining_elems * sizeof(TIn));
-    pack_bitfield<TIn>(padding_buffer.data(), bpacked_elem_ptr);
+  // If padding is needed, copy the remaining elements to a buffer and add
+  // enough zeros to fill the bitwidth. This function assumes enough memory for
+  // padding is already allocatd in the output array `bitpacked_array`.
+  if (elements_left != 0) {
+    std::array<TIn, bitwidth> padding_buffer = {0};
+    memcpy(padding_buffer.data(), in, elements_left * sizeof(TIn));
+    pack_bitfield(padding_buffer.data(), out);
   }
 }
 
