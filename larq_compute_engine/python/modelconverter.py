@@ -181,26 +181,46 @@ class ModelConverter:
             return None
 
         tflite_model = None
-        keras_result = "success"
+
+        result_log = []
+        result_summary = []
+
         if tf_2_or_newer():
-            session_result = "tensorflow 1.x only"
+            result_summary.append("Session method: Tensorflow 1.x only")
         else:
-            session_result = "success"
             try:
                 tflite_model = self.convert_sessionmethod()
+                result_summary.append("Session method: success")
             except Exception as e:
-                session_result = str(e)
+                result_log.append(f"Session method log:\n{str(e)}")
+                result_summary.append("Session method: failed")
 
         try:
-            tflite_model2 = self.convert_kerasmethod()
+            tflite_model2 = self.convert_kerasmethod(new_converter=True)
             if tflite_model is None:
                 tflite_model = tflite_model2
+            result_summary.append("MLIR method: success")
         except Exception as e:
-            keras_result = str(e)
+            result_log.append(f"MLIR method log:\n{str(e)}")
+            result_summary.append("MLIR method: failed")
 
-        print("Conversion result:")
-        print(f"Session method: {session_result}")
-        print(f"Keras method: {keras_result}")
+        try:
+            tflite_model3 = self.convert_kerasmethod(new_converter=False)
+            if tflite_model is None:
+                tflite_model = tflite_model3
+            result_summary.append("Keras method: success")
+        except Exception as e:
+            result_log.append(f"Keras method log:\n{str(e)}")
+            result_summary.append("Keras method: failed")
+
+        print("\n----------------\nConversion logs:")
+        for log in result_log:
+            print("----------------")
+            print(log)
+
+        print("----------------\nConversion summary:")
+        for log in result_summary:
+            print(log)
 
         if tflite_model is not None:
             if filename is not None:
@@ -244,7 +264,12 @@ class ModelConverter:
                 kernel_quantizer = l.kernel_quantizer
             except AttributeError:
                 pass
-            if kernel_quantizer is not None:
+            if kernel_quantizer is None:
+                # When its trained with Bop then it doesn't have kernel quantizers
+                # So for QuantConv2D just assume its a binary kernel
+                if isinstance(l, lq.layers.QuantConv2D):
+                    supported_kernel_quantizer = True
+            else:
                 name = lq.quantizers.serialize(kernel_quantizer)
                 if isinstance(name, dict):
                     name = name["class_name"]
@@ -297,7 +322,7 @@ class ModelConverter:
 
         return result
 
-    def convert_kerasmethod(self):
+    def convert_kerasmethod(self, new_converter=False):
         """Conversion through the 'Keras method'
 
         This method works with many normal models. When adding a single Lambda layer, such as `tf.keras.layers.Lambda(tf.sign)` or with a custom op, then it still works.
@@ -310,6 +335,9 @@ class ModelConverter:
             tf.keras.models.save_model(self.model, keras_file)
             converter = tf.lite.TFLiteConverter.from_keras_model_file(keras_file)
         converter.allow_custom_ops = True
+        if new_converter:
+            converter.experimental_enable_mlir_converter = True
+            converter.experimental_new_converter = True
         return converter.convert()
 
     def convert_sessionmethod(self):
