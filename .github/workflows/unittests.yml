@@ -85,6 +85,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
+      - name: Fix sources # Docker image contains outdated 404ed source
+        run: rm /etc/apt/sources.list.d/jonathonf-ubuntu-python-3_6-xenial.list
       - name: Install qemu-user
         run: apt-get update && apt-get install -y qemu-user
       - name: Configure Bazel
