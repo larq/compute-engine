@@ -17,7 +17,7 @@ def AllConv(features, kernel_size, stride):
         weights_ohwi = np.moveaxis(weights, 3, 0)
         strides = [1, stride, stride, 1]
         name = f"{in_features}-{features}-{kernel_size}-{stride}"
-        out_ohwi = lqce.bconv2d32(
+        out_ohwi = lqce.bconv2d(
             x,
             weights_ohwi,
             strides,

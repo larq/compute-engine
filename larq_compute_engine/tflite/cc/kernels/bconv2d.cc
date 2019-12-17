@@ -537,7 +537,6 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
 
 }  // namespace bconv2d
 
-
 // TfLiteRegistration* Register_BCONV_2D8_REF() {
 //   static TfLiteRegistration r = {
 //       bconv2d::Init, bconv2d::Free,

@@ -91,22 +91,6 @@ cc_library(
 )
 
 cc_library(
-    name = "kernel_arm",
-    srcs = [
-        # "kernel_arm32.cc",
-        "kernel_arm64.cc",
-    ],
-    copts = ruy_copts_base(),
-    deps = [
-        # ":common",
-        # ":kernel_common",
-        # ":opt_set",
-        # ":platform",
-        "@gemmlowp//:profiler",
-    ],
-)
-
-cc_library(
     name = "bconv2d",
     srcs = ["cc/kernels/bconv2d.cc"],
     hdrs = ["cc/kernels/utils.h"],

@@ -35,9 +35,10 @@ struct BgemmKernel<ruy::Path::kNeon, std::uint32_t, std::uint32_t, float,
            const BasicSpec<std::int32_t /* accum. scalar */, float>& spec,
            int start_row, int start_col, int end_row, int end_col,
            ruy::Matrix<float>* dst) const {
-    BinaryKernelParams32BP<LhsLayout::kCols, RhsLayout::kCols> params;
-    MakeBinaryKernelParams32BP(lhs, rhs, spec, start_row, start_col, end_row,
-                               end_col, dst, &params);
+    BinaryKernelParams<LhsLayout::kCols, RhsLayout::kCols, std::uint32_t>
+        params;
+    MakeBinaryKernelParams(lhs, rhs, spec, start_row, start_col, end_row,
+                           end_col, dst, &params);
     BinaryKernelNeonOutOfOrder32BP4x4(params);
   }
 };
@@ -55,9 +56,10 @@ struct BgemmKernel<ruy::Path::kNeon, std::uint64_t, std::uint64_t, float,
            const BasicSpec<std::int32_t /* accum. scalar */, float>& spec,
            int start_row, int start_col, int end_row, int end_col,
            ruy::Matrix<float>* dst) const {
-    BinaryKernelParams64BP<LhsLayout::kCols, RhsLayout::kCols> params;
-    MakeBinaryKernelParams64BP(lhs, rhs, spec, start_row, start_col, end_row,
-                               end_col, dst, &params);
+    BinaryKernelParams<LhsLayout::kCols, RhsLayout::kCols, std::uint64_t>
+        params;
+    MakeBinaryKernelParams(lhs, rhs, spec, start_row, start_col, end_row,
+                           end_col, dst, &params);
     BinaryKernelNeonOutOfOrder64BP4x4(params);
   }
 };

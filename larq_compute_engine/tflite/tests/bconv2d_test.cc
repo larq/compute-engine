@@ -320,7 +320,6 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   auto rand_generator = [&list]() {
     const int index = rand() % list.size();
     return list[index];
-    // return 1.0;
   };
 
   std::generate(std::begin(input_data), std::end(input_data), rand_generator);
@@ -368,20 +367,20 @@ INSTANTIATE_TEST_SUITE_P(
     BConv2DTests, BConv2DOpTest,
     // WARNING: ::testing::Combine accepts max 10 arguments!!!
     ::testing::Combine(
-         ::testing::Values(1),  // batches
-         ::testing::Values(std::array<int, 2>{7, 7},
-                           std::array<int, 2>{24, 24}),  // input height/width
-         ::testing::Values(1, 64, 130),                  // input depth
-         ::testing::Values(std::array<int, 2>{3, 3}, std::array<int, 2>{5, 6},
-                           std::array<int, 2>{7, 7}),  // filter height/width
-         ::testing::Values(1, 4, 64),                      // filter count
-         ::testing::Values(std::array<int, 2>{1, 1}),  // strides height/width
-         ::testing::Values(std::array<int, 2>{1, 1}),  // dilation height/width
-         ::testing::Values(Padding_VALID),             // padding
-         ::testing::Values(1, 2),                         // number of threads
-         ::testing::ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
+        ::testing::Values(1),  // batches
+        ::testing::Values(std::array<int, 2>{7, 7},
+                          std::array<int, 2>{24, 24}),  // input height/width
+        ::testing::Values(1, 64, 130),                  // input depth
+        ::testing::Values(std::array<int, 2>{3, 3}, std::array<int, 2>{5, 6},
+                          std::array<int, 2>{7, 7}),  // filter height/width
+        ::testing::Values(1, 4, 64),                  // filter count
+        ::testing::Values(std::array<int, 2>{1, 1},
+                          std::array<int, 2>{2, 3}),  // strides height/width
+        ::testing::Values(std::array<int, 2>{1, 1}),  // dilation height/width
+        ::testing::Values(Padding_VALID),             // padding
+        ::testing::Values(1, 2),                      // number of threads
+        ::testing::ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
     TestParam::TestNameSuffix);
-
 }  // namespace testing
 }  // namespace tflite
 }  // namespace compute_engine

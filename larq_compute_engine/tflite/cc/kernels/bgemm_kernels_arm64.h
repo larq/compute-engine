@@ -64,17 +64,46 @@ void CheckOffsetsInKernelParams32BP(const Params&) {
   static_assert(offsetof(Params, flags) == RUY_OFFSET_FLAGS, "");
 }
 
-// This is very naive and first attempt on using the SIMD registers for BGEMM.
-// The following optimizations still need be implemented:
+// This is a very naive and first attempt on using the SIMD registers for BGEMM.
+// The following optimizations still need to be implemented:
 // 1. Using the entire register space which the architecture provides. This can
 // be achieved in to ways:
-// - 4x4 destination matrices with unrolling the depth loop
-// - 8x8 destination matrices but requires dymanic changing of temporary
-// registers in BMLA
+// - 4x4 destination matrices and unrolling the depth loop
+// - 8x8 destination matrices (requires dymanic changing of temporary
+// registers in BMLA)
 // 2. taking advantage of out-of-order cpu by dual dispatching the load/compute
 // instructions
+
+// clang-format off
+
+// The asm kernel below has the following NEON register allocation:
+//
+// v16 -- v31 are int32 accumulators.
+// During accumulation, v0 -- v3 are used to load data from LHS and
+// v4 -- v7 from RHS:
+//
+//                                      int32 RHS 4x4 block
+//                          /--------------------------------------\
+//                          |v4.s[0]         ...          v7.s[0]  |
+//                          |  ...                         ...     |
+//                          |v4.s[3]         ...          v7.s[3]  |
+//                          \--------------------------------------/
+//    int32 LHS 4x4 block
+//  /--------------------\  /--------------------------------------\
+//  |v0.s[0] ... v0.s[3] |  |v16.s[0]        ...         v22.s[0]  |
+//  |v1.s[0] ... v1.s[3] |  |v16.s[1]        ...         v22.s[1]  |
+//  |v2.s[0] ... v2.s[3] |  |v16.s[2]        ...         v22.s[2]  |
+//  |v3.s[0] ... v3.s[3] |  |v16.s[3]        ...         v22.s[3]  |
+//  \--------------------/  \--------------------------------------/
+//                                  int32 accumulators 4x4 block
+//
+// No attempt had been made so far at implementing the RUY_OPT_MAX_STREAMING
+// optimization for this kernel.
+
+// clang-format on
+
 void BinaryKernelNeonOutOfOrder32BP4x4(
-    const BinaryKernelParams32BP<4, 4>& params) {
+    const BinaryKernelParams<4, 4, std::uint32_t>& params) {
   CheckOffsetsInKernelParams32BP(params);
   gemmlowp::ScopedProfilingLabel label(
       "Binary Kernel (4x4) 32BP (kNeon, optimized for out-of-order cores)");
@@ -88,9 +117,6 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
   float* dst_ptr = dst_col_ptr;
   int row = params.start_row;
   int col = params.start_col;
-
-  // The asm kernel below has the following NEON register allocation:
-  // kernel layout TODO:
 
   asm volatile(
 #define RUY_MAKE_ZERO(reg) "dup " #reg ".4s, wzr\n"
@@ -108,27 +134,24 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "ldr w12, [%[params], #" RUY_STR(RUY_OFFSET_DEPTH) "]\n"
 
       // Load the first 64 bytes of LHS and RHS data.
-      "ld1 {v18.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v19.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v20.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v21.4s}, [%[lhs_ptr]], #16\n"
+      "ld1 {v0.4s}, [%[lhs_ptr]], #16\n"
+      "ld1 {v1.4s}, [%[lhs_ptr]], #16\n"
+      "ld1 {v2.4s}, [%[lhs_ptr]], #16\n"
+      "ld1 {v3.4s}, [%[lhs_ptr]], #16\n"
 
-      "ld1 {v12.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v13.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v14.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v15.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v4.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v5.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v6.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v7.4s}, [%[rhs_ptr]], #16\n"
 
       // Clear accumulators.
-      RUY_MAKE_ZERO(v0)
-      RUY_MAKE_ZERO(v2)
-      RUY_MAKE_ZERO(v4)
-      RUY_MAKE_ZERO(v6)
+      RUY_MAKE_ZERO(v16)
+      RUY_MAKE_ZERO(v18)
+      RUY_MAKE_ZERO(v20)
+      RUY_MAKE_ZERO(v22)
 
       // w1 is the number of levels of depth that we have already loaded
-      // LHS and RHS data for. Corresponding to the initial ld1 instructions
-      // above, this is currently 1.
-      // "mov w1, #1\n"
-      // the RHS is stored in col-wise. For 32-bit elements,
+      // LHS and RHS data for. The RHS is stored in col-wise. Therefore, for 32-bit elements,
       // one register can hold 4 levels of depth.
       "mov w1, #4\n"
 
@@ -136,39 +159,39 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       // destination matrix.
       "1:\n"
 
-      LCE_BMLA(v0, v12, v18, v19, v20, v21)
-      LCE_BMLA(v2, v13, v18, v19, v20, v21)
-      LCE_BMLA(v4, v14, v18, v19, v20, v21)
-      LCE_BMLA(v6, v15, v18, v19, v20, v21)
+      LCE_BMLA(v16, v4, v0, v1, v2, v3)
+      LCE_BMLA(v18, v5, v0, v1, v2, v3)
+      LCE_BMLA(v20, v6, v0, v1, v2, v3)
+      LCE_BMLA(v22, v7, v0, v1, v2, v3)
 
       // Accumulation loop
       "cmp w1, w12\n"
       "beq 79f\n"
 
       "2:\n"
-      "ld1 {v18.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v19.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v20.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v21.4s}, [%[lhs_ptr]], #16\n"
+      "ld1 {v0.4s}, [%[lhs_ptr]], #16\n"
+      "ld1 {v1.4s}, [%[lhs_ptr]], #16\n"
+      "ld1 {v2.4s}, [%[lhs_ptr]], #16\n"
+      "ld1 {v3.4s}, [%[lhs_ptr]], #16\n"
 
-      "ld1 {v12.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v13.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v14.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v15.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v4.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v5.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v6.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v7.4s}, [%[rhs_ptr]], #16\n"
 
       "add w1, w1, #4\n"
       "cmp w1, w12\n"
 
-      LCE_BMLA(v0, v12, v18, v19, v20, v21)
-      LCE_BMLA(v2, v13, v18, v19, v20, v21)
-      LCE_BMLA(v4, v14, v18, v19, v20, v21)
-      LCE_BMLA(v6, v15, v18, v19, v20, v21)
+      LCE_BMLA(v16, v4, v0, v1, v2, v3)
+      LCE_BMLA(v18, v5, v0, v1, v2, v3)
+      LCE_BMLA(v20, v6, v0, v1, v2, v3)
+      LCE_BMLA(v22, v7, v0, v1, v2, v3)
 
       "blt 2b\n"
 
       "79:\n"
 
-      // End of accumulation. The registers v0 -- v11 contain the final
+      // End of accumulation. The registers v16 -- v22 contain the final
       // int32 accumulator values of the current 4x4 destination block.
 
       // Logic to advance to the next block in preparation for the next
@@ -216,17 +239,17 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
 
       // Now that we know what LHS and RHS data the next iteration of the
       // main loop will need to load, we start loading the first 64 bytes of
-      // each of LHS and RHS, into v18 -- v21 and v12 -- v15 as we don't need
+      // each of LHS and RHS, into v0 -- v3 and v4 -- v7 as we don't need
       // them anymore in the rest of the work on the current block.
-      "ld1 {v18.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v19.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v20.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v21.4s}, [%[lhs_ptr]], #16\n"
+      "ld1 {v0.4s}, [%[lhs_ptr]], #16\n"
+      "ld1 {v1.4s}, [%[lhs_ptr]], #16\n"
+      "ld1 {v2.4s}, [%[lhs_ptr]], #16\n"
+      "ld1 {v3.4s}, [%[lhs_ptr]], #16\n"
 
-      "ld1 {v12.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v13.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v14.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v15.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v4.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v5.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v6.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v7.4s}, [%[rhs_ptr]], #16\n"
 
       // Compute how much of the 4x4 block of destination values that
       // we have computed, fit in the destination matrix. Typically, all of
@@ -261,25 +284,25 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "31:\n"
 
       // convert to single precision float before storing the NEON registers
-      "ucvtf v0.4s, v0.4s\n"
-      "ucvtf v2.4s, v2.4s\n"
-      "ucvtf v4.4s, v4.4s\n"
-      "ucvtf v6.4s, v6.4s\n"
+      "ucvtf v16.4s, v16.4s\n"
+      "ucvtf v18.4s, v18.4s\n"
+      "ucvtf v20.4s, v20.4s\n"
+      "ucvtf v22.4s, v22.4s\n"
 
       // Write our values to the destination described by
       // (x3 address, x4 stride).
-      "str q0, [x3, #0]\n"
+      "str q16, [x3, #0]\n"
       "add x3, x3, x4\n"
-      "str q2, [x3, #0]\n"
+      "str q18, [x3, #0]\n"
       "add x3, x3, x4\n"
-      RUY_MAKE_ZERO(v0)
-      RUY_MAKE_ZERO(v2)
-      "str q4, [x3, #0]\n"
+      RUY_MAKE_ZERO(v16)
+      RUY_MAKE_ZERO(v18)
+      "str q20, [x3, #0]\n"
       "add x3, x3, x4\n"
-      "str q6, [x3, #0]\n"
+      "str q22, [x3, #0]\n"
       "add x3, x3, x4\n"
-      RUY_MAKE_ZERO(v4)
-      RUY_MAKE_ZERO(v6)
+      RUY_MAKE_ZERO(v20)
+      RUY_MAKE_ZERO(v22)
 
       // If all of the 4x4 block fits, we just finished writing it to the
       // destination, so we skip the next part.
@@ -406,16 +429,44 @@ void CheckOffsetsInKernelParams64BP(const Params&) {
 }
 
 // This is a very naive and first attempt on using the SIMD registers for BGEMM.
-// The following optimizations still need be implemented:
+// The following optimizations still need to be implemented:
 // 1. Using the entire register space which the architecture provides. This can
-// be achieved in to ways:
-// - 4x4 destination matrices with unrolling the depth loop
-// - 8x8 destination matrices but requires dymanic changing of temporary
-// registers in BMLA
+// be achieved in two ways:
+// - 4x4 destination matrix with unrolling the depth loop
+// - 8x8 destination matrix (requires dymanic changing of temporary
+// registers in BMLA)
 // 2. taking advantage of out-of-order cpu by dual dispatching the load/compute
 // instructions
+
+// clang-format off
+
+// The asm kernel below has the following NEON register allocation:
+//
+// v16 -- v31 are int32 accumulators.
+// During accumulation, v0 -- v3 are used to load data from LHS and
+// v4 -- v7 from RHS:
+//
+//                                      int32 RHS 2x4 block
+//                          /--------------------------------------\
+//                          |v4.d[0]         ...          v7.d[0]  |
+//                          |v4.d[1]         ...          v7.d[1]  |
+//                          \--------------------------------------/
+//    int32 LHS 4x2 block
+//      /----------------\  /--------------------------------------\
+//      |v0.d[0] v0.d[1] |  |v16.s[0]        ...         v22.s[0]  |
+//      |v1.d[0] v1.d[1] |  |v16.s[1]        ...         v22.s[1]  |
+//      |v2.d[0] v2.d[1] |  |v16.s[2]        ...         v22.s[2]  |
+//      |v3.d[0] v3.d[1] |  |v16.s[3]        ...         v22.s[3]  |
+//      \----------------/  \--------------------------------------/
+//                                  int32 accumulators 4x4 block
+//
+// No attempt had been made so far at implementing the RUY_OPT_MAX_STREAMING
+// optimization for this kernel.
+
+// clang-format on
+
 void BinaryKernelNeonOutOfOrder64BP4x4(
-    const BinaryKernelParams64BP<4, 4>& params) {
+    const BinaryKernelParams<4, 4, std::uint64_t>& params) {
   CheckOffsetsInKernelParams64BP(params);
   gemmlowp::ScopedProfilingLabel label(
       "Binary Kernel (4x4) 64BP (kNeon, optimized for out-of-order cores)");
@@ -429,9 +480,6 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
   float* dst_ptr = dst_col_ptr;
   int row = params.start_row;
   int col = params.start_col;
-
-  // The asm kernel below has the following NEON register allocation:
-  // kernel layout TODO:
 
   asm volatile(
 #define RUY_MAKE_ZERO(reg) "dup " #reg ".4s, wzr\n"
@@ -449,67 +497,65 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "ldr w12, [%[params], #" RUY_STR(RUY_OFFSET_DEPTH) "]\n"
 
       // Load the first 64 bytes of LHS and RHS data.
-      "ld1 {v18.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v19.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v20.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v21.2d}, [%[lhs_ptr]], #16\n"
+      "ld1 {v0.2d}, [%[lhs_ptr]], #16\n"
+      "ld1 {v1.2d}, [%[lhs_ptr]], #16\n"
+      "ld1 {v2.2d}, [%[lhs_ptr]], #16\n"
+      "ld1 {v3.2d}, [%[lhs_ptr]], #16\n"
 
-      "ld1 {v12.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v13.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v14.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v15.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v4.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v5.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v6.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v7.2d}, [%[rhs_ptr]], #16\n"
 
       // Clear accumulators.
-      RUY_MAKE_ZERO(v0)
-      RUY_MAKE_ZERO(v2)
-      RUY_MAKE_ZERO(v4)
-      RUY_MAKE_ZERO(v6)
+      RUY_MAKE_ZERO(v16)
+      RUY_MAKE_ZERO(v18)
+      RUY_MAKE_ZERO(v20)
+      RUY_MAKE_ZERO(v22)
 
       // w1 is the number of levels of depth that we have already loaded
-      // LHS and RHS data for. Corresponding to the initial ld1 instructions
-      // above, this is currently 1.
-      // "mov w1, #1\n"
-      // the RHS is stored in col-wise. For 64-bit elements,
-      // one register can hold 4 levels of depth.
+      // LHS and RHS data for.
+      // The RHS is stored in col-wise. Therefore, for 64-bit elements,
+      // one register can hold 2 levels of depth.
       "mov w1, #2\n"
 
       // Main loop of the whole GEMM, over rows and columns of the
       // destination matrix.
       "1:\n"
 
-      LCE_BMLA(v0, v12, v18, v19, v20, v21)
-      LCE_BMLA(v2, v13, v18, v19, v20, v21)
-      LCE_BMLA(v4, v14, v18, v19, v20, v21)
-      LCE_BMLA(v6, v15, v18, v19, v20, v21)
+      LCE_BMLA(v16, v4, v0, v1, v2, v3)
+      LCE_BMLA(v18, v5, v0, v1, v2, v3)
+      LCE_BMLA(v20, v6, v0, v1, v2, v3)
+      LCE_BMLA(v22, v7, v0, v1, v2, v3)
 
       // Accumulation loop
       "cmp w1, w12\n"
       "beq 79f\n"
 
       "2:\n"
-      "ld1 {v18.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v19.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v20.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v21.2d}, [%[lhs_ptr]], #16\n"
+      "ld1 {v0.2d}, [%[lhs_ptr]], #16\n"
+      "ld1 {v1.2d}, [%[lhs_ptr]], #16\n"
+      "ld1 {v2.2d}, [%[lhs_ptr]], #16\n"
+      "ld1 {v3.2d}, [%[lhs_ptr]], #16\n"
 
-      "ld1 {v12.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v13.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v14.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v15.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v4.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v5.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v6.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v7.2d}, [%[rhs_ptr]], #16\n"
 
       "add w1, w1, #2\n"
       "cmp w1, w12\n"
 
-      LCE_BMLA(v0, v12, v18, v19, v20, v21)
-      LCE_BMLA(v2, v13, v18, v19, v20, v21)
-      LCE_BMLA(v4, v14, v18, v19, v20, v21)
-      LCE_BMLA(v6, v15, v18, v19, v20, v21)
+      LCE_BMLA(v16, v4, v0, v1, v2, v3)
+      LCE_BMLA(v18, v5, v0, v1, v2, v3)
+      LCE_BMLA(v20, v6, v0, v1, v2, v3)
+      LCE_BMLA(v22, v7, v0, v1, v2, v3)
 
       "blt 2b\n"
 
       "79:\n"
 
-      // End of accumulation. The registers v0 -- v11 contain the final
+      // End of accumulation. The registers v16 -- v22 contain the final
       // int32 accumulator values of the current 4x4 destination block.
 
       // Logic to advance to the next block in preparation for the next
@@ -557,17 +603,17 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
 
       // Now that we know what LHS and RHS data the next iteration of the
       // main loop will need to load, we start loading the first 64 bytes of
-      // each of LHS and RHS, into v18 -- v21 and v12 -- v15 as we don't need
+      // each of LHS and RHS, into v0 -- v3 and v4 -- v7 as we don't need
       // them anymore in the rest of the work on the current block.
-      "ld1 {v18.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v19.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v20.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v21.2d}, [%[lhs_ptr]], #16\n"
+      "ld1 {v0.2d}, [%[lhs_ptr]], #16\n"
+      "ld1 {v1.2d}, [%[lhs_ptr]], #16\n"
+      "ld1 {v2.2d}, [%[lhs_ptr]], #16\n"
+      "ld1 {v3.2d}, [%[lhs_ptr]], #16\n"
 
-      "ld1 {v12.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v13.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v14.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v15.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v4.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v5.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v6.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v7.2d}, [%[rhs_ptr]], #16\n"
 
       // Compute how much of the 4x4 block of destination values that
       // we have computed, fit in the destination matrix. Typically, all of
@@ -602,25 +648,25 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "31:\n"
 
       // convert to single precision float before storing the NEON registers
-      "ucvtf v0.4s, v0.4s\n"
-      "ucvtf v2.4s, v2.4s\n"
-      "ucvtf v4.4s, v4.4s\n"
-      "ucvtf v6.4s, v6.4s\n"
+      "ucvtf v16.4s, v16.4s\n"
+      "ucvtf v18.4s, v18.4s\n"
+      "ucvtf v20.4s, v20.4s\n"
+      "ucvtf v22.4s, v22.4s\n"
 
       // Write our values to the destination described by
       // (x3 address, x4 stride).
-      "str q0, [x3, #0]\n"
+      "str q16, [x3, #0]\n"
       "add x3, x3, x4\n"
-      "str q2, [x3, #0]\n"
+      "str q18, [x3, #0]\n"
       "add x3, x3, x4\n"
-      RUY_MAKE_ZERO(v0)
-      RUY_MAKE_ZERO(v2)
-      "str q4, [x3, #0]\n"
+      RUY_MAKE_ZERO(v16)
+      RUY_MAKE_ZERO(v18)
+      "str q20, [x3, #0]\n"
       "add x3, x3, x4\n"
-      "str q6, [x3, #0]\n"
+      "str q22, [x3, #0]\n"
       "add x3, x3, x4\n"
-      RUY_MAKE_ZERO(v4)
-      RUY_MAKE_ZERO(v6)
+      RUY_MAKE_ZERO(v20)
+      RUY_MAKE_ZERO(v22)
 
       // If all of the 4x4 block fits, we just finished writing it to the
       // destination, so we skip the next part.
