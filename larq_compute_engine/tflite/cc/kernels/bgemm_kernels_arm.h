@@ -35,8 +35,6 @@ struct BgemmKernel<ruy::Path::kNeon, std::uint32_t, std::uint32_t, float,
            const BasicSpec<std::int32_t /* accum. scalar */, float>& spec,
            int start_row, int start_col, int end_row, int end_col,
            ruy::Matrix<float>* dst) const {
-    // std::cout << "Binary Kernel (4x4) 32BP (kNeon, optimized for out-of-order
-    // cores)" << std::endl;
     BinaryKernelParams32BP<LhsLayout::kCols, RhsLayout::kCols> params;
     MakeBinaryKernelParams32BP(lhs, rhs, spec, start_row, start_col, end_row,
                                end_col, dst, &params);
@@ -44,27 +42,25 @@ struct BgemmKernel<ruy::Path::kNeon, std::uint32_t, std::uint32_t, float,
   }
 };
 
-// // specialized kernel for 64-bit bitpacking, float output and 32-bit
-// accumulator template <> struct BgemmKernel<ruy::Path::kNeon, std::uint64_t,
-// std::uint64_t, float,
-//                    BasicSpec<std::int32_t, float>> {
-//   Tuning tuning = Tuning::kAuto;
-//   // TODO: whats the best kernel layout for ARM64 and int{8|32|64} data
-//   types? using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>; using
-//   RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>; explicit
-//   BgemmKernel(Tuning tuning_) : tuning(tuning_) {} void Run(const
-//   ruy::PackedMatrix<std::uint64_t>& lhs,
-//            const ruy::PackedMatrix<std::uint64_t>& rhs,
-//            const BasicSpec<std::int32_t/* accum. scalar */, float>& spec, int
-//            start_row, int start_col, int end_row, int end_col,
-//            ruy::Matrix<float>* dst) const {
-//     std::cout << "RUNNING 64-bit bitpadding kernel" << std::endl;
-//     BinaryKernelParams64BP<LhsLayout::kCols, RhsLayout::kCols> params;
-//     MakeBinaryKernelParams64BP(lhs, rhs, spec, start_row, start_col, end_row,
-//                              end_col, dst, &params);
-//     BinaryKernelNeonOutOfOrder64BP(params);
-//   }
-// };
+// specialized kernel for 64-bit bitpacking, float output and 32-bit accumulator
+template <>
+struct BgemmKernel<ruy::Path::kNeon, std::uint64_t, std::uint64_t, float,
+                   BasicSpec<std::int32_t, float>> {
+  Tuning tuning = Tuning::kAuto;
+  using LhsLayout = FixedKernelLayout<Order::kColMajor, 2, 4>;
+  using RhsLayout = FixedKernelLayout<Order::kColMajor, 2, 4>;
+  explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
+  void Run(const ruy::PackedMatrix<std::uint64_t>& lhs,
+           const ruy::PackedMatrix<std::uint64_t>& rhs,
+           const BasicSpec<std::int32_t /* accum. scalar */, float>& spec,
+           int start_row, int start_col, int end_row, int end_col,
+           ruy::Matrix<float>* dst) const {
+    BinaryKernelParams64BP<LhsLayout::kCols, RhsLayout::kCols> params;
+    MakeBinaryKernelParams64BP(lhs, rhs, spec, start_row, start_col, end_row,
+                               end_col, dst, &params);
+    BinaryKernelNeonOutOfOrder64BP4x4(params);
+  }
+};
 
 #endif
 

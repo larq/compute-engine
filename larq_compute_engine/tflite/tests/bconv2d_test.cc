@@ -101,7 +101,7 @@ namespace tflite {
 
 // TfLiteRegistration* Register_BCONV_2D8();
 TfLiteRegistration* Register_BCONV_2D32();
-// TfLiteRegistration* Register_BCONV_2D64();
+TfLiteRegistration* Register_BCONV_2D64();
 
 namespace testing {
 
@@ -243,7 +243,7 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
 const auto kKernelMap = new std::map<string, register_function>({
     // {"BConv2D8", compute_engine::tflite::Register_BCONV_2D8},
     {"BConv2D32", compute_engine::tflite::Register_BCONV_2D32},
-    // {"BConv2D64", compute_engine::tflite::Register_BCONV_2D64},
+    {"BConv2D64", compute_engine::tflite::Register_BCONV_2D64},
 });
 
 class BConv2DOpTest : public ::testing::TestWithParam<TestParamTuple> {
@@ -269,8 +269,6 @@ class BConv2DOpTest : public ::testing::TestWithParam<TestParamTuple> {
   static std::vector<std::pair<std::string, register_function>>
   GetKernelsTuples(const std::map<string, register_function>& kernel_map) {
     std::vector<std::pair<std::string, register_function>> regs;
-    return {{"BConv2D32", compute_engine::tflite::Register_BCONV_2D32}};
-    // return {{"BConv2D64", compute_engine::tflite::Register_BCONV_2D64}};
     for (const auto& it : kernel_map) {
       regs.push_back(it);
     }
@@ -380,7 +378,7 @@ INSTANTIATE_TEST_SUITE_P(
          ::testing::Values(std::array<int, 2>{1, 1}),  // strides height/width
          ::testing::Values(std::array<int, 2>{1, 1}),  // dilation height/width
          ::testing::Values(Padding_VALID),             // padding
-         ::testing::Values(1),                         // number of threads
+         ::testing::Values(1, 2),                         // number of threads
          ::testing::ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
     TestParam::TestNameSuffix);
 
