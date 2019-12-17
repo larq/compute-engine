@@ -72,6 +72,7 @@ cc_library(
 cc_library(
     name = "bconv2d",
     srcs = ["cc/kernels/bconv2d.cc"],
+    hdrs = ["cc/kernels/utils.h"],
     deps = [
         ":bconv2d_impl",
         "@org_tensorflow//tensorflow/lite:framework",
