@@ -28,8 +28,10 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
   const int dilation_width_factor = params.dilation_width_factor;
   const int dilation_height_factor = params.dilation_height_factor;
 
-  // NB: the float 0.0f value is represented by all zero bytes.
-  const uint8 zero_byte = 0x00;
+  // bitpack before im2col: we want to write floats that are <0 so they become 0
+  // bitpack after im2col: we want to write bytes that are 0
+  const uint8 zero_byte = (std::is_same<T, float>::value) ? 0xff : 0x00;
+
   const int filter_height = filter_shape.Dims(1);
   const int filter_width = filter_shape.Dims(2);
 

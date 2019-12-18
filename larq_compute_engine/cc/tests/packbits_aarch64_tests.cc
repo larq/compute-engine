@@ -20,9 +20,11 @@ void test_bitpacking() {
   // We will simply check if every input gets mapped uniquely to one bit
   float input[n];
   uint64_t output[n / 64];
-  int mapping[n];
+  int mapping_in2out[n];
+  int mapping_out2in[n];
   for (auto i = 0; i < n; ++i) {
-    mapping[i] = -1;
+    mapping_in2out[i] = -1;
+    mapping_out2in[i] = -1;
   }
   for (auto i = 0; i < n; ++i) {
     // Try to get the position of bit i by packing the one-hot vector e_i
@@ -48,7 +50,10 @@ void test_bitpacking() {
     // We should have exactly one enabled bit
     EXPECT_EQ(bits_found, 1);
     // This location should *not* have been used already
-    EXPECT_EQ(mapping[bit_index], -1);
+    EXPECT_EQ(mapping_in2out[i], -1);
+    EXPECT_EQ(mapping_out2in[bit_index], -1);
+    mapping_in2out[i] = bit_index;
+    mapping_out2in[bit_index] = i;
   }
 }
 

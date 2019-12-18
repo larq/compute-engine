@@ -368,9 +368,9 @@ INSTANTIATE_TEST_SUITE_P(
     // WARNING: ::testing::Combine accepts max 10 arguments!!!
     ::testing::Combine(
         ::testing::Values(1),  // batches
-        ::testing::Values(std::array<int, 2>{11, 11},
-                          std::array<int, 2>{15, 12}),  // input height/width
-        ::testing::Values(1, 64, 130),                  // input depth
+        ::testing::Values(std::array<int, 2>{7, 7},
+                          std::array<int, 2>{8, 5}),  // input height/width
+        ::testing::Values(1, 64, 130),                // input depth
         ::testing::Values(std::array<int, 2>{1, 1}, std::array<int, 2>{3, 3},
                           std::array<int, 2>{2, 3}),  // filter height/width
         ::testing::Values(1, 4, 64),                  // filter count
@@ -378,8 +378,8 @@ INSTANTIATE_TEST_SUITE_P(
                           std::array<int, 2>{2, 3}),  // strides height/width
         ::testing::Values(std::array<int, 2>{1, 1},
                           std::array<int, 2>{3, 2}),  // dilation height/width
-        ::testing::Values(Padding_VALID),             // padding
-        ::testing::Values(1, 2),                      // number of threads
+        ::testing::Values(Padding_VALID, Padding_SAME),  // padding
+        ::testing::Values(1, 2),                         // number of threads
         ::testing::ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
     TestParam::TestNameSuffix);
 }  // namespace testing
