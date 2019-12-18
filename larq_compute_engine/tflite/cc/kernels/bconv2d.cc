@@ -537,13 +537,13 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
 
 }  // namespace bconv2d
 
-TfLiteRegistration* Register_BCONV_2D8_REF() {
-  static TfLiteRegistration r = {
-      bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kReference, 8>,
-      bconv2d::Eval<bconv2d::KernelType::kReference, std::uint8_t>};
-  return &r;
-}
+// TfLiteRegistration* Register_BCONV_2D8_REF() {
+//   static TfLiteRegistration r = {
+//       bconv2d::Init, bconv2d::Free,
+//       bconv2d::Prepare<bconv2d::KernelType::kReference, 8>,
+//       bconv2d::Eval<bconv2d::KernelType::kReference, std::uint8_t>};
+//   return &r;
+// }
 
 TfLiteRegistration* Register_BCONV_2D32_REF() {
   static TfLiteRegistration r = {
@@ -561,13 +561,13 @@ TfLiteRegistration* Register_BCONV_2D64_REF() {
   return &r;
 }
 
-TfLiteRegistration* Register_BCONV_2D8_OPT() {
-  static TfLiteRegistration r = {
-      bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized, 8>,
-      bconv2d::Eval<bconv2d::KernelType::kGenericOptimized, std::uint8_t>};
-  return &r;
-}
+// TfLiteRegistration* Register_BCONV_2D8_OPT() {
+//   static TfLiteRegistration r = {
+//       bconv2d::Init, bconv2d::Free,
+//       bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized, 8>,
+//       bconv2d::Eval<bconv2d::KernelType::kGenericOptimized, std::uint8_t>};
+//   return &r;
+// }
 
 TfLiteRegistration* Register_BCONV_2D32_OPT() {
   static TfLiteRegistration r = {
@@ -586,13 +586,13 @@ TfLiteRegistration* Register_BCONV_2D64_OPT() {
 }
 
 // use these registration wrappers to decide which impl. to use.
-TfLiteRegistration* Register_BCONV_2D8() {
-#if defined TFLITE_WITH_RUY
-  return Register_BCONV_2D8_OPT();
-#else
-  return Register_BCONV_2D8_REF();
-#endif
-}
+// TfLiteRegistration* Register_BCONV_2D8() {
+// #if defined TFLITE_WITH_RUY
+//   return Register_BCONV_2D8_OPT();
+// #else
+//   return Register_BCONV_2D8_REF();
+// #endif
+// }
 
 TfLiteRegistration* Register_BCONV_2D32() {
 #if defined TFLITE_WITH_RUY

@@ -77,9 +77,12 @@ struct BGemmImplUsingRuy {
     // TODO: this needs to be modified as soon as architecture-specific
     // optimized kernels are added.
 #if RUY_PLATFORM(ARM)
-    if (bgemm_runtime_path == ruy::Path::kNeon ||
-        bgemm_runtime_path == ruy::Path::kNeonDotprod)
-      bgemm_runtime_path = ruy::Path::kStandardCpp;
+    if (bgemm_runtime_path == ruy::Path::kNeonDotprod)
+      bgemm_runtime_path = ruy::Path::kNeon;
+#if RUY_PLATFORM(NEON_32)
+    // 32-bit NEON optimized code is not available yet
+    bgemm_runtime_path = ruy::Path::kStandardCpp;
+#endif
 #elif RUY_PLATFORM(X86)
     if (bgemm_runtime_path == ruy::Path::kAvx2 ||
         bgemm_runtime_path == ruy::Path::kAvx512)

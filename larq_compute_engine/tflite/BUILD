@@ -1,4 +1,6 @@
 load("@org_tensorflow//tensorflow/lite:build_def.bzl", "tflite_linkopts")
+load(":build_defs.bzl", "ruy_copts_base")
+
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],  # Apache 2.0
@@ -17,6 +19,24 @@ cc_library(
 )
 
 cc_library(
+    name = "bgemm_kernels_common",
+    hdrs = [
+        "cc/kernels/bgemm_kernels_common.h",
+    ],
+)
+
+cc_library(
+    name = "bgemm_kernels_arm",
+    hdrs = [
+        "cc/kernels/bgemm_kernels_arm.h",
+        "cc/kernels/bgemm_kernels_arm64.h",
+    ],
+    deps = [
+        ":bgemm_kernels_common"
+    ]
+)
+
+cc_library(
     name = "bgemm_kernels_ruy",
     hdrs = [
         "cc/kernels/bgemm_kernels_arm.h",
@@ -25,6 +45,7 @@ cc_library(
     ],
     deps = [
         "//larq_compute_engine:bgemm",
+        ":bgemm_kernels_arm"
     ]
 )
 

@@ -99,7 +99,7 @@ using namespace tflite;
 namespace compute_engine {
 namespace tflite {
 
-TfLiteRegistration* Register_BCONV_2D8();
+// TfLiteRegistration* Register_BCONV_2D8();
 TfLiteRegistration* Register_BCONV_2D32();
 TfLiteRegistration* Register_BCONV_2D64();
 
@@ -184,7 +184,7 @@ struct TestParam {
   int num_threads = 1;
 
   std::string kernel_name = "Unknown";
-  register_function registration = compute_engine::tflite::Register_BCONV_2D8;
+  register_function registration = compute_engine::tflite::Register_BCONV_2D32;
 };
 
 class BaseBConv2DOpModel : public SingleOpModel {
@@ -241,7 +241,7 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
 };
 
 const auto kKernelMap = new std::map<string, register_function>({
-    {"BConv2D8", compute_engine::tflite::Register_BCONV_2D8},
+    // {"BConv2D8", compute_engine::tflite::Register_BCONV_2D8},
     {"BConv2D32", compute_engine::tflite::Register_BCONV_2D32},
     {"BConv2D64", compute_engine::tflite::Register_BCONV_2D64},
 });
@@ -367,16 +367,17 @@ INSTANTIATE_TEST_SUITE_P(
     BConv2DTests, BConv2DOpTest,
     // WARNING: ::testing::Combine accepts max 10 arguments!!!
     ::testing::Combine(
-        ::testing::Values(1),                           // batches
-        ::testing::Values(std::array<int, 2>{10, 10}),  // input height/width
+        ::testing::Values(1),  // batches
+        ::testing::Values(std::array<int, 2>{11, 11},
+                          std::array<int, 2>{15, 12}),  // input height/width
         ::testing::Values(1, 64, 130),                  // input depth
-        ::testing::Values(std::array<int, 2>{2, 2},
-                          std::array<int, 2>{3, 3}),  // filter height/width
-        ::testing::Values(1, 64),                     // filter count
+        ::testing::Values(std::array<int, 2>{1, 1}, std::array<int, 2>{3, 3},
+                          std::array<int, 2>{2, 3}),  // filter height/width
+        ::testing::Values(1, 4, 64),                  // filter count
         ::testing::Values(std::array<int, 2>{1, 1},
                           std::array<int, 2>{2, 3}),  // strides height/width
         ::testing::Values(std::array<int, 2>{1, 1},
-                          std::array<int, 2>{2, 3}),  // dilation height/width
+                          std::array<int, 2>{3, 2}),  // dilation height/width
         ::testing::Values(Padding_VALID),             // padding
         ::testing::Values(1, 2),                      // number of threads
         ::testing::ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
