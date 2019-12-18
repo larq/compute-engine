@@ -80,8 +80,8 @@ typedef struct {
 
 } TfLiteBConv2DParams;
 
-void decide_bitpack_before_im2col(TfLiteBConv2DParams* conv_params,
-                                  int bitwidth) {
+inline void decide_bitpack_before_im2col(TfLiteBConv2DParams* conv_params,
+                                         const int bitwidth) {
   if (conv_params->channels_in >= bitwidth / 4) {
     conv_params->bitpack_before_im2col = true;
   } else {
@@ -138,7 +138,7 @@ void Free(TfLiteContext* context, void* buffer) {
   delete reinterpret_cast<TfLiteBConv2DParams*>(buffer);
 }
 
-TfLiteStatus Prepare(KernelType kernel_type, int bitwidth,
+TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
                      TfLiteContext* context, TfLiteNode* node) {
   auto* conv_params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
 
