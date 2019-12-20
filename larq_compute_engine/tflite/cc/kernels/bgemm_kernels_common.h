@@ -27,7 +27,7 @@ struct BinaryKernelParams {
   std::uint32_t clamp_max;
   std::uint8_t flags;
   const T zero_data[LhsCols] = {0};
-  T dst_tmp_buf[LhsCols * RhsCols];
+  float dst_tmp_buf[LhsCols * RhsCols];
 };
 
 template <int LhsCols, int RhsCols, class T>
