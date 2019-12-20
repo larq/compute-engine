@@ -293,15 +293,22 @@ inline void pack_bitfield(const float* in, std::uint64_t* out) {
 #endif
 
 template <class TIn, class TOut>
-inline void packbits_array(const TIn* input_array, const std::size_t n,
+inline void packbits_array(const TIn* input_array, std::size_t n,
                            TOut* bitpacked_array) {
   constexpr size_t bitwidth = std::numeric_limits<TOut>::digits;
 
-  int num_packed_elems = n / bitwidth;
-  int elements_left = n - bitwidth * num_packed_elems;
-
   const TIn* in = input_array;
   TOut* out = bitpacked_array;
+
+  while (n >= 64) {
+    pack_bitfield(in, reinterpret_cast<uint64_t*>(out));
+    in += 64;
+    out += 64 / bitwidth;
+    n -= 64;
+  }
+
+  int num_packed_elems = n / bitwidth;
+  int elements_left = n - bitwidth * num_packed_elems;
 
   while (num_packed_elems--) {
     pack_bitfield(in, out++);
