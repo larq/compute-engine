@@ -158,7 +158,7 @@ class Im2ColBConvFunctor {
           if ((in_y < 0) || (in_y >= input_height)) {
             T1* im2col_row_end =
                 im2col_row_start + (filter_width * input_depth);
-            std::fill(im2col_row_start, im2col_row_end, T1(-1));
+            std::fill(im2col_row_start, im2col_row_end, T1(0));
           } else {
             // What we're doing here is trying to copy and fill the im2col
             // buffer as efficiently as possible, using functions to set or
@@ -186,7 +186,7 @@ class Im2ColBConvFunctor {
               T1* im2col_left_start = im2col_row_start;
               T1* im2col_left_end =
                   im2col_left_start + (left_zero_count * input_depth);
-              std::fill(im2col_left_start, im2col_left_end, T1(-1));
+              std::fill(im2col_left_start, im2col_left_end, T1(0));
             }
             if (center_copy_count > 0) {
               const T1* input_row_start =
@@ -204,7 +204,7 @@ class Im2ColBConvFunctor {
                   ((left_zero_count + center_copy_count) * input_depth);
               T1* im2col_right_end =
                   im2col_right_start + (right_zero_count * input_depth);
-              std::fill(im2col_right_start, im2col_right_end, T1(-1));
+              std::fill(im2col_right_start, im2col_right_end, T1(0));
             }
           }
         }

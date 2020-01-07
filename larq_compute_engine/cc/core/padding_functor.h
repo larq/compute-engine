@@ -117,7 +117,7 @@ class PaddingFunctor {
                                            filter_count) +
                                filter_x * (input_channels * filter_count) +
                                in_c * filter_count + out_c;
-                  cur_correction += filter_data[filter_idx];
+                  cur_correction -= filter_data[filter_idx];
                 } else {
                   // filter_data has shape
                   // [out_channels, height, width, in_channels]
@@ -137,7 +137,7 @@ class PaddingFunctor {
                   // below we do the 0.5 * num_elements.
                   //
                   // See also the explanation at the bottom of the functor.
-                  if (filter_data[filter_idx] >= 0) cur_correction -= 1;
+                  if (filter_data[filter_idx] < 0) cur_correction -= 1;
                 }
               }
 
@@ -307,10 +307,10 @@ class PaddingFunctor {
           Tdata* output_ptr = &output_data[out_idx];
 
           // Apply pre-computed correction
-          // im2col padded the input with 0s which effectively became -1s.
+          // im2col padded the input with 0s which effectively became +1s.
           // The convolution therefore computed
-          // out = correct_part + (-1) * (outside_filter_values)
-          // So to correct for this we add (+1) * (outside_filter_values)
+          // out = correct_part + (+1) * (outside_filter_values)
+          // So to correct for this we add (-1) * (outside_filter_values)
           for (int out_c = 0; out_c < filter_count; ++out_c) {
             *output_ptr++ += *cache_ptr++;
           }
