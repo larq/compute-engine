@@ -28,9 +28,9 @@ void test_bitpacking_nonuniform_input_rowwise() {
   const size_t expected_num_rows = 2, expected_num_cols = 1;
   std::vector<std::uint8_t> expected;
   if (CE_IS_BIG_ENDIAN)
-    expected = {0b11010001, 0b10100011};
+    expected = {0b00101110, 0b01011100};
   else
-    expected = {0b10001011, 0b11000101};
+    expected = {0b01110100, 0b00111010};
 
   std::vector<std::uint8_t> output;
   size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
@@ -57,9 +57,9 @@ void test_bitpacking_nonuniform_input_colwise() {
   const size_t expected_num_rows = 1, expected_num_cols = 2;
   std::vector<std::uint8_t> expected;
   if (CE_IS_BIG_ENDIAN)
-    expected = {0b11010001, 0b10100011};
+    expected = {0b00101110, 0b01011100};
   else
-    expected = {0b10001011, 0b11000101};
+    expected = {0b01110100, 0b00111010};
 
   std::vector<std::uint8_t> output;
   size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
@@ -81,7 +81,7 @@ void test_bitpacking(const ce::core::Axis bitpacking_axis,
 
   const size_t num_elems = num_rows * num_cols;
   std::array<TIn, num_elems> input;
-  input.fill(1);
+  input.fill(-1);
 
   std::vector<TOut> output;
   size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
@@ -138,8 +138,8 @@ TEST(BitpackingWithBitPaddingTests, RowMajorPadding) {
   // input matrix
   const int num_rows = 2;
   const int num_cols = 9;
-  std::vector<float> input{1, 1,  -1, 1,  -1, -1, -1, 1, 1,
-                           1, -1, 1,  -1, -1, -1, 1,  1, -1};
+  std::vector<float> input{-1, -1, 1,  -1, 1, 1, 1,  -1, -1,
+                           -1, 1,  -1, 1,  1, 1, -1, -1, 1};
 
   // expected output matrix after bitpacking
   const size_t expected_num_rows = 2;
@@ -168,8 +168,8 @@ TEST(BitpackingWithBitPaddingTests, ColMajorPadding) {
   // The input matrix is:
   const int num_rows = 9;
   const int num_cols = 2;
-  std::vector<float> input{1,  1,  1,  -1, -1, 1, 1, -1, -1,
-                           -1, -1, -1, -1, 1,  1, 1, 1,  -1};
+  std::vector<float> input{-1, -1, -1, 1, 1,  -1, -1, 1,  1,
+                           1,  1,  1,  1, -1, -1, -1, -1, 1};
 
   // expected output matrix after bitpacking
   const size_t expected_num_rows = 2;

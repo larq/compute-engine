@@ -49,10 +49,6 @@ void packbits_aarch64_64(const float* input, uint64_t* output) {
       // v0.h[7] -- signs --------/
       "mov    v0.h[0], v0.h[5] \n"
       "mov    v0.h[2], v0.h[7] \n"
-      // Flip all bits.
-      // TODO: we can remove this instruction if we flip the zero-padding
-      // correction
-      "not    v0.8b, v0.8b   \n"
       // Store in output. %1 is the output pointer, post-increment it
       "st1    {v0.1d}, [%1], #8 \n"
 
