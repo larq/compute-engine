@@ -312,8 +312,7 @@ inline void packbits_array(const TIn* input_array, const std::size_t n,
   // enough zeros to fill the bitwidth. This function assumes enough memory for
   // padding is already allocatd in the output array `bitpacked_array`.
   if (elements_left != 0) {
-    std::array<TIn, bitwidth> padding_buffer;
-    memset(padding_buffer.data(), 0, bitwidth * sizeof(TIn));
+    std::array<TIn, bitwidth> padding_buffer = {0};
     memcpy(padding_buffer.data(), in, elements_left * sizeof(TIn));
     pack_bitfield(padding_buffer.data(), out);
   }
