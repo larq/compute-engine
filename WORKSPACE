@@ -50,17 +50,17 @@ arm_compiler_configure(
 # To update TensorFlow to a new revision.
 # 1. Update the git hash in the urls and the 'strip_prefix' parameter.
 # 2. Get the sha256 hash of the archive with a command such as...
-#    curl -L https://github.com/tensorflow/tensorflow/archive/<git hash>.tar.gz | sha256sum
+#    curl -L https://github.com/tensorflow/tensorflow/archive/<git hash>.tar.gz | shasum -a 256
 #    and update the 'sha256' arg with the result.
 # 3. Request the new archive to be mirrored on mirror.bazel.build for more
 #    reliable downloads.
 http_archive(
     name = "org_tensorflow",
-    sha256 = "674cc90223f1d6b7fa2969e82636a630ce453e48a9dec39d73d6dba2fd3fd243",
+    sha256 = "638e541a4981f52c69da4a311815f1e7989bf1d67a41d204511966e1daed14f7",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/v2.1.0-rc0.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/v2.1.0.tar.gz",
     ],
-    strip_prefix = "tensorflow-2.1.0-rc0",
+    strip_prefix = "tensorflow-2.1.0",
 )
 
 # load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
