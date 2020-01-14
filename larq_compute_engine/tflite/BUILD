@@ -6,125 +6,12 @@ package(
     licenses = ["notice"],  # Apache 2.0
 )
 
-cc_library(
-    name = "bgemm_ref",
-    hdrs = [
-        "cc/kernels/bgemm_impl_ref.h",
-    ],
-    deps = [
-        "//larq_compute_engine:bgemm",
-        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
-        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
-    ]
-)
-
-cc_library(
-    name = "bgemm_kernels_common",
-    hdrs = [
-        "cc/kernels/bgemm_kernels_common.h",
-    ],
-)
-
-cc_library(
-    name = "bgemm_kernels_arm",
-    hdrs = [
-        "cc/kernels/bgemm_kernels_arm.h",
-        "cc/kernels/bgemm_kernels_arm64.h",
-    ],
-    deps = [
-        ":bgemm_kernels_common"
-    ]
-)
-
-cc_library(
-    name = "bgemm_kernels_ruy",
-    hdrs = [
-        "cc/kernels/bgemm_kernels_arm.h",
-        "cc/kernels/bgemm_kernels_ruy.h",
-        "cc/kernels/bgemm_kernels_x86.h",
-    ],
-    deps = [
-        "//larq_compute_engine:bgemm",
-        ":bgemm_kernels_arm"
-    ]
-)
-
-cc_library(
-    name = "bgemm_ruy",
-    hdrs = [
-        "cc/kernels/bgemm_impl_ruy.h",
-        "cc/kernels/bgemm_trmul_params.h",
-    ],
-    deps = [
-        ":bgemm_kernels_ruy",
-        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
-        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
-    ]
-)
-
-cc_library(
-    name = "bgemm",
-    hdrs = [
-        "cc/kernels/bgemm_impl.h",
-    ],
-    deps = [
-        ":bgemm_ref",
-        ":bgemm_ruy",
-    ]
-)
-
-cc_library(
-    name = "bconv2d_impl",
-    hdrs = [
-        "cc/kernels/bconv2d_impl.h",
-    ],
-    deps = [
-        ":bgemm",
-        "//larq_compute_engine:bconv2d",
-        "//larq_compute_engine:padding",
-        "//larq_compute_engine:packbits",
-        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
-        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
-        "@org_tensorflow//tensorflow/lite/kernels:padding",
-        "@org_tensorflow//tensorflow/lite/kernels/internal:optimized_base",
-    ]
-)
-
-cc_library(
-    name = "bconv2d",
-    srcs = ["cc/kernels/bconv2d.cc"],
-    hdrs = ["cc/kernels/utils.h"],
-    deps = [
-        ":bconv2d_impl",
-        "@org_tensorflow//tensorflow/lite:framework",
-        "@org_tensorflow//tensorflow/lite:context",
-        "@org_tensorflow//tensorflow/lite/kernels/internal:kernel_utils",
-        "@org_tensorflow//tensorflow/lite/kernels:op_macros",
-        "@org_tensorflow//tensorflow/lite/kernels/internal:tensor",
-        "@gemmlowp//:profiler",
-    ],
-)
-
-cc_test(
-    name = "bconv2d_test",
-    size = "small",
-    srcs = ["tests/bconv2d_test.cc"],
-    deps = [
-        ":bconv2d",
-        "@org_tensorflow//tensorflow/lite/kernels:test_main",
-        "@org_tensorflow//tensorflow/lite/kernels:test_util",
-        "@org_tensorflow//tensorflow/lite:framework",
-        "@com_google_googletest//:gtest",
-        "@flatbuffers",
-    ],
-)
-
 # COLLECTION OF ALL TFLITE CC TESTS
 # each new cc test needs to be added here
 test_suite(
     name = "cc_tests",
     tests = [
-        ":bconv2d_test",
+        "//larq_compute_engine/tflite/tests:bconv2d_test",
     ],
 )
 
