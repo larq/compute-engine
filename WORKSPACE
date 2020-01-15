@@ -4,14 +4,6 @@ tf_configure(name = "local_config_tf")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
-    name = "googletest",
-    url = "https://github.com/google/googletest/archive/release-1.10.0.zip",
-    sha256 = "94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91",
-    build_file = "@//ext:gtest.BUILD",
-    strip_prefix = "googletest-release-1.10.0",
-)
-
-http_archive(
     name = "googlebenchmark",
     url = "https://github.com/google/benchmark/archive/v1.5.0.zip",
     sha256 = "2d22dd3758afee43842bb504af1a8385cccb3ee1f164824e4837c1c1b04d92a0",
