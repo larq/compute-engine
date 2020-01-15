@@ -37,8 +37,8 @@ cc_test(
     srcs = ["cc/tests/bgemm_tests.cc"],
     copts = ["-Iext/gtest/include"],
     deps = [
-         "@googletest//:gtest_main",
-         ":bgemm",
+        "@com_google_googletest//:gtest_main",
+        ":bgemm",
     ],
 )
 
@@ -63,7 +63,7 @@ cc_test(
     srcs = ["cc/tests/packbits_tests.cc"],
     copts = ["-Iext/gtest/include"],
     deps = [
-         "@googletest//:gtest_main",
+         "@com_google_googletest//:gtest_main",
          ":packbits",
     ],
 )
@@ -85,7 +85,7 @@ cc_test(
     srcs = ["cc/tests/fused_bgemm_tests.cc"],
     copts = ["-Iext/gtest/include"],
     deps = [
-         "@googletest//:gtest_main",
+         "@com_google_googletest//:gtest_main",
          "@eigen_archive//:eigen",
          "fused_bgemm",
          ":utils",
@@ -106,7 +106,7 @@ cc_test(
     srcs = ["cc/tests/im2col_tests.cc"],
     copts = ["-Iext/gtest/include"],
     deps = [
-         "@googletest//:gtest_main",
+         "@com_google_googletest//:gtest_main",
          ":im2col",
     ],
 )
@@ -133,7 +133,7 @@ cc_test(
     srcs = ["cc/tests/bconv2d_tests.cc"],
     copts = ["-Iexternal/gtest/include"],
     deps = [
-         "@googletest//:gtest_main",
+         "@com_google_googletest//:gtest_main",
          ":bconv2d",
     ],
 )
@@ -164,7 +164,7 @@ cc_test(
     srcs = ["cc/tests/bgemm_arm32_tests.cc"],
     copts = ["-Iexternal/gtest/include"],
     deps = [
-         "@googletest//:gtest_main",
+         "@com_google_googletest//:gtest_main",
          ":bgemm_arm32",
          ":bgemm",
     ],
@@ -183,7 +183,7 @@ cc_test(
     srcs = ["cc/tests/packbits_arm32_tests.cc"],
     copts = ["-Iexternal/gtest/include"],
     deps = [
-         "@googletest//:gtest_main",
+         "@com_google_googletest//:gtest_main",
          ":packbits_arm32",
          ":packbits",
     ],
@@ -221,7 +221,7 @@ cc_test(
     srcs = ["cc/tests/packbits_aarch64_tests.cc"],
     copts = ["-Iexternal/gtest/include"],
     deps = [
-         "@googletest//:gtest_main",
+         "@com_google_googletest//:gtest_main",
          ":packbits",
     ],
 )
