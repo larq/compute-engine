@@ -193,4 +193,30 @@ test:v2 --action_env=TF2_BEHAVIOR=1
 build --config=v2
 test --config=v2
 
+# Android configs. Bazel needs to have --cpu and --fat_apk_cpu both set to the
+# target CPU to build transient dependencies correctly. See
+# https://docs.bazel.build/versions/master/user-manual.html#flag--fat_apk_cpu
+build:android --crosstool_top=//external:android/crosstool
+build:android --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
+build:android_arm --config=android
+build:android_arm --cpu=armeabi-v7a
+build:android_arm --fat_apk_cpu=armeabi-v7a
+build:android_arm64 --config=android
+build:android_arm64 --cpu=arm64-v8a
+build:android_arm64 --fat_apk_cpu=arm64-v8a
+build:android_x86 --config=android
+build:android_x86 --cpu=x86
+build:android_x86 --fat_apk_cpu=x86
+build:android_x86_64 --config=android
+build:android_x86_64 --cpu=x86_64
+build:android_x86_64 --fat_apk_cpu=x86_64
+
+# TODO: The default android SDK/NDK paths are hardcoded here and the user needs
+# to change the paths according to the local configuration
+build --action_env ANDROID_NDK_HOME="/tmp/code/android/android-ndk-r19c"
+build --action_env ANDROID_NDK_API_LEVEL="21"
+build --action_env ANDROID_BUILD_TOOLS_VERSION="27.0.3"
+build --action_env ANDROID_SDK_API_LEVEL="28"
+build --action_env ANDROID_SDK_HOME="/tmp/code/android"
+
 EOM
