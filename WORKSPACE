@@ -11,17 +11,6 @@ http_archive(
 )
 
 http_archive(
-    name = "eigen_archive",
-    build_file = "@//ext:eigen.BUILD",
-    sha256 = "091d1a3124ea41ac2e70e30028365d78d43a1c617a26445aef15e140e4fab1dd",
-    strip_prefix = "eigen-eigen-afc120bc03bd",
-    urls = [
-        "https://storage.googleapis.com/mirror.tensorflow.org/bitbucket.org/eigen/eigen/get/afc120bc03bd.tar.gz",
-        "https://bitbucket.org/eigen/eigen/get/afc120bc03bd.tar.gz",
-    ],
-)
-
-http_archive(
     # This is the "raspberry pi compiler" as used in the tensorflow repository
     # Download size: 250 MB compressed
     # The archive contains GCC versions 4.9.4 (160 MB), 6.5.0 (290 MB) and 8.3.0 (270 MB)
