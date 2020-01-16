@@ -23,6 +23,7 @@ cc_binary(
         "//conditions:default": [],
     }),
     deps = [
+        "//larq_compute_engine/tflite/cc/kernels:lce_op_kernels",
         "@org_tensorflow//tensorflow/lite/tools/benchmark:benchmark_tflite_model_lib",
         "@org_tensorflow//tensorflow/lite/tools/benchmark:logging",
     ],

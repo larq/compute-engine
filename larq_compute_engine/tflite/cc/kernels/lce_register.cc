@@ -6,19 +6,9 @@
 // but this way we only have to add them once.
 //
 
+#include "larq_compute_engine/tflite/cc/kernels/lce_ops_register.h"
 #include "tensorflow/lite/kernels/builtin_op_kernels.h"
 #include "tensorflow/lite/kernels/register.h"
-
-namespace compute_engine {
-namespace tflite {
-
-TfLiteRegistration* Register_BSIGN();
-// TfLiteRegistration* Register_BCONV_2D8();
-TfLiteRegistration* Register_BCONV_2D32();
-TfLiteRegistration* Register_BCONV_2D64();
-
-}  // namespace tflite
-}  // namespace compute_engine
 
 namespace tflite {
 namespace ops {

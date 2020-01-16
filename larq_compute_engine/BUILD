@@ -45,14 +45,20 @@ cc_test(
 # BUILDING PACKBITS
 cc_library(
     name = "packbits",
-    hdrs = select({
+    hdrs = ["cc/core/packbits.h"] + select({
         ":aarch64_build": [
             "cc/core/aarch64/packbits.h",
-            "cc/core/packbits.h",
         ],
-        "//conditions:default": [
-            "cc/core/packbits.h",
+        ":arm32_build": [
+            "cc/core/arm32/packbits.h",
         ],
+        "@org_tensorflow//tensorflow:android_arm": [
+            "cc/core/aarch64/packbits.h",
+        ],
+        "@org_tensorflow//tensorflow:android_arm64": [
+            "cc/core/aarch64/packbits.h",
+        ],
+        "//conditions:default": [],
     }),
     deps = [":utils"],
 )
