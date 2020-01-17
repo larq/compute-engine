@@ -97,9 +97,9 @@ cc_library(
         "sign.cc",
         "bconv2d.cc",
     ],
-    hdrs = ["utils.h"],
+    hdrs = ["utils.h", "lce_ops_register.h"],
     copts = tflite_copts() + tf_opts_nortti_if_android(),
-    visibility = ["//visibility:private"],
+    # visibility = ["//visibility:private"],
     deps = [
         ":bconv2d_impl",
         "@org_tensorflow//tensorflow/lite:framework",
