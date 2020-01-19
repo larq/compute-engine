@@ -21,6 +21,7 @@ static void padding(benchmark::State& state) {
 
   const int pad_h = 0, pad_w = 0;
   const int stride_h = 1, stride_w = 1;
+  const int dilation_h = 1, dilation_w = 1;
 
   const int output_height =
       (input_height - filter_height + 2 * pad_h) / stride_h + 1;
@@ -33,17 +34,17 @@ static void padding(benchmark::State& state) {
   filters_data.resize(filters_num_elem);
   std::fill(std::begin(filters_data), std::end(filters_data), 1);
 
-  using PaddingFunctor = ReferencePaddingFunctor<T, T, FilterFormat::OHWI>;
+  using TPaddingFunctor = PaddingFunctor<T, T, FilterFormat::OHWI>;
 
   std::vector<T> output;
   output.resize(output_num_elem);
 
-  PaddingFunctor padding_functor;
+  TPaddingFunctor padding_functor;
   for (auto _ : state) {
     padding_functor(input_batch_count, input_height, input_width, channels_in,
                     filters_data.data(), filter_height, filter_width,
-                    channels_out, stride_h, stride_w, output.data(),
-                    output_height, output_width);
+                    channels_out, stride_h, stride_w, dilation_h, dilation_w,
+                    output.data(), output_height, output_width);
   }
 }
 

@@ -25,6 +25,7 @@ static void bconv2d(benchmark::State& state) {
 
   const int pad_h = 0, pad_w = 0;
   const int stride_h = 1, stride_w = 1;
+  const int dilation_h = 1, dilation_w = 1;
 
   const int output_height =
       (input_height - filter_height + 2 * pad_h) / stride_h + 1;
@@ -48,13 +49,13 @@ static void bconv2d(benchmark::State& state) {
                         TBGemmFunctor>;
 
   using TBConv2DFunctor = Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
-  using PaddingFunctor = ReferencePaddingFunctor<T, T, FilterFormat::OHWI>;
+  using TPaddingFunctor = PaddingFunctor<T, T, FilterFormat::OHWI>;
 
   std::vector<T> output;
   output.resize(output_num_elem);
 
   TBConv2DFunctor bconv2d_functor;
-  PaddingFunctor padding_functor;
+  TPaddingFunctor padding_functor;
   for (auto _ : state) {
     bconv2d_functor(input_data.data(), input_batch_count, input_height,
                     input_width, channels_in, filters_data.data(),
@@ -64,8 +65,8 @@ static void bconv2d(benchmark::State& state) {
                     output.data(), output_height, output_width);
     padding_functor(input_batch_count, input_height, input_width, channels_in,
                     filters_data.data(), filter_height, filter_width,
-                    channels_out, stride_h, stride_w, output.data(),
-                    output_height, output_width);
+                    channels_out, stride_h, stride_w, dilation_h, dilation_w,
+                    output.data(), output_height, output_width);
   }
 }
 
