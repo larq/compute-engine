@@ -22,13 +22,7 @@ limitations under the License.
 
 void ABSL_ATTRIBUTE_WEAK
 RegisterSelectedOps(::tflite::MutableOpResolver* resolver) {
-  resolver->AddCustom("LqceBsign", compute_engine::tflite::Register_BSIGN());
-  // resolver->// AddCustom("LqceBconv2d8",
-  // compute_engine::tflite::Register_BCONV_2D8());
-  resolver->AddCustom("LqceBconv2d32",
-                      compute_engine::tflite::Register_BCONV_2D32());
-  resolver->AddCustom("LqceBconv2d64",
-                      compute_engine::tflite::Register_BCONV_2D64());
+  compute_engine::tflite::RegisterLCECustomOps(resolver);
 }
 
 namespace tflite {

@@ -99,7 +99,6 @@ cc_library(
     ],
     hdrs = ["utils.h", "lce_ops_register.h"],
     copts = tflite_copts() + tf_opts_nortti_if_android(),
-    # visibility = ["//visibility:private"],
     deps = [
         ":bconv2d_impl",
         "@org_tensorflow//tensorflow/lite:framework",
