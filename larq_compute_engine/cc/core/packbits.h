@@ -9,7 +9,7 @@
 
 #include "larq_compute_engine/cc/utils/types.h"
 #ifdef __aarch64__
-#include "larq_compute_engine/cc/core/aarch64/packbits.h"
+#include "larq_compute_engine/cc/core/packbits_aarch64.h"
 #endif
 
 namespace compute_engine {

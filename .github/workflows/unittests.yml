@@ -14,7 +14,7 @@ jobs:
         run: ./configure.sh <<< $'yes\nno\n' #yes,no for tf1
         shell: bash
       - name: Run CC Unit Tests
-        run: bazel test larq_compute_engine:cc_tests_general
+        run: bazel test larq_compute_engine/cc/tests:cc_tests_general
       - name: Build Bazel Package Creator Binary
         run: bazel build :build_pip_pkg
       - name: Build PIP Package
@@ -35,7 +35,7 @@ jobs:
         run: ./configure.sh <<< $'yes\nyes\n' #yes,yes for tf2
         shell: bash
       - name: Run CC Unit Tests
-        run: bazel test larq_compute_engine:cc_tests_general
+        run: bazel test larq_compute_engine/cc/tests:cc_tests_general
       - name: Build Bazel Package Creator Binary
         run: bazel build :build_pip_pkg
       - name: Build PIP Package
@@ -93,10 +93,10 @@ jobs:
         run: ./configure.sh <<< $'yes\nyes\n' #yes,yes for tf2
         shell: bash
       - name: "TF Arm32: Cross-compile and run unit tests in qemu"
-        run: bazel run larq_compute_engine:cc_tests_arm32_qemu --config=rpi3
+        run: bazel run larq_compute_engine/cc/tests:cc_tests_arm32_qemu --config=rpi3
       - name: "TF Lite Arm32: Cross-compile and run tflite tests in qemu"
         run: bazel run larq_compute_engine/tflite:cc_tests_arm32_qemu --config=rpi3
       - name: "TF Aarch64: Cross-compile and run unit tests in qemu"
-        run: bazel run larq_compute_engine:cc_tests_aarch64_qemu --config=aarch64
+        run: bazel run larq_compute_engine/cc/tests:cc_tests_aarch64_qemu --config=aarch64
       - name: "TF Lite Aarch64: Cross-compile and run tflite tests in qemu"
         run: bazel run larq_compute_engine/tflite:cc_tests_aarch64_qemu --config=aarch64
