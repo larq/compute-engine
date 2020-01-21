@@ -142,11 +142,15 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
                      TfLiteContext* context, TfLiteNode* node) {
   auto* conv_params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
 
+  TF_LITE_ENSURE(context, node->inputs->size >= 2);
+
   const auto* input = GetInput(context, node, 0);
   const auto* filter = GetInput(context, node, 1);
   auto* output = GetOutput(context, node, 0);
 
-  TF_LITE_ENSURE(context, node->inputs->size >= 2);
+  const TfLiteTensor* multi_bias =
+      node->inputs->size >= 3 ? GetInput(context, node, 2) : nullptr;
+
   TF_LITE_ENSURE_EQ(context, NumDimensions(input), 4);
   TF_LITE_ENSURE_EQ(context, NumDimensions(filter), 4);
 
@@ -171,6 +175,16 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
   conv_params->filter_height = filter->dims->data[1];
   conv_params->filter_width = filter->dims->data[2];
   TF_LITE_ENSURE_EQ(context, conv_params->channels_in, filter->dims->data[3]);
+
+  if (multi_bias) {
+    // Bias is applied to the accumulator, so its int32
+    TF_LITE_ENSURE_EQ(context, multi_bias->type, kTfLiteInt32);
+    // multi_bias has shape [2, channels]
+    TF_LITE_ENSURE_EQ(context, NumDimensions(multi_bias), 2);
+    TF_LITE_ENSURE_EQ(context, multi_bias->dims->data[0], 2);
+    TF_LITE_ENSURE_EQ(context, multi_bias->dims->data[1],
+                      conv_params->channels_out);
+  }
 
   // computing the padding and output values (height, width)
   int out_width, out_height;
@@ -437,9 +451,11 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   const auto* filter = GetInput(context, node, 1);
   auto* output = GetOutput(context, node, 0);
 
-  // TODO: investigate how to use the biases
-  bool has_bias = node->inputs->size == 3;
-  const TfLiteTensor* bias = has_bias ? GetInput(context, node, 2) : nullptr;
+  // In case there is a third input, it will have shape [2, channels_out]
+  // where one set of channels is multipliers and the other set is
+  // additive terms.
+  const TfLiteTensor* multi_bias =
+      node->inputs->size >= 3 ? GetInput(context, node, 2) : nullptr;
 
   TfLiteTensor* im2col = params->need_im2col
                              ? GetTemporary(context, node, params->im2col_index)
@@ -513,8 +529,8 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   BConv2D<T, TBitpacked>(
       op_params, GetTensorShape(input), GetTensorData<T>(input),
       GetTensorShape(filter), GetTensorData<TBitpacked>(bitpacked_weights),
-      GetTensorShape(bias), GetTensorData<T>(bias), GetTensorShape(output),
-      GetTensorData<T>(output), GetTensorShape(im2col),
+      GetTensorShape(multi_bias), GetTensorData<std::int32_t>(multi_bias),
+      GetTensorShape(output), GetTensorData<T>(output), GetTensorShape(im2col),
       GetTensorData<T>(im2col), params->bitpack_before_im2col,
       GetTensorData<T>(padding_buffer),
       CpuBackendContext::GetFromContext(context));

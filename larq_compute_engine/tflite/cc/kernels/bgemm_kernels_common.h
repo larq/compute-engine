@@ -12,7 +12,8 @@ struct BinaryKernelParams {
   const T* lhs_base_ptr;
   const T* rhs_base_ptr;
   float* dst_base_ptr;
-  const T* bias;
+  const std::int32_t* mul_bias;
+  const std::int32_t* add_bias;
   std::int32_t start_row;
   std::int32_t start_col;
   std::int32_t last_row;
@@ -48,11 +49,11 @@ inline void MakeBinaryKernelParams(
       dst->data.get() + start_col * dst->layout.stride + start_row;
 
   std::uint8_t flags = 0;
-  // params->bias = params->zero_data;
-  // if (spec.bias) {
-  //   params->bias = spec.bias;
-  //   flags |= RUY_ASM_FLAG_HAS_BIAS;
-  // }
+  if (spec.bias) {
+    params->mul_bias = spec.bias;
+    params->add_bias = spec.bias + dst->layout.rows;
+    flags |= RUY_ASM_FLAG_HAS_BIAS;
+  }
   params->flags = flags;
   params->start_row = start_row;
   params->start_col = start_col;

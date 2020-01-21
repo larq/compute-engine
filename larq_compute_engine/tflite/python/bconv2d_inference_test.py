@@ -24,6 +24,10 @@ def _create_bconv2d_layer(
     filt_lite = np.copy(np.moveaxis(filt_tf, 3, 0))
     dotproduct_size = kernel_size * kernel_size * in_channels
 
+    multi_bias = np.empty(shape=(2, filters))
+    multi_bias[0, :] = -2
+    multi_bias[1, :] = dotproduct_size
+
     def _layer_tf(x):
         # Use native tf op because it supports dilations
         return tf.nn.conv2d(
@@ -34,13 +38,13 @@ def _create_bconv2d_layer(
         y = bconv_op(
             x,
             filt_lite,
+            multi_bias,
             strides,
             padding,
             data_format="NHWC",
             filter_format="OHWI",
             dilations=dilations,
         )
-        y = dotproduct_size - 2 * y
         return y
 
     return _layer_tf, _layer_lite

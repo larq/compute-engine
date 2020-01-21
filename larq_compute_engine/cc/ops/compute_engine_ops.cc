@@ -33,13 +33,11 @@ REGISTER_OP("LqceBsign")
         R"doc(Computes element-wise sign function where 0 is mapped to +1.)doc")
     .SetShapeFn(shape_inference::UnchangedShape);
 
-// TODO: Allow for uint64 filter type, for TF lite conversion
-// Note: allowing the filter type to be different from the input type
-// is currently not supported by the TF lite converter.
 #define REGISTER_CONV_BITPACKED_OP(OPNAME, BITWIDTH)                                                       \
   REGISTER_OP(OPNAME)                                                                                      \
       .Input("input: T")                                                                                   \
       .Input("filter: T")                                                                                  \
+      .Input("multi_bias: int32")                                                                          \
       .Output("output: T")                                                                                 \
       .Attr("T: {float, double}")                                                                          \
       .Attr("strides: list(int)")                                                                          \

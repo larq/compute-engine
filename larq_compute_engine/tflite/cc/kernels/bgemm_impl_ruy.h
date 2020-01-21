@@ -32,10 +32,7 @@ struct BGemmImplUsingRuy {
     static_assert(std::is_signed<DstScalar>::value,
                   "Output of BGEMM should be of a signed type.");
 
-    // default accumulator bitwidth is set to 32-bit which is enough for
-    // bitwidths we are currently using
-    using TAccum = std::int32_t;
-    using TSpec = ruy::BasicSpec<TAccum, DstScalar>;
+    using TSpec = ruy::BasicSpec<AccumScalar, DstScalar>;
 
     // getting ruy context
     auto ruy_context = context->ruy_context();
@@ -54,11 +51,10 @@ struct BGemmImplUsingRuy {
     rhs.data = rhs_data;
     dst.data = dst_data;
 
-    // Here, we abuse the 'multiplier_exponent' which is used only for
-    // non-floating-point cases to pass the bitpadding correction value (int) to
-    // bgemm kernel
+    // We would like to set `spec.add_bias` and `spec.multiply_bias` but right
+    // now we concatenate them in a single array
     TSpec spec;
-    spec.multiplier_exponent = params.multiplier_exponent;
+    spec.bias = params.bias;
 
     // The allocator is used to allocate memory for pre-packed matrices
     ruy::Allocator allocator;

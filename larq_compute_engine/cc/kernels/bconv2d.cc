@@ -15,9 +15,9 @@ namespace compute_engine {
 namespace kernels {
 
 template <class T, class TConvFunctor>
-class BConv2DOp : public BinaryOp<T> {
+class BConv2DOp : public OpKernel {
  public:
-  explicit BConv2DOp(OpKernelConstruction* context) : BinaryOp<T>(context) {
+  explicit BConv2DOp(OpKernelConstruction* context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("strides", &strides_));
     OP_REQUIRES_OK(context, context->GetAttr("dilations", &dilations_));
     string data_format;

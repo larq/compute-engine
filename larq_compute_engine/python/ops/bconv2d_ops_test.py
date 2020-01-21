@@ -57,9 +57,17 @@ def test_bconv(
     filt = np.random.choice(sample_list, np.prod(fshape)).astype(dtype)
     filt = np.reshape(filt, fshape)
 
+    multi_bias = np.empty(shape=(2, out_channel))
+
     output = eval_op(
         bconv_op(
-            inp, filt, strides, padding, dilations=dilations, data_format=data_format
+            inp,
+            filt,
+            multi_bias,
+            strides,
+            padding,
+            dilations=dilations,
+            data_format=data_format,
         )
     )
     expected = eval_op(
