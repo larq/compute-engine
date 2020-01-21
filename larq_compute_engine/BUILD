@@ -11,20 +11,13 @@ config_setting(
     values = {"cpu": "aarch64"},
 )
 
-cc_library(
-    name = "bconv_shape_inference",
-    srcs = ["cc/ops/bconv_shape_inference.cc"],
-    hdrs = ["cc/ops/bconv_shape_inference.h"],
-    deps = ["@local_config_tf//:tf_header_lib"],
-)
-
-# MAIN COMPUTE ENGINE LIBRARY
+# dynamic library of larq compute engine custom ops
+# for tensorflow
 cc_binary(
     name = 'python/ops/_larq_compute_engine_ops.so',
     srcs = [
         "cc/kernels/sign_kernels.cc",
         "cc/kernels/bconv2d.cc",
-        "cc/ops/compute_engine_ops.cc",
     ],
     linkshared = 1,
     deps = [
@@ -32,7 +25,7 @@ cc_binary(
         "@local_config_tf//:tf_header_lib",
         "//larq_compute_engine/cc/utils:utils",
         "//larq_compute_engine/cc/core:bconv2d",
-        ":bconv_shape_inference",
+        "//larq_compute_engine/cc/ops:compute_engine_ops",
     ],
     copts = ["-pthread", "-std=c++11", "-D_GLIBCXX_USE_CXX11_ABI=0"]
 )
