@@ -11,44 +11,6 @@ config_setting(
     values = {"cpu": "aarch64"},
 )
 
-cc_binary(
-    name = "benchmark_aarch64",
-    linkopts = ["-lrt -lm"],
-    srcs = [
-        "cc/benchmark/aarch64/packbits_bench.cc",
-    ],
-    deps = [
-        "@googlebenchmark//:benchmark",
-        "@googlebenchmark//:benchmark_main",
-        "//larq_compute_engine/cc/core:packbits",
-        "//larq_compute_engine/cc/core:packbits_aarch64",
-    ],
-)
-
-#
-# Benchmarks
-#
-
-cc_binary(
-        name = "benchmark",
-        linkopts = ["-lrt -lm"],
-    srcs = [
-        "cc/benchmark/bconv2d_bench.cc",
-        "cc/benchmark/bgemm_bench.cc",
-        "cc/benchmark/im2col_bench.cc",
-        "cc/benchmark/padding_bench.cc",
-    ],
-        deps = [
-        "@googlebenchmark//:benchmark",
-        "@googlebenchmark//:benchmark_main",
-        "//larq_compute_engine/cc/core:bconv2d",
-        "//larq_compute_engine/cc/core:bgemm",
-        "//larq_compute_engine/cc/core:fused_bgemm",
-        "//larq_compute_engine/cc/core:im2col",
-        "//larq_compute_engine/cc/core:padding",
-        ],
-)
-
 cc_library(
     name = "bconv_shape_inference",
     srcs = ["cc/ops/bconv_shape_inference.cc"],
