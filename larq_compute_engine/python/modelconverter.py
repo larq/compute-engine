@@ -26,13 +26,15 @@ quantizer_replacements = {
 }
 
 
-def create_bconv_layer(weights, strides, padding, transpose=True, mul_weights=None):
+def create_bconv_layer(
+    weights, strides, padding, transpose=True, fused_multiply=None, fused_add=None
+):
     """
     Creates a binary convolution layer for tflite.
 
     If `transpose` is True, transposes from HWIO to OHWI
 
-    When `mul_weights` is not `None`, it should be a 1D array of size equal to the filter out-channel dimension.
+    When `fused_multiply` is not `None`, it should be a 1D array of size equal to the filter out-channel dimension.
     In this case, a multiplication op is inserted *after* the convolution.
     This multiplication op will be merged into the batchnorm op by the converter.
     This has two purposes:
@@ -52,37 +54,51 @@ def create_bconv_layer(weights, strides, padding, transpose=True, mul_weights=No
         filter_format = "OHWI"
         weights = np.sign(np.sign(weights) + 0.5)
 
-    if mul_weights is not None:
-        if len(mul_weights.shape) != 1 or mul_weights.shape[0] != weights.shape[0]:
-            print(
-                f"ERROR: Argument mul_weights should have shape ({weights.shape[0]}) but has shape {mul_weights.shape}"
-            )
-            mul_weights = None
+    out_channels = weights.shape[0]
+
+    if fused_multiply is not None and (
+        len(fused_multiply.shape) != 1 or fused_multiply.shape[0] != out_channels
+    ):
+        print(
+            f"ERROR: Argument fused_multiply should have shape ({weights.shape[0]}) but has shape {fused_multiply.shape}"
+        )
+        fused_multiply = None
+
+    if fused_multiply is None:
+        fused_multiply = np.full(shape=(out_channels), fill_value=1)
+
+    if fused_add is not None and (
+        len(fused_add.shape) != 1 or fused_add.shape[0] != out_channels
+    ):
+        print(
+            f"ERROR: Argument fused_add should have shape ({weights.shape[0]}) but has shape {fused_add.shape}"
+        )
+        fused_add = None
+
+    if fused_add is None:
+        fused_add = np.full(shape=(out_channels), fill_value=0)
+
+    # The bconv will do the following:
+    # output = add_bias[channel] + mul_bias[channel] * popcount
+    # We use this to implement:
+    # - `y1 = n - 2 * x` (the backtransformation to -1,+1 space)
+    # - `y2 = a + b * y1` (fused batchnorm)
+    # Together they become
+    # `y = (a + b*n) + (-2b) * x
+    multi_bias = np.empty(shape=(2, out_channels))
+    multi_bias[0, :] = -2 * fused_multiply
+    multi_bias[1, :] = fused_add + dotproduct_size * fused_multiply
 
     def bconv_op(x):
         y = bconv2d64(
             x,
             weights,
+            multi_bias,
             strides,
             padding,
             data_format="NHWC",
             filter_format=filter_format,
         )
-        # Do the {0,1} -> {-1,1} transformation
-        # If a,b are {-1,1} vectors then A = (a+1)/2 and B = (b+1)/2
-        # are the corresponding {0,1} vectors.
-        # We have
-        #   dot(a,b) = n - 2 * XOR(A,B)
-        # where n is the size of the vector.
-        # The convolution will compute XOR(A,B) so we have to transform it back
-        # One awesome property about this is that it already takes care of bitpadding,
-        # so we can ignore that in the C++ code.
-
-        # TODO: Detect if there is a batchnorm and merge this with that
-        y = dotproduct_size - 2 * y
-
-        if mul_weights is not None:
-            y *= mul_weights
         return y
 
     return bconv_op
@@ -301,12 +317,15 @@ class ModelConverter:
                         result = False
                     else:
                         # Create a new layer with those weights
+                        # TODO: Detect if there is a batchnorm and put that into
+                        # fused_multiply, fused_add
                         bconvlayer = create_bconv_layer(
                             w,
                             l.strides,
                             l.padding,
                             transpose=True,
-                            mul_weights=mul_weights,
+                            fused_multiply=mul_weights,
+                            fused_add=None,
                         )
                         replacement_dict[l.name] = bconvlayer
                 else:
