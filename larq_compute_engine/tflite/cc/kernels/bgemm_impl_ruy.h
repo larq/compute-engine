@@ -52,8 +52,6 @@ struct BGemmImplUsingRuy {
     rhs.data = rhs_data;
     dst.data = dst_data;
 
-    // We would like to set `spec.add_bias` and `spec.multiply_bias` but right
-    // now we concatenate them in a single array
     TSpec spec;
     spec.fused_multiply = params.fused_multiply;
     spec.fused_add = params.fused_add;
