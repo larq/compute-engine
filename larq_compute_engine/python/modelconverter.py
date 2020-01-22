@@ -56,35 +56,27 @@ def create_bconv_layer(
 
     out_channels = weights.shape[0]
 
-    if fused_multiply is not None and (
-        len(fused_multiply.shape) != 1 or fused_multiply.shape[0] != out_channels
-    ):
-        print(
-            f"ERROR: Argument fused_multiply should have shape ({weights.shape[0]}) but has shape {fused_multiply.shape}"
-        )
-        fused_multiply = None
-
     if fused_multiply is None:
         fused_multiply = np.full(shape=(out_channels), fill_value=1)
-
-    if fused_add is not None and (
-        len(fused_add.shape) != 1 or fused_add.shape[0] != out_channels
-    ):
-        print(
-            f"ERROR: Argument fused_add should have shape ({weights.shape[0]}) but has shape {fused_add.shape}"
+    elif len(fused_multiply.shape) != 1 or fused_multiply.shape[0] != out_channels:
+        raise Exception(
+            f"ERROR: Argument fused_multiply should have shape ({weights.shape[0]}) but has shape {fused_multiply.shape}"
         )
-        fused_add = None
 
     if fused_add is None:
         fused_add = np.full(shape=(out_channels), fill_value=0)
+    elif len(fused_add.shape) != 1 or fused_add.shape[0] != out_channels:
+        raise Exception(
+            f"ERROR: Argument fused_add should have shape ({weights.shape[0]}) but has shape {fused_add.shape}"
+        )
 
     # The bconv will do the following:
     # output = fused_add[channel] + fused_multiply[channel] * popcount
-    # We use this to implement:
-    # - `y1 = n - 2 * x`   (the backtransformation to -1,+1 space)
-    # - `y2 = a + b * y1`  (fused batchnorm)
+    # We use this to implement two things:
+    # - `y1 = n - 2 * popcount`     (the backtransformation to -1,+1 space)
+    # - `y2 = a + b * y1`           (optional fused batchnorm)
     # Together they become
-    # `y = (a + b*n) + (-2b) * x
+    # `y = (a + b*n) + (-2b) * popcount
     fused_add = fused_add + dotproduct_size * fused_multiply
     fused_multiply = -2 * fused_multiply
 
