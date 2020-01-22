@@ -2,9 +2,13 @@
 import tensorflow as tf
 import numpy as np
 import larq as lq
+import subprocess
 from larq_compute_engine import bsign, bconv2d64
 from larq_compute_engine.python.utils import tf_2_or_newer
 from tensorflow.keras.utils import get_custom_objects
+from tensorflow.python.keras.saving import saving_utils as _saving_utils
+from tensorflow.python.framework import convert_to_constants as _convert_to_constants
+from tensorflow.lite.python.util import build_debug_info_func as _build_debug_info_func
 
 get_custom_objects()["bsign"] = bsign
 
@@ -157,7 +161,10 @@ class ModelConverter:
     """Converter to create TF lite models from Larq Keras models
 
     This converter will convert the input quantizers to their tflite counterpart.
-    It will remove the kernel quantizers and only store the signs instead of the latent weights.
+    It will remove the kernel quantizers and instead only store the signs of the latent weights.
+
+    By default the converter will try out different options and stop as soon as one option succeeded.
+    By setting the option `converter.do_all_methods = True` one can enforce that all options will be executed and saved as `filename_XXX.tflite`
 
     # Arguments
     model: The Keras model to convert.
@@ -175,6 +182,7 @@ class ModelConverter:
 
     def __init__(self, model):
         self.model = model
+        self.do_all_methods = False
 
     def convert(self, filename=None):
         """Convert and return the tflite model.
@@ -184,42 +192,40 @@ class ModelConverter:
         # Arguments
         filename: If `None`, then returns the tflite model object. If its a string then it saves the model to that filename.
         """
+        if self.do_all_methods and filename is None:
+            print("If `do_all_methods` is enabled then filename can not be None")
+
         if not self.fix_quantizers():
             print("Model contains unsupported quantizers. No conversion will be done.")
             return None
 
-        tflite_model = None
+        # Methods should be listed in order of most likely to succeed
+        # because normally the converter stops after the first succesful conversion
+        methods = [
+            ("mlir", lambda: self.convert_fromkeras(new_converter=True),),
+            ("toco", lambda: self.convert_fromkeras(new_converter=False),),
+            ("compatv1", lambda: self.convert_compatv1(extra_shape_inference=False),),
+            (
+                "compatv1_withshapes",
+                lambda: self.convert_compatv1(extra_shape_inference=True),
+            ),
+        ]
 
+        tflite_models = []
         result_log = []
         result_summary = []
 
-        if tf_2_or_newer():
-            result_summary.append("Session method: Tensorflow 1.x only")
-        else:
+        for name, conv_func in methods:
+            print(f"Running conversion method: {name}")
             try:
-                tflite_model = self.convert_sessionmethod()
-                result_summary.append("Session method: success")
+                tflite_model = conv_func()
+                result_summary.append(f"{name} method: success")
+                tflite_models.append((name, tflite_model))
+                if not self.do_all_methods:
+                    break
             except Exception as e:
-                result_log.append(f"Session method log:\n{str(e)}")
-                result_summary.append("Session method: failed")
-
-        try:
-            tflite_model2 = self.convert_kerasmethod(new_converter=True)
-            if tflite_model is None:
-                tflite_model = tflite_model2
-            result_summary.append("MLIR method: success")
-        except Exception as e:
-            result_log.append(f"MLIR method log:\n{str(e)}")
-            result_summary.append("MLIR method: failed")
-
-        try:
-            tflite_model3 = self.convert_kerasmethod(new_converter=False)
-            if tflite_model is None:
-                tflite_model = tflite_model3
-            result_summary.append("Keras method: success")
-        except Exception as e:
-            result_log.append(f"Keras method log:\n{str(e)}")
-            result_summary.append("Keras method: failed")
+                result_log.append(f"{name} method log:\n{str(e)}")
+                result_summary.append(f"{name} method: failed")
 
         print("\n----------------\nConversion logs:")
         for log in result_log:
@@ -230,14 +236,19 @@ class ModelConverter:
         for log in result_summary:
             print(log)
 
-        if tflite_model is not None:
-            if filename is not None:
-                print(f"Saving tf lite model as {filename}")
-                open(filename, "wb").write(tflite_model)
-        else:
-            print("Did not save tf lite model.")
+        first_model = tflite_models[0][1] if len(tflite_models) >= 1 else None
 
-        return tflite_model
+        if self.do_all_methods:
+            for name, tflite_model in tflite_models:
+                fn = f"{filename}_{name}.tflite"
+                print(f"Saving tf lite model as {fn}")
+                open(fn, "wb").write(tflite_model)
+        else:
+            if first_model and filename is not None:
+                print(f"Saving tf lite model as {filename}")
+                open(filename, "wb").write(first_model)
+
+        return first_model
 
     def fix_quantizers(self):
         result = True
@@ -299,6 +310,9 @@ class ModelConverter:
 
             if supported_input_quantizer and supported_kernel_quantizer:
                 l.kernel_quantizer = None
+
+                # TODO: Our QuantConv2D layers usually don't have a bias because it is already in the batchnorm.
+                # If they do, however, then we have to check whether its [0] or [1] here based on shape
                 w = l.get_weights()[0]
 
                 if isinstance(l, lq.layers.QuantConv2D):
@@ -333,11 +347,8 @@ class ModelConverter:
 
         return result
 
-    def convert_kerasmethod(self, new_converter=False):
-        """Conversion through the 'Keras method'
-
-        This method works with many normal models. When adding a single Lambda layer, such as `tf.keras.layers.Lambda(tf.sign)` or with a custom op, then it still works.
-        However, sometimes, when adding *more than one* of such layers, at any place in the network, then it stops working.
+    def convert_fromkeras(self, new_converter=False):
+        """Conversion using the v2 converter.
         """
         if tf_2_or_newer():
             converter = tf.lite.TFLiteConverter.from_keras_model(self.model)
@@ -347,22 +358,77 @@ class ModelConverter:
             converter = tf.lite.TFLiteConverter.from_keras_model_file(keras_file)
         converter.allow_custom_ops = True
         if new_converter:
-            converter.experimental_enable_mlir_converter = True
+            # converter.experimental_enable_mlir_converter = True
             converter.experimental_new_converter = True
+            # For now, we print a note to the user on how to add our custom op to the MLIR converter
+            toco_path = (
+                subprocess.check_output("which toco_from_protos", shell=True)
+                .strip()
+                .decode("ascii")
+            )
+            print(
+                f"Note: to use the MLIR converter, please add the line `import larq_compute_engine as lqce` to `{toco_path}`"
+            )
         return converter.convert()
 
-    def convert_sessionmethod(self):
-        """Conversion through the 'Session method'
-
-        Unlike the Keras method, this one works with multiple Lambda layers with custom ops. However, it sometimes fails with BatchNormalization layers.
-
-        Although it is a different error message, in the following issue it is suggested to replace `tf.keras.layers.BatchNormalization` by `tf.layers.batch_normalization(fused=False)`.
-        https://github.com/tensorflow/tensorflow/issues/25301
+    def convert_compatv1(
+        self, extra_shape_inference=False, new_converter=False,
+    ):
+        """Conversion using the compat.v1 interface of the converter.
         """
-        converter = tf.lite.TFLiteConverter.from_session(
-            tf.compat.v1.keras.backend.get_session(),
-            self.model.inputs,
-            self.model.outputs,
+        # First convert the graph to a 'frozen graph def' so that we can edit the attributes
+
+        # This frozen graph part is taken from the compat.v1 converter in `lite/python/lite.py`
+        tf.keras.backend.set_learning_phase(False)
+        function = _saving_utils.trace_model_call(self.model)
+        concrete_func = function.get_concrete_function()
+        frozen_func = _convert_to_constants.convert_variables_to_constants_v2(
+            concrete_func, lower_control_flow=False
+        )
+        input_tensors = frozen_func.inputs
+        output_tensors = frozen_func.outputs
+        # Setting add_shapes=True causes shape inference and generates the `_output_shapes` attr
+        graph_def = frozen_func.graph.as_graph_def(add_shapes=extra_shape_inference)
+
+        # Now edit the attributes
+        # - Optionally set `_output_quantized = True`
+        # - Set batch dimension of `_output_shape` to 1
+        for node in graph_def.node:
+            # node.name is "model/tf_op_layer_..../..."
+            # node.op is "LqceBconv2d64"
+            # node.input is "model/.../add"
+            # node.input is "model/.../filter"
+            if node.op.startswith("LqceBconv2d"):
+
+                node.attr["_output_quantized"].b = False
+
+                # Set batch dimension to 1
+                # because wildcard dimensions are not supported for custom operators
+                if extra_shape_inference:
+                    node.attr["_output_shapes"].list.shape[0].dim[0].size = 1
+
+                # Once we support fused activations, here we can
+                # choose one of the activations in the enum `TfLiteFusedActivation`
+                # defined in `lite/c/builtin_op_data.h`
+                # "", "RELU", "RELU1", "RELU6"
+                # node.attr["_fused_activation"].str = ""
+
+                # Setting _output_types will be needed for bitpacked weights
+                # node.attr['_output_types'].list.type.extend([
+                #    types_pb2.DT_FLOAT,
+                #    ])
+
+        # Create the converter
+        converter = tf.compat.v1.lite.TFLiteConverter(
+            graph_def,
+            input_tensors,
+            output_tensors,
+            experimental_debug_info_func=_build_debug_info_func(frozen_func.graph),
         )
         converter.allow_custom_ops = True
+
+        if new_converter:
+            converter.experimental_enable_mlir_converter = True
+            converter.experimental_new_converter = True
+
         return converter.convert()
