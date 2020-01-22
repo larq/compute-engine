@@ -28,3 +28,25 @@ cc_binary(
         "@org_tensorflow//tensorflow/lite/tools/benchmark:logging",
     ],
 )
+
+cc_binary(
+    name = "lce_benchmark_all",
+    srcs = [
+        "lce_benchmark_all.cc",
+    ],
+    copts = common_copts,
+    linkopts = tflite_linkopts() + select({
+        "@org_tensorflow//tensorflow:android": [
+            "-pie",  # Android 5.0 and later supports only PIE
+            "-lm",  # some builtin ops, e.g., tanh, need -lm
+        ],
+        "//conditions:default": [],
+    }),
+    deps = [
+        "//larq_compute_engine/tflite/cc/kernels:lce_op_kernels",
+        "@org_tensorflow//tensorflow/lite:framework",
+        "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
+        "@googlebenchmark//:benchmark",
+        "@googlebenchmark//:benchmark_main",
+    ],
+)
