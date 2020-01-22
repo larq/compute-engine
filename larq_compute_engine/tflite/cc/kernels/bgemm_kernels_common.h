@@ -86,8 +86,8 @@ struct BinaryKernelParams {
 template <int LhsCols, int RhsCols, class T>
 inline void MakeBinaryKernelParams(
     const PackedMatrix<T>& lhs, const PackedMatrix<T>& rhs,
-    const BinaryBasicSpec<std::int32_t, float>& spec,
-    int start_row, int start_col, int end_row, int end_col, Matrix<float>* dst,
+    const BinaryBasicSpec<std::int32_t, float>& spec, int start_row,
+    int start_col, int end_row, int end_col, Matrix<float>* dst,
     BinaryKernelParams<LhsCols, RhsCols, T>* params) {
   const int depth = lhs.layout.rows;
   RUY_DCHECK_EQ(start_row % LhsCols, 0);

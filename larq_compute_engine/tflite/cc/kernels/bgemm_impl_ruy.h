@@ -1,8 +1,8 @@
 #ifndef COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_RUY_H_
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_RUY_H_
 
-#include "bgemm_trmul_params.h"
 #include "bgemm_kernels_common.h"
+#include "bgemm_trmul_params.h"
 #include "tensorflow/lite/experimental/ruy/matrix.h"
 #include "tensorflow/lite/experimental/ruy/platform.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
@@ -13,7 +13,6 @@ using namespace tflite::cpu_backend_gemm;
 
 namespace compute_engine {
 namespace tflite {
-
 
 template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
           typename DstScalar, QuantizationFlavor quantization_flavor>
