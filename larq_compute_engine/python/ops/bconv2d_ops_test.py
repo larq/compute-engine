@@ -57,13 +57,15 @@ def test_bconv(
     filt = np.random.choice(sample_list, np.prod(fshape)).astype(dtype)
     filt = np.reshape(filt, fshape)
 
-    multi_bias = np.empty(shape=(2, out_channel))
+    fused_multiply = np.full(shape=(out_channel), fill_value=-2)
+    fused_add = np.full(shape=(out_channel), fill_value=fh * fw * in_channel)
 
     output = eval_op(
         bconv_op(
             inp,
             filt,
-            multi_bias,
+            fused_multiply,
+            fused_add,
             strides,
             padding,
             dilations=dilations,

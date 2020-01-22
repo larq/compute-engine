@@ -80,11 +80,6 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
     RUY_DCHECK_LE(clamped_end_col, end_col);
     RUY_DCHECK_LE(end_col - clamped_end_col, RhsLayout::kCols);
 
-    const int out_channels = dst->layout.rows;
-    const AccumScalar* mul_bias = spec.bias;
-    const AccumScalar* add_bias =
-        spec.bias ? &spec.bias[out_channels] : nullptr;
-
     gemmlowp::ScopedProfilingLabel label("Binary Kernel (Standard Cpp)");
     const int depth = lhs.layout.rows;
     for (int i = start_row; i < clamped_end_row; i++) {
@@ -99,11 +94,11 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
           //    lhs_val, rhs_val);
           accum += xorpopcount<TBitpacked, AccumScalar>(lhs_val, rhs_val);
         }
-        if (mul_bias) {
-          accum *= mul_bias[i];
+        if (spec.fused_multiply) {
+          accum *= spec.fused_multiply[i];
         }
-        if (add_bias) {
-          accum += add_bias[i];
+        if (spec.fused_add) {
+          accum += spec.fused_add[i];
         }
         *ElementPtr(dst, i, j) = static_cast<DstScalar>(accum);
       }

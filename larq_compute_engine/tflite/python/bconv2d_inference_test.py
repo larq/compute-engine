@@ -22,11 +22,10 @@ def _create_bconv2d_layer(
     fshape = [kernel_size, kernel_size, in_channels, filters]
     filt_tf = np.random.choice([-1, 1], fshape)
     filt_lite = np.copy(np.moveaxis(filt_tf, 3, 0))
-    dotproduct_size = kernel_size * kernel_size * in_channels
 
-    multi_bias = np.empty(shape=(2, filters))
-    multi_bias[0, :] = -2
-    multi_bias[1, :] = dotproduct_size
+    dotproduct_size = kernel_size * kernel_size * in_channels
+    fused_multiply = np.full(shape=(filters), fill_value=-2)
+    fused_add = np.full(shape=(filters), fill_value=dotproduct_size)
 
     def _layer_tf(x):
         # Use native tf op because it supports dilations
@@ -38,7 +37,8 @@ def _create_bconv2d_layer(
         y = bconv_op(
             x,
             filt_lite,
-            multi_bias,
+            fused_multiply,
+            fused_add,
             strides,
             padding,
             data_format="NHWC",

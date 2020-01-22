@@ -2,6 +2,7 @@
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_RUY_H_
 
 #include "bgemm_trmul_params.h"
+#include "bgemm_kernels_common.h"
 #include "tensorflow/lite/experimental/ruy/matrix.h"
 #include "tensorflow/lite/experimental/ruy/platform.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
@@ -13,6 +14,7 @@ using namespace tflite::cpu_backend_gemm;
 namespace compute_engine {
 namespace tflite {
 
+
 template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
           typename DstScalar, QuantizationFlavor quantization_flavor>
 struct BGemmImplUsingRuy {
@@ -20,7 +22,7 @@ struct BGemmImplUsingRuy {
       const MatrixParams<LhsScalar>& lhs_params, const LhsScalar* lhs_data,
       const MatrixParams<RhsScalar>& rhs_params, const RhsScalar* rhs_data,
       const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
-      const GemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
+      const BGemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
       CpuBackendContext* context) {
     gemmlowp::ScopedProfilingLabel label("BGemmRuy");
 
@@ -32,7 +34,7 @@ struct BGemmImplUsingRuy {
     static_assert(std::is_signed<DstScalar>::value,
                   "Output of BGEMM should be of a signed type.");
 
-    using TSpec = ruy::BasicSpec<AccumScalar, DstScalar>;
+    using TSpec = BinaryBasicSpec<AccumScalar, DstScalar>;
 
     // getting ruy context
     auto ruy_context = context->ruy_context();
@@ -54,7 +56,8 @@ struct BGemmImplUsingRuy {
     // We would like to set `spec.add_bias` and `spec.multiply_bias` but right
     // now we concatenate them in a single array
     TSpec spec;
-    spec.bias = params.bias;
+    spec.fused_multiply = params.fused_multiply;
+    spec.fused_add = params.fused_add;
 
     // The allocator is used to allocate memory for pre-packed matrices
     ruy::Allocator allocator;

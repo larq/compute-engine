@@ -15,12 +15,13 @@
 
 using namespace tflite;
 
+namespace ce = compute_engine;
+
 namespace compute_engine {
 namespace tflite {
 namespace bconv2d {
 
-namespace ce = compute_engine;
-using ce::core::Layout;
+using ::compute_engine::core::Layout;
 
 enum class KernelType {
   // kReference: the same impl. path as the BConv2D op for TF
@@ -142,21 +143,24 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
                      TfLiteContext* context, TfLiteNode* node) {
   auto* conv_params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
 
-  TF_LITE_ENSURE(context, node->inputs->size >= 2);
+  TF_LITE_ENSURE(context, node->inputs->size == 4);
 
   const auto* input = GetInput(context, node, 0);
   const auto* filter = GetInput(context, node, 1);
+  const auto* fused_multiply = GetInput(context, node, 2);
+  const auto* fused_add = GetInput(context, node, 3);
   auto* output = GetOutput(context, node, 0);
-
-  const TfLiteTensor* multi_bias =
-      node->inputs->size >= 3 ? GetInput(context, node, 2) : nullptr;
 
   TF_LITE_ENSURE_EQ(context, NumDimensions(input), 4);
   TF_LITE_ENSURE_EQ(context, NumDimensions(filter), 4);
+  TF_LITE_ENSURE_EQ(context, NumDimensions(fused_multiply), 1);
+  TF_LITE_ENSURE_EQ(context, NumDimensions(fused_add), 1);
 
   // TF lite supports only single precision float as tensor data type!
   // Therefore no need to check against doubles for now.
   TF_LITE_ENSURE_EQ(context, input->type, kTfLiteFloat32);
+  TF_LITE_ENSURE_EQ(context, fused_multiply->type, kTfLiteInt32);
+  TF_LITE_ENSURE_EQ(context, fused_add->type, kTfLiteInt32);
   TF_LITE_ENSURE_EQ(context, output->type, kTfLiteFloat32);
 
   // reading the input dimensions
@@ -176,15 +180,10 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
   conv_params->filter_width = filter->dims->data[2];
   TF_LITE_ENSURE_EQ(context, conv_params->channels_in, filter->dims->data[3]);
 
-  if (multi_bias) {
-    // Bias is applied to the accumulator, so its int32
-    TF_LITE_ENSURE_EQ(context, multi_bias->type, kTfLiteInt32);
-    // multi_bias has shape [2, channels]
-    TF_LITE_ENSURE_EQ(context, NumDimensions(multi_bias), 2);
-    TF_LITE_ENSURE_EQ(context, multi_bias->dims->data[0], 2);
-    TF_LITE_ENSURE_EQ(context, multi_bias->dims->data[1],
-                      conv_params->channels_out);
-  }
+  TF_LITE_ENSURE_EQ(context, fused_multiply->dims->data[0],
+                    conv_params->channels_out);
+  TF_LITE_ENSURE_EQ(context, fused_add->dims->data[0],
+                    conv_params->channels_out);
 
   // computing the padding and output values (height, width)
   int out_width, out_height;
@@ -449,13 +448,9 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
              TfLiteBConv2DParams* params) {
   const auto* input = GetInput(context, node, 0);
   const auto* filter = GetInput(context, node, 1);
+  const auto* fused_multiply = GetInput(context, node, 2);
+  const auto* fused_add = GetInput(context, node, 3);
   auto* output = GetOutput(context, node, 0);
-
-  // In case there is a third input, it will have shape [2, channels_out]
-  // where one set of channels is multipliers and the other set is
-  // additive terms.
-  const TfLiteTensor* multi_bias =
-      node->inputs->size >= 3 ? GetInput(context, node, 2) : nullptr;
 
   TfLiteTensor* im2col = params->need_im2col
                              ? GetTemporary(context, node, params->im2col_index)
@@ -529,8 +524,9 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   BConv2D<T, TBitpacked>(
       op_params, GetTensorShape(input), GetTensorData<T>(input),
       GetTensorShape(filter), GetTensorData<TBitpacked>(bitpacked_weights),
-      GetTensorShape(multi_bias), GetTensorData<std::int32_t>(multi_bias),
-      GetTensorShape(output), GetTensorData<T>(output), GetTensorShape(im2col),
+      GetTensorData<std::int32_t>(fused_multiply),
+      GetTensorData<std::int32_t>(fused_add), GetTensorShape(output),
+      GetTensorData<T>(output), GetTensorShape(im2col),
       GetTensorData<T>(im2col), params->bitpack_before_im2col,
       GetTensorData<T>(padding_buffer),
       CpuBackendContext::GetFromContext(context));

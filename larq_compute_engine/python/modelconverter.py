@@ -79,21 +79,21 @@ def create_bconv_layer(
         fused_add = np.full(shape=(out_channels), fill_value=0)
 
     # The bconv will do the following:
-    # output = add_bias[channel] + mul_bias[channel] * popcount
+    # output = fused_add[channel] + fused_multiply[channel] * popcount
     # We use this to implement:
-    # - `y1 = n - 2 * x` (the backtransformation to -1,+1 space)
-    # - `y2 = a + b * y1` (fused batchnorm)
+    # - `y1 = n - 2 * x`   (the backtransformation to -1,+1 space)
+    # - `y2 = a + b * y1`  (fused batchnorm)
     # Together they become
     # `y = (a + b*n) + (-2b) * x
-    multi_bias = np.empty(shape=(2, out_channels))
-    multi_bias[0, :] = -2 * fused_multiply
-    multi_bias[1, :] = fused_add + dotproduct_size * fused_multiply
+    fused_add = fused_add + dotproduct_size * fused_multiply
+    fused_multiply = -2 * fused_multiply
 
     def bconv_op(x):
         y = bconv2d64(
             x,
             weights,
-            multi_bias,
+            fused_multiply,
+            fused_add,
             strides,
             padding,
             data_format="NHWC",

@@ -62,8 +62,8 @@ template <class T, class TBitpacked>
 inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                     const T* input_data, const RuntimeShape& filter_shape,
                     const TBitpacked* packed_filter_data,
-                    const RuntimeShape& multi_bias_shape,
-                    const std::int32_t* multi_bias_data,
+                    const std::int32_t* fused_multiply_data,
+                    const std::int32_t* fused_add_data,
                     const RuntimeShape& output_shape, T* output_data,
                     const RuntimeShape& im2col_shape, T* im2col_data,
                     bool bitpack_before_im2col, T* padding_buffer,
@@ -164,11 +164,9 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   dst_params.cols = m;
 
   // Accumulation type, destination type
-  // The first is used for the bias type, the second for the clamp type.
-  cpu_backend_gemm::GemmParams<std::int32_t, T> gemm_params;
-  gemm_params.bias = multi_bias_data;
-  // gemm_params.clamp_min = output_activation_min;
-  // gemm_params.clamp_max = output_activation_max;
+  BGemmParams<std::int32_t, T> gemm_params;
+  gemm_params.fused_multiply = fused_multiply_data;
+  gemm_params.fused_add = fused_add_data;
 
   // #if defined(TF_LITE_USE_CBLAS) && defined(__APPLE__)
 
