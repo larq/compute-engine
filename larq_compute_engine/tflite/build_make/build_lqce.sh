@@ -113,7 +113,7 @@ if [ ! -d "${TF_DIR}/tensorflow/lite/tools/make/downloads" ]; then
     #   grep -v mirror.tensorflow
     # by
     #   grep mirror.tensorflow
-    sed -i -e "s#grep -v mirror#grep mirror#" "${TF_DIR}/tensorflow/lite/tools/make/download_dependencies.sh"
+    sed -i -e "s#bitbucket.org/eigen/eigen/get/#gitlab.com/libeigen/eigen/-/archive/#" "${TF_DIR}/tensorflow/lite/tools/make/download_dependencies.sh"
     ${TF_DIR}/tensorflow/lite/tools/make/download_dependencies.sh
 fi
 
