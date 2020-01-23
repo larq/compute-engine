@@ -125,19 +125,7 @@ class PaddingFunctor {
                       out_c * (filter_height * filter_width * input_channels) +
                       filter_y * (filter_width * input_channels) +
                       filter_x * input_channels + in_c;
-                  // Since the filter format is OHWI, this is tflite
-                  // and we will now assume that bgemm computes popcount
-                  // and does *not* do the transformation back to {-1,1},
-                  // this will happen in another layer.
-                  // Therefore, we now need to compute
-                  //
-                  // 0.5 * num_elements - popcount(filter_values)
-                  //
-                  // Here we do -popcount(filter) and in the cases
-                  // below we do the 0.5 * num_elements.
-                  //
-                  // See also the explanation at the bottom of the functor.
-                  if (filter_data[filter_idx] < 0) cur_correction -= 1;
+                  cur_correction -= filter_data[filter_idx];
                 }
               }
 
@@ -145,29 +133,21 @@ class PaddingFunctor {
               const int effective_filter_y = dilation_rows * filter_y;
               // Case 0: overflow_left = x; overflow_top = y
               if (effective_filter_y < y || effective_filter_x < x) {
-                if (filter_format != FilterFormat::HWIO)
-                  corrections[0] += 0.5 * input_channels;
                 corrections[0] += cur_correction;
               }
               // Case 1: overflow_right = x; overflow_top = y
               if (effective_filter_y < y ||
                   (effective_filter_width - effective_filter_x) <= x) {
-                if (filter_format != FilterFormat::HWIO)
-                  corrections[1] += 0.5 * input_channels;
                 corrections[1] += cur_correction;
               }
               // Case 2: overflow_left = x; overflow_bot = y
               if ((effective_filter_height - effective_filter_y) <= y ||
                   effective_filter_x < x) {
-                if (filter_format != FilterFormat::HWIO)
-                  corrections[2] += 0.5 * input_channels;
                 corrections[2] += cur_correction;
               }
               // Case 3: overflow_right = x; overflow_bot = y
               if ((effective_filter_height - effective_filter_y) <= y ||
                   (effective_filter_width - effective_filter_x) <= x) {
-                if (filter_format != FilterFormat::HWIO)
-                  corrections[3] += 0.5 * input_channels;
                 corrections[3] += cur_correction;
               }
             }
@@ -314,24 +294,6 @@ class PaddingFunctor {
           for (int out_c = 0; out_c < filter_count; ++out_c) {
             *output_ptr++ += *cache_ptr++;
           }
-
-          // Let n = kernel_height * kernel_width * input_channels
-          //
-          // For the inside part we have
-          //    y = popcount(XOR(input,filter))     y is in {0,1} space
-          //    z = n - 2 * y                       z is in {-1,1} space
-          //
-          // For the outside zero-padding parts we have
-          //    y = correct_part + popcount(XOR(0,outside_filter))
-          //    z = n - 2 * y
-          // But we *want* it to be
-          //    z = m - 2 * correct_part
-          // where m is the number of filter parts inside the input.
-          //
-          // Now define
-          //    fix = (n-m)/2 - popcount(binarized_outside_filter_values)
-          // Then choosing y = y + fix will make z correct.
-          // We compute that fix in the caching part.
 
         }  // out_x
       }    // out_y

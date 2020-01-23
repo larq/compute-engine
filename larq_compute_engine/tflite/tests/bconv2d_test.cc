@@ -199,6 +199,10 @@ class BaseBConv2DOpModel : public SingleOpModel {
     filter_ = AddInput(filter);
     output_ = AddOutput(output);
 
+    int channels_out = GetShape(filter_)[0];
+    fused_multiply_ = AddInput({TensorType_INT32, {channels_out}});
+    fused_add_ = AddInput({TensorType_INT32, {channels_out}});
+
     flexbuffers::Builder fbb;
     fbb.Map([&]() {
       fbb.TypedVector("strides", [&]() {
@@ -225,6 +229,8 @@ class BaseBConv2DOpModel : public SingleOpModel {
   int input_;
   int filter_;
   int output_;
+  int fused_multiply_;
+  int fused_add_;
 };
 
 class BConv2DOpModel : public BaseBConv2DOpModel {
@@ -235,6 +241,14 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
 
   void SetInput(const std::vector<float>& data) {
     PopulateTensor(input_, data);
+  }
+
+  void SetFusedMultiply(std::vector<std::int32_t>& f) {
+    PopulateTensor(fused_multiply_, f);
+  }
+
+  void SetFusedAdd(std::vector<std::int32_t>& f) {
+    PopulateTensor(fused_add_, f);
   }
 
   std::vector<float> GetOutput() { return ExtractVector<float>(output_); }
@@ -311,9 +325,12 @@ TEST_P(BConv2DOpTest, SimpleTest) {
 
   using T = float;
   std::vector<T> input_data, filters_data, bias_data;
+  std::vector<std::int32_t> fused_multiply_data, fused_add_data;
   input_data.resize(input_num_elem);
   filters_data.resize(filters_num_elem);
   bias_data.resize(filter_count, 0);
+  fused_multiply_data.resize(filter_count, 0);
+  fused_add_data.resize(filter_count, 0);
 
   srand(time(NULL));
   std::array<T, 2> list{1.0, -1.0};
@@ -326,6 +343,13 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   std::generate(std::begin(filters_data), std::end(filters_data),
                 rand_generator);
 
+  const std::int32_t dotproduct_size =
+      filter_height * filter_width * input_depth;
+  for (int i = 0; i < filter_count; ++i) {
+    fused_multiply_data[i] = -2;
+    fused_add_data[i] = dotproduct_size;
+  }
+
   BConv2DOpModel m_lce(
       registration,
       {TensorType_FLOAT32,
@@ -337,12 +361,9 @@ TEST_P(BConv2DOpTest, SimpleTest) {
 
   m_lce.SetInput(input_data);
   m_lce.SetFilter(filters_data);
+  m_lce.SetFusedMultiply(fused_multiply_data);
+  m_lce.SetFusedAdd(fused_add_data);
   m_lce.Invoke();
-
-  auto lce_output = m_lce.GetOutput();
-  // Do the transformation from {0,1} back to {-1,+1}
-  const T dotproduct_size = filter_height * filter_width * input_depth;
-  for (auto& x : lce_output) x = dotproduct_size - 2 * x;
 
   ConvolutionOpModel m_builtin(
       ::tflite::ops::builtin::
@@ -360,7 +381,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   m_builtin.SetBias(bias_data);
   m_builtin.Invoke();
 
-  EXPECT_THAT(lce_output, ElementsAreArray(m_builtin.GetOutput()));
+  EXPECT_THAT(m_lce.GetOutput(), ElementsAreArray(m_builtin.GetOutput()));
 }
 
 INSTANTIATE_TEST_SUITE_P(

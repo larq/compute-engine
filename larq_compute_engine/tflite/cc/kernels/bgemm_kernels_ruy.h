@@ -94,11 +94,12 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
           //    lhs_val, rhs_val);
           accum += xorpopcount<TBitpacked, AccumScalar>(lhs_val, rhs_val);
         }
-        if (spec.bias) {
-          accum += spec.bias[i];
+        if (spec.fused_multiply) {
+          accum *= spec.fused_multiply[i];
         }
-        //*ElementPtr(dst, i, j) =
-        //    static_cast<DstScalar>(accum) - spec.multiplier_exponent;
+        if (spec.fused_add) {
+          accum += spec.fused_add[i];
+        }
         *ElementPtr(dst, i, j) = static_cast<DstScalar>(accum);
       }
     }

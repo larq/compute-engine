@@ -1,6 +1,7 @@
 #ifndef COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_RUY_H_
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_RUY_H_
 
+#include "bgemm_kernels_common.h"
 #include "bgemm_trmul_params.h"
 #include "tensorflow/lite/experimental/ruy/matrix.h"
 #include "tensorflow/lite/experimental/ruy/platform.h"
@@ -20,7 +21,7 @@ struct BGemmImplUsingRuy {
       const MatrixParams<LhsScalar>& lhs_params, const LhsScalar* lhs_data,
       const MatrixParams<RhsScalar>& rhs_params, const RhsScalar* rhs_data,
       const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
-      const GemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
+      const BGemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
       CpuBackendContext* context) {
     gemmlowp::ScopedProfilingLabel label("BGemmRuy");
 
@@ -32,10 +33,7 @@ struct BGemmImplUsingRuy {
     static_assert(std::is_signed<DstScalar>::value,
                   "Output of BGEMM should be of a signed type.");
 
-    // default accumulator bitwidth is set to 32-bit which is enough for
-    // bitwidths we are currently using
-    using TAccum = std::int32_t;
-    using TSpec = ruy::BasicSpec<TAccum, DstScalar>;
+    using TSpec = BinaryBasicSpec<AccumScalar, DstScalar>;
 
     // getting ruy context
     auto ruy_context = context->ruy_context();
@@ -54,11 +52,9 @@ struct BGemmImplUsingRuy {
     rhs.data = rhs_data;
     dst.data = dst_data;
 
-    // Here, we abuse the 'multiplier_exponent' which is used only for
-    // non-floating-point cases to pass the bitpadding correction value (int) to
-    // bgemm kernel
     TSpec spec;
-    spec.multiplier_exponent = params.multiplier_exponent;
+    spec.fused_multiply = params.fused_multiply;
+    spec.fused_add = params.fused_add;
 
     // The allocator is used to allocate memory for pre-packed matrices
     ruy::Allocator allocator;

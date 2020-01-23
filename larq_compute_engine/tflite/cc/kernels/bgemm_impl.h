@@ -1,6 +1,7 @@
 #ifndef COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_IMPL_H_
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_IMPL_H_
 
+#include "bgemm_kernels_common.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 
@@ -35,10 +36,9 @@ void BGemm(
     const MatrixParams<LhsScalar>& lhs_params, const LhsScalar* lhs_data,
     const MatrixParams<RhsScalar>& rhs_params, const RhsScalar* rhs_data,
     const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
-    const GemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
+    const BGemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
     CpuBackendContext* context) {
   gemmlowp::ScopedProfilingLabel label("BGemm");
-  ValidateParams(lhs_params, rhs_params, dst_params, params);
   // TODO: special fast bgemm impl. for matrix-vector multiplication
   // if (dst_params.cols == 1) {
   //   // GEMV case: try a custom fast GEMV path.
