@@ -15,7 +15,8 @@ namespace tflite {
 template <class T, class TBitpacked>
 inline void packbits_tensor(const RuntimeShape& in_shape, const T* in_data,
                             RuntimeShape& out_shape,
-                            std::vector<TBitpacked>& out_data) {
+                            std::vector<TBitpacked>& out_data,
+                            const std::int32_t zero_point) {
   const int dims = in_shape.DimensionsCount();
   // Pack the tensor along the last dimension
   const int rows = FlatSizeSkipDim(in_shape, dims - 1);
@@ -26,7 +27,7 @@ inline void packbits_tensor(const RuntimeShape& in_shape, const T* in_data,
   {
     gemmlowp::ScopedProfilingLabel label("Packbits");
     ce::core::packbits_matrix(in_data, rows, cols, out_data, rows_bp, cols_bp,
-                              bitpadding, ce::core::Axis::RowWise);
+                              bitpadding, ce::core::Axis::RowWise, zero_point);
   }
 
   out_shape.ReplaceWith(dims, in_shape.DimsData());

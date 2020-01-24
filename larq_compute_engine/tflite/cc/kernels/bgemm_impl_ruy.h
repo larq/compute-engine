@@ -30,8 +30,6 @@ struct BGemmImplUsingRuy {
     static_assert(std::is_unsigned<LhsScalar>::value &&
                       std::is_integral<LhsScalar>::value,
                   "Input to BGEMM should be of type unsigned integral.");
-    static_assert(std::is_signed<DstScalar>::value,
-                  "Output of BGEMM should be of a signed type.");
 
     using TSpec = BinaryBasicSpec<AccumScalar, DstScalar>;
 
@@ -51,10 +49,16 @@ struct BGemmImplUsingRuy {
     lhs.data = lhs_data;
     rhs.data = rhs_data;
     dst.data = dst_data;
+    // lhs and rhs do not have zero-points since they are already bitpacked
+    dst.zero_point = dst_params.zero_point;
 
     TSpec spec;
     spec.fused_multiply = params.fused_multiply;
     spec.fused_add = params.fused_add;
+    spec.clamp_min = params.clamp_min;
+    spec.clamp_max = params.clamp_max;
+    spec.multiplier_fixedpoint = params.multiplier_fixedpoint;
+    spec.multiplier_exponent = params.multiplier_exponent;
 
     // The allocator is used to allocate memory for pre-packed matrices
     ruy::Allocator allocator;
@@ -84,6 +88,11 @@ struct BGemmImplUsingRuy {
         bgemm_runtime_path == ruy::Path::kAvx512)
       bgemm_runtime_path = ruy::Path::kStandardCpp;
 #endif
+
+    // For now, int8 only has a reference implementation
+    if (!std::is_floating_point<DstScalar>::value) {
+      bgemm_runtime_path = ruy::Path::kStandardCpp;
+    }
 
     ruy::Matrix<LhsScalar> transposed_lhs(lhs);
     Transpose(&transposed_lhs);

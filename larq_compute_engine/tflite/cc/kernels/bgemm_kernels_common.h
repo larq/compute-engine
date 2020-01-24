@@ -15,15 +15,15 @@ using tflite::cpu_backend_gemm::QuantizationFlavor;
 // Modifications:
 // - bias changes to multiply + add
 // - clamp_min, clamp_max type changed from DstScalar to AccumScalar
-// - (later) 8-bit quantization related stuff
+// - 8-bit quantization related stuff
 template <typename AccumScalar, typename DstScalar,
           QuantizationFlavor quantization_flavor =
               std::is_floating_point<DstScalar>::value
                   ? QuantizationFlavor::kFloatingPoint
-                  : QuantizationFlavor::kIntegerWithUniformMultiplier>
+                  : QuantizationFlavor::kIntegerWithPerRowMultiplier>
 struct BGemmParams {
-  AccumScalar multiplier_fixedpoint = 0;
-  int multiplier_exponent = 0;
+  const AccumScalar* multiplier_fixedpoint = nullptr;
+  const int* multiplier_exponent = nullptr;
   const AccumScalar* fused_multiply = nullptr;
   const AccumScalar* fused_add = nullptr;
   AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
@@ -42,8 +42,8 @@ template <typename tAccumScalar, typename tDstScalar>
 struct BinaryBasicSpec {
   using AccumScalar = tAccumScalar;
   using DstScalar = tDstScalar;
-  AccumScalar multiplier_fixedpoint = 0;
-  int multiplier_exponent = 0;
+  const AccumScalar* multiplier_fixedpoint = nullptr;
+  const int* multiplier_exponent = nullptr;
   const AccumScalar* fused_multiply = nullptr;
   const AccumScalar* fused_add = nullptr;
   AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
@@ -59,6 +59,8 @@ struct BinaryBasicSpec {
   static int cache_friendly_traversal_threshold() { return 32 * 1024; }
 };
 
+// TODO: For 8-bit assembly kernels we need:
+// LhsCols, RhsCols, TBitpacked TDest
 template <int LhsCols, int RhsCols, class T>
 struct BinaryKernelParams {
   const T* lhs_base_ptr;

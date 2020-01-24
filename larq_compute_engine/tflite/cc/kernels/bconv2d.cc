@@ -8,6 +8,7 @@
 #include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/c/c_api_internal.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
+#include "tensorflow/lite/kernels/internal/quantization_util.h"
 #include "tensorflow/lite/kernels/internal/tensor.h"
 #include "tensorflow/lite/kernels/kernel_util.h"
 #include "tensorflow/lite/kernels/op_macros.h"
@@ -61,6 +62,17 @@ typedef struct {
   int64_t out_height{0};
 
   ce::core::FilterFormat filter_format{ce::core::FilterFormat::Unknown};
+
+  TfLiteFusedActivation activation = kTfLiteActNone;
+  // These min,max take care of a Relu *and* of clamping the results to go back
+  // to int8, so we get the Relu for free.
+  int32_t output_activation_min;
+  int32_t output_activation_max;
+
+  // Quantization parameters, per output channel
+  // A float multiplier is implemented as an int32 multiplication plus a shift.
+  std::vector<int32_t> output_multiplier;
+  std::vector<int32_t> output_shift;
 
   bool bitpack_before_im2col = false;
   bool need_im2col = false;
@@ -132,6 +144,20 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
                   "valid"  // TODO: not sure if this check is needed
           ? TfLitePadding::kTfLitePaddingValid
           : TfLitePadding::kTfLitePaddingSame;
+
+  if (m["activation"].IsNull() || m["activation"].ToString() == "") {
+    conv_params->activation = kTfLiteActNone;
+  } else if (m["activation"].ToString() == "RELU") {
+    conv_params->activation = kTfLiteActRelu;
+  } else if (m["activation"].ToString() == "RELU1") {
+    conv_params->activation = kTfLiteActRelu1;
+  } else if (m["activation"].ToString() == "RELU6") {
+    conv_params->activation = kTfLiteActRelu6;
+  } else {
+    context->ReportError(context, "Invalid value for activation.");
+    return conv_params;
+  }
+
   return conv_params;
 }
 
@@ -156,12 +182,14 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
   TF_LITE_ENSURE_EQ(context, NumDimensions(fused_multiply), 1);
   TF_LITE_ENSURE_EQ(context, NumDimensions(fused_add), 1);
 
-  // TF lite supports only single precision float as tensor data type!
-  // Therefore no need to check against doubles for now.
-  TF_LITE_ENSURE_EQ(context, input->type, kTfLiteFloat32);
+  TfLiteType input_type = input->type;
+  TF_LITE_ENSURE(context, input_type == kTfLiteFloat32 ||
+                              input_type == kTfLiteUInt8 ||
+                              input_type == kTfLiteInt8);
+  TF_LITE_ENSURE_EQ(context, filter->type, input_type);
+  TF_LITE_ENSURE_EQ(context, output->type, input_type);
   TF_LITE_ENSURE_EQ(context, fused_multiply->type, kTfLiteInt32);
   TF_LITE_ENSURE_EQ(context, fused_add->type, kTfLiteInt32);
-  TF_LITE_ENSURE_EQ(context, output->type, kTfLiteFloat32);
 
   // reading the input dimensions
   // TF and TF lite have the same input format [B, H, W, Ci]
@@ -198,6 +226,43 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
 
   conv_params->out_width = out_width;
   conv_params->out_height = out_height;
+
+  if (input_type == kTfLiteFloat32) {
+    CalculateActivationRange(conv_params->activation,
+                             &conv_params->output_activation_min,
+                             &conv_params->output_activation_max);
+  } else {  // Int8 or UInt8
+
+    // Currently there is only one quantization type in TF Lite
+    TF_LITE_ENSURE_EQ(context, input->quantization.type,
+                      kTfLiteAffineQuantization);
+    TF_LITE_ENSURE_EQ(context, filter->quantization.type,
+                      kTfLiteAffineQuantization);
+
+    const float output_scale = output->params.scale;
+    const double effective_output_scale =
+        1.0 / static_cast<double>(output_scale);
+    // Now convert effective_output_scale to an int32 multiplier + shift
+    int32_t significand;
+    int shift;
+    QuantizeMultiplier(effective_output_scale, &significand, &shift);
+
+    // Currently we only have the int8 output scale, so this is the same for
+    // every channel. Later we can fuse the batchnorm scales into these
+    // numbers, then they will be per-channel.
+    // Therefore we will already store them per-channel so that this will be
+    // easier in the future.
+    conv_params->output_multiplier.resize(conv_params->channels_out);
+    conv_params->output_shift.resize(conv_params->channels_out);
+    for (int i = 0; i < conv_params->channels_out; ++i) {
+      conv_params->output_multiplier[i] = significand;
+      conv_params->output_shift[i] = shift;
+    }
+
+    CalculateActivationRangeUint8(conv_params->activation, output,
+                                  &conv_params->output_activation_min,
+                                  &conv_params->output_activation_max);
+  }
 
   // determine the output dimensions
   TfLiteIntArray* output_shape = TfLiteIntArrayCreate(4);
@@ -291,7 +356,7 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
         TF_LITE_ENSURE(context, false);
     } else {
       // im2col before bitpacking so use the same type as the input
-      im2col->type = input->type;
+      im2col->type = input_type;
     }
     im2col->allocation_type = kTfLiteArenaRw;
     TF_LITE_ENSURE_OK(context,
@@ -314,7 +379,8 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
         conv_params->channels_out, conv_params->dilations[1],
         conv_params->dilations[2]);
 
-    padding_buffer->type = input->type;  // currently still float
+    padding_buffer->type =
+        input_type;  // TODO: Maybe we always want Int32 here?
     padding_buffer->allocation_type = kTfLiteArenaRw;
     TF_LITE_ENSURE_OK(
         context, context->ResizeTensor(context, padding_buffer, padding_size));
@@ -436,11 +502,8 @@ inline void GetConvParamsType(const TfLiteBConv2DParams& conv_params,
   op_params.dilation_height_factor = conv_params.dilations[1];
   op_params.dilation_width_factor = conv_params.dilations[2];
 
-  // TODO: this is not required for binary conv, however we need to
-  // check if it is used in other components of TF lite internal method which
-  // we are reusing and what are the default values!
-  // op_params.float_activation_min = output_activation_min;
-  // op_params.float_activation_max = output_activation_max;
+  op_params.quantized_activation_min = conv_params.output_activation_min;
+  op_params.quantized_activation_max = conv_params.output_activation_max;
 }
 
 template <class T, class TBitpacked>
@@ -498,7 +561,8 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
     size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
     ce::core::packbits_matrix(GetTensorData<T>(filter), rows, cols,
                               filter_data_bp, filter_rows_bp, filter_cols_bp,
-                              filter_bitpadding, ce::core::Axis::RowWise);
+                              filter_bitpadding, ce::core::Axis::RowWise,
+                              filter->params.zero_point);
 
     size_t num_bytes = filter_data_bp.size() * sizeof(TBitpacked);
 
@@ -518,12 +582,25 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   ConvParams op_params;
   GetConvParamsType(*params, op_params);
 
+  op_params.input_offset = input->params.zero_point;
+  op_params.weights_offset = filter->params.zero_point;
+  op_params.output_offset = output->params.zero_point;
+
+  const std::int32_t* output_multiplier = nullptr;
+  const int* output_shift = nullptr;
+
+  if (!std::is_floating_point<T>::value) {
+    output_multiplier = params->output_multiplier.data();
+    output_shift = params->output_shift.data();
+  }
+
   // We pass the shape of the original unpacked filter, so that all the shape
   // information is correct (number of channels etc), but we pass the packed
   // weights data
   BConv2D<T, TBitpacked>(
-      op_params, GetTensorShape(input), GetTensorData<T>(input),
-      GetTensorShape(filter), GetTensorData<TBitpacked>(bitpacked_weights),
+      op_params, output_multiplier, output_shift, GetTensorShape(input),
+      GetTensorData<T>(input), GetTensorShape(filter),
+      GetTensorData<TBitpacked>(bitpacked_weights),
       GetTensorData<std::int32_t>(fused_multiply),
       GetTensorData<std::int32_t>(fused_add), GetTensorShape(output),
       GetTensorData<T>(output), GetTensorShape(im2col),
@@ -536,10 +613,28 @@ template <KernelType kernel_type, class TBitpacked>
 TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   auto* conv_params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
 
+  const auto input_type = GetInput(context, node, 0)->type;
+
   if (kernel_type == KernelType::kReference) {
-    EvalRef<float, TBitpacked>(context, node, conv_params);
+    if (input_type == kTfLiteFloat32) {
+      EvalRef<float, TBitpacked>(context, node, conv_params);
+    } else if (input_type == kTfLiteInt8) {
+      // Not supported yet
+      // EvalRef<std::int8_t, TBitpacked>(context, node, conv_params);
+      return kTfLiteError;
+    } else {
+      // Not supported yet
+      // EvalRef<std::uint8_t, TBitpacked>(context, node, conv_params);
+      return kTfLiteError;
+    }
   } else if (kernel_type == KernelType::kGenericOptimized) {
-    EvalOpt<float, TBitpacked>(context, node, conv_params);
+    if (input_type == kTfLiteFloat32) {
+      EvalOpt<float, TBitpacked>(context, node, conv_params);
+    } else if (input_type == kTfLiteInt8) {
+      EvalOpt<std::int8_t, TBitpacked>(context, node, conv_params);
+    } else {
+      EvalOpt<std::uint8_t, TBitpacked>(context, node, conv_params);
+    }
   } else {
     return kTfLiteError;
   }

@@ -2,6 +2,7 @@
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_RUY_H_
 
 #include "larq_compute_engine/cc/core/bgemm_functor.h"
+#include "tensorflow/lite/experimental/ruy/kernel_common.h"
 #include "tensorflow/lite/experimental/ruy/platform.h"
 #include "tensorflow/lite/experimental/ruy/ruy.h"
 
@@ -20,6 +21,47 @@ struct BgemmKernel {};
 #elif RUY_PLATFORM(X86)
 #include "bgemm_kernels_x86.h"
 #endif
+
+// The function `ApplyMultiplier` in experimental/ruy/kernel_common.h
+// applies the float -> (u)int8 conversion if and only if
+//  AccumScalar == int32 && DstScalar != int32
+// For us, we have two cases:
+//  AccumScalar == int32 && DstScalar == float
+//  AccumScalar == int32 && DstScalar == (u)int8
+// Unfortunately, both of these would trigger `ApplyMultiplier`.
+// Thats why we make a copy here that triggers only if
+//  DstScalar != float
+
+template <typename Spec,
+          bool IsApplicable =
+              !std::is_same<typename Spec::DstScalar, float>::value>
+struct BinaryApplyMultiplierImpl {};
+
+template <typename Spec>
+struct BinaryApplyMultiplierImpl<Spec, false> {
+  using AccumScalar = typename Spec::AccumScalar;
+  using DstScalar = typename Spec::DstScalar;
+  static void Run(const Spec& spec, int row, AccumScalar* accum) {
+    RUY_DCHECK_EQ(spec.multiplier_fixedpoint, 0);
+    RUY_DCHECK_EQ(spec.multiplier_exponent, 0);
+  }
+};
+
+template <typename Spec>
+struct BinaryApplyMultiplierImpl<Spec, true> {
+  using AccumScalar = typename Spec::AccumScalar;
+  using DstScalar = typename Spec::DstScalar;
+  static void Run(const Spec& spec, int row, AccumScalar* accum) {
+    *accum = MultiplyByQuantizedMultiplier(
+        *accum, spec.multiplier_fixedpoint[row], spec.multiplier_exponent[row]);
+  }
+};
+
+template <typename Spec>
+void BinaryApplyMultiplier(const Spec& spec, int row,
+                           typename Spec::AccumScalar* accum) {
+  BinaryApplyMultiplierImpl<Spec>::Run(spec, row, accum);
+}
 
 template <class TIn, class TOut>
 inline auto xorpopcount(const TIn& a, const TIn& b) -> TOut {
@@ -62,8 +104,6 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
         std::is_unsigned<LhsScalar>::value &&
             std::is_integral<LhsScalar>::value,
         "Input to binary kernel should be of type unsigned integral.");
-    static_assert(std::is_signed<DstScalar>::value,
-                  "Output of binary kernel should be of a signed type.");
 
     using TBitpacked = LhsScalar;
 
@@ -89,9 +129,6 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
         for (int k = 0; k < depth; k++) {
           TBitpacked lhs_val = Element(lhs, k, i);
           TBitpacked rhs_val = Element(rhs, k, j);
-          // accum += ce::core::compute_binary_inner_prod<TBitpacked,
-          // AccumScalar>(
-          //    lhs_val, rhs_val);
           accum += xorpopcount<TBitpacked, AccumScalar>(lhs_val, rhs_val);
         }
         if (spec.fused_multiply) {
@@ -100,6 +137,12 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
         if (spec.fused_add) {
           accum += spec.fused_add[i];
         }
+
+        BinaryApplyMultiplier(spec, i, &accum);
+        accum += dst->zero_point;
+        accum = std::min<AccumScalar>(accum, spec.clamp_max);
+        accum = std::max<AccumScalar>(accum, spec.clamp_min);
+
         *ElementPtr(dst, i, j) = static_cast<DstScalar>(accum);
       }
     }
@@ -116,8 +159,10 @@ void RunBgemmKernelTyped(ruy::Tuning tuning,
                          ruy::Matrix<DstScalar>* dst) {
   using BKernel = BgemmKernel<ThePath, LhsScalar, RhsScalar, DstScalar, Spec>;
   BKernel kernel(tuning);
+#if !defined NDEBUG || !RUY_OPT_ENABLED(RUY_OPT_FAT_KERNEL)
   using LhsLayout = typename BKernel::LhsLayout;
   using RhsLayout = typename BKernel::RhsLayout;
+#endif
   // end_row and end_col may be larger than dst dimensions.
   // that is because kernels write directly to the destination matrix, whose
   // dimensions may not be a multiple of the kernel dimensions, and we try to

@@ -56,8 +56,44 @@ class BaseConvolutionOpModel : public SingleOpModel {
     input_ = AddInput(input);
     filter_ = AddInput(filter);
     output_ = AddOutput(output);
+
     int bias_size = GetShape(filter_)[0];
-    bias_ = AddInput({TensorType_FLOAT32, {bias_size}});
+    if (input.type == TensorType_FLOAT32) {
+      bias_ = AddInput({TensorType_FLOAT32, {bias_size}});
+    } else {
+      // This is a quantized version. The scale of 'bias' depends on the scales
+      // of input and filter. Supposedly this is correctly set during quantized
+      // training.
+      if (filter.per_channel_quantization) {
+        // per channel quantization.
+        std::vector<float> bias_scale(
+            filter.per_channel_quantization_scales.size());
+        std::vector<int64_t> bias_zero_points(
+            filter.per_channel_quantization_scales.size());
+        for (size_t i = 0; i < filter.per_channel_quantization_scales.size();
+             ++i) {
+          bias_scale[i] =
+              input.scale * filter.per_channel_quantization_scales[i];
+          bias_zero_points[i] = 0;
+        }
+        TensorData bias{TensorType_INT32,
+                        {bias_size},
+                        /*min=*/0,
+                        /*max=*/0,
+                        /*scale=*/0,
+                        /*zero_point=*/0,
+                        true,
+                        /*per_channel_quantization_scales=*/bias_scale,
+                        /*per_channel_quantization_offsets=*/bias_zero_points,
+                        /*channel_index==*/0};
+        bias_ = AddInput(bias);
+      } else {
+        // per tensor quantization.
+        auto bias_scale = GetScale(input_) * GetScale(filter_);
+        TensorData bias{TensorType_INT32, {bias_size}, 0, 0, bias_scale};
+        bias_ = AddInput(bias);
+      }
+    }
 
     SetBuiltinOp(BuiltinOperator_CONV_2D, BuiltinOptions_Conv2DOptions,
                  CreateConv2DOptions(
@@ -78,17 +114,18 @@ class BaseConvolutionOpModel : public SingleOpModel {
   int output_;
 };
 
+template <typename T, typename BiasType>
 class ConvolutionOpModel : public BaseConvolutionOpModel {
  public:
   using BaseConvolutionOpModel::BaseConvolutionOpModel;
 
-  void SetFilter(std::vector<float>& f) { PopulateTensor(filter_, f); }
+  void SetFilter(std::vector<T>& f) { PopulateTensor(filter_, f); }
 
-  void SetInput(std::vector<float>& data) { PopulateTensor(input_, data); }
+  void SetInput(std::vector<T>& data) { PopulateTensor(input_, data); }
 
-  void SetBias(std::vector<float>& f) { PopulateTensor(bias_, f); }
+  void SetBias(std::vector<BiasType>& f) { PopulateTensor(bias_, f); }
 
-  std::vector<float> GetOutput() { return ExtractVector<float>(output_); }
+  std::vector<T> GetOutput() { return ExtractVector<T>(output_); }
 };
 
 }  // namespace
@@ -233,15 +270,14 @@ class BaseBConv2DOpModel : public SingleOpModel {
   int fused_add_;
 };
 
+template <typename T>
 class BConv2DOpModel : public BaseBConv2DOpModel {
  public:
   using BaseBConv2DOpModel::BaseBConv2DOpModel;
 
-  void SetFilter(const std::vector<float>& f) { PopulateTensor(filter_, f); }
+  void SetFilter(const std::vector<T>& f) { PopulateTensor(filter_, f); }
 
-  void SetInput(const std::vector<float>& data) {
-    PopulateTensor(input_, data);
-  }
+  void SetInput(const std::vector<T>& data) { PopulateTensor(input_, data); }
 
   void SetFusedMultiply(std::vector<std::int32_t>& f) {
     PopulateTensor(fused_multiply_, f);
@@ -251,7 +287,7 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
     PopulateTensor(fused_add_, f);
   }
 
-  std::vector<float> GetOutput() { return ExtractVector<float>(output_); }
+  std::vector<T> GetOutput() { return ExtractVector<T>(output_); }
 };
 
 const auto kKernelMap = new std::map<string, register_function>({
@@ -298,9 +334,8 @@ class BConv2DOpTest : public ::testing::TestWithParam<TestParamTuple> {
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 
-TEST_P(BConv2DOpTest, SimpleTest) {
-  const TestParam param(GetParam());
-
+template <typename T, typename BiasType>
+void runTest(const TestParam& param) {
   const register_function registration = param.registration;
   const int input_batch_count = param.input_batch_count;
   const int input_height = param.input_height;
@@ -313,7 +348,6 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   const int stride_width = param.stride_width;
   const int dilation_height_factor = param.dilation_height_factor;
   const int dilation_width_factor = param.dilation_width_factor;
-  // TOOD: currently we are ignoring padding
   const Padding padding = param.padding;
   const int num_threads = param.num_threads;
 
@@ -323,8 +357,49 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   const int filters_num_elem =
       filter_height * filter_width * input_depth * filter_count;
 
-  using T = float;
-  std::vector<T> input_data, filters_data, bias_data;
+  // For UInt8, uint8_value can be 0 up to 255 (inclusive) and then
+  //
+  // real_value = scale * ( uint8_value - zero_point )
+  //
+  // So to get +1 and -1 values for the filter, we have
+  // uint8_value = zero_point + (1 / scale)
+  // uint8_value = zero_point - (1 / scale)
+  //
+  // We always have integers and input and as output, so we choose our scales
+  // as 1.0 to simplify things.
+  //
+  // TODO: test more general scales
+  //
+
+  TensorType data_type = TensorType_FLOAT32;
+  float input_scale = 0.0f;
+  float output_scale = 0.0f;
+  int32_t input_zero_point = 0;
+  int32_t output_zero_point = 0;
+
+  const bool per_channel_quantization = false;  // TODO
+
+  if (!std::is_floating_point<T>::value) {
+    data_type = TensorType_UINT8;
+    input_scale = 1.0f;
+    input_zero_point = 127;
+    output_scale = 1.0f;
+    output_zero_point = 127;
+  }
+
+  const TensorData input_tensor(
+      data_type, {input_batch_count, input_height, input_width, input_depth}, 0,
+      0, input_scale, input_zero_point, per_channel_quantization);
+
+  const TensorData filter_tensor(
+      data_type, {filter_count, filter_height, filter_width, input_depth}, 0, 0,
+      input_scale, input_zero_point, per_channel_quantization);
+
+  const TensorData output_tensor(data_type, {}, 0, 0, output_scale,
+                                 output_zero_point, per_channel_quantization);
+
+  std::vector<T> input_data, filters_data;
+  std::vector<BiasType> bias_data;
   std::vector<std::int32_t> fused_multiply_data, fused_add_data;
   input_data.resize(input_num_elem);
   filters_data.resize(filters_num_elem);
@@ -333,7 +408,8 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   fused_add_data.resize(filter_count, 0);
 
   srand(time(NULL));
-  std::array<T, 2> list{1.0, -1.0};
+  std::array<T, 2> list{static_cast<T>(input_zero_point + 1),
+                        static_cast<T>(input_zero_point - 1)};
   auto rand_generator = [&list]() {
     const int index = rand() % list.size();
     return list[index];
@@ -350,14 +426,10 @@ TEST_P(BConv2DOpTest, SimpleTest) {
     fused_add_data[i] = dotproduct_size;
   }
 
-  BConv2DOpModel m_lce(
-      registration,
-      {TensorType_FLOAT32,
-       {input_batch_count, input_height, input_width, input_depth}},
-      {TensorType_FLOAT32,
-       {filter_count, filter_height, filter_width, input_depth}},
-      {TensorType_FLOAT32, {}}, stride_width, stride_height, padding,
-      dilation_width_factor, dilation_height_factor, num_threads);
+  BConv2DOpModel<T> m_lce(registration, input_tensor, filter_tensor,
+                          output_tensor, stride_width, stride_height, padding,
+                          dilation_width_factor, dilation_height_factor,
+                          num_threads);
 
   m_lce.SetInput(input_data);
   m_lce.SetFilter(filters_data);
@@ -365,16 +437,11 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   m_lce.SetFusedAdd(fused_add_data);
   m_lce.Invoke();
 
-  ConvolutionOpModel m_builtin(
-      ::tflite::ops::builtin::
-          Register_CONVOLUTION_GENERIC_OPT(),  // registration
-      {TensorType_FLOAT32,
-       {input_batch_count, input_height, input_width, input_depth}},  // input
-      {TensorType_FLOAT32,
-       {filter_count, filter_height, filter_width, input_depth}},  // filter
-      {TensorType_FLOAT32, {}},                                    // output
-      stride_width, stride_height, padding, ActivationFunctionType_NONE,
-      dilation_width_factor, dilation_height_factor, num_threads);
+  ConvolutionOpModel<T, BiasType> m_builtin(
+      ::tflite::ops::builtin::Register_CONVOLUTION_GENERIC_OPT(), input_tensor,
+      filter_tensor, output_tensor, stride_width, stride_height, padding,
+      ActivationFunctionType_NONE, dilation_width_factor,
+      dilation_height_factor, num_threads);
 
   m_builtin.SetInput(input_data);
   m_builtin.SetFilter(filters_data);
@@ -382,6 +449,15 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   m_builtin.Invoke();
 
   EXPECT_THAT(m_lce.GetOutput(), ElementsAreArray(m_builtin.GetOutput()));
+}
+
+TEST_P(BConv2DOpTest, SimpleTest) {
+  const TestParam param(GetParam());
+  runTest<float, float>(param);
+  // Do not yet run the int8 test if padding is SAME
+  if (param.padding == Padding_VALID) {
+    runTest<std::uint8_t, std::int32_t>(param);
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(

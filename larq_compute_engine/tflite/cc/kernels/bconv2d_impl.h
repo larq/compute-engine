@@ -59,8 +59,11 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
 }
 
 template <class T, class TBitpacked>
-inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
-                    const T* input_data, const RuntimeShape& filter_shape,
+inline void BConv2D(const ConvParams& params,
+                    const std::int32_t* output_multiplier,
+                    const std::int32_t* output_shift,
+                    const RuntimeShape& input_shape, const T* input_data,
+                    const RuntimeShape& filter_shape,
                     const TBitpacked* packed_filter_data,
                     const std::int32_t* fused_multiply_data,
                     const std::int32_t* fused_add_data,
@@ -112,7 +115,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
     // Input tensor has this shape which we bitpack along the channels dimension
     //  [batch, input height, input width, channels]
     RuntimeShape packed_input_shape;
-    packbits_tensor(input_shape, input_data, packed_input_shape, input_data_bp);
+    packbits_tensor(input_shape, input_data, packed_input_shape, input_data_bp,
+                    params.input_offset);
 
     // Filter tensor was already bitpacked. Only get the new shape
     RuntimeShape packed_filter_shape = packed_shape<TBitpacked>(filter_shape);
@@ -138,7 +142,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
     //  [batch, output_height, output_width, k * bitwidth]
     RuntimeShape packed_input_shape;
     packbits_tensor(result_shape, result_data, packed_input_shape,
-                    input_data_bp);
+                    input_data_bp, params.input_offset);
     rhs_data = input_data_bp.data();
 
     k = packed_input_shape.Dims(3);
@@ -162,11 +166,20 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   dst_params.order = cpu_backend_gemm::Order::kColMajor;
   dst_params.rows = n;
   dst_params.cols = m;
+  dst_params.zero_point = params.output_offset;
 
   // Accumulation type, destination type
   BGemmParams<std::int32_t, T> gemm_params;
   gemm_params.fused_multiply = fused_multiply_data;
   gemm_params.fused_add = fused_add_data;
+  gemm_params.clamp_min = params.quantized_activation_min;
+  gemm_params.clamp_max = params.quantized_activation_max;
+
+  if (!std::is_floating_point<T>::value) {
+    // For storing the 8-bit result
+    gemm_params.multiplier_fixedpoint = output_multiplier;
+    gemm_params.multiplier_exponent = output_shift;
+  }
 
   // #if defined(TF_LITE_USE_CBLAS) && defined(__APPLE__)
 
