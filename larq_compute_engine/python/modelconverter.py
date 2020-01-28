@@ -166,6 +166,9 @@ class ModelConverter:
     By default the converter will try out different options and stop as soon as one option succeeded.
     By setting the option `converter.do_all_methods = True` one can enforce that all options will be executed and saved as `filename_XXX.tflite`
 
+    By setting the option `converter.quantize = True`, the non-binary parts of the network will be 8-bit quantized.
+    If quantization is used, then one has to set `converter.representative_dataset_gen`, as required for post-training quantization in Tensorflow. See [this example](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/g3doc/performance/post_training_integer_quant.ipynb).
+
     # Arguments
     model: The Keras model to convert.
 
@@ -183,6 +186,9 @@ class ModelConverter:
     def __init__(self, model):
         self.model = model
         self.do_all_methods = False
+        self.has_custom_ops = False
+        self.quantize = False
+        self.representative_dataset_gen = None
 
     def convert(self, filename=None):
         """Convert and return the tflite model.
@@ -201,15 +207,57 @@ class ModelConverter:
 
         # Methods should be listed in order of most likely to succeed
         # because normally the converter stops after the first succesful conversion
-        methods = [
-            ("mlir", lambda: self.convert_fromkeras(new_converter=True),),
-            ("toco", lambda: self.convert_fromkeras(new_converter=False),),
-            ("compatv1", lambda: self.convert_compatv1(extra_shape_inference=False),),
-            (
-                "compatv1_withshapes",
-                lambda: self.convert_compatv1(extra_shape_inference=True),
-            ),
-        ]
+        if self.quantize:
+            methods = [
+                (
+                    "compatv1_train",
+                    lambda: self.convert_compatv1(
+                        train_quantize=True, extra_shape_inference=False
+                    ),
+                ),
+                (
+                    "compatv1_train_withshapes",
+                    lambda: self.convert_compatv1(
+                        train_quantize=True, extra_shape_inference=True
+                    ),
+                ),
+                (
+                    "mlir_post",
+                    lambda: self.convert_fromkeras(
+                        new_converter=True, post_quantize=True
+                    ),
+                ),
+                (
+                    "toco_post",
+                    lambda: self.convert_fromkeras(
+                        new_converter=False, post_quantize=True
+                    ),
+                ),
+                ("compatv1_post", lambda: self.convert_compatv1(post_quantize=True),),
+            ]
+        else:
+            methods = [
+                (
+                    "mlir",
+                    lambda: self.convert_fromkeras(
+                        new_converter=True, post_quantize=False
+                    ),
+                ),
+                (
+                    "toco",
+                    lambda: self.convert_fromkeras(
+                        new_converter=False, post_quantize=False
+                    ),
+                ),
+                (
+                    "compatv1",
+                    lambda: self.convert_compatv1(extra_shape_inference=False),
+                ),
+                (
+                    "compatv1_withshapes",
+                    lambda: self.convert_compatv1(extra_shape_inference=True),
+                ),
+            ]
 
         tflite_models = []
         result_log = []
@@ -339,6 +387,7 @@ class ModelConverter:
                     l.set_weights([binary_weights])
 
         if result and replacement_dict:
+            self.has_custom_ops = True
             new_model = replace_layers(self.model, replacement_dict)
             if new_model is None:
                 return False
@@ -347,7 +396,7 @@ class ModelConverter:
 
         return result
 
-    def convert_fromkeras(self, new_converter=False):
+    def convert_fromkeras(self, new_converter=False, post_quantize=False):
         """Conversion using the v2 converter.
         """
         if tf_2_or_newer():
@@ -357,9 +406,24 @@ class ModelConverter:
             tf.keras.models.save_model(self.model, keras_file)
             converter = tf.lite.TFLiteConverter.from_keras_model_file(keras_file)
         converter.allow_custom_ops = True
+
+        if post_quantize:
+            if self.has_custom_ops:
+                raise Exception(
+                    "Post-training quantization is not yet supported for custom ops."
+                )
+
+            converter.optimizations = [tf.lite.Optimize.DEFAULT]
+            converter.representative_dataset = self.representative_dataset_gen
+            # The lines below enforce full int8 (error on unsupported op)
+            converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+            converter.inference_input_type = tf.uint8
+            converter.inference_output_type = tf.uint8
+            # The `inference_xxx_type` parameters are ignored in tf2 and reset to float
+
         if new_converter:
-            # converter.experimental_enable_mlir_converter = True
             converter.experimental_new_converter = True
+            converter.experimental_new_quantizer = True
             # For now, we print a note to the user on how to add our custom op to the MLIR converter
             toco_path = (
                 subprocess.check_output("which toco_from_protos", shell=True)
@@ -372,7 +436,11 @@ class ModelConverter:
         return converter.convert()
 
     def convert_compatv1(
-        self, extra_shape_inference=False, new_converter=False,
+        self,
+        train_quantize=False,
+        post_quantize=False,
+        extra_shape_inference=False,
+        new_converter=False,
     ):
         """Conversion using the compat.v1 interface of the converter.
         """
@@ -400,7 +468,10 @@ class ModelConverter:
             # node.input is "model/.../filter"
             if node.op.startswith("LqceBconv2d"):
 
-                node.attr["_output_quantized"].b = False
+                if train_quantize or post_quantize:
+                    node.attr["_output_quantized"].b = True
+                else:
+                    node.attr["_output_quantized"].b = False
 
                 # Set batch dimension to 1
                 # because wildcard dimensions are not supported for custom operators
@@ -427,8 +498,31 @@ class ModelConverter:
         )
         converter.allow_custom_ops = True
 
+        if train_quantize:
+            converter.inference_type = tf.uint8
+            input_arrays = converter.get_input_arrays()
+            # We usually have input images that are scaled to the range [-1,1],
+            # so set the mean to 0 and standard deviation to 1
+            converter.quantized_input_stats = {input_arrays[0]: (0.0, 1.0)}
+            converter.default_ranges_stats = (-3, 3)
+
+        if post_quantize:
+            if self.has_custom_ops:
+                raise Exception(
+                    "Post-training quantization is not supported for custom ops"
+                )
+
+            converter.representative_dataset = self.representative_dataset_gen
+            converter.optimizations = [tf.lite.Optimize.DEFAULT]
+            # The lines below enforce full int8 (error on unsupported op)
+            converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+            converter.inference_input_type = tf.uint8
+            converter.inference_output_type = tf.uint8
+
         if new_converter:
             converter.experimental_enable_mlir_converter = True
             converter.experimental_new_converter = True
+            if train_quantize or post_quantize:
+                converter.experimental_new_quantizer = True
 
         return converter.convert()
