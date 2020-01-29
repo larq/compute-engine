@@ -37,8 +37,8 @@ REGISTER_OP("LqceBsign")
   REGISTER_OP(OPNAME)                                                                                      \
       .Input("input: T")                                                                                   \
       .Input("filter: T")                                                                                  \
-      .Input("fused_multiply: int32")                                                                      \
-      .Input("fused_add: int32")                                                                           \
+      .Input("fused_multiply: float")                                                                      \
+      .Input("fused_add: float")                                                                           \
       .Output("output: T")                                                                                 \
       .Attr("T: {float, double}")                                                                          \
       .Attr("strides: list(int)")                                                                          \

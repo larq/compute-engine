@@ -265,16 +265,22 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "ld1 {v6.4s}, [%[rhs_ptr]], #16\n"
       "ld1 {v7.4s}, [%[rhs_ptr]], #16\n"
 
+      // convert to single precision float before storing the NEON registers
+      "scvtf v16.4s, v16.4s\n"
+      "scvtf v18.4s, v18.4s\n"
+      "scvtf v20.4s, v20.4s\n"
+      "scvtf v22.4s, v22.4s\n"
+
       // Perform the bias multiplications
-      "mul v16.4s, v16.4s, v14.4s\n"
-      "mul v18.4s, v18.4s, v14.4s\n"
-      "mul v20.4s, v20.4s, v14.4s\n"
-      "mul v22.4s, v22.4s, v14.4s\n"
+      "fmul v16.4s, v16.4s, v14.4s\n"
+      "fmul v18.4s, v18.4s, v14.4s\n"
+      "fmul v20.4s, v20.4s, v14.4s\n"
+      "fmul v22.4s, v22.4s, v14.4s\n"
       // Perform the bias additions
-      "add v16.4s, v16.4s, v15.4s\n"
-      "add v18.4s, v18.4s, v15.4s\n"
-      "add v20.4s, v20.4s, v15.4s\n"
-      "add v22.4s, v22.4s, v15.4s\n"
+      "fadd v16.4s, v16.4s, v15.4s\n"
+      "fadd v18.4s, v18.4s, v15.4s\n"
+      "fadd v20.4s, v20.4s, v15.4s\n"
+      "fadd v22.4s, v22.4s, v15.4s\n"
 
       // Compute how much of the 4x4 block of destination values that
       // we have computed, fit in the destination matrix. Typically, all of
@@ -307,12 +313,6 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "mov x3, %[dst_ptr]\n"
       "mov x4, x11\n"
       "31:\n"
-
-      // convert to single precision float before storing the NEON registers
-      "scvtf v16.4s, v16.4s\n"
-      "scvtf v18.4s, v18.4s\n"
-      "scvtf v20.4s, v20.4s\n"
-      "scvtf v22.4s, v22.4s\n"
 
       // Write our values to the destination described by
       // (x3 address, x4 stride).
@@ -655,16 +655,22 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "ld1 {v6.2d}, [%[rhs_ptr]], #16\n"
       "ld1 {v7.2d}, [%[rhs_ptr]], #16\n"
 
+      // convert to single precision float before storing the NEON registers
+      "scvtf v16.4s, v16.4s\n"
+      "scvtf v18.4s, v18.4s\n"
+      "scvtf v20.4s, v20.4s\n"
+      "scvtf v22.4s, v22.4s\n"
+
       // Perform the bias multiplications
-      "mul v16.4s, v16.4s, v14.4s\n"
-      "mul v18.4s, v18.4s, v14.4s\n"
-      "mul v20.4s, v20.4s, v14.4s\n"
-      "mul v22.4s, v22.4s, v14.4s\n"
+      "fmul v16.4s, v16.4s, v14.4s\n"
+      "fmul v18.4s, v18.4s, v14.4s\n"
+      "fmul v20.4s, v20.4s, v14.4s\n"
+      "fmul v22.4s, v22.4s, v14.4s\n"
       // Perform the bias additions
-      "add v16.4s, v16.4s, v15.4s\n"
-      "add v18.4s, v18.4s, v15.4s\n"
-      "add v20.4s, v20.4s, v15.4s\n"
-      "add v22.4s, v22.4s, v15.4s\n"
+      "fadd v16.4s, v16.4s, v15.4s\n"
+      "fadd v18.4s, v18.4s, v15.4s\n"
+      "fadd v20.4s, v20.4s, v15.4s\n"
+      "fadd v22.4s, v22.4s, v15.4s\n"
 
       // Compute how much of the 4x4 block of destination values that
       // we have computed, fit in the destination matrix. Typically, all of
@@ -697,12 +703,6 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "mov x3, %[dst_ptr]\n"
       "mov x4, x11\n"
       "31:\n"
-
-      // convert to single precision float before storing the NEON registers
-      "scvtf v16.4s, v16.4s\n"
-      "scvtf v18.4s, v18.4s\n"
-      "scvtf v20.4s, v20.4s\n"
-      "scvtf v22.4s, v22.4s\n"
 
       // Write our values to the destination described by
       // (x3 address, x4 stride).

@@ -200,8 +200,8 @@ class BaseBConv2DOpModel : public SingleOpModel {
     output_ = AddOutput(output);
 
     int channels_out = GetShape(filter_)[0];
-    fused_multiply_ = AddInput({TensorType_INT32, {channels_out}});
-    fused_add_ = AddInput({TensorType_INT32, {channels_out}});
+    fused_multiply_ = AddInput({TensorType_FLOAT32, {channels_out}});
+    fused_add_ = AddInput({TensorType_FLOAT32, {channels_out}});
 
     flexbuffers::Builder fbb;
     fbb.Map([&]() {
@@ -243,13 +243,11 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
     PopulateTensor(input_, data);
   }
 
-  void SetFusedMultiply(std::vector<std::int32_t>& f) {
+  void SetFusedMultiply(std::vector<float>& f) {
     PopulateTensor(fused_multiply_, f);
   }
 
-  void SetFusedAdd(std::vector<std::int32_t>& f) {
-    PopulateTensor(fused_add_, f);
-  }
+  void SetFusedAdd(std::vector<float>& f) { PopulateTensor(fused_add_, f); }
 
   std::vector<float> GetOutput() { return ExtractVector<float>(output_); }
 };
@@ -325,7 +323,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
 
   using T = float;
   std::vector<T> input_data, filters_data, bias_data;
-  std::vector<std::int32_t> fused_multiply_data, fused_add_data;
+  std::vector<float> fused_multiply_data, fused_add_data;
   input_data.resize(input_num_elem);
   filters_data.resize(filters_num_elem);
   bias_data.resize(filter_count, 0);
