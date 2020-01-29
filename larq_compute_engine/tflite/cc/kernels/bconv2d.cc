@@ -156,8 +156,9 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
   TF_LITE_ENSURE_EQ(context, NumDimensions(fused_multiply), 1);
   TF_LITE_ENSURE_EQ(context, NumDimensions(fused_add), 1);
 
-  // TF lite supports only single precision float as tensor data type!
-  // Therefore no need to check against doubles for now.
+  // The inputs fused_mutiply and fused_add are currently float
+  // in order to accomodate for batchnorm scales
+  // Later this might be changed to the int8 system of multipliers+shifts
   TF_LITE_ENSURE_EQ(context, input->type, kTfLiteFloat32);
   TF_LITE_ENSURE_EQ(context, fused_multiply->type, kTfLiteFloat32);
   TF_LITE_ENSURE_EQ(context, fused_add->type, kTfLiteFloat32);

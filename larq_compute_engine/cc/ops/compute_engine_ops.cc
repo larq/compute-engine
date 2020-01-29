@@ -33,6 +33,9 @@ REGISTER_OP("LqceBsign")
         R"doc(Computes element-wise sign function where 0 is mapped to +1.)doc")
     .SetShapeFn(shape_inference::UnchangedShape);
 
+// The inputs fused_mutiply and fused_add are currently float
+// in order to accomodate for batchnorm scales
+// Later this might be changed to the int8 system of multipliers+shifts
 #define REGISTER_CONV_BITPACKED_OP(OPNAME, BITWIDTH)                                                       \
   REGISTER_OP(OPNAME)                                                                                      \
       .Input("input: T")                                                                                   \
