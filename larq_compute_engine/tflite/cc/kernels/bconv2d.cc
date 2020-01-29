@@ -156,11 +156,12 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
   TF_LITE_ENSURE_EQ(context, NumDimensions(fused_multiply), 1);
   TF_LITE_ENSURE_EQ(context, NumDimensions(fused_add), 1);
 
-  // TF lite supports only single precision float as tensor data type!
-  // Therefore no need to check against doubles for now.
+  // The inputs fused_mutiply and fused_add are currently float
+  // in order to accomodate for batchnorm scales
+  // Later this might be changed to the int8 system of multipliers+shifts
   TF_LITE_ENSURE_EQ(context, input->type, kTfLiteFloat32);
-  TF_LITE_ENSURE_EQ(context, fused_multiply->type, kTfLiteInt32);
-  TF_LITE_ENSURE_EQ(context, fused_add->type, kTfLiteInt32);
+  TF_LITE_ENSURE_EQ(context, fused_multiply->type, kTfLiteFloat32);
+  TF_LITE_ENSURE_EQ(context, fused_add->type, kTfLiteFloat32);
   TF_LITE_ENSURE_EQ(context, output->type, kTfLiteFloat32);
 
   // reading the input dimensions
@@ -524,9 +525,8 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   BConv2D<T, TBitpacked>(
       op_params, GetTensorShape(input), GetTensorData<T>(input),
       GetTensorShape(filter), GetTensorData<TBitpacked>(bitpacked_weights),
-      GetTensorData<std::int32_t>(fused_multiply),
-      GetTensorData<std::int32_t>(fused_add), GetTensorShape(output),
-      GetTensorData<T>(output), GetTensorShape(im2col),
+      GetTensorData<float>(fused_multiply), GetTensorData<float>(fused_add),
+      GetTensorShape(output), GetTensorData<T>(output), GetTensorShape(im2col),
       GetTensorData<T>(im2col), params->bitpack_before_im2col,
       GetTensorData<T>(padding_buffer),
       CpuBackendContext::GetFromContext(context));

@@ -24,8 +24,11 @@ template <typename AccumScalar, typename DstScalar,
 struct BGemmParams {
   AccumScalar multiplier_fixedpoint = 0;
   int multiplier_exponent = 0;
-  const AccumScalar* fused_multiply = nullptr;
-  const AccumScalar* fused_add = nullptr;
+  // fused_mutiply and fused_add are currently float
+  // in order to accomodate for batchnorm scales
+  // Later this might be changed to the int8 system of multipliers+shifts
+  const float* fused_multiply = nullptr;
+  const float* fused_add = nullptr;
   AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
   AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
 };
@@ -44,8 +47,11 @@ struct BinaryBasicSpec {
   using DstScalar = tDstScalar;
   AccumScalar multiplier_fixedpoint = 0;
   int multiplier_exponent = 0;
-  const AccumScalar* fused_multiply = nullptr;
-  const AccumScalar* fused_add = nullptr;
+  // fused_mutiply and fused_add are currently float
+  // in order to accomodate for batchnorm scales
+  // Later this might be changed to the int8 system of multipliers+shifts
+  const float* fused_multiply = nullptr;
+  const float* fused_add = nullptr;
   AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
   AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
 
@@ -64,8 +70,11 @@ struct BinaryKernelParams {
   const T* lhs_base_ptr;
   const T* rhs_base_ptr;
   float* dst_base_ptr;
-  const std::int32_t* fused_multiply;
-  const std::int32_t* fused_add;
+  // fused_mutiply and fused_add are currently float
+  // in order to accomodate for batchnorm scales
+  // Later this might be changed to the int8 system of multipliers+shifts
+  const float* fused_multiply;
+  const float* fused_add;
   std::int32_t start_row;
   std::int32_t start_col;
   std::int32_t last_row;

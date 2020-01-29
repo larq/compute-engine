@@ -58,12 +58,15 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
   result_shape.ReplaceWith(shape->DimensionsCount(), shape->DimsData());
 }
 
+// The inputs fused_mutiply and fused_add are currently float
+// in order to accomodate for batchnorm scales
+// Later this might be changed to the int8 system of multipliers+shifts
 template <class T, class TBitpacked>
 inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                     const T* input_data, const RuntimeShape& filter_shape,
                     const TBitpacked* packed_filter_data,
-                    const std::int32_t* fused_multiply_data,
-                    const std::int32_t* fused_add_data,
+                    const float* fused_multiply_data,
+                    const float* fused_add_data,
                     const RuntimeShape& output_shape, T* output_data,
                     const RuntimeShape& im2col_shape, T* im2col_data,
                     bool bitpack_before_im2col, T* padding_buffer,
