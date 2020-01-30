@@ -8,81 +8,14 @@ package(
 )
 
 cc_library(
-    name = "bgemm_ref",
-    hdrs = [
-        "bgemm_impl_ref.h",
-    ],
-    deps = [
-        "//larq_compute_engine/core:bgemm",
-        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
-        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
-    ]
-)
-
-cc_library(
-    name = "bgemm_kernels_common",
-    hdrs = [
-        "bgemm_kernels_common.h",
-    ],
-)
-
-cc_library(
-    name = "bgemm_kernels_arm",
-    hdrs = [
-        "bgemm_kernels_arm.h",
-        "bgemm_kernels_arm64.h",
-    ],
-    deps = [
-        ":bgemm_kernels_common"
-    ]
-)
-
-cc_library(
-    name = "bgemm_kernels_ruy",
-    hdrs = [
-        "bgemm_kernels_arm.h",
-        "bgemm_kernels_ruy.h",
-        "bgemm_kernels_x86.h",
-    ],
-    deps = [
-        "//larq_compute_engine/core:bgemm",
-        ":bgemm_kernels_arm"
-    ]
-)
-
-cc_library(
-    name = "bgemm_ruy",
-    hdrs = [
-        "bgemm_impl_ruy.h",
-        "bgemm_trmul_params.h",
-    ],
-    deps = [
-        ":bgemm_kernels_ruy",
-        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
-        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
-    ]
-)
-
-cc_library(
-    name = "bgemm",
-    hdrs = [
-        "bgemm_impl.h",
-    ],
-    deps = [
-        ":bgemm_ref",
-        ":bgemm_ruy",
-    ]
-)
-
-cc_library(
     name = "bconv2d_impl",
     hdrs = [
         "bconv2d_impl.h",
     ],
     deps = [
-        ":bgemm",
-        "//larq_compute_engine/core:bconv2d",
-        "//larq_compute_engine/core:padding",
+        "//larq_compute_engine/core:bgemm_impl",
+        "//larq_compute_engine/core:bconv2d_functor",
+        "//larq_compute_engine/core:padding_functor",
         "//larq_compute_engine/core:packbits",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
