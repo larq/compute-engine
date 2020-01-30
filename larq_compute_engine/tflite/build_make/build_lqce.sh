@@ -79,7 +79,7 @@ done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}/../../.."
-TF_DIR="${ROOT_DIR}/ext/tensorflow"
+TF_DIR="${ROOT_DIR}/third_party/tensorflow"
 LCE_MAKEFILE="larq_compute_engine/tflite/build_make/Makefile"
 
 # number of hyper threads
