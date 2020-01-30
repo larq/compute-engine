@@ -8,7 +8,7 @@
 # below.
 SHELL := /bin/bash
 
-TF_DIR := ext/tensorflow
+TF_DIR := third_party/tensorflow
 TF_MAKEFILE_DIR := $(TF_DIR)/tensorflow/lite/tools/make
 
 # Try to figure out the host system

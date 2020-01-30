@@ -1,4 +1,4 @@
-load("//ext/tf:tf_configure.bzl", "tf_configure")
+load("//third_party/tf:tf_configure.bzl", "tf_configure")
 tf_configure(name = "local_config_tf")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
@@ -16,7 +16,7 @@ http_archive(
     # The archive contains GCC versions 4.9.4 (160 MB), 6.5.0 (290 MB) and 8.3.0 (270 MB)
     # Only gcc 6.5.0 is used, the rest is ignored, see the `strip_prefix` parameter.
     name = "arm_compiler",
-    build_file = "//ext:arm_compiler.BUILD",
+    build_file = "//third_party:arm_compiler.BUILD",
     sha256 = "b9e7d50ffd9996ed18900d041d362c99473b382c0ae049b2fce3290632d2656f",
     strip_prefix = "rpi-newer-crosstools-eb68350c5c8ec1663b7fe52c742ac4271e3217c5/x64-gcc-6.5.0/arm-rpi-linux-gnueabihf/",
     urls = [
@@ -31,17 +31,17 @@ http_archive(
     # Download size: 260 MB compressed, 1.5 GB uncompressed
     # The archive contains GCC version 8.3.0
     name = "aarch64_compiler",
-    build_file = "//ext:aarch64_compiler.BUILD",
+    build_file = "//third_party:aarch64_compiler.BUILD",
     sha256 = "8ce3e7688a47d8cd2d8e8323f147104ae1c8139520eca50ccf8a7fa933002731",
     strip_prefix = "gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu/",
     url = "https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu.tar.xz?revision=2e88a73f-d233-4f96-b1f4-d8b36e9bb0b9&la=en&hash=167687FADA00B73D20EED2A67D0939A197504ACD",
 )
 
-load("//ext/toolchains/cpus/arm:arm_compiler_configure.bzl", "arm_compiler_configure")
+load("//third_party/toolchains/cpus/arm:arm_compiler_configure.bzl", "arm_compiler_configure")
 
 arm_compiler_configure(
     name = "local_config_arm_compiler",
-    build_file = "//ext/toolchains/cpus/arm:BUILD",
+    build_file = "//third_party/toolchains/cpus/arm:BUILD",
     #These paths are relative to some_bazel_dir/external/local_config_arm_compiler/
     remote_config_repo_arm = "../arm_compiler",
     remote_config_repo_aarch64 = "../aarch64_compiler",
