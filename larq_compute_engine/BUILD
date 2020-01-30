@@ -16,8 +16,8 @@ config_setting(
 cc_binary(
     name = 'python/ops/_larq_compute_engine_ops.so',
     srcs = [
-        "cc/kernels/sign_kernels.cc",
-        "cc/kernels/bconv2d.cc",
+        "tf/kernels/sign_kernels.cc",
+        "tf/kernels/bconv2d.cc",
     ],
     linkshared = 1,
     deps = [
@@ -25,7 +25,7 @@ cc_binary(
         "@local_config_tf//:tf_header_lib",
         "//larq_compute_engine/core:bconv2d",
         "//larq_compute_engine/core:utils",
-        "//larq_compute_engine/cc/ops:compute_engine_ops",
+        "//larq_compute_engine/tf/ops:compute_engine_ops",
     ],
     copts = ["-pthread", "-std=c++11", "-D_GLIBCXX_USE_CXX11_ABI=0"]
 )
