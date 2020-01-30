@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <vector>
 
-#include "larq_compute_engine/cc/core/packbits.h"
-#include "larq_compute_engine/cc/core/packbits_arm32.h"
+#include "larq_compute_engine/core/packbits.h"
+#include "larq_compute_engine/core/packbits_arm32.h"
 
 namespace compute_engine {
 namespace testing {

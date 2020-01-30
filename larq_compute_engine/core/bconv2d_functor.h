@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include "larq_compute_engine/cc/core/fused_bgemm_functor.h"
+#include "larq_compute_engine/core/fused_bgemm_functor.h"
 
 namespace compute_engine {
 namespace core {

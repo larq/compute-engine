@@ -1,4 +1,4 @@
-#include "larq_compute_engine/cc/core/packbits.h"
+#include "larq_compute_engine/core/packbits.h"
 #include "profiling/instrumentation.h"
 #include "tensorflow/lite/kernels/internal/types.h"
 
