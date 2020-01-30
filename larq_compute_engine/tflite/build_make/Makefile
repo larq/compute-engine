@@ -77,8 +77,8 @@ BENCHMARK_LIB_NAME := benchmark-lib.a
 # build files.
 
 LQCE_ALL_SRCS := \
-$(wildcard larq_compute_engine/tflite/cc/*.cc) \
-$(wildcard larq_compute_engine/tflite/cc/kernels/*.cc) \
+$(wildcard larq_compute_engine/tflite/*.cc) \
+$(wildcard larq_compute_engine/tflite/kernels/*.cc) \
 
 # These target-specific makefiles should modify or replace options like
 # CXXFLAGS or LIBS to work for a specific targetted architecture. All logic

@@ -16,7 +16,7 @@ limitations under the License.
 #include <iostream>
 
 #include "absl/base/attributes.h"
-#include "larq_compute_engine/tflite/cc/kernels/lce_ops_register.h"
+#include "larq_compute_engine/tflite/kernels/lce_ops_register.h"
 #include "tensorflow/lite/tools/benchmark/benchmark_tflite_model.h"
 #include "tensorflow/lite/tools/benchmark/logging.h"
 
