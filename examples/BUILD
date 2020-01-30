@@ -18,7 +18,7 @@ cc_binary(
         "//conditions:default": [],
     }),
     deps = [
-        "//larq_compute_engine/tflite/cc/kernels:lce_op_kernels",
+        "//larq_compute_engine/tflite/kernels:lce_op_kernels",
         "@org_tensorflow//tensorflow/lite:framework",
         "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
     ],
