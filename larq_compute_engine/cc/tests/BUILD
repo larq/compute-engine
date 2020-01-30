@@ -33,7 +33,7 @@ cc_test(
          "@com_google_googletest//:gtest_main",
          "@eigen_archive//:eigen",
          "//larq_compute_engine/core:fused_bgemm",
-         "//larq_compute_engine/cc/utils:utils",
+         "//larq_compute_engine/core:utils",
     ],
 )
 

@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "larq_compute_engine/cc/utils/macros.h"
+#include "larq_compute_engine/core/macros.h"
 #include "larq_compute_engine/core/packbits.h"
 
 namespace compute_engine {

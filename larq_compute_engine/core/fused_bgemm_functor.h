@@ -1,8 +1,8 @@
 #ifndef COMPUTE_ENGINE_KERNELS_FUSED_BGEMM_FUNCTORS_H_
 #define COMPUTE_ENGINE_KERNELS_FUSED_BGEMM_FUNCTORS_H_
 
-#include "larq_compute_engine/cc/utils/macros.h"
 #include "larq_compute_engine/core/bgemm_functor.h"
+#include "larq_compute_engine/core/macros.h"
 #include "larq_compute_engine/core/packbits.h"
 
 namespace compute_engine {

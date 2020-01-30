@@ -2,9 +2,9 @@
 
 #include "bconv2d_impl.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
-#include "larq_compute_engine/cc/utils/types.h"
 #include "larq_compute_engine/core/bconv2d_functor.h"
 #include "larq_compute_engine/core/padding_functor.h"
+#include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/c/c_api_internal.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
