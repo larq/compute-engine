@@ -1,6 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include "larq_compute_engine/cc/core/padding_functor.h"
+#include "larq_compute_engine/core/padding_functor.h"
 
 using namespace compute_engine::core;
 

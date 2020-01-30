@@ -4,8 +4,8 @@
 #include <array>
 #include <vector>
 
-#include "larq_compute_engine/cc/core/fused_bgemm_functor.h"
-#include "larq_compute_engine/cc/utils/macros.h"
+#include "larq_compute_engine/core/fused_bgemm_functor.h"
+#include "larq_compute_engine/core/macros.h"
 
 namespace compute_engine {
 namespace testing {

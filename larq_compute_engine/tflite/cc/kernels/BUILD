@@ -13,7 +13,7 @@ cc_library(
         "bgemm_impl_ref.h",
     ],
     deps = [
-        "//larq_compute_engine/cc/core:bgemm",
+        "//larq_compute_engine/core:bgemm",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
     ]
@@ -45,7 +45,7 @@ cc_library(
         "bgemm_kernels_x86.h",
     ],
     deps = [
-        "//larq_compute_engine/cc/core:bgemm",
+        "//larq_compute_engine/core:bgemm",
         ":bgemm_kernels_arm"
     ]
 )
@@ -81,9 +81,9 @@ cc_library(
     ],
     deps = [
         ":bgemm",
-        "//larq_compute_engine/cc/core:bconv2d",
-        "//larq_compute_engine/cc/core:padding",
-        "//larq_compute_engine/cc/core:packbits",
+        "//larq_compute_engine/core:bconv2d",
+        "//larq_compute_engine/core:padding",
+        "//larq_compute_engine/core:packbits",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
         "@org_tensorflow//tensorflow/lite/kernels:padding",

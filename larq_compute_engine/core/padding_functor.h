@@ -1,7 +1,7 @@
 #ifndef COMPUTE_ENGINE_KERNELS_PADDING_H_
 #define COMPUTE_ENGINE_KERNELS_PADDING_H_
 
-#include "larq_compute_engine/cc/utils/types.h"
+#include "larq_compute_engine/core/types.h"
 
 namespace compute_engine {
 namespace core {

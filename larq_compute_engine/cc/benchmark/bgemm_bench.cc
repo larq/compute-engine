@@ -2,8 +2,8 @@
 
 #include <vector>
 
-#include "larq_compute_engine/cc/core/bgemm_functor.h"
-#include "larq_compute_engine/cc/core/fused_bgemm_functor.h"
+#include "larq_compute_engine/core/bgemm_functor.h"
+#include "larq_compute_engine/core/fused_bgemm_functor.h"
 
 using namespace compute_engine::core;
 using compute_engine::core::Layout;

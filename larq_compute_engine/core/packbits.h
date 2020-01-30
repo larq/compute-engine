@@ -7,9 +7,9 @@
 #include <limits>
 #include <vector>
 
-#include "larq_compute_engine/cc/utils/types.h"
+#include "larq_compute_engine/core/types.h"
 #ifdef __aarch64__
-#include "larq_compute_engine/cc/core/packbits_aarch64.h"
+#include "larq_compute_engine/core/packbits_aarch64.h"
 #endif
 
 namespace compute_engine {

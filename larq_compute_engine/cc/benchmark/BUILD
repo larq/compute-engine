@@ -11,8 +11,8 @@ cc_binary(
     deps = [
         "@googlebenchmark//:benchmark",
         "@googlebenchmark//:benchmark_main",
-        "//larq_compute_engine/cc/core:packbits",
-        "//larq_compute_engine/cc/core:packbits_aarch64",
+        "//larq_compute_engine/core:packbits",
+        "//larq_compute_engine/core:packbits_aarch64",
     ],
 )
 
@@ -28,10 +28,10 @@ cc_binary(
         deps = [
         "@googlebenchmark//:benchmark",
         "@googlebenchmark//:benchmark_main",
-        "//larq_compute_engine/cc/core:bconv2d",
-        "//larq_compute_engine/cc/core:bgemm",
-        "//larq_compute_engine/cc/core:fused_bgemm",
-        "//larq_compute_engine/cc/core:im2col",
-        "//larq_compute_engine/cc/core:padding",
+        "//larq_compute_engine/core:bconv2d",
+        "//larq_compute_engine/core:bgemm",
+        "//larq_compute_engine/core:fused_bgemm",
+        "//larq_compute_engine/core:im2col",
+        "//larq_compute_engine/core:padding",
         ],
 )

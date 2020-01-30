@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <numeric>
 
-#include "larq_compute_engine/cc/core/bconv2d_functor.h"
+#include "larq_compute_engine/core/bconv2d_functor.h"
 
 namespace compute_engine {
 namespace testing {

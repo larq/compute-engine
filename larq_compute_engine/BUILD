@@ -23,8 +23,8 @@ cc_binary(
     deps = [
         "@local_config_tf//:libtensorflow_framework",
         "@local_config_tf//:tf_header_lib",
-        "//larq_compute_engine/cc/utils:utils",
-        "//larq_compute_engine/cc/core:bconv2d",
+        "//larq_compute_engine/core:bconv2d",
+        "//larq_compute_engine/core:utils",
         "//larq_compute_engine/cc/ops:compute_engine_ops",
     ],
     copts = ["-pthread", "-std=c++11", "-D_GLIBCXX_USE_CXX11_ABI=0"]

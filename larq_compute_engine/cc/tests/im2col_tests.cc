@@ -2,7 +2,7 @@
 
 #include <numeric>
 
-#include "larq_compute_engine/cc/core/im2col_functor.h"
+#include "larq_compute_engine/core/im2col_functor.h"
 
 namespace compute_engine {
 namespace testing {

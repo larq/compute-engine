@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include "larq_compute_engine/cc/core/bgemm_functor.h"
+#include "larq_compute_engine/core/bgemm_functor.h"
 
 namespace compute_engine {
 namespace testing {

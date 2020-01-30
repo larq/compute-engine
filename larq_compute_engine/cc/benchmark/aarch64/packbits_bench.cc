@@ -7,8 +7,8 @@
 
 #include <cstdlib>
 
-#include "larq_compute_engine/cc/core/packbits.h"
-#include "larq_compute_engine/cc/core/packbits_aarch64.h"
+#include "larq_compute_engine/core/packbits.h"
+#include "larq_compute_engine/core/packbits_aarch64.h"
 
 using namespace compute_engine::core;
 

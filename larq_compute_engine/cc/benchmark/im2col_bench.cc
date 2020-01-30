@@ -3,7 +3,7 @@
 #include <numeric>
 #include <vector>
 
-#include "larq_compute_engine/cc/core/im2col_functor.h"
+#include "larq_compute_engine/core/im2col_functor.h"
 
 static void im2col(benchmark::State& state) {
   const int im_h = state.range(0), im_w = state.range(0);

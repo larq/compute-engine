@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
 
-#include "larq_compute_engine/cc/core/bconv2d_functor.h"
-#include "larq_compute_engine/cc/core/padding_functor.h"
+#include "larq_compute_engine/core/bconv2d_functor.h"
+#include "larq_compute_engine/core/padding_functor.h"
 
 using namespace compute_engine::core;
 using compute_engine::core::Layout;
