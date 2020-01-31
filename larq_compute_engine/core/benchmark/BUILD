@@ -28,10 +28,10 @@ cc_binary(
         deps = [
         "@googlebenchmark//:benchmark",
         "@googlebenchmark//:benchmark_main",
-        "//larq_compute_engine/core:bconv2d",
-        "//larq_compute_engine/core:bgemm",
-        "//larq_compute_engine/core:fused_bgemm",
-        "//larq_compute_engine/core:im2col",
-        "//larq_compute_engine/core:padding",
+        "//larq_compute_engine/core:bconv2d_functor",
+        "//larq_compute_engine/core:bgemm_functor",
+        "//larq_compute_engine/core:fused_bgemm_functor",
+        "//larq_compute_engine/core:im2col_functor",
+        "//larq_compute_engine/core:padding_functor",
         ],
 )
