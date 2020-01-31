@@ -12,7 +12,7 @@ cc_library(
 
 # BUILDING BGEMM
 cc_library(
-    name = "bgemm",
+    name = "bgemm_functor",
     hdrs = [
         "bgemm_functor.h",
     ],
@@ -43,37 +43,37 @@ cc_library(
 )
 
 cc_library(
-    name = "fused_bgemm",
+    name = "fused_bgemm_functor",
     hdrs = [
         "fused_bgemm_functor.h",
     ],
     deps = [
          ":packbits",
-         ":bgemm",
+         ":bgemm_functor",
     ],
 )
 
 # BUILDING IM2COL
 cc_library(
-    name = "im2col",
+    name = "im2col_functor",
     hdrs = [
         "im2col_functor.h",
     ],
 )
 
 cc_library(
-    name = "padding",
+    name = "padding_functor",
     hdrs = ["padding_functor.h"],
 )
 
 cc_library(
-    name = "bconv2d",
+    name = "bconv2d_functor",
     hdrs = [
         "bconv2d_functor.h",
     ],
     deps = [
-         ":fused_bgemm",
-         ":padding",
+         ":fused_bgemm_functor",
+         ":padding_functor",
     ],
 )
 
@@ -89,4 +89,71 @@ cc_library(
     hdrs = [
         "packbits_aarch64.h",
     ],
+)
+
+cc_library(
+    name = "bgemm_ref",
+    hdrs = [
+        "bgemm_impl_ref.h",
+    ],
+    deps = [
+        "//larq_compute_engine/core:bgemm_functor",
+        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
+        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
+    ]
+)
+
+cc_library(
+    name = "bgemm_kernels_common",
+    hdrs = [
+        "bgemm_kernels_common.h",
+    ],
+)
+
+cc_library(
+    name = "bgemm_kernels_arm",
+    hdrs = [
+        "bgemm_kernels_arm.h",
+        "bgemm_kernels_arm64.h",
+    ],
+    deps = [
+        ":bgemm_kernels_common"
+    ]
+)
+
+cc_library(
+    name = "bgemm_kernels_ruy",
+    hdrs = [
+        "bgemm_kernels_arm.h",
+        "bgemm_kernels_ruy.h",
+        "bgemm_kernels_x86.h",
+    ],
+    deps = [
+        "//larq_compute_engine/core:bgemm_functor",
+        ":bgemm_kernels_arm"
+    ]
+)
+
+cc_library(
+    name = "bgemm_ruy",
+    hdrs = [
+        "bgemm_impl_ruy.h",
+        "bgemm_trmul_params.h",
+    ],
+    deps = [
+        ":bgemm_kernels_ruy",
+        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
+        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
+    ]
+)
+
+cc_library(
+    name = "bgemm_impl",
+    hdrs = [
+        "bgemm_impl.h",
+    ],
+    deps = [
+        ":bgemm_ref",
+        ":bgemm_ruy",
+    ]
 )

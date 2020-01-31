@@ -1,4 +1,4 @@
-#include "bgemm_impl.h"
+#include "larq_compute_engine/core/bgemm_impl.h"
 #include "larq_compute_engine/core/packbits.h"
 #include "larq_compute_engine/core/padding_functor.h"
 #include "profiling/instrumentation.h"
