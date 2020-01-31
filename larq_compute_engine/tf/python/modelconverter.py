@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 import larq as lq
 from larq_compute_engine import bsign, bconv2d64
-from larq_compute_engine.python.utils import tf_2_or_newer
+from larq_compute_engine.tf.python.utils import tf_2_or_newer
 from tensorflow.keras.utils import get_custom_objects
 
 get_custom_objects()["bsign"] = bsign

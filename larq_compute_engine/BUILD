@@ -14,7 +14,7 @@ config_setting(
 # dynamic library of larq compute engine custom ops
 # for tensorflow
 cc_binary(
-    name = 'python/ops/_larq_compute_engine_ops.so',
+    name = 'tf/python/ops/_larq_compute_engine_ops.so',
     srcs = [
         "tf/kernels/sign_kernels.cc",
         "tf/kernels/bconv2d.cc",
@@ -43,10 +43,10 @@ py_runtime(
 py_library(
     name = "compute_engine_ops_py",
     srcs = ([
-        "python/ops/compute_engine_ops.py",
+        "tf/python/ops/compute_engine_ops.py",
     ]),
     data = [
-        ":python/ops/_larq_compute_engine_ops.so"
+        ":tf/python/ops/_larq_compute_engine_ops.so"
     ],
     srcs_version = "PY3",
 )
@@ -54,8 +54,8 @@ py_library(
 py_library(
     name = "compute_engine_utils_py",
     srcs = ([
-        "python/utils.py",
-        "python/modelconverter.py",
+        "tf/python/utils.py",
+        "tf/python/modelconverter.py",
     ]),
     srcs_version = "PY3",
 )
@@ -64,8 +64,9 @@ py_library(
     name = "compute_engine_py",
     srcs = ([
         "__init__.py",
-        "python/__init__.py",
-        "python/ops/__init__.py",
+        "tf/__init__.py",
+        "tf/python/__init__.py",
+        "tf/python/ops/__init__.py",
     ]),
     deps = [
         ":compute_engine_ops_py",
@@ -77,9 +78,9 @@ py_library(
 py_test(
     name = "bsign_ops_py_test",
     srcs = [
-        "python/ops/bsign_ops_test.py"
+        "tf/python/ops/bsign_ops_test.py"
     ],
-    main = "python/ops/bsign_ops_test.py",
+    main = "tf/python/ops/bsign_ops_test.py",
     deps = [
         ":compute_engine_ops_py",
         ":compute_engine_utils_py",
@@ -92,9 +93,9 @@ py_test(
 py_test(
     name = "bconv2d_ops_py_test",
     srcs = [
-        "python/ops/bconv2d_ops_test.py"
+        "tf/python/ops/bconv2d_ops_test.py"
     ],
-    main = "python/ops/bconv2d_ops_test.py",
+    main = "tf/python/ops/bconv2d_ops_test.py",
     deps = [
         ":compute_engine_ops_py",
         ":compute_engine_utils_py",

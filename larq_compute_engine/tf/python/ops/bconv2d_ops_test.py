@@ -6,12 +6,12 @@ import pytest
 
 
 try:
-    from larq_compute_engine.python.ops.compute_engine_ops import (
+    from larq_compute_engine.tf.python.ops.compute_engine_ops import (
         bconv2d8,
         bconv2d32,
         bconv2d64,
     )
-    from larq_compute_engine.python.utils import eval_op
+    from larq_compute_engine.tf.python.utils import eval_op
 except ImportError:
     from compute_engine_ops import bconv2d8, bconv2d32, bconv2d64
     from ..utils import eval_op
