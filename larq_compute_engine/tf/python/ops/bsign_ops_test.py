@@ -5,11 +5,11 @@ import pytest
 
 
 try:
-    from larq_compute_engine.python.ops.compute_engine_ops import bsign
-    from larq_compute_engine.python.utils import eval_op
+    from larq_compute_engine.tf.python.ops.compute_engine_ops import bsign
+    from larq_compute_engine.tf.python.utils import eval_op
 except ImportError:
     from compute_engine_ops import bsign
-    from compute_engine_ops.python.utils import eval_op
+    from compute_engine_ops.tf.python.utils import eval_op
 
 
 @pytest.mark.parametrize("dtype", [np.int8, np.int32, np.int64])
