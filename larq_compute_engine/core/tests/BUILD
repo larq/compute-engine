@@ -8,8 +8,8 @@ cc_test(
     srcs = ["bgemm_tests.cc"],
     copts = ["-Iext/gtest/include"],
     deps = [
-        "@com_google_googletest//:gtest_main",
         "//larq_compute_engine/core:bgemm_functor",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
@@ -19,8 +19,8 @@ cc_test(
     srcs = ["packbits_tests.cc"],
     copts = ["-Iext/gtest/include"],
     deps = [
-         "@com_google_googletest//:gtest_main",
-         "//larq_compute_engine/core:packbits",
+        "//larq_compute_engine/core:packbits",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
@@ -30,10 +30,10 @@ cc_test(
     srcs = ["fused_bgemm_tests.cc"],
     copts = ["-Iext/gtest/include"],
     deps = [
-         "@com_google_googletest//:gtest_main",
-         "@eigen_archive//:eigen",
-         "//larq_compute_engine/core:fused_bgemm_functor",
-         "//larq_compute_engine/core:utils",
+        "//larq_compute_engine/core:fused_bgemm_functor",
+        "//larq_compute_engine/core:utils",
+        "@com_google_googletest//:gtest_main",
+        "@eigen_archive//:eigen",
     ],
 )
 
@@ -43,8 +43,8 @@ cc_test(
     srcs = ["im2col_tests.cc"],
     copts = ["-Iext/gtest/include"],
     deps = [
-         "@com_google_googletest//:gtest_main",
-         "//larq_compute_engine/core:im2col_functor",
+        "//larq_compute_engine/core:im2col_functor",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
@@ -54,8 +54,8 @@ cc_test(
     srcs = ["bconv2d_tests.cc"],
     copts = ["-Iexternal/gtest/include"],
     deps = [
-         "@com_google_googletest//:gtest_main",
-         "//larq_compute_engine/core:bconv2d_functor",
+        "//larq_compute_engine/core:bconv2d_functor",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
@@ -64,11 +64,11 @@ cc_test(
 test_suite(
     name = "cc_tests_general",
     tests = [
+        "bconv2d_tests",
         "bgemm_tests",
-        "packbits_tests",
         "fused_bgemm_tests",
         "im2col_tests",
-        "bconv2d_tests",
+        "packbits_tests",
     ],
 )
 
@@ -79,9 +79,9 @@ cc_test(
     srcs = ["packbits_arm32_tests.cc"],
     copts = ["-Iexternal/gtest/include"],
     deps = [
-         "@com_google_googletest//:gtest_main",
-         "//larq_compute_engine/core:packbits_arm32",
-         "//larq_compute_engine/core:packbits",
+        "//larq_compute_engine/core:packbits",
+        "//larq_compute_engine/core:packbits_arm32",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
@@ -109,16 +109,16 @@ cc_test(
     srcs = ["packbits_aarch64_tests.cc"],
     copts = ["-Iexternal/gtest/include"],
     deps = [
-         "@com_google_googletest//:gtest_main",
-         "//larq_compute_engine/core:packbits",
+        "//larq_compute_engine/core:packbits",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
 test_suite(
     name = "cc_tests_aarch64",
     tests = [
-            ":packbits_aarch64_tests",
-            ":packbits_tests",
+        ":packbits_aarch64_tests",
+        ":packbits_tests",
     ],
 )
 

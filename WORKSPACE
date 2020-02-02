@@ -1,13 +1,14 @@
 load("//third_party/tf:tf_configure.bzl", "tf_configure")
+
 tf_configure(name = "local_config_tf")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "googlebenchmark",
-    url = "https://github.com/google/benchmark/archive/v1.5.0.zip",
     sha256 = "2d22dd3758afee43842bb504af1a8385cccb3ee1f164824e4837c1c1b04d92a0",
     strip_prefix = "benchmark-1.5.0",
+    url = "https://github.com/google/benchmark/archive/v1.5.0.zip",
 )
 
 http_archive(
@@ -42,9 +43,9 @@ load("//third_party/toolchains/cpus/arm:arm_compiler_configure.bzl", "arm_compil
 arm_compiler_configure(
     name = "local_config_arm_compiler",
     build_file = "//third_party/toolchains/cpus/arm:BUILD",
+    remote_config_repo_aarch64 = "../aarch64_compiler",
     #These paths are relative to some_bazel_dir/external/local_config_arm_compiler/
     remote_config_repo_arm = "../arm_compiler",
-    remote_config_repo_aarch64 = "../aarch64_compiler",
 )
 
 # To update TensorFlow to a new revision.
@@ -57,10 +58,10 @@ arm_compiler_configure(
 http_archive(
     name = "org_tensorflow",
     sha256 = "638e541a4981f52c69da4a311815f1e7989bf1d67a41d204511966e1daed14f7",
+    strip_prefix = "tensorflow-2.1.0",
     urls = [
         "https://github.com/tensorflow/tensorflow/archive/v2.1.0.tar.gz",
     ],
-    strip_prefix = "tensorflow-2.1.0",
 )
 
 # load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
@@ -76,6 +77,7 @@ http_archive(
         "https://github.com/bazelbuild/rules_closure/archive/308b05b2419edb5c8ee0471b67a40403df940149.tar.gz",  # 2019-06-13
     ],
 )
+
 http_archive(
     name = "bazel_skylib",
     sha256 = "2ef429f5d7ce7111263289644d233707dba35e39696377ebab8b0bc701f7818e",
@@ -89,21 +91,31 @@ http_archive(
     sha256 = "a045a436b642c70fb0c10ca84ff0fd2dcbd59cc89100d597a61e8374afafb366",
     urls = ["https://github.com/bazelbuild/rules_apple/releases/download/0.18.0/rules_apple.0.18.0.tar.gz"],
 )  # https://github.com/bazelbuild/rules_apple/releases
+
 http_archive(
     name = "build_bazel_rules_swift",
     sha256 = "18cd4df4e410b0439a4935f9ca035bd979993d42372ba79e7f2d4fafe9596ef0",
     urls = ["https://github.com/bazelbuild/rules_swift/releases/download/0.12.1/rules_swift.0.12.1.tar.gz"],
 )  # https://github.com/bazelbuild/rules_swift/releases
+
 http_archive(
     name = "build_bazel_apple_support",
     sha256 = "122ebf7fe7d1c8e938af6aeaee0efe788a3a2449ece5a8d6a428cb18d6f88033",
     urls = ["https://github.com/bazelbuild/apple_support/releases/download/0.7.1/apple_support.0.7.1.tar.gz"],
 )  # https://github.com/bazelbuild/apple_support/releases
+
 load("@org_tensorflow//tensorflow:workspace.bzl", "tf_workspace")
-tf_workspace(path_prefix = "", tf_repo_name = "org_tensorflow")
+
+tf_workspace(
+    path_prefix = "",
+    tf_repo_name = "org_tensorflow",
+)
 
 # android bazel configurations
 load("@org_tensorflow//third_party/android:android_configure.bzl", "android_configure")
-android_configure(name="local_config_android")
+
+android_configure(name = "local_config_android")
+
 load("@local_config_android//:android.bzl", "android_workspace")
+
 android_workspace()

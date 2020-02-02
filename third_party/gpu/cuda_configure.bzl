@@ -20,6 +20,7 @@
     `3.5,5.2`.
   * `PYTHON_BIN_PATH`: The python binary path
 """
+
 load(
     "@bazel_tools//tools/cpp:lib_cc_configure.bzl",
     "escape_string",
@@ -248,7 +249,6 @@ def find_cc(repository_ctx):
         fail(("Cannot find {}, either correct your path or set the {}" +
               " environment variable").format(target_cc_name, cc_path_envvar))
     return cc
-
 
 _INC_DIR_MARKER_BEGIN = "#include <...>"
 
@@ -940,7 +940,7 @@ def _get_cuda_config(repository_ctx):
 
 def _tpl(repository_ctx, tpl, substitutions = {}, out = None):
     if substitutions == None:
-      substitutions = {}
+        substitutions = {}
     if not out:
         out = tpl.replace(":", "/")
     repository_ctx.template(
@@ -1013,7 +1013,6 @@ def _create_dummy_repository(repository_ctx):
     repository_ctx.file("cuda/cuda/lib/%s" % lib_name("curand", cpu_value))
     repository_ctx.file("cuda/cuda/lib/%s" % lib_name("cufft", cpu_value))
     repository_ctx.file("cuda/cuda/lib/%s" % lib_name("cupti", cpu_value))
-
 
 def _execute(
         repository_ctx,
@@ -1181,7 +1180,7 @@ def _create_local_cuda_repository(repository_ctx):
         "cuda:build_defs.bzl",
         {
             "%{cuda_is_configured}": "True",
-             "%{cuda_extra_copts}": "[]",
+            "%{cuda_extra_copts}": "[]",
         },
     )
 
@@ -1206,7 +1205,7 @@ def _create_local_cuda_repository(repository_ctx):
         },
         "cuda/BUILD",
     )
-   
+
     # Set up crosstool/
     cc = find_cc(repository_ctx)
     cc_fullpath = cc
@@ -1224,7 +1223,6 @@ def _create_local_cuda_repository(repository_ctx):
     #       https://github.com/bazelbuild/bazel/issues/5634)
     cuda_defines["%{linker_bin_path_flag}"] = 'flag: "-B/usr/bin"'
 
-    
     cuda_defines["%{host_compiler_path}"] = "clang/bin/crosstool_wrapper_driver_is_not_gcc"
     cuda_defines["%{host_compiler_warnings}"] = ""
 

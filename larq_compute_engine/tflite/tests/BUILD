@@ -9,11 +9,11 @@ cc_test(
     srcs = ["bconv2d_test.cc"],
     deps = [
         "//larq_compute_engine/tflite/kernels:lce_ops",
-        "@org_tensorflow//tensorflow/lite/kernels:test_main",
-        "@org_tensorflow//tensorflow/lite/kernels:test_util",
-        "@org_tensorflow//tensorflow/lite:framework",
         "@com_google_googletest//:gtest",
         "@flatbuffers",
+        "@org_tensorflow//tensorflow/lite:framework",
+        "@org_tensorflow//tensorflow/lite/kernels:test_main",
+        "@org_tensorflow//tensorflow/lite/kernels:test_util",
     ],
 )
 

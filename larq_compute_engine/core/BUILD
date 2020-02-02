@@ -17,8 +17,8 @@ cc_library(
         "bgemm_functor.h",
     ],
     deps = [
-    ":utils",
-    ]
+        ":utils",
+    ],
 )
 
 # BUILDING PACKBITS
@@ -48,8 +48,8 @@ cc_library(
         "fused_bgemm_functor.h",
     ],
     deps = [
-         ":packbits",
-         ":bgemm_functor",
+        ":bgemm_functor",
+        ":packbits",
     ],
 )
 
@@ -72,8 +72,8 @@ cc_library(
         "bconv2d_functor.h",
     ],
     deps = [
-         ":fused_bgemm_functor",
-         ":padding_functor",
+        ":fused_bgemm_functor",
+        ":padding_functor",
     ],
 )
 
@@ -100,7 +100,7 @@ cc_library(
         "//larq_compute_engine/core:bgemm_functor",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
-    ]
+    ],
 )
 
 cc_library(
@@ -117,8 +117,8 @@ cc_library(
         "bgemm_kernels_arm64.h",
     ],
     deps = [
-        ":bgemm_kernels_common"
-    ]
+        ":bgemm_kernels_common",
+    ],
 )
 
 cc_library(
@@ -129,9 +129,9 @@ cc_library(
         "bgemm_kernels_x86.h",
     ],
     deps = [
+        ":bgemm_kernels_arm",
         "//larq_compute_engine/core:bgemm_functor",
-        ":bgemm_kernels_arm"
-    ]
+    ],
 )
 
 cc_library(
@@ -144,7 +144,7 @@ cc_library(
         ":bgemm_kernels_ruy",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
-    ]
+    ],
 )
 
 cc_library(
@@ -155,5 +155,5 @@ cc_library(
     deps = [
         ":bgemm_ref",
         ":bgemm_ruy",
-    ]
+    ],
 )
