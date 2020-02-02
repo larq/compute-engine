@@ -1,14 +1,11 @@
-
 # Building TF lite
 
 First, make sure the tensorflow submodule is loaded. This only has to be done once.
-
 ``` bash
 git submodule update --init
 ```
 
 To build the library and C++ example programs, run
-
 ```bash
 larq_compute_engine/tflite/build/build_lqce.sh --native
 ```
@@ -74,4 +71,3 @@ It can be built as follows:
 - On the Raspberry Pi navigate to `ext/tensorflow/tensorflow/lite/tools/pip_package/`.
 - Open `setup.py` and find the class `CustomBuildExt`. Uncomment the line `make()` in the member function `run`.
 - Now run `./build_pip_package.sh`.
-
