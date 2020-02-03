@@ -13,11 +13,15 @@ jobs:
         with:
           python-version: 3.7
       - name: Install Lint Dependencies
-        run: pip install pyflakes==2.1.1 black==19.10b0
+        run: |
+          pip install pyflakes==2.1.1 black==19.10b0
+          sudo wget -O /usr/local/bin/buildifier https://github.com/bazelbuild/buildtools/releases/download/0.29.0/buildifier
+          sudo chmod +x /usr/local/bin/buildifier
       - name: Run PyFlakes
         run: pyflakes larq_compute_engine
       - name: Black code style
         run: black larq_compute_engine --check --target-version py36 --exclude 'build/|buck-out/|dzzist/|_build/|\.git/|\.hg/|\.mypy_cache/|\.tox/|\.venv/|larq/snapshots/'
       - name: clang-format lint
-        uses: DoozyX/clang-format-lint-action@v0.4.1
-
+        uses: DoozyX/clang-format-lint-action@v0.5
+      - name: Lint bazel files
+        run: buildifier -mode=check -r ./

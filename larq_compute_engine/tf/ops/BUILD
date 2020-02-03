@@ -13,7 +13,7 @@ cc_library(
     name = "compute_engine_ops",
     srcs = ["compute_engine_ops.cc"],
     deps = [
-        "@local_config_tf//:tf_header_lib",
         ":bconv_shape_inference",
-    ]
+        "@local_config_tf//:tf_header_lib",
+    ],
 )

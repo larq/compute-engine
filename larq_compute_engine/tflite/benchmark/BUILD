@@ -44,9 +44,9 @@ cc_binary(
     }),
     deps = [
         "//larq_compute_engine/tflite/kernels:lce_op_kernels",
-        "@org_tensorflow//tensorflow/lite:framework",
-        "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
         "@googlebenchmark//:benchmark",
         "@googlebenchmark//:benchmark_main",
+        "@org_tensorflow//tensorflow/lite:framework",
+        "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
     ],
 )
