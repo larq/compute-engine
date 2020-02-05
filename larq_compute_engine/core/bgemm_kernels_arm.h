@@ -43,6 +43,27 @@ struct BgemmKernel<ruy::Path::kNeon, std::uint32_t, std::uint32_t, float,
   }
 };
 
+// // specialized kernel for 64-bit bitpacking, float output and 32-bit accumulator
+// template <>
+// struct BgemmKernel<ruy::Path::kNeon, std::uint64_t, std::uint64_t, float,
+//                    BinaryBasicSpec<std::int32_t, float>> {
+//   Tuning tuning = Tuning::kAuto;
+//   using LhsLayout = FixedKernelLayout<Order::kColMajor, 2, 4>;
+//   using RhsLayout = FixedKernelLayout<Order::kColMajor, 2, 4>;
+//   explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
+//   void Run(const ruy::PackedMatrix<std::uint64_t>& lhs,
+//            const ruy::PackedMatrix<std::uint64_t>& rhs,
+//            const BinaryBasicSpec<std::int32_t /* accum. scalar */, float>& spec,
+//            int start_row, int start_col, int end_row, int end_col,
+//            ruy::Matrix<float>* dst) const {
+//     BinaryKernelParams<LhsLayout::kCols, RhsLayout::kCols, std::uint64_t>
+//         params;
+//     MakeBinaryKernelParams(lhs, rhs, spec, start_row, start_col, end_row,
+//                            end_col, dst, &params);
+//     BinaryKernelNeonOutOfOrder64BP4x4(params);
+//   }
+// };
+
 // specialized kernel for 64-bit bitpacking, float output and 32-bit accumulator
 template <>
 struct BgemmKernel<ruy::Path::kNeon, std::uint64_t, std::uint64_t, float,
@@ -60,7 +81,7 @@ struct BgemmKernel<ruy::Path::kNeon, std::uint64_t, std::uint64_t, float,
         params;
     MakeBinaryKernelParams(lhs, rhs, spec, start_row, start_col, end_row,
                            end_col, dst, &params);
-    BinaryKernelNeonOutOfOrder64BP4x4(params);
+    BinaryKernelNeonOutOfOrder64BP4x4D6(params);
   }
 };
 
