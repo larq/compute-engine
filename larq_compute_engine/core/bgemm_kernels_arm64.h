@@ -884,6 +884,25 @@ void CheckOffsetsInKernelParams64BPD6(const Params&) {
 
 // clang-format on
 
+// // temporery NEON registers: v28,v29,v30,v31
+// #define LCE_BMLA(Vd, Vr, Vl1, Vl2, Vl3, Vl4) \
+//   "eor v28.16b, " #Vr".16b, " #Vl1".16b\n"    \
+//   "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"    \
+//   "eor v30.16b, " #Vr".16b, " #Vl3".16b\n"    \
+//   "eor v31.16b, " #Vr".16b, " #Vl4".16b\n"    \
+//   "cnt v28.16b, v28.16b\n"                    \
+//   "cnt v29.16b, v29.16b\n"                    \
+//   "cnt v30.16b, v30.16b\n"                    \
+//   "cnt v31.16b, v31.16b\n"                    \
+//   "addv b28, v28.16b\n"                       \
+//   "addv b29, v29.16b\n"                       \
+//   "addv b30, v30.16b\n"                       \
+//   "addv b31, v31.16b\n"                       \
+//   "ins v28.s[1], v29.s[0]\n"                  \
+//   "ins v28.s[2], v30.s[0]\n"                  \
+//   "ins v28.s[3], v31.s[0]\n"                  \
+//   "add " #Vd".4s, " #Vd".4s, v28.4s\n"
+
 void BinaryKernelNeonOutOfOrder64BP4x4D6(
     const BinaryKernelParams<4, 4, std::uint64_t>& params) {
   CheckOffsetsInKernelParams64BP(params);
@@ -1018,20 +1037,104 @@ void BinaryKernelNeonOutOfOrder64BP4x4D6(
       "beq 79f\n"
 
       "2:\n"
+      //////////////////////////////////////////////////////////////////////
+      // LCE_BMLA(v25, v5, v0, v1, v2, v3)
+      //////////////////////////////////////////////////////////////////////
+      "eor v28.16b, v5.16b, v0.16b\n"
+      "eor v29.16b, v5.16b, v1.16b\n"
+
+      // loading v4
       "ld1 {v4.2d}, [%[rhs_ptr]], #16\n"
 
-      LCE_BMLA(v25, v5, v0, v1, v2, v3)
+      "eor v30.16b, v5.16b, v2.16b\n"
+      "eor v31.16b, v5.16b, v3.16b\n"
+
+      // loading v5
       "ld1 {v5.2d}, [%[rhs_ptr]], #16\n"
 
-      LCE_BMLA(v26, v6, v0, v1, v2, v3)
+      "cnt v28.16b, v28.16b\n"
+      "cnt v29.16b, v29.16b\n"
+      "cnt v30.16b, v30.16b\n"
+      "cnt v31.16b, v31.16b\n"
+
+      "addv b28, v28.16b\n"
+      "addv b29, v29.16b\n"
+      "addv b30, v30.16b\n"
+      "addv b31, v31.16b\n"
+
+      "ins v28.s[1], v29.s[0]\n"
+      "ins v28.s[2], v30.s[0]\n"
+      "ins v28.s[3], v31.s[0]\n"
+      "add v25.4s, v25.4s, v28.4s\n"
+      //////////////////////////////////////////////////////////////////////
+
+      //////////////////////////////////////////////////////////////////////
+      // LCE_BMLA(v26, v6, v0, v1, v2, v3)
+      //////////////////////////////////////////////////////////////////////
+      "eor v28.16b, v6.16b, v0.16b\n"
+      "eor v29.16b, v6.16b, v1.16b\n"
+      "eor v30.16b, v6.16b, v2.16b\n"
+      "eor v31.16b, v6.16b, v3.16b\n"
+
+      // loading v6
       "ld1 {v6.2d}, [%[rhs_ptr]], #16\n"
 
-      LCE_BMLA(v27, v7, v0, v1, v2, v3)
+      "cnt v28.16b, v28.16b\n"
+      "cnt v29.16b, v29.16b\n"
+      "cnt v30.16b, v30.16b\n"
+      "cnt v31.16b, v31.16b\n"
+
+      "addv b28, v28.16b\n"
+      "addv b29, v29.16b\n"
+      "addv b30, v30.16b\n"
+      "addv b31, v31.16b\n"
+
+      "ins v28.s[1], v29.s[0]\n"
+      "ins v28.s[2], v30.s[0]\n"
+      "ins v28.s[3], v31.s[0]\n"
+
+      "add v26.4s, v26.4s, v28.4s\n"
+      //////////////////////////////////////////////////////////////////////
+
+      //////////////////////////////////////////////////////////////////////
+      // LCE_BMLA(v27, v7, v0, v1, v2, v3)
+      //////////////////////////////////////////////////////////////////////
+      "eor v28.16b, v7.16b, v0.16b\n"
+      "eor v29.16b, v7.16b, v1.16b\n"
+      "eor v30.16b, v7.16b, v2.16b\n"
+      "eor v31.16b, v7.16b, v3.16b\n"
+
+      // loading v6
       "ld1 {v7.2d}, [%[rhs_ptr]], #16\n"
 
+      "cnt v28.16b, v28.16b\n"
+      "cnt v29.16b, v29.16b\n"
+
+      // loading v0
       "ld1 {v0.2d}, [%[lhs_ptr]], #16\n"
+
+      "cnt v30.16b, v30.16b\n"
+      "cnt v31.16b, v31.16b\n"
+
+      // loading v1
       "ld1 {v1.2d}, [%[lhs_ptr]], #16\n"
+
+      "addv b28, v28.16b\n"
+      "addv b29, v29.16b\n"
+
+      // loading v2
       "ld1 {v2.2d}, [%[lhs_ptr]], #16\n"
+
+      "addv b30, v30.16b\n"
+      "addv b31, v31.16b\n"
+
+      "ins v28.s[1], v29.s[0]\n"
+      "ins v28.s[2], v30.s[0]\n"
+      "ins v28.s[3], v31.s[0]\n"
+      "add v27.4s, v27.4s, v28.4s\n"
+      //////////////////////////////////////////////////////////////////////
+
+      // loading v3
       "ld1 {v3.2d}, [%[lhs_ptr]], #16\n"
 
       "add w1, w1, #2\n"
