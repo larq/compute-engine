@@ -146,10 +146,11 @@ fi
 if [[ "$PIP_MANYLINUX2010" == "1" ]]; then
   write_to_bazelrc "build --config=manylinux2010"
   write_to_bazelrc "test --config=manylinux2010"
-  # By default, build TF in C++ 14 mode.
-  write_to_bazelrc "build --cxxopt=-std=c++14"
-  write_to_bazelrc "build --host_cxxopt=-std=c++14"
 fi
+
+# By default, build TF in C++ 14 mode.
+write_to_bazelrc "build --cxxopt=-std=c++14"
+write_to_bazelrc "build --host_cxxopt=-std=c++14"
 
 cat << EOM >> .bazelrc
 build --copt=-DTFLITE_WITH_RUY
