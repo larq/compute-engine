@@ -26,6 +26,10 @@ function write_action_env_to_bazelrc() {
   write_to_bazelrc "build --action_env $1=\"$2\""
 }
 
+function is_linux() {
+  [[ "${PLATFORM}" == "linux" ]]
+}
+
 # Remove .bazelrc if it already exist
 [ -e .bazelrc ] && rm .bazelrc
 
@@ -112,7 +116,9 @@ write_to_bazelrc "build:cuda --define=using_cuda=true --define=using_cuda_nvcc=t
 if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
   write_to_bazelrc "build:cuda --crosstool_top=@local_config_cuda//crosstool:toolchain"
 fi
-write_to_bazelrc "build:manylinux2010 --crosstool_top=//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.0:toolchain"
+if is_linux; then
+  write_to_bazelrc "build:manylinux2010 --crosstool_top=//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.0:toolchain"
+fi
 write_to_bazelrc "build --spawn_strategy=standalone"
 write_to_bazelrc "build --strategy=Genrule=standalone"
 write_to_bazelrc "build -c opt"
@@ -144,13 +150,15 @@ fi
 
 
 if [[ "$PIP_MANYLINUX2010" == "1" ]]; then
-  write_to_bazelrc "build --config=manylinux2010"
-  write_to_bazelrc "test --config=manylinux2010"
+  if is_linux; then
+    write_to_bazelrc "build --config=manylinux2010"
+    write_to_bazelrc "test --config=manylinux2010"
+  fi
+  # By default, build TF in C++ 14 mode.
+  write_to_bazelrc "build --cxxopt=-std=c++14"
+  write_to_bazelrc "build --host_cxxopt=-std=c++14"
 fi
 
-# By default, build TF in C++ 14 mode.
-write_to_bazelrc "build --cxxopt=-std=c++14"
-write_to_bazelrc "build --host_cxxopt=-std=c++14"
 
 cat << EOM >> .bazelrc
 # Disable visibility checks (works around some private deps in TensorFlow that
