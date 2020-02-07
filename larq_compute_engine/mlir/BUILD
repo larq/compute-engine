@@ -13,7 +13,7 @@ gentbl(
         ("-gen-op-defs", "ir/lce_ops.cc.inc"),
         ("-gen-op-doc", "g3doc/lce_ops.md"),
     ],
-    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    tblgen = "@local_config_mlir//:mlir-tblgen",
     td_file = "ir/lce_ops.td",
     td_srcs = [
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
@@ -25,12 +25,12 @@ gentbl(
     tbl_outs = [
         ("-gen-rewriters", "transforms/generated_prepare.inc"),
     ],
-    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    tblgen = "@local_config_mlir//:mlir-tblgen",
     td_file = "transforms/prepare_patterns.td",
     td_srcs = [
         "ir/lce_ops.td",
-        "@llvm-project//mlir:OpBaseTdFiles",
-        "@llvm-project//mlir:StdOpsTdFiles",
+        "@local_config_mlir//:OpBaseTdFiles",
+        "@local_config_mlir//:StdOpsTdFiles",
         # If we remove the dependency on lite:transforms/prepare_patterns.td  we can probably reduce the number of files
         "@org_tensorflow//tensorflow/compiler/mlir/lite:transforms/prepare_patterns.td",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_optimize_td_files",
@@ -44,13 +44,13 @@ gentbl(
     tbl_outs = [
         ("-gen-rewriters", "transforms/generated_optimize.inc"),
     ],
-    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    tblgen = "@local_config_mlir//:mlir-tblgen",
     td_file = "transforms/optimize_patterns.td",
     td_srcs = [
         "ir/lce_ops.td",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
-        "@llvm-project//mlir:StdOpsTdFiles",
+        "@local_config_mlir//:StdOpsTdFiles",
     ],
 )
 
