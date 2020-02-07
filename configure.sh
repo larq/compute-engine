@@ -153,6 +153,10 @@ write_to_bazelrc "build --cxxopt=-std=c++14"
 write_to_bazelrc "build --host_cxxopt=-std=c++14"
 
 cat << EOM >> .bazelrc
+# Disable visibility checks (works around some private deps in TensorFlow that
+# are being unbundled soon anyway).
+build --nocheck_visibility
+
 build --copt=-DTFLITE_WITH_RUY
 
 # These can be activated using --config=rpi3 and --config=aarch64
