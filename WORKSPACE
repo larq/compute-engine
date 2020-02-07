@@ -1,5 +1,9 @@
 workspace(name = "larq_compute_engine")
 
+load("//third_party/tf:tf_configure.bzl", "tf_configure")
+
+tf_configure(name = "local_config_tf")
+
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
