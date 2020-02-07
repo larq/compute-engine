@@ -1,27 +1,14 @@
 #include "larq_compute_engine/mlir/tf_tfl_passes.h"
-
-// #include "absl/strings/str_split.h"
-// #include "llvm/ADT/StringExtras.h"
-// #include "llvm/Support/CommandLine.h"
-// #include "llvm/Support/FormatVariadic.h"
-// #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
-// #include "mlir/IR/Diagnostics.h"  // TF:llvm-project
 #include "mlir/IR/Function.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Module.h"
 #include "mlir/Support/FileUtilities.h"
 #include "tensorflow/compiler/mlir/init_mlir.h"
-// #include "tensorflow/compiler/mlir/lite/common/tfl_pass_config.h"
-// #include "tensorflow/compiler/mlir/lite/flatbuffer_translate.h"
-// #include "tensorflow/compiler/mlir/lite/flatbuffer_translate_flags.h"
 #include "tensorflow/compiler/mlir/lite/tf_tfl_translate_cl.h"
 #include "tensorflow/compiler/mlir/lite/tf_to_tfl_flatbuffer.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/tf_mlir_translate_cl.h"
-// #include "tensorflow/core/framework/types.pb.h"
-// #include "tensorflow/lite/model.h"
-// #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/stream_executor/lib/statusor.h"
 
 using mlir::FuncOp;
