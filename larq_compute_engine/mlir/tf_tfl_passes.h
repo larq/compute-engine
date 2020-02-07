@@ -1,6 +1,8 @@
 #ifndef LARQ_COMPUTE_ENGINE_MLIR_TF_TFL_PASSES_H_
 #define LARQ_COMPUTE_ENGINE_MLIR_TF_TFL_PASSES_H_
 
+#include <functional>
+
 #include "mlir/Pass/PassManager.h"
 
 namespace tensorflow {
