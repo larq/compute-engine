@@ -1,6 +1,4 @@
-load("//third_party/tf:tf_configure.bzl", "tf_configure")
-
-tf_configure(name = "local_config_tf")
+workspace(name = "larq_compute_engine")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
@@ -57,14 +55,13 @@ arm_compiler_configure(
 #    reliable downloads.
 http_archive(
     name = "org_tensorflow",
-    sha256 = "638e541a4981f52c69da4a311815f1e7989bf1d67a41d204511966e1daed14f7",
-    strip_prefix = "tensorflow-2.1.0",
+    sha256 = "a500425192654ee30b6e7e7f2b475af89558944fe34d07428fe11e51c20c4fa2",
+    strip_prefix = "tensorflow-7cf12ae52d55125d7995ddf62084084e7b3f9e5d",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/v2.1.0.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/7cf12ae52d55125d7995ddf62084084e7b3f9e5d.tar.gz",
     ],
 )
 
-# load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 # START: Upstream TensorFlow dependencies
 # TensorFlow build depends on these dependencies.
 # Needs to be in-sync with TensorFlow sources.
@@ -104,12 +101,11 @@ http_archive(
     urls = ["https://github.com/bazelbuild/apple_support/releases/download/0.7.1/apple_support.0.7.1.tar.gz"],
 )  # https://github.com/bazelbuild/apple_support/releases
 
+# Import all of the tensorflow dependencies.
 load("@org_tensorflow//tensorflow:workspace.bzl", "tf_workspace")
 
-tf_workspace(
-    path_prefix = "",
-    tf_repo_name = "org_tensorflow",
-)
+# Bootstrap TensorFlow deps last so that ours can take precedence.
+tf_workspace(tf_repo_name = "org_tensorflow")
 
 # android bazel configurations
 load("@org_tensorflow//third_party/android:android_configure.bzl", "android_configure")
