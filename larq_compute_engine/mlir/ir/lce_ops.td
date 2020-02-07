@@ -3,10 +3,9 @@
 // We extend the TensorFlow dialect in order to allow for easy generation of
 // of the TFLite flatbuffer using TensorFlows infrastructure.
 
-#ifndef LCE_OPS
-#define LCE_OPS
-
+#ifndef TF_OP_BASE
 include "tensorflow/compiler/mlir/tensorflow/ir/tf_op_base.td"
+#endif
 
 def TF_LqceBsignOp : TF_Op<"LqceBsign", [NoSideEffect, SameOperandsAndResultType]> {
   let summary = "Returns an element-wise indication of the binary sign of a number.";
@@ -59,5 +58,3 @@ TODO
     return Verify(*this);
   }]; */
 }
-
-#endif // LCE_OPS

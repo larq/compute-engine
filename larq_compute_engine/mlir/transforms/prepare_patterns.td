@@ -1,6 +1,3 @@
-include "mlir/IR/OpBase.td"
-include "mlir/Dialect/StandardOps/Ops.td"
-include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.td"
 include "tensorflow/compiler/mlir/lite/transforms/prepare_patterns.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
 
@@ -26,9 +23,9 @@ class I32VectorElementsAttr<int len> : ElementsAttrBase<
     "RankedTensorType::get({" # len # "}, $_builder.getIntegerType(32)), $0)";
 }
 
-def GetBias : NativeCodeCall<"GetBias($0)">;
-def GetMultiplier : NativeCodeCall<"GetMultiplier($0)">;
-def BinaryFilter : Constraint<CPred<"IsBinaryFilter($0)">>;
+def GetBias : NativeCodeCall<"GetBias(*$0)">;
+def GetMultiplier : NativeCodeCall<"GetMultiplier(*$0)">;
+def BinaryFilter : Constraint<CPred<"IsBinaryFilter(*$0)">>;
 
 def : Pat<(TF_Conv2DOp (TF_LqceBsignOp $input), $filter, $strides, $use_cudnn,
                        $padding, $explicit_padding, $data_format, $dilations),

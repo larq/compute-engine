@@ -7,7 +7,7 @@ def F32ElementsAttr : ElementsAttrBase<
   CPred<"$_self.cast<ElementsAttr>().getType().getElementType().isF32()">, "float constant tensor">;
 
 // Checks if the value has only one user.
-def HasOneUse : Constraint<CPred<"$0.hasOneUse()">>;
+def HasOneUse : Constraint<CPred<"$0->hasOneUse()">>;
 
 // TODO: Check shapes before fusing
 multiclass FuseAddOrSubWithBConv2D<dag binaryOp> {

@@ -29,12 +29,9 @@ gentbl(
     td_file = "transforms/prepare_patterns.td",
     td_srcs = [
         "ir/lce_ops.td",
-        "@local_config_mlir//:OpBaseTdFiles",
-        "@local_config_mlir//:StdOpsTdFiles",
         # If we remove the dependency on lite:transforms/prepare_patterns.td  we can probably reduce the number of files
         "@org_tensorflow//tensorflow/compiler/mlir/lite:transforms/prepare_patterns.td",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_optimize_td_files",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
