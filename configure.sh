@@ -26,12 +26,6 @@ function write_action_env_to_bazelrc() {
   write_to_bazelrc "build --action_env $1=\"$2\""
 }
 
-#First download bazelisk, store it as `bazel` so we can call it as `./ bazel`
-if [ ! -f bazel ]; then
-    curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.2.1/bazelisk-linux-amd64 > bazel
-    chmod +x bazel
-fi
-
 # Remove .bazelrc if it already exist
 [ -e .bazelrc ] && rm .bazelrc
 
