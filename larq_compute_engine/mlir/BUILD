@@ -1,5 +1,4 @@
 load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl")
-load("@org_tensorflow//tensorflow:tensorflow.bzl", "tf_cc_binary")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -136,18 +135,14 @@ cc_library(
     ],
 )
 
-# This takes a lot of time to run
-# TODO: Can we remove some dependencies or force TF to only build the necessary stuff?
-tf_cc_binary(
+cc_binary(
     name = "tf_lce_translate",
     srcs = ["tf_lce_translate.cc"],
     deps = [
         ":lce_tfl_passes",
-        "@com_google_absl//absl/strings",
-        "@org_tensorflow//tensorflow/compiler/mlir:init_mlir",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tf_tfl_translate_cl_options",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tf_to_tfl_flatbuffer",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_translate_lib",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:translate_cl_options",
-        "@org_tensorflow//tensorflow/stream_executor/lib",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:translate_lib",
     ],
 )
