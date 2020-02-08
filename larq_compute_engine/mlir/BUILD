@@ -140,8 +140,8 @@ cc_binary(
     srcs = ["tf_lce_translate.cc"],
     deps = [
         ":lce_tfl_passes",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tf_tfl_translate_cl_options",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_translate_lib",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tf_tfl_translate_cl_options",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:translate_cl_options",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:translate_lib",
     ],
