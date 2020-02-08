@@ -20,9 +20,6 @@ void AddTFToLCETFLConversionPasses(mlir::OpPassManager* pass_manager) {
   pass_manager->addPass(mlir::CreateTFExecutorToControlDialectConversion());
   pass_manager->addPass(mlir::TFControlFlow::CreateRaiseTFControlFlowPass());
 
-  // Enable fusing composite ops that can be lowered to built-in TFLite ops.
-  pass_manager->addPass(mlir::TFL::CreatePrepareCompositeFunctionsPass());
-
   // TODO(jpienaar): Revise post dialect constants.
   pass_manager->addPass(mlir::TF::CreateDecodeConstantPass());
   // Canonicalization includes const folding, which is utilized here to optimize
@@ -30,8 +27,6 @@ void AddTFToLCETFLConversionPasses(mlir::OpPassManager* pass_manager) {
   // tf.Conv2D is split into tf.Transpose and tfl.Conv2D.
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCSEPass());
-
-  pass_manager->addPass(mlir::createInlinerPass());
 
   // The below passes only make sense if Builtin TFLite ops are enabled
   // for emission.

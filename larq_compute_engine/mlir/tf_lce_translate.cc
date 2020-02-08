@@ -42,8 +42,8 @@ int main(int argc, char** argv) {
       tensorflow::LoadFromGraphdefOrMlirSource(
           input_file_name, input_mlir, use_splatted_constant, custom_opdefs,
           debug_info_file, input_arrays, input_dtypes, input_shapes,
-          output_arrays,
-          /*prune_unused_nodes=*/true, &source_mgr, &context);
+          output_arrays, /*prune_unused_nodes=*/true, &source_mgr, &context,
+          /*add_pseudo_input_nodes=*/false);
 
   // If errors occur, the library call in the above already logged the error
   // message. So we can just return here.
@@ -58,8 +58,9 @@ int main(int argc, char** argv) {
   std::string result;
   auto status = tensorflow::ConvertTFExecutorToTFLOrFlatbuffer(
       module.ValueOrDie().get(), output_mlir, /*emit_builtin_tflite_ops=*/true,
-      /*emit_select_tf_ops=*/false, /*emit_custom_ops=*/true, quant_specs,
-      &result, &pm);
+      /*emit_select_tf_ops=*/false, /*emit_custom_ops=*/true,
+      /*emit_quant_adaptor_ops=*/false, /*lower_tensor_list_ops=*/false,
+      quant_specs, &result, &pm, /*add_pseudo_input_nodes=*/false);
   if (!status.ok()) return kTrFailure;
 
   std::string error_msg;
