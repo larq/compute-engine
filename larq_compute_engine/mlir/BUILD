@@ -104,16 +104,35 @@ cc_library(
     alwayslink = 1,
 )
 
+# This is part of @org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_dialect_passes
+# which includes most of TensorFlow. We extract this single target to keep
+# binary size and build time manageable.
+cc_library(
+    name = "tf_decode_constant_pass",
+    srcs = [
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:transforms/decode_constant.cc",
+    ],
+    hdrs = [
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:transforms/decode_constant.h",
+    ],
+    deps = [
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_tensor",
+    ],
+    alwayslink = 1,
+)
+
 cc_library(
     name = "lce_tfl_passes",
     srcs = ["tf_tfl_passes.cc"],
     hdrs = [
         "tf_tfl_passes.h",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:transforms/decode_constant.h",
     ],
     deps = [
         ":larq_compute_engine_optimize",
         ":larq_compute_engine_prepare",
+        ":tf_decode_constant_pass",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_legalize_tf",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_optimize",
     ],
 )
 
