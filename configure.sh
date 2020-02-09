@@ -27,7 +27,7 @@ function write_action_env_to_bazelrc() {
 }
 
 function is_linux() {
-  [[ "${PLATFORM}" == "linux" ]]
+  [[ "`uname`" == "Linux" ]]
 }
 
 # Remove .bazelrc if it already exist
