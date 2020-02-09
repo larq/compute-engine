@@ -17,6 +17,7 @@ set -e
 shopt -s expand_aliases
 alias pip='pip3'
 alias python='python3'
+PLATFORM="$(uname -s | tr 'A-Z' 'a-z')"
 
 function write_to_bazelrc() {
   echo "$1" >> .bazelrc
@@ -27,7 +28,7 @@ function write_action_env_to_bazelrc() {
 }
 
 function is_linux() {
-  [[ "`uname`" == "Linux" ]]
+    [[ "${PLATFORM}" == "linux" ]]
 }
 
 # Remove .bazelrc if it already exist
