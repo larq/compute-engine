@@ -82,7 +82,7 @@ adb push lce_benchmark_model  /data/local/tmp
 (6) Make the binary executable:
 
 ```shell
-adb shell chmod +x /data/local/tmp/benchmark_model
+adb shell chmod +x /data/local/tmp/lce_benchmark_model
 ```
 
 (7) Transfer the converted ```.tflite``` model file to your phone:

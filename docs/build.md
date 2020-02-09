@@ -58,8 +58,8 @@ Tensorflow 2.x or Tensorflow 1.15, and "No" for Tensorflow 1.14 and below.
 
 ## LCE for Tensorflow Lite ##
 LCE for Tensorflow Lite has a diverse platform support, covering
-[Android](./quickstart_android.md), [Raspberry Pi](./quickstart_rpi.md)
-and [ARM64-based boards](./quickstart_arm64.md). To build/install/run LCE on
+[Android](./quickstart_android.md), [ARM-based boards](./quickstart_arm.md)
+such as Raspberry Pi and x86 machines. To build/install/run LCE on
 each of these platforms, please refer to the corresponding guide.
 
 ## LCE for Tensorflow ##
