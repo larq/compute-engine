@@ -17,6 +17,7 @@ set -e
 shopt -s expand_aliases
 alias pip='pip3'
 alias python='python3'
+PLATFORM="$(uname -s | tr 'A-Z' 'a-z')"
 
 function write_to_bazelrc() {
   echo "$1" >> .bazelrc
@@ -24,6 +25,10 @@ function write_to_bazelrc() {
 
 function write_action_env_to_bazelrc() {
   write_to_bazelrc "build --action_env $1=\"$2\""
+}
+
+function is_linux() {
+    [[ "${PLATFORM}" == "linux" ]]
 }
 
 # Remove .bazelrc if it already exist
@@ -112,7 +117,9 @@ write_to_bazelrc "build:cuda --define=using_cuda=true --define=using_cuda_nvcc=t
 if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
   write_to_bazelrc "build:cuda --crosstool_top=@local_config_cuda//crosstool:toolchain"
 fi
-write_to_bazelrc "build:manylinux2010 --crosstool_top=//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.0:toolchain"
+if is_linux; then
+  write_to_bazelrc "build:manylinux2010 --crosstool_top=//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.0:toolchain"
+fi
 write_to_bazelrc "build --spawn_strategy=standalone"
 write_to_bazelrc "build --strategy=Genrule=standalone"
 write_to_bazelrc "build -c opt"
@@ -144,14 +151,21 @@ fi
 
 
 if [[ "$PIP_MANYLINUX2010" == "1" ]]; then
-  write_to_bazelrc "build --config=manylinux2010"
-  write_to_bazelrc "test --config=manylinux2010"
+  if is_linux; then
+    write_to_bazelrc "build --config=manylinux2010"
+    write_to_bazelrc "test --config=manylinux2010"
+  fi
   # By default, build TF in C++ 14 mode.
   write_to_bazelrc "build --cxxopt=-std=c++14"
   write_to_bazelrc "build --host_cxxopt=-std=c++14"
 fi
 
+
 cat << EOM >> .bazelrc
+# Disable visibility checks (works around some private deps in TensorFlow that
+# are being unbundled soon anyway).
+build --nocheck_visibility
+
 build --copt=-DTFLITE_WITH_RUY
 
 # These can be activated using --config=rpi3 and --config=aarch64
@@ -190,8 +204,15 @@ build:v1 --define=tf_api_version=1
 build:v2 --define=tf_api_version=2
 test:v1 --action_env=TF2_BEHAVIOR=0
 test:v2 --action_env=TF2_BEHAVIOR=1
-build --config=v2
-test --config=v2
+
+# Options to disable default on features
+build:noaws --define=no_aws_support=true
+build:nogcp --define=no_gcp_support=true
+build:nohdfs --define=no_hdfs_support=true
+build:nonccl --define=no_nccl_support=true
+
+build --config=v2 --config=noaws --config=nogcp --config=nohdfs --config=nonccl
+test --config=v2 --config=noaws --config=nogcp --config=nohdfs --config=nonccl
 
 # Android configs. Bazel needs to have --cpu and --fat_apk_cpu both set to the
 # target CPU to build transient dependencies correctly. See
