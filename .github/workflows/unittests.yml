@@ -129,5 +129,7 @@ jobs:
       - name: Configure Bazel
         run: ./configure.sh <<< $'yes\nyes\n' #yes,yes for tf2
         shell: bash
+      - name: Install pip dependencies
+        run: pip3 install larq_zoo==0.5.0 pytest --no-cache
       - name: Build LCE MLIR passes
-        run: ./bazelisk build larq_compute_engine/mlir:converter --distinct_host_configuration=false --compilation_mode=fastbuild
+        run: ./bazelisk test larq_compute_engine/mlir:converter_test --distinct_host_configuration=false --compilation_mode=fastbuild

@@ -154,8 +154,15 @@ pybind_extension(
 py_library(
     name = "converter",
     srcs = ["python/converter.py"],
-    visibility = ["//visibility:public"],
     deps = [
         ":_graphdef_tfl_flatbuffer",
+    ],
+)
+
+py_test(
+    name = "converter_test",
+    srcs = ["python/converter_test.py"],
+    deps = [
+        ":converter",
     ],
 )
