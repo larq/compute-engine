@@ -18,6 +18,7 @@
 #include <ctime>
 #include <functional>
 #include <memory>
+#include <random>
 #include <tuple>
 #include <vector>
 
@@ -322,8 +323,8 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       filter_height * filter_width * input_depth * filter_count;
 
   using T = float;
-  std::vector<T> input_data, filters_data, bias_data;
-  std::vector<float> fused_multiply_data, fused_add_data;
+  std::vector<T> input_data, filters_data;
+  std::vector<float> fused_multiply_data, fused_add_data, bias_data;
   input_data.resize(input_num_elem);
   filters_data.resize(filters_num_elem);
   bias_data.resize(filter_count, 0);
@@ -337,15 +338,18 @@ TEST_P(BConv2DOpTest, SimpleTest) {
     return list[index];
   };
 
+  // std::default_random_engine real_generator;
   std::generate(std::begin(input_data), std::end(input_data), rand_generator);
   std::generate(std::begin(filters_data), std::end(filters_data),
                 rand_generator);
+  // std::generate(std::begin(bias_data), std::end(bias_data), real_generator);
 
   const std::int32_t dotproduct_size =
       filter_height * filter_width * input_depth;
   for (int i = 0; i < filter_count; ++i) {
-    fused_multiply_data[i] = -2;
-    fused_add_data[i] = dotproduct_size;
+    fused_multiply_data[i] = -2.0f;
+    fused_add_data[i] = (float)dotproduct_size + 0.3f;
+    bias_data[i] = 0.3f;
   }
 
   BConv2DOpModel m_lce(
