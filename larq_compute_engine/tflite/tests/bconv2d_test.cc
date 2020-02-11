@@ -72,10 +72,10 @@ class BaseConvolutionOpModel : public SingleOpModel {
   }
 
  protected:
-  float input_;
-  float filter_;
-  float bias_;
-  float output_;
+  int input_;
+  int filter_;
+  int bias_;
+  int output_;
 };
 
 class ConvolutionOpModel : public BaseConvolutionOpModel {
@@ -226,11 +226,11 @@ class BaseBConv2DOpModel : public SingleOpModel {
   }
 
  protected:
-  float input_;
-  float filter_;
-  float output_;
-  float fused_multiply_;
-  float fused_add_;
+  int input_;
+  int filter_;
+  int output_;
+  int fused_multiply_;
+  int fused_add_;
 };
 
 class BConv2DOpModel : public BaseBConv2DOpModel {
@@ -352,7 +352,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   for (int i = 0; i < filter_count; ++i) {
     fused_multiply_data[i] = -2.0;
     fused_add_data[i] = dotproduct_size;
-    bias_data[i] = 0.3f;
+    bias_data[i] = 0.25f;
     fused_add_data[i] += bias_data[i];
   }
 
