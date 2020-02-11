@@ -65,4 +65,5 @@ You should then be able to natively compile LCE:
 ```bash
 larq_compute_engine/tflite/build_make/build_lce.sh --native
 ```
-NOTE: when building natively on a 32-bit Raspberry Pi, replace `--native` with `--rpi`.
+NOTE: when building natively on a 32-bit Raspberry Pi, replace `--native` with
+`--rpi`.
