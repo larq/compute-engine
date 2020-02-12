@@ -74,7 +74,7 @@ jobs:
       - name: "Run CC Unit Tests"
         run: ./bazelisk test larq_compute_engine/tflite/tests:cc_tests --distinct_host_configuration=false
       - name: "Build TF Lite Static Library and Python Runtime Package"
-        run: larq_compute_engine/tflite/build_make/build_lqce.sh --native --pip
+        run: larq_compute_engine/tflite/build_make/build_lce.sh --native --pip
       - name: "Install TF Lite Python Runtime Package"
         run: pip3 install /tmp/tflite_pip/python3/dist/*.whl
       - name: "Python Test Dependency: Build Bazel Package Creator Binary"

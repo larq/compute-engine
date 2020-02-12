@@ -1,86 +1,97 @@
-# Larq Compute Engine
+# Larq Compute Engine Guide
 
-### Setup Docker container
+Larq Compute Engine (LCE) is a highly optimized inference engine for deploying
+neural networks with exteremely low-precision weights and activations,
+such as Binarized Neural Netowoks (BNNs).
+LCE provides a collection of hand-optimized [Tensorflow](https://www.tensorflow.org/) 
+and [Tensorflow Lite](https://www.tensorflow.org/lite)
+custom Ops for specific instruction sets, developed in inline assembly or in C++ 
+using compiler intrinsics. LCE leverages optimization techniques
+such as **tiling** to maximize the number of cache hits, **vectorization** to maximize 
+the computational throughput, and **multi-threading parallelization** to take
+advantage of multi-core modern desktop and mobile CPUs.
 
-We will build the compute engine inside a Docker container. The image that you use depends on the version of Tensorflow:
+## Key Features
+- Tight integration of LCE with [Larq](https://larq.dev) and
+  TensorFlow provides a smooth end-to-end training and deployment experience.
+- LCE enables high performance, on-device machine learning inference by
+  providing hand-optimized kernels and network level optimizations for BNN models.
+- LCE currently supports ARM64-based mobile platforms such Android phones
+  and the Raspberry Pi.
+- Thread parallelism support in LCE is essential for modern mobile devices with
+  multi-core CPUs.
+- A collection of Larq pre-trained BNN models for common machine learning tasks
+  is available in [Larq Zoo](https://github.com/larq/zoo)
+  and can be used seamlessly with LCE.
+- LCE provides a custom [MLIR-based model converter](./lce_converter.md) which
+  is fully compatible with Tensorflow Lite and performs additional
+  network level optimizations for Larq models.
 
-- To build the compute engine for Tensorflow 2.x (manylinux2010 compatible) use `custom-op-ubuntu16`
-- To build the compute engine for Tensorflow 1.x (not manylinux2010 compatible) use `custom-op-ubuntu14`
+## Performance
+The table below presents **single-threaded** performance of Larq Compute Engine on multiple
+generations of Larq BNN models one the [Pixel phone (2016)](https://support.google.com/pixelphone/answer/7158570?hl=en-GB)
+and (Raspberry Pi 4 [BCM2711](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2711/README.md)) board:
 
-You can download and start a docker container as follows:
-``` bash
-docker pull tensorflow/tensorflow:custom-op-ubuntu16
-docker run -it tensorflow/tensorflow:custom-op-ubuntu16 /bin/bash
-```
+| Model         | Accuracy  | Pixel, ms   | RPi 4 (BCM2711), ms |
+| ------------- | :-------: | :---------: | :----------:        |
+| TODO          | TODO      | TODO        | TODO                |
+| TODO          | TODO      | TODO        | TODO                |
+| TODO          | TODO      | TODO        | TODO                |
+| TODO          | TODO      | TODO        | TODO                |
 
-Inside the Docker container, clone this repository.
-``` bash
-git clone https://github.com/plumerai/compute-engine.git
-cd compute_engine
-```
+The following table presents **multi-threaded** performance of Larq Compute Engine on
+a Pixel 1 phone and a Raspberry Pi 4 board:
 
-### Build PIP package
-You can build the pip package with Bazel.
+| Model              | Accuracy  | Pixel, ms   | RPi 4 (BCM2711), ms |
+| ------------------ | :-------: | :---------: | :----------:        |
+| TODO               | TODO      | TODO        | TODO                |
+| TODO               | TODO      | TODO        | TODO                |
+| TODO               | TODO      | TODO        | TODO                |
+| TODO               | TODO      | TODO        | TODO                |
 
-For the configure script, answer Yes to the manylinux2010 question when you want to build for Tensorflow 2.x or Tensorflow 1.15, and No for Tensorflow 1.14 and below.
-``` bash
-./configure.sh
-bazel build :build_pip_pkg
-bazel-bin/build_pip_pkg artifacts
-```
+Benchmarked on February, TODO with LCE custom
+[TFLite Model Benchmark Tool](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/tools/benchmark)
+(see [here](../larq_compute_engine/tflite/benchmark))
+and BNN models with randomized weights and inputs.
 
-The wheel file is now available in `artifacts/`, you can install it with
-``` bash
-pip install artifacts/*.whl
-```
+## Getting started
+The workflow to use LCE consists of the following steps:
 
-### Test the PIP package
+1. **Building LCE**
 
-You can test the package by running the following python code
-```python
-import larq_compute_engine as lqce
+    The LCE documentation provides the build instructions for [Andorid](./build_android.md)
+    and [ARM64-based boards](./build_arm.md) such as Raspberry Pi.
+    Please follow the provided instructions to create a native LCE build
+    or cross-compile for one of the supported targets.
 
-print(lqce.bsign([[1,-2], [-3,-4]], [[-1,-2], [3,4]]))
-```
+1. **Pick a Larq model**
 
+    You can use [Larq](https://github.com/larq/larq) to build and train your own
+    model or pick a pre-trained model from [Larq Zoo](https://github.com/larq/zoo).
 
-### Running tests
+1. **Convert the Larq model**
 
-Run CC unit tests
-``` bash
-bazel test larq_compute_engine/cc/tests:cc_tests_general
-```
+    LCE is built on top of Tensorflow Lite and uses Tensorflow Lite
+    [FlatBuffer format](https://google.github.io/flatbuffers/)
+    to convert and serialize Larq models for inference.
+    We provide a [LCE Converter](./mlir_converter.md) with additional
+    optimization passes to increase speed of execution of Larq models
+    on supported target platforms.
 
-Run Python unit tests
-``` bash
-bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime
-```
+1. **Run inference**
 
-### Benchmarking
+    LCE uses the [Tensorflow Lite Interpreter](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/g3doc/guide/inference.md) 
+    to perform an inference. In addition to the already available built-in
+    Tensorflow Lite Ops, optimized LCE Ops are registered to the interpreter
+    to execute the Larq specific subgraphs of the model. An example to create
+    and build LCE compatible Tensorflow Lite interpreter in user's applications
+    is provided [here](./inference.md).
 
-See [benchmarking TF lite ops](larq_compute_engine/tflite/benchmark) for benchmarks of complete ops in TF lite.
+To learn more about using LCE, see [Get started](get_started.md).
 
-Benchmarks of sub-components can be run using
-``` bash
-bazel run larq_compute_engine:benchmark
-```
-
-To cross-compile the benchmark program for the Raspberry Pi (armv7), use
-``` bash
-bazel build larq_compute_engine:benchmark --config=rpi3
-```
-
-The resulting binary `bazel-bin/larq_compute_engine/benchmark` can then be copied to the Raspberry Pi to be used.
-
-
-## TF lite
-
-The core of the TF lite library is a C++ library. There are python, Android and iOS wrappers around it. Note that it is possible to use the C++ library directly on Android as well.
-
-This is independent of the normal tensorflow part of the compute engine. It does not require the docker image or the tensorflow python package.
-
-Please see the [TF lite readme](larq_compute_engine/tflite/build/README.md) for more information.
-
-To benchmark the TF lite ops, see [benchmarking](larq_compute_engine/tflite/benchmark/README.md).
-
-To run unit tests for TF lite, see [TF lite unittests](larq_compute_engine/tflite/python/README.md).
+## Next steps
+- Visit [Get started](./get_started.md) to learn more about how to integrate LCE 
+  in your application.
+- For deploying LCE in your android app visit LCE [android guides](./quickstart_android.md)
+- Explore [Larq pre-traind models](https://github.com/larq/zoo).
+- Try our [example programs](../examples/).
