@@ -16,8 +16,8 @@ advantage of multi-core modern desktop and mobile CPUs.
   TensorFlow provides a smooth end-to-end training and deployment experience.
 - LCE enables high performance, on-device machine learning inference by
   providing hand-optimized kernels and network level optimizations for BNN models.
-- LCE supports mobile and embedded platforms such as ARM64 (with NEON) on Android,
-  Raspberry Pi and Linux.
+- LCE currently supports ARM64-based mobile platforms such Android phones
+  and the Raspberry Pi.
 - Thread parallelism support in LCE is essential for modern mobile devices with
   multi-core CPUs.
 - A collection of Larq pre-trained BNN models for common machine learning tasks
@@ -40,7 +40,7 @@ and (Raspberry Pi 4 [BCM2711](https://www.raspberrypi.org/documentation/hardware
 | TODO          | TODO      | TODO        | TODO                |
 
 The following table presents **multi-threaded** performance of Larq Compute Engine on
-pixel phone and Raspberry Pi 4 board:
+a Pixel 1 phone and a Raspberry Pi 4 board:
 
 | Model              | Accuracy  | Pixel, ms   | RPi 4 (BCM2711), ms |
 | ------------------ | :-------: | :---------: | :----------:        |
@@ -59,9 +59,9 @@ The workflow to use LCE consists of the following steps:
 
 1. **Build the LCE**
 
-    The LCE documentation provides the build instructions for [Andorid](./build_android.md),
-    [ARM64-based boards](./build_arm64.md) such as Raspberry Pi or [x86-based](./build_x86.md)
-    machines. Please follow the provided instructions to create a native LCE build
+    The LCE documentation provides the build instructions for [Andorid](./build_android.md)
+    and [ARM64-based boards](./build_arm.md) such as Raspberry Pi.
+    Please follow the provided instructions to create a native LCE build
     or cross-compile for one of the supported targets.
 
 1. **Pick a Larq model**
@@ -74,7 +74,7 @@ The workflow to use LCE consists of the following steps:
     LCE is built on top of Tensorflow Lite and uses Tensorflow Lite
     [FlatBuffer format](https://google.github.io/flatbuffers/)
     to convert and serialize Larq models for inference.
-    We provide a [LCE Converter](./lce_converter.md) with additional
+    We provide a [LCE Converter](./mlir_converter.md) with additional
     optimization passes to increase speed of execution of Larq models
     on supported target platforms.
 
@@ -92,6 +92,6 @@ To learn more about using LCE, see [Get started](get_started.md).
 ## Next steps
 - Visit [Get started](./get_started.md) to learn more about how to integrate LCE 
   in your application.
-- For deploying LCE in your android app visit LCE [android guides](./build_android.md)
+- For deploying LCE in your android app visit LCE [android guides](./quickstart_android.md)
 - Explore [Larq pre-traind models](https://github.com/larq/zoo).
 - Try our [example programs](../examples/).

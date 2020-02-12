@@ -9,6 +9,10 @@ accordingly. Before proceeding with the next steps, please follow
 the instructions in the main [LCE build guide](./build.md) to setup the
 docker for LCE and the Bazel build system.
 
+NOTE: we recommend using the docker volume as described in the
+[LCE build guide](./build.md) to be able to easily transfer
+files in-between the container and host machine.
+
 #### Install prerequisites
 We provide a bash script which uses the ```sdkmanager``` tool
 to install Android NDK and SDK inside the docker.
@@ -71,8 +75,9 @@ adb devices
 ```
 
 (4) Copy the inference binary from the docker container to your host machine
-    (we recommend using docker [Volumes](https://docs.docker.com/storage/volumes/)).
-
+```bash
+cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model <volume-dir>
+```
 (5) Transfer the LCE inference binary to your phone:
 
 ```bash

@@ -1,5 +1,5 @@
 # Get started with Larq Compute Engine
-[Larq](https://larq.dev/) toolchain provides all the tools you need to
+The [Larq](https://larq.dev/) toolchain provides all the tools you need to
 [train](1.-Choose-a-Larq-Model), [convert](2.-Convert-a-Larq-Model) and
 perform [inference](3.-Run-inference-with-LCE) with neural networks with
 extremely low-precision weights and activations,

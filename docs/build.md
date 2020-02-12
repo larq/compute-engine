@@ -8,7 +8,7 @@ These two components can be built indepent of each other. Below we describe
 the build process for each of these components.
 
 ### Setup Docker container ###
-We will build the LCE inside a Docker container.
+We will build the LCE inside a [Docker](https://www.docker.com/) container.
 The image that you use depends on the version of Tensorflow:
 
 - To build the LCE for Tensorflow 2.x (manylinux2010 compatible)
@@ -16,21 +16,21 @@ The image that you use depends on the version of Tensorflow:
 - To build the LCE for Tensorflow 1.x (not manylinux2010 compatible)
   use `custom-op-ubuntu14`
 
-You can download and start a docker container as follows:
+You can clone the LCE repository in a directoy of the
+host machine and mount that directroy as a
+[volume]((https://docs.docker.com/storage/volumes/)) in the LCE container:
 ``` bash
+# create the docker shared volume directory
+mkdir lce-volume
+git clone https://github.com/plumerai/compute-engine.git lce-volume
+
+# download and start a docker container
 docker pull tensorflow/tensorflow:custom-op-ubuntu16
-docker run -it tensorflow/tensorflow:custom-op-ubuntu16 /bin/bash
+docker run -it -v $PWD/lce-volume:/tmp/lce-volume tensorflow/tensorflow:custom-op-ubuntu16 /bin/bash
+# cd /tmp/lce-volume in the docker container
 ```
-
-Inside the Docker container, clone this repository:
-``` bash
-git clone https://github.com/plumerai/compute-engine.git
-cd compute_engine
-```
-
-Alternatively, you can clone the LCE repository in a directoy of the
-host machine and mount that directroy as a volume in the LCE container
-as described [here](https://docs.docker.com/storage/volumes/).
+the `lce-volume` in the host machine is now mapped to the `/tmp/lce-volume/`directory
+inside the container.
 
 ### Install Bazel ###
 
@@ -58,7 +58,7 @@ Tensorflow 2.x or Tensorflow 1.15, and "No" for Tensorflow 1.14 and below.
 
 ## LCE for Tensorflow Lite ##
 LCE for Tensorflow Lite has a diverse platform support, covering
-[Android](./quickstart_android.md), [ARM-based boards](./quickstart_arm.md)
+[Android](./quickstart_android.md), [ARM-based boards](./build_arm.md)
 such as Raspberry Pi and x86 machines. To build/install/run LCE on
 each of these platforms, please refer to the corresponding guide.
 
