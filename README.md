@@ -1,1 +1,97 @@
-# Larq Compute Engine
+# Larq Compute Engine Guide
+
+Larq Compute Engine (LCE) is a highly optimized inference engine for deploying
+neural networks with exteremely low-precision weights and activations,
+such as Binarized Neural Netowoks (BNNs).
+LCE provides a collection of hand-optimized [Tensorflow](https://www.tensorflow.org/) 
+and [Tensorflow Lite](https://www.tensorflow.org/lite)
+custom Ops for specific instruction sets, developed in inline assembly or in C++ 
+using compiler intrinsics. LCE leverages optimization techniques
+such as **tiling** to maximize the number of cache hits, **vectorization** to maximize 
+the computational throughput, and **multi-threading parallelization** to take
+advantage of multi-core modern desktop and mobile CPUs.
+
+## Key Features
+- Tight integration of LCE with [Larq](https://larq.dev) and
+  TensorFlow provides a smooth end-to-end training and deployment experience.
+- LCE enables high performance, on-device machine learning inference by
+  providing hand-optimized kernels and network level optimizations for BNN models.
+- LCE currently supports ARM64-based mobile platforms such Android phones
+  and the Raspberry Pi.
+- Thread parallelism support in LCE is essential for modern mobile devices with
+  multi-core CPUs.
+- A collection of Larq pre-trained BNN models for common machine learning tasks
+  is available in [Larq Zoo](https://github.com/larq/zoo)
+  and can be used seamlessly with LCE.
+- LCE provides a custom [MLIR-based model converter](./lce_converter.md) which
+  is fully compatible with Tensorflow Lite and performs additional
+  network level optimizations for Larq models.
+
+## Performance
+The table below presents **single-threaded** performance of Larq Compute Engine on multiple
+generations of Larq BNN models one the [Pixel phone (2016)](https://support.google.com/pixelphone/answer/7158570?hl=en-GB)
+and (Raspberry Pi 4 [BCM2711](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2711/README.md)) board:
+
+| Model         | Accuracy  | Pixel, ms   | RPi 4 (BCM2711), ms |
+| ------------- | :-------: | :---------: | :----------:        |
+| TODO          | TODO      | TODO        | TODO                |
+| TODO          | TODO      | TODO        | TODO                |
+| TODO          | TODO      | TODO        | TODO                |
+| TODO          | TODO      | TODO        | TODO                |
+
+The following table presents **multi-threaded** performance of Larq Compute Engine on
+a Pixel 1 phone and a Raspberry Pi 4 board:
+
+| Model              | Accuracy  | Pixel, ms   | RPi 4 (BCM2711), ms |
+| ------------------ | :-------: | :---------: | :----------:        |
+| TODO               | TODO      | TODO        | TODO                |
+| TODO               | TODO      | TODO        | TODO                |
+| TODO               | TODO      | TODO        | TODO                |
+| TODO               | TODO      | TODO        | TODO                |
+
+Benchmarked on February, TODO with LCE custom
+[TFLite Model Benchmark Tool](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/tools/benchmark)
+(see [here](../larq_compute_engine/tflite/benchmark))
+and BNN models with randomized weights and inputs.
+
+## Getting started
+The workflow to use LCE consists of the following steps:
+
+1. **Building LCE**
+
+    The LCE documentation provides the build instructions for [Andorid](./build_android.md)
+    and [ARM64-based boards](./build_arm.md) such as Raspberry Pi.
+    Please follow the provided instructions to create a native LCE build
+    or cross-compile for one of the supported targets.
+
+1. **Pick a Larq model**
+
+    You can use [Larq](https://github.com/larq/larq) to build and train your own
+    model or pick a pre-trained model from [Larq Zoo](https://github.com/larq/zoo).
+
+1. **Convert the Larq model**
+
+    LCE is built on top of Tensorflow Lite and uses Tensorflow Lite
+    [FlatBuffer format](https://google.github.io/flatbuffers/)
+    to convert and serialize Larq models for inference.
+    We provide a [LCE Converter](./mlir_converter.md) with additional
+    optimization passes to increase speed of execution of Larq models
+    on supported target platforms.
+
+1. **Run inference**
+
+    LCE uses the [Tensorflow Lite Interpreter](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/g3doc/guide/inference.md) 
+    to perform an inference. In addition to the already available built-in
+    Tensorflow Lite Ops, optimized LCE Ops are registered to the interpreter
+    to execute the Larq specific subgraphs of the model. An example to create
+    and build LCE compatible Tensorflow Lite interpreter in user's applications
+    is provided [here](./inference.md).
+
+To learn more about using LCE, see [Get started](get_started.md).
+
+## Next steps
+- Visit [Get started](./get_started.md) to learn more about how to integrate LCE 
+  in your application.
+- For deploying LCE in your android app visit LCE [android guides](./quickstart_android.md)
+- Explore [Larq pre-traind models](https://github.com/larq/zoo).
+- Try our [example programs](../examples/).
