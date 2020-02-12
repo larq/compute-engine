@@ -34,22 +34,10 @@ function is_linux() {
 # Remove .bazelrc if it already exist
 [ -e .bazelrc ] && rm .bazelrc
 
-# Check if we are building GPU or CPU ops, default CPU
-while [[ "$TF_NEED_CUDA" == "" ]]; do
-  read -p "Do you want to build ops again TensorFlow CPU pip package?"\
-" Y or enter for CPU (tensorflow), N for GPU (tensorflow-gpu). [Y/n] " INPUT
-  case $INPUT in
-    [Yy]* ) echo "Build with CPU pip package."; TF_NEED_CUDA=0;;
-    [Nn]* ) echo "Build with GPU pip package."; TF_NEED_CUDA=1;;
-    "" ) echo "Build with CPU pip package."; TF_NEED_CUDA=0;;
-    * ) echo "Invalid selection: " $INPUT;;
-  esac
-done
-
 # Check if we are building against manylinux1 or manylinux2010 pip package,
 # default manylinux2010
 while [[ "$PIP_MANYLINUX2010" == "" ]]; do
-  read -p "Does the pip package have tag manylinux2010 (usually the case for nightly release after Aug 1, 2019, or official releases past 1.14.0)?"\
+  read -p "Does the tensorflow pip package have tag manylinux2010 (this is the case for official releases past 1.14.0)?"\
 " Y or enter for manylinux2010, N for manylinux1. [Y/n] " INPUT
   case $INPUT in
     [Yy]* ) echo "Build against pip package with manylinux2010 tag. --crosstool_top=//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.0:toolchain will be added to bazel command."; PIP_MANYLINUX2010=1;;
@@ -59,53 +47,25 @@ while [[ "$PIP_MANYLINUX2010" == "" ]]; do
   esac
 done
 
-# CPU
-if [[ "$TF_NEED_CUDA" == "0" ]]; then
-
-  # Check if it's installed
-  if [[ $(pip show tensorflow) == *tensorflow* ]] || [[ $(pip show tf-nightly) == *tf-nightly* ]] ; then
-    echo 'Using installed tensorflow'
-  else
-    # Uninstall GPU version if it is installed.
-    if [[ $(pip show tensorflow-gpu) == *tensorflow-gpu* ]]; then
-      echo 'Already have gpu version of tensorflow installed. Uninstalling......\n'
-      pip uninstall tensorflow-gpu
-    elif [[ $(pip show tf-nightly-gpu) == *tf-nightly-gpu* ]]; then
-      echo 'Already have gpu version of tensorflow installed. Uninstalling......\n'
-      pip uninstall tf-nightly-gpu
-    fi
-    # Install CPU version
-    if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
-        echo 'Installing tensorflow 1.14......\n'
-        pip install tensorflow==1.14
-    else
-        echo 'Installing tensorflow 2......\n'
-        pip install tensorflow
-    fi
-  fi
-
+# Check if it's installed
+if [[ $(pip show tensorflow) == *tensorflow* ]] || [[ $(pip show tf-nightly) == *tf-nightly* ]] || [[ $(pip show tensorflow-cpu) == *tensorflow-cpu* ]]; then
+  echo 'Using installed tensorflow'
 else
-
-  # Check if it's installed
-   if [[ $(pip show tensorflow-gpu) == *tensorflow-gpu* ]] || [[ $(pip show tf-nightly-gpu) == *tf-nightly-gpu* ]]; then
-    echo 'Using installed tensorflow-gpu'
+  # Uninstall GPU version if it is installed.
+  if [[ $(pip show tensorflow-gpu) == *tensorflow-gpu* ]]; then
+    echo 'Already have gpu version of tensorflow installed. Uninstalling......\n'
+    pip uninstall tensorflow-gpu
+  elif [[ $(pip show tf-nightly-gpu) == *tf-nightly-gpu* ]]; then
+    echo 'Already have gpu version of tensorflow installed. Uninstalling......\n'
+    pip uninstall tf-nightly-gpu
+  fi
+  # Install CPU version
+  if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
+      echo 'Installing tensorflow 1.14......\n'
+      pip install tensorflow==1.14
   else
-    # Uninstall CPU version if it is installed.
-    if [[ $(pip show tensorflow) == *tensorflow* ]]; then
-      echo 'Already have tensorflow non-gpu installed. Uninstalling......\n'
-      pip uninstall tensorflow
-    elif [[ $(pip show tf-nightly) == *tf-nightly* ]]; then
-      echo 'Already have tensorflow non-gpu installed. Uninstalling......\n'
-      pip uninstall tf-nightly
-    fi
-    # Install CPU version
-    if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
-        echo 'Installing tensorflow-gpu 1.14.....\n'
-        pip install tensorflow-gpu==1.14
-    else
-        echo 'Installing tensorflow-gpu 2.....\n'
-        pip install tensorflow-gpu
-    fi
+      echo 'Installing tensorflow 2......\n'
+      pip install tensorflow-cpu
   fi
 fi
 
@@ -137,18 +97,7 @@ if ! [[ $TF_LFLAGS =~ .*:.* ]]; then
 fi
 write_action_env_to_bazelrc "TF_SHARED_LIBRARY_DIR" ${SHARED_LIBRARY_DIR}
 write_action_env_to_bazelrc "TF_SHARED_LIBRARY_NAME" ${SHARED_LIBRARY_NAME}
-write_action_env_to_bazelrc "TF_NEED_CUDA" ${TF_NEED_CUDA}
-
-# TODO(yifeif): do not hardcode path
-if [[ "$TF_NEED_CUDA" == "1" ]]; then
-  write_action_env_to_bazelrc "CUDNN_INSTALL_PATH" "/usr/lib/x86_64-linux-gnu"
-  write_action_env_to_bazelrc "TF_CUDA_VERSION" "10.0"
-  write_action_env_to_bazelrc "TF_CUDNN_VERSION" "7"
-  write_action_env_to_bazelrc "CUDA_TOOLKIT_PATH" "/usr/local/cuda"
-  write_to_bazelrc "build --config=cuda"
-  write_to_bazelrc "test --config=cuda"
-fi
-
+write_action_env_to_bazelrc "TF_NEED_CUDA" 0
 
 if [[ "$PIP_MANYLINUX2010" == "1" ]]; then
   if is_linux; then
