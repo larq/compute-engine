@@ -23,7 +23,7 @@ advantage of multi-core modern desktop and mobile CPUs.
 - A collection of Larq pre-trained BNN models for common machine learning tasks
   is available in [Larq Zoo](https://github.com/larq/zoo)
   and can be used seamlessly with LCE.
-- LCE provides a custom [MLIR-based model converter](./lce_converter.md) which
+- LCE provides a custom [MLIR-based model converter](./docs/mlir_converter.md) which
   is fully compatible with Tensorflow Lite and performs additional
   network level optimizations for Larq models.
 
@@ -51,7 +51,7 @@ a Pixel 1 phone and a Raspberry Pi 4 board:
 
 Benchmarked on February, TODO with LCE custom
 [TFLite Model Benchmark Tool](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/tools/benchmark)
-(see [here](../larq_compute_engine/tflite/benchmark))
+(see [here](./larq_compute_engine/tflite/benchmark))
 and BNN models with randomized weights and inputs.
 
 ## Getting started
@@ -59,8 +59,8 @@ The workflow to use LCE consists of the following steps:
 
 1. **Building LCE**
 
-    The LCE documentation provides the build instructions for [Andorid](./build_android.md)
-    and [ARM64-based boards](./build_arm.md) such as Raspberry Pi.
+    The LCE documentation provides the build instructions for [Andorid](./docs/quickstart_android.md)
+    and [ARM64-based boards](./docs/build_arm.md) such as Raspberry Pi.
     Please follow the provided instructions to create a native LCE build
     or cross-compile for one of the supported targets.
 
@@ -74,7 +74,7 @@ The workflow to use LCE consists of the following steps:
     LCE is built on top of Tensorflow Lite and uses Tensorflow Lite
     [FlatBuffer format](https://google.github.io/flatbuffers/)
     to convert and serialize Larq models for inference.
-    We provide a [LCE Converter](./mlir_converter.md) with additional
+    We provide a [LCE Converter](./docs/mlir_converter.md) with additional
     optimization passes to increase speed of execution of Larq models
     on supported target platforms.
 
@@ -85,13 +85,13 @@ The workflow to use LCE consists of the following steps:
     Tensorflow Lite Ops, optimized LCE Ops are registered to the interpreter
     to execute the Larq specific subgraphs of the model. An example to create
     and build LCE compatible Tensorflow Lite interpreter in user's applications
-    is provided [here](./inference.md).
+    is provided [here](./docs/inference.md).
 
-To learn more about using LCE, see [Get started](get_started.md).
+To learn more about using LCE, see [Get started](./docs/get_started.md).
 
 ## Next steps
-- Visit [Get started](./get_started.md) to learn more about how to integrate LCE 
+- Visit [Get started](./docs/get_started.md) to learn more about how to integrate LCE 
   in your application.
-- For deploying LCE in your android app visit LCE [android guides](./quickstart_android.md)
+- For deploying LCE in your android app visit LCE [android guides](./docs/quickstart_android.md)
 - Explore [Larq pre-traind models](https://github.com/larq/zoo).
-- Try our [example programs](../examples/).
+- Try our [example programs](./examples/).
