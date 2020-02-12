@@ -29,7 +29,7 @@ advantage of multi-core modern desktop and mobile CPUs.
 
 ## Performance
 The table below presents **single-threaded** performance of Larq Compute Engine on multiple
-generations of Larq BNN models one the [Pixel phone (2016)](https://support.google.com/pixelphone/answer/7158570?hl=en-GB)
+generations of Larq BNN models on the [Pixel phone (2016)](https://support.google.com/pixelphone/answer/7158570?hl=en-GB)
 and (Raspberry Pi 4 [BCM2711](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2711/README.md)) board:
 
 | Model         | Accuracy  | Pixel, ms   | RPi 4 (BCM2711), ms |
@@ -75,7 +75,7 @@ The workflow to use LCE consists of the following steps:
     [FlatBuffer format](https://google.github.io/flatbuffers/)
     to convert and serialize Larq models for inference.
     We provide a [LCE Converter](./docs/mlir_converter.md) with additional
-    optimization passes to increase speed of execution of Larq models
+    optimization passes to increase the speed of execution of Larq models
     on supported target platforms.
 
 1. **Run inference**
