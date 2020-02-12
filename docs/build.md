@@ -11,7 +11,7 @@ the build process for each of these components.
 We will build the LCE inside a Docker container.
 The image that you use depends on the version of Tensorflow:
 
-- To build the LCE for Tensorflow 2.x (manylinux2010 compatible)
+- To build the LCE for Tensorflow 2.x (`manylinux2010` compatible)
   use `custom-op-ubuntu16`
 - To build the LCE for Tensorflow 1.x (not manylinux2010 compatible)
   use `custom-op-ubuntu14`
