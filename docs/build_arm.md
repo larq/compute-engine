@@ -11,7 +11,7 @@ See [here](./inference.md) to find out how you can create your own
 custom LCE inference application.
 
 ## Cross-compiling LCE with Bazel ##
-To cross-compile a LCE inference program for ARM64 architecture,
+To cross-compile an LCE inference program for the ARM64 architecture,
 the bazel target needs to be build with ```--config=aarch64``` flag.
 For example, to build the LCE benchmark tool,
 run the following command from LCE root directory:
