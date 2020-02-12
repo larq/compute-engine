@@ -296,6 +296,12 @@ class BConv2DOpTest : public ::testing::TestWithParam<TestParamTuple> {
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 
+// TODO: there might be a better way to define this matcher
+MATCHER_P(FloatNearPointwise, tol, "Out of range") {
+  return (std::get<0>(arg) > std::get<1>(arg) - tol &&
+          std::get<0>(arg) < std::get<1>(arg) + tol);
+}
+
 TEST_P(BConv2DOpTest, SimpleTest) {
   const TestParam param(GetParam());
 
@@ -322,8 +328,8 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       filter_height * filter_width * input_depth * filter_count;
 
   using T = float;
-  std::vector<T> input_data, filters_data, bias_data;
-  std::vector<float> fused_multiply_data, fused_add_data;
+  std::vector<T> input_data, filters_data;
+  std::vector<T> fused_multiply_data, fused_add_data, bias_data;
   input_data.resize(input_num_elem);
   filters_data.resize(filters_num_elem);
   bias_data.resize(filter_count, 0);
@@ -344,8 +350,10 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   const std::int32_t dotproduct_size =
       filter_height * filter_width * input_depth;
   for (int i = 0; i < filter_count; ++i) {
-    fused_multiply_data[i] = -2;
+    fused_multiply_data[i] = -2.0;
     fused_add_data[i] = dotproduct_size;
+    bias_data[i] = 0.25f;
+    fused_add_data[i] += bias_data[i];
   }
 
   BConv2DOpModel m_lce(
@@ -379,7 +387,9 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   m_builtin.SetBias(bias_data);
   m_builtin.Invoke();
 
-  EXPECT_THAT(m_lce.GetOutput(), ElementsAreArray(m_builtin.GetOutput()));
+  auto expected_array = m_builtin.GetOutput();
+  EXPECT_THAT(m_lce.GetOutput(),
+              ::testing::Pointwise(FloatNearPointwise(1e-7), expected_array));
 }
 
 INSTANTIATE_TEST_SUITE_P(
