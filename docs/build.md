@@ -84,7 +84,7 @@ import larq_compute_engine as lce
 print(lce.bsign([[1,-2], [-3,-4]], [[-1,-2], [3,4]]))
 ```
 
-To run the entire python unittests of LCE for Tensorflow, execute the following
+To run all python unittests of LCE for Tensorflow, execute the following
 bazel command:
 ``` bash
 bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime
