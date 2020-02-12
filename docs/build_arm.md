@@ -8,7 +8,7 @@ convenient build solution,  we also provide scripts to build LCE with Make as we
 In this guide, we use the [LCE benchmark tool](../larq_compute_engine/tflite/benchmark)
 source to build an inference binary.
 See [here](./inference.md) to find out how you can create your own
-custom LCE inference programs.
+custom LCE inference application.
 
 ## Cross-compiling LCE with Bazel ##
 To cross-compile a LCE inference program for ARM64 architecture,
