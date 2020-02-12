@@ -2,7 +2,7 @@
 This page descibes how to build a Larq Compute Engine (LCE) inference binary
 for 32-bit, as well as 64-bit ARM-based boards.
 [Bazel](https://bazel.build/) is the primary build
-system for LCE, however, since in some occasions Make build system is a more
+system for LCE. However, since in some occasions Make build system is a more
 convenient build solution,  we also provide scripts to build LCE with Make as well.
 
 In this guide, we use the [LCE benchmark tool](../larq_compute_engine/tflite/benchmark)
