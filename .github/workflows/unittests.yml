@@ -136,4 +136,4 @@ jobs:
       - name: Install pip dependencies
         run: python -m pip install larq_zoo==0.5.0 pytest --no-cache
       - name: Build LCE MLIR passes
-        run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false --compilation_mode=fastbuild
+        run: ./bazelisk run larq_compute_engine/mlir:converter_test
