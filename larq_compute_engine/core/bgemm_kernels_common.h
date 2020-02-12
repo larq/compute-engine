@@ -14,7 +14,6 @@ using tflite::cpu_backend_gemm::QuantizationFlavor;
 // Original is in `lite/kernels/cpu_backend_gemm_params.h`
 // Modifications:
 // - bias changes to multiply + add
-// - clamp_min, clamp_max type changed from DstScalar to AccumScalar
 // - (later) 8-bit quantization related stuff
 template <typename AccumScalar, typename DstScalar,
           QuantizationFlavor quantization_flavor =
@@ -29,8 +28,8 @@ struct BGemmParams {
   // Later this might be changed to the int8 system of multipliers+shifts
   const float* fused_multiply = nullptr;
   const float* fused_add = nullptr;
-  AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
-  AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
+  DstScalar clamp_min = std::numeric_limits<DstScalar>::lowest();
+  DstScalar clamp_max = std::numeric_limits<DstScalar>::max();
 };
 
 //
@@ -38,7 +37,6 @@ struct BGemmParams {
 // Original is in `lite/experimental/ruy/spec.h`
 // Modifications:
 // - bias changes to multiply + add
-// - clamp_min, clamp_max types changed from DstScalar to AccumScalar
 // - (later) 8-bit quantization related stuff
 
 template <typename tAccumScalar, typename tDstScalar>
@@ -52,8 +50,8 @@ struct BinaryBasicSpec {
   // Later this might be changed to the int8 system of multipliers+shifts
   const float* fused_multiply = nullptr;
   const float* fused_add = nullptr;
-  AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
-  AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
+  DstScalar clamp_min = std::numeric_limits<DstScalar>::lowest();
+  DstScalar clamp_max = std::numeric_limits<DstScalar>::max();
 
   // This is identical to `ruy::BasicSpec`
   static constexpr LoopStructure kLoopStructure = LoopStructure::kAuto;
@@ -85,8 +83,8 @@ struct BinaryKernelParams {
   std::int32_t rhs_stride;
   std::int32_t dst_stride;
   std::int32_t depth;
-  std::uint32_t clamp_min;
-  std::uint32_t clamp_max;
+  float clamp_min;
+  float clamp_max;
   std::uint8_t flags;
   const T zero_data[LhsCols] = {0};
   T dst_tmp_buf[LhsCols * RhsCols];
@@ -124,8 +122,8 @@ inline void MakeBinaryKernelParams(
   params->rhs_stride = sizeof(T) * rhs.layout.stride;
   params->dst_stride = sizeof(float) * dst->layout.stride;
   params->depth = depth;
-  // params->clamp_min = spec.clamp_min;
-  // params->clamp_max = spec.clamp_max;
+  params->clamp_min = spec.clamp_min;
+  params->clamp_max = spec.clamp_max;
   params->dst_rows = dst->layout.rows;
   params->dst_cols = dst->layout.cols;
 

@@ -98,6 +98,8 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
         if (spec.fused_add) {
           dst_val += spec.fused_add[i];
         }
+        dst_val = std::min<DstScalar>(dst_val, spec.clamp_max);
+        dst_val = std::max<DstScalar>(dst_val, spec.clamp_min);
         *ElementPtr(dst, i, j) = dst_val;
       }
     }

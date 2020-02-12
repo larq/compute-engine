@@ -327,6 +327,25 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "fadd v20.4s, v20.4s, v15.4s\n"
       "fadd v22.4s, v22.4s, v15.4s\n"
 
+      // Perform the clamping (activation function)
+      // Load the clamp_min, clamp_max bounds
+      "ldr w2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
+      "ldr w3, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MAX) "]\n"
+      "dup v14.4s, w2\n"  // clamp_min
+      "dup v15.4s, w3\n"  // clamp_max
+
+      // Apply the clamp_min bound
+      "fmax v16.4s, v16.4s, v14.4s\n"
+      "fmax v18.4s, v18.4s, v14.4s\n"
+      "fmax v20.4s, v20.4s, v14.4s\n"
+      "fmax v22.4s, v22.4s, v14.4s\n"
+
+      // Apply the clamp_max bound
+      "fmin v16.4s, v16.4s, v15.4s\n"
+      "fmin v18.4s, v18.4s, v15.4s\n"
+      "fmin v20.4s, v20.4s, v15.4s\n"
+      "fmin v22.4s, v22.4s, v15.4s\n"
+
       // Compute how much of the 4x4 block of destination values that
       // we have computed, fit in the destination matrix. Typically, all of
       // it fits, but when the destination matrix shape is not a multiple
@@ -744,6 +763,25 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "fadd v25.4s, v25.4s, v15.4s\n"
       "fadd v26.4s, v26.4s, v15.4s\n"
       "fadd v27.4s, v27.4s, v15.4s\n"
+
+      // Perform the clamping (activation function)
+      // Load the clamp_min, clamp_max bounds
+      "ldr w2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
+      "ldr w3, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MAX) "]\n"
+      "dup v14.4s, w2\n"  // clamp_min
+      "dup v15.4s, w3\n"  // clamp_max
+
+      // Apply the clamp_min bound
+      "fmax v24.4s, v24.4s, v14.4s\n"
+      "fmax v25.4s, v25.4s, v14.4s\n"
+      "fmax v26.4s, v26.4s, v14.4s\n"
+      "fmax v27.4s, v27.4s, v14.4s\n"
+
+      // Apply the clamp_max bound
+      "fmin v24.4s, v24.4s, v15.4s\n"
+      "fmin v25.4s, v25.4s, v15.4s\n"
+      "fmin v26.4s, v26.4s, v15.4s\n"
+      "fmin v27.4s, v27.4s, v15.4s\n"
 
       // Compute how much of the 4x4 block of destination values that
       // we have computed, fit in the destination matrix. Typically, all of

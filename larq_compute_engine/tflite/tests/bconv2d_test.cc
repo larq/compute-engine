@@ -42,6 +42,15 @@ TfLiteRegistration* Register_CONVOLUTION_GENERIC_OPT();
 }  // namespace builtin
 }  // namespace ops
 
+std::string getActivationString(const enum ActivationFunctionType activation) {
+  if (activation == ActivationFunctionType_RELU) {
+    return "RELU";
+  } else if (activation == ActivationFunctionType_NONE) {
+    return "NONE";
+  }
+  return "UNKOWN";
+}
+
 namespace {
 
 class BaseConvolutionOpModel : public SingleOpModel {
@@ -107,15 +116,15 @@ namespace testing {
 
 typedef TfLiteRegistration* (*register_function)(void);
 
-typedef std::tuple<int,                 // batch count
-                   std::array<int, 2>,  // input shape [HW]
-                   int,                 // input depth
-                   std::array<int, 2>,  // filter shape [HW]
-                   int,                 // filter count
-                   std::array<int, 2>,  // strides [HW]
-                   std::array<int, 2>,  // dilations [HW]
-                   Padding,             // paddding
-                   int,                 // number of threads
+typedef std::tuple<enum ActivationFunctionType,  // activation function
+                   std::array<int, 2>,           // input shape [HW]
+                   int,                          // input depth
+                   std::array<int, 2>,           // filter shape [HW]
+                   int,                          // filter count
+                   std::array<int, 2>,           // strides [HW]
+                   std::array<int, 2>,           // dilations [HW]
+                   Padding,                      // paddding
+                   int,                          // number of threads
                    std::pair<std::string, register_function>  // registration
                    >
     TestParamTuple;
@@ -124,7 +133,7 @@ struct TestParam {
   TestParam() = default;
 
   explicit TestParam(TestParamTuple param_tuple)
-      : input_batch_count(::testing::get<0>(param_tuple)),
+      : activation(::testing::get<0>(param_tuple)),
         input_height(::testing::get<1>(param_tuple)[0]),
         input_width(::testing::get<1>(param_tuple)[1]),
         input_depth(::testing::get<2>(param_tuple)),
@@ -156,11 +165,12 @@ struct TestParam {
                        << param.dilation_width_factor;
 
     // WARNING: substitute accests only 11 arguments
-    return absl::Substitute("Op$0_I$1_K$2_P$3_S$4_D$5_T$6", param.kernel_name,
-                            param_input_oss.str(), param_filter_oss.str(),
-                            param.padding == Padding_VALID ? "VALID" : "SAME",
-                            param_strides_oss.str(), param_dilation_oss.str(),
-                            param.num_threads);
+    return absl::Substitute(
+        "Op$0_I$1_K$2_P$3_S$4_D$5_T$6_Act$7", param.kernel_name,
+        param_input_oss.str(), param_filter_oss.str(),
+        param.padding == Padding_VALID ? "VALID" : "SAME",
+        param_strides_oss.str(), param_dilation_oss.str(), param.num_threads,
+        getActivationString(param.activation));
   }
 
   int input_batch_count = 1;
@@ -178,8 +188,9 @@ struct TestParam {
   int dilation_height_factor = 1;
   int dilation_width_factor = 1;
 
-  // TOOD: currently we are ignoring padding
   Padding padding = Padding_VALID;
+
+  ::tflite::ActivationFunctionType activation = ActivationFunctionType_NONE;
 
   int num_threads = 1;
 
@@ -189,12 +200,13 @@ struct TestParam {
 
 class BaseBConv2DOpModel : public SingleOpModel {
  public:
-  BaseBConv2DOpModel(register_function registration, const TensorData& input,
-                     const TensorData& filter, const TensorData& output,
-                     int stride_width = 1, int stride_height = 1,
-                     enum Padding padding = Padding_VALID,
-                     int dilation_width_factor = 1,
-                     int dilation_height_factor = 1, int num_threads = -1) {
+  BaseBConv2DOpModel(
+      register_function registration, const TensorData& input,
+      const TensorData& filter, const TensorData& output, int stride_width = 1,
+      int stride_height = 1, enum Padding padding = Padding_VALID,
+      enum ActivationFunctionType activation = ActivationFunctionType_NONE,
+      int dilation_width_factor = 1, int dilation_height_factor = 1,
+      int num_threads = -1) {
     input_ = AddInput(input);
     filter_ = AddInput(filter);
     output_ = AddOutput(output);
@@ -219,6 +231,7 @@ class BaseBConv2DOpModel : public SingleOpModel {
       });
       fbb.String("filter_format", "OHWI");
       fbb.String("padding", padding == Padding_VALID ? "VALID" : "SAME");
+      fbb.String("activation", getActivationString(activation));
     });
     fbb.Finish();
     SetCustomOp("LqceBconv2d", fbb.GetBuffer(), registration);
@@ -317,9 +330,14 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   const int stride_width = param.stride_width;
   const int dilation_height_factor = param.dilation_height_factor;
   const int dilation_width_factor = param.dilation_width_factor;
-  // TOOD: currently we are ignoring padding
   const Padding padding = param.padding;
+  const ActivationFunctionType activation = param.activation;
   const int num_threads = param.num_threads;
+
+  // Fused ReLu is not yet supported for zero-padding
+  if (padding == Padding_SAME && activation == ActivationFunctionType_RELU) {
+    return;
+  }
 
   const int input_num_elem =
       input_batch_count * input_height * input_width * input_depth;
@@ -363,7 +381,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       {TensorType_FLOAT32,
        {filter_count, filter_height, filter_width, input_depth}},
       {TensorType_FLOAT32, {}}, stride_width, stride_height, padding,
-      dilation_width_factor, dilation_height_factor, num_threads);
+      activation, dilation_width_factor, dilation_height_factor, num_threads);
 
   m_lce.SetInput(input_data);
   m_lce.SetFilter(filters_data);
@@ -379,8 +397,8 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       {TensorType_FLOAT32,
        {filter_count, filter_height, filter_width, input_depth}},  // filter
       {TensorType_FLOAT32, {}},                                    // output
-      stride_width, stride_height, padding, ActivationFunctionType_NONE,
-      dilation_width_factor, dilation_height_factor, num_threads);
+      stride_width, stride_height, padding, activation, dilation_width_factor,
+      dilation_height_factor, num_threads);
 
   m_builtin.SetInput(input_data);
   m_builtin.SetFilter(filters_data);
@@ -396,7 +414,8 @@ INSTANTIATE_TEST_SUITE_P(
     BConv2DTests, BConv2DOpTest,
     // WARNING: ::testing::Combine accepts max 10 arguments!!!
     ::testing::Combine(
-        ::testing::Values(1),  // batches
+        ::testing::Values(ActivationFunctionType_NONE,
+                          ActivationFunctionType_RELU),  // activation function
         ::testing::Values(std::array<int, 2>{7, 7},
                           std::array<int, 2>{8, 5}),  // input height/width
         ::testing::Values(1, 64, 130),                // input depth

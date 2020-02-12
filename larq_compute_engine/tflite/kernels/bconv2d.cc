@@ -62,6 +62,12 @@ typedef struct {
 
   ce::core::FilterFormat filter_format{ce::core::FilterFormat::Unknown};
 
+  TfLiteFusedActivation activation = kTfLiteActNone;
+  // These min,max take care of a Relu.
+  // Later they will *also* do the clamping in order to go from int32 to int8
+  float output_activation_min;
+  float output_activation_max;
+
   bool bitpack_before_im2col = false;
   bool need_im2col = false;
   // IDs are the arbitrary identifiers used by TF Lite to identify and access
@@ -132,6 +138,29 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
                   "valid"  // TODO: not sure if this check is needed
           ? TfLitePadding::kTfLitePaddingValid
           : TfLitePadding::kTfLitePaddingSame;
+
+  if (m["activation"].IsNull() || m["activation"].ToString() == "" ||
+      m["activation"].ToString() == "NONE") {
+    conv_params->activation = kTfLiteActNone;
+  } else if (m["activation"].ToString() == "RELU") {
+    conv_params->activation = kTfLiteActRelu;
+  } else if (m["activation"].ToString() == "RELU1") {
+    conv_params->activation = kTfLiteActRelu1;
+  } else if (m["activation"].ToString() == "RELU6") {
+    conv_params->activation = kTfLiteActRelu6;
+  } else {
+    context->ReportError(context, "Invalid value for activation.");
+    return conv_params;
+  }
+
+  if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame &&
+      conv_params->activation != kTfLiteActNone) {
+    context->ReportError(context,
+                         "Fused activation functions are not yet supported "
+                         "together with zero-padding.");
+    return conv_params;
+  }
+
   return conv_params;
 }
 
@@ -199,6 +228,10 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
 
   conv_params->out_width = out_width;
   conv_params->out_height = out_height;
+
+  CalculateActivationRange(conv_params->activation,
+                           &conv_params->output_activation_min,
+                           &conv_params->output_activation_max);
 
   // determine the output dimensions
   TfLiteIntArray* output_shape = TfLiteIntArrayCreate(4);
@@ -437,11 +470,9 @@ inline void GetConvParamsType(const TfLiteBConv2DParams& conv_params,
   op_params.dilation_height_factor = conv_params.dilations[1];
   op_params.dilation_width_factor = conv_params.dilations[2];
 
-  // TODO: this is not required for binary conv, however we need to
-  // check if it is used in other components of TF lite internal method which
-  // we are reusing and what are the default values!
-  // op_params.float_activation_min = output_activation_min;
-  // op_params.float_activation_max = output_activation_max;
+  // Activation function
+  op_params.float_activation_min = conv_params.output_activation_min;
+  op_params.float_activation_max = conv_params.output_activation_max;
 }
 
 template <class T, class TBitpacked>

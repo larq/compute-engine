@@ -170,6 +170,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   BGemmParams<std::int32_t, T> gemm_params;
   gemm_params.fused_multiply = fused_multiply_data;
   gemm_params.fused_add = fused_add_data;
+  gemm_params.clamp_min = params.float_activation_min;
+  gemm_params.clamp_max = params.float_activation_max;
 
   // #if defined(TF_LITE_USE_CBLAS) && defined(__APPLE__)
 

@@ -55,6 +55,8 @@ struct BGemmImplUsingRuy {
     TSpec spec;
     spec.fused_multiply = params.fused_multiply;
     spec.fused_add = params.fused_add;
+    spec.clamp_min = params.clamp_min;
+    spec.clamp_max = params.clamp_max;
 
     // The allocator is used to allocate memory for pre-packed matrices
     ruy::Allocator allocator;
