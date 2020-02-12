@@ -1,7 +1,7 @@
 # Larq Compute Engine Inference
-To perform an inference with Larq Compute Engine (LCE), we use [TensorFlow Lite
+To perform an inference with Larq Compute Engine (LCE), we use the [TensorFlow Lite
 interpreter](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/g3doc/guide/inference.md).
-A LCE compatibale TensorFlow Lite interpreter drives the Larq model inference and
+An LCE-compatible TensorFlow Lite interpreter drives the Larq model inference and
 uses LCE custom Ops instead of built-in TensorFlow Lite Ops for each applicable
 subgraph of the model.
 
@@ -23,7 +23,7 @@ std::unique_ptr<tflite::FlatBufferModel> model =
     tflite::FlatBufferModel::BuildFromFile(filename);
 ```
 
-(2) Building the `BuiltinOpResolver` with LCE Ops:
+(2) Build the `BuiltinOpResolver` with LCE Ops:
 
 ```c++
 // create a builtin OpResolver

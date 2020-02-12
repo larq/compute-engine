@@ -1,18 +1,18 @@
 # Larq Compute Engine Guide
 
-Larq Compute Engine (LCE) is an highly optimized inference engine for deploying
+Larq Compute Engine (LCE) is a highly optimized inference engine for deploying
 neural networks with exteremely low-precision weights and activations,
 such as Binarized Neural Netowoks (BNNs).
-LCE provides a collection of hand optimized [Tensorflow](https://www.tensorflow.org/) 
+LCE provides a collection of hand-optimized [Tensorflow](https://www.tensorflow.org/) 
 and [Tensorflow Lite](https://www.tensorflow.org/lite)
 custom Ops for specific instruction sets, developed in inline assembly or in C++ 
 using compiler intrinsics. LCE leverages optimization techniques
 such as **tiling** to maximize the number of cache hits, **vectorization** to maximize 
-the computational throughput and **multi-threading parallelization** to take
+the computational throughput, and **multi-threading parallelization** to take
 advantage of multi-core modern desktop and mobile CPUs.
 
 ## Key Features
-- Tight integration of LCE with [Larq](https://github.com/larq/larq) and
+- Tight integration of LCE with [Larq](https://larq.dev) and
   TensorFlow provides a smooth end-to-end training and deployment experience.
 - LCE enables high performance, on-device machine learning inference by
   providing hand-optimized kernels and network level optimizations for BNN models.
@@ -54,10 +54,10 @@ Benchmarked on February, TODO with LCE custom
 (see [here](../larq_compute_engine/tflite/benchmark))
 and BNN models with randomized weights and inputs.
 
-## Get started
+## Getting started
 The workflow to use LCE consists of the following steps:
 
-1. **Build the LCE**
+1. **Building LCE**
 
     The LCE documentation provides the build instructions for [Andorid](./build_android.md)
     and [ARM64-based boards](./build_arm.md) such as Raspberry Pi.

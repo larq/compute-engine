@@ -11,9 +11,9 @@ the build process for each of these components.
 We will build the LCE inside a [Docker](https://www.docker.com/) container.
 The image that you use depends on the version of Tensorflow:
 
-- To build the LCE for Tensorflow 2.x (manylinux2010 compatible)
+- To build the LCE for Tensorflow 2.x (`manylinux2010` compatible)
   use `custom-op-ubuntu16`
-- To build the LCE for Tensorflow 1.x (not manylinux2010 compatible)
+- To build the LCE for Tensorflow 1.x (not `manylinux2010` compatible)
   use `custom-op-ubuntu14`
 
 You can clone the LCE repository in a directoy of the
@@ -84,7 +84,7 @@ import larq_compute_engine as lce
 print(lce.bsign([[1,-2], [-3,-4]], [[-1,-2], [3,4]]))
 ```
 
-To run the entire python unittests of LCE for Tensorflow, execute the following
+To run all python unittests of LCE for Tensorflow, execute the following
 bazel command:
 ``` bash
 bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime
