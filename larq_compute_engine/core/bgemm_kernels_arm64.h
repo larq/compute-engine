@@ -330,18 +330,36 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "sub v20.4s, v13.4s, v20.4s\n"
       "sub v22.4s, v13.4s, v22.4s\n"
 
-      // convert to single precision float before storing the NEON registers
+      // Perform the activation function, by clamping
+      // Load the clamp_min, clamp_max bounds
+      "ldr w2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
+      "ldr w3, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MAX) "]\n"
+      "dup v12.4s, w2\n"  // clamp_min
+      "dup v13.4s, w3\n"  // clamp_max
+
+      // Apply the clamp_min bound
+      "smax v16.4s, v16.4s, v12.4s\n"
+      "smax v18.4s, v18.4s, v12.4s\n"
+      "smax v20.4s, v20.4s, v12.4s\n"
+      "smax v22.4s, v22.4s, v12.4s\n"
+      // Apply the clamp_max bound
+      "smin v16.4s, v16.4s, v13.4s\n"
+      "smin v18.4s, v18.4s, v13.4s\n"
+      "smin v20.4s, v20.4s, v13.4s\n"
+      "smin v22.4s, v22.4s, v13.4s\n"
+
+      // Convert to single precision float
       "scvtf v16.4s, v16.4s\n"
       "scvtf v18.4s, v18.4s\n"
       "scvtf v20.4s, v20.4s\n"
       "scvtf v22.4s, v22.4s\n"
 
-      // Perform the bias multiplications
+      // Perform the post multiplications
       "fmul v16.4s, v16.4s, v14.4s\n"
       "fmul v18.4s, v18.4s, v14.4s\n"
       "fmul v20.4s, v20.4s, v14.4s\n"
       "fmul v22.4s, v22.4s, v14.4s\n"
-      // Perform the bias additions
+      // Perform the post additions
       "fadd v16.4s, v16.4s, v15.4s\n"
       "fadd v18.4s, v18.4s, v15.4s\n"
       "fadd v20.4s, v20.4s, v15.4s\n"
@@ -763,18 +781,36 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "sub v26.4s, v13.4s, v26.4s\n"
       "sub v27.4s, v13.4s, v27.4s\n"
 
-      // convert to single precision float before storing the NEON registers
+      // Perform the activation function, by clamping
+      // Load the clamp_min, clamp_max bounds
+      "ldr w2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
+      "ldr w3, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MAX) "]\n"
+      "dup v12.4s, w2\n"  // clamp_min
+      "dup v13.4s, w3\n"  // clamp_max
+
+      // Apply the clamp_min bound
+      "smax v24.4s, v24.4s, v12.4s\n"
+      "smax v25.4s, v25.4s, v12.4s\n"
+      "smax v26.4s, v26.4s, v12.4s\n"
+      "smax v27.4s, v27.4s, v12.4s\n"
+      // Apply the clamp_max bound
+      "smin v24.4s, v24.4s, v13.4s\n"
+      "smin v25.4s, v25.4s, v13.4s\n"
+      "smin v26.4s, v26.4s, v13.4s\n"
+      "smin v27.4s, v27.4s, v13.4s\n"
+
+      // Convert to single precision float
       "scvtf v24.4s, v24.4s\n"
       "scvtf v25.4s, v25.4s\n"
       "scvtf v26.4s, v26.4s\n"
       "scvtf v27.4s, v27.4s\n"
 
-      // Perform the bias multiplications
+      // Perform the post multiplications
       "fmul v24.4s, v24.4s, v14.4s\n"
       "fmul v25.4s, v25.4s, v14.4s\n"
       "fmul v26.4s, v26.4s, v14.4s\n"
       "fmul v27.4s, v27.4s, v14.4s\n"
-      // Perform the bias additions
+      // Perform the post additions
       "fadd v24.4s, v24.4s, v15.4s\n"
       "fadd v25.4s, v25.4s, v15.4s\n"
       "fadd v26.4s, v26.4s, v15.4s\n"

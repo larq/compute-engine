@@ -56,6 +56,8 @@ struct BGemmImplUsingRuy {
     spec.backtransform_add = params.backtransform_add;
     spec.post_activation_multiplier = params.post_activation_multiplier;
     spec.post_activation_bias = params.post_activation_bias;
+    spec.clamp_min = params.clamp_min;
+    spec.clamp_max = params.clamp_max;
 
     // The allocator is used to allocate memory for pre-packed matrices
     ruy::Allocator allocator;

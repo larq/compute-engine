@@ -87,8 +87,8 @@ struct BinaryKernelParams {
   std::int32_t rhs_stride;
   std::int32_t dst_stride;
   std::int32_t depth;
-  std::uint32_t clamp_min;
-  std::uint32_t clamp_max;
+  std::int32_t clamp_min;
+  std::int32_t clamp_max;
   std::int32_t backtransform_add;
   std::uint8_t flags;
   const T zero_data[LhsCols] = {0};
@@ -128,8 +128,8 @@ inline void MakeBinaryKernelParams(
   params->rhs_stride = sizeof(T) * rhs.layout.stride;
   params->dst_stride = sizeof(float) * dst->layout.stride;
   params->depth = depth;
-  // params->clamp_min = spec.clamp_min;
-  // params->clamp_max = spec.clamp_max;
+  params->clamp_min = spec.clamp_min;
+  params->clamp_max = spec.clamp_max;
   params->dst_rows = dst->layout.rows;
   params->dst_cols = dst->layout.cols;
 
