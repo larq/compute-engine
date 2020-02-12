@@ -14,14 +14,14 @@ custom LCE inference application.
 To cross-compile an LCE inference program for the ARM64 architecture,
 the bazel target needs to be built with the ```--config=aarch64``` flag.
 For example, to build the LCE benchmark tool,
-run the following command from LCE root directory:
+run the following command from the LCE root directory:
 
 ```bash
 bazel build -c opt \
     --config=aarch64 \
     //larq_compute_engine/tflite/benchmark:lce_benchmark_model
  ```
-To build for ARM32 architecture, use the ```--config=rpi``` flag instead.
+To build for the ARM32 architecture, use the ```--config=rpi``` flag instead.
 
 ## Building LCE with Make ##
 To build LCE with Make, first make sure the tensorflow submodule is loaded
@@ -30,10 +30,10 @@ To build LCE with Make, first make sure the tensorflow submodule is loaded
 git submodule update --init
 ```
 To simplify the build process for various supported targets, we provide
-`build_lce.sh` script which accepts the build target platform as an input
+the `build_lce.sh` script which accepts the build target platform as an input
 argument. The resulting compiled files will be stored in
 `third_party/tensorflow/tensorflow/lite/tools/make/gen/<TARGET>/` where,
-depending on your target platform, `TARGET` can be `linux_x86_64`, `rpi_armv7l`
+depending on your target platform, `<TARGET>` can be `linux_x86_64`, `rpi_armv7l`,
 or `aarch64_armv8-a`. In the `lib` folder, you can find the Tensorflow Lite
 static library `libtensorflow-lite.a` including LCE customs ops.
 
