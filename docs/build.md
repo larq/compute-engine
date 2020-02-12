@@ -13,7 +13,7 @@ The image that you use depends on the version of Tensorflow:
 
 - To build the LCE for Tensorflow 2.x (`manylinux2010` compatible)
   use `custom-op-ubuntu16`
-- To build the LCE for Tensorflow 1.x (not manylinux2010 compatible)
+- To build the LCE for Tensorflow 1.x (not `manylinux2010` compatible)
   use `custom-op-ubuntu14`
 
 You can download and start a docker container as follows:
