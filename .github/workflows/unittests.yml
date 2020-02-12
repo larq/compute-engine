@@ -126,10 +126,14 @@ jobs:
         run: |
           curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-linux-amd64 > bazelisk
           chmod +x bazelisk
+      - name: Force Python 3 for everything we do
+        run: |
+          ln -sf /usr/bin/python3.6 /usr/bin/python
+          ln -sf /usr/bin/python3.6 /usr/bin/python3
       - name: Configure Bazel
         run: ./configure.sh <<< $'yes\nyes\n' #yes,yes for tf2
         shell: bash
       - name: Install pip dependencies
-        run: pip3 install larq_zoo==0.5.0 pytest --no-cache
+        run: python -m pip install larq_zoo==0.5.0 pytest --no-cache
       - name: Build LCE MLIR passes
-        run: ./bazelisk test larq_compute_engine/mlir:converter_test --distinct_host_configuration=false --compilation_mode=fastbuild
+        run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false --compilation_mode=fastbuild
