@@ -55,8 +55,12 @@ function main() {
   rsync -avm -L --exclude='*_test.py' ${PIP_FILE_PREFIX}larq_compute_engine "${TMPDIR}"
 
   pushd ${TMPDIR}
-  echo $(date) : "=== Building wheel"
 
+  echo "=== Stripping symbols"
+  chmod +w ${TMPDIR}/larq_compute_engine/mlir/*.so
+  strip -x ${TMPDIR}/larq_compute_engine/mlir/*.so
+
+  echo $(date) : "=== Building wheel"
   python setup.py bdist_wheel > /dev/null
 
   cp dist/*.whl "${DEST}"
