@@ -19,7 +19,7 @@ limitations under the License.
 
 using namespace tensorflow;
 
-// Do *not* use a name that already exists within the Tensorflow system
+// Do *not* use a name that already exists within the TensorFlow system
 // like `Sign` because it will fail without giving an error message.
 
 // The shape functions can cause crashes when compiled by 'wrong' gcc versions

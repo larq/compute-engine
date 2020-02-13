@@ -34,7 +34,7 @@ the `build_lce.sh` script which accepts the build target platform as an input
 argument. The resulting compiled files will be stored in
 `third_party/tensorflow/tensorflow/lite/tools/make/gen/<TARGET>/` where,
 depending on your target platform, `<TARGET>` can be `linux_x86_64`, `rpi_armv7l`,
-or `aarch64_armv8-a`. In the `lib` folder, you can find the Tensorflow Lite
+or `aarch64_armv8-a`. In the `lib` folder, you can find the TensorFlow Lite
 static library `libtensorflow-lite.a` including LCE customs ops.
 
 ### Cross-compiling for Raspberry Pi or other ARM based systems with Make ###

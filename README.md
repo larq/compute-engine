@@ -2,9 +2,9 @@
 
 Larq Compute Engine (LCE) is a highly optimized inference engine for deploying
 neural networks with exteremely low-precision weights and activations,
-such as Binarized Neural Netowoks (BNNs).
-LCE provides a collection of hand-optimized [Tensorflow](https://www.tensorflow.org/) 
-and [Tensorflow Lite](https://www.tensorflow.org/lite)
+-such as Binarized Neural Networks (BNNs).
+LCE provides a collection of hand-optimized [TensorFlow](https://www.tensorflow.org/) 
+and [TensorFlow Lite](https://www.tensorflow.org/lite)
 custom Ops for specific instruction sets, developed in inline assembly or in C++ 
 using compiler intrinsics. LCE leverages optimization techniques
 such as **tiling** to maximize the number of cache hits, **vectorization** to maximize 
@@ -24,7 +24,7 @@ advantage of multi-core modern desktop and mobile CPUs.
   is available in [Larq Zoo](https://github.com/larq/zoo)
   and can be used seamlessly with LCE.
 - LCE provides a custom [MLIR-based model converter](./docs/mlir_converter.md) which
-  is fully compatible with Tensorflow Lite and performs additional
+  is fully compatible with TensorFlow Lite and performs additional
   network level optimizations for Larq models.
 
 ## Performance
@@ -55,7 +55,7 @@ Benchmarked on February, TODO with LCE custom
 and BNN models with randomized weights and inputs.
 
 ## Getting started
-The workflow to use LCE consists of the following steps:
+Follow these steps to deploy a BNN with LCE:
 
 1. **Building LCE**
 
@@ -71,7 +71,7 @@ The workflow to use LCE consists of the following steps:
 
 1. **Convert the Larq model**
 
-    LCE is built on top of Tensorflow Lite and uses Tensorflow Lite
+    LCE is built on top of TensorFlow Lite and uses TensorFlow Lite
     [FlatBuffer format](https://google.github.io/flatbuffers/)
     to convert and serialize Larq models for inference.
     We provide a [LCE Converter](./docs/mlir_converter.md) with additional
@@ -80,18 +80,16 @@ The workflow to use LCE consists of the following steps:
 
 1. **Run inference**
 
-    LCE uses the [Tensorflow Lite Interpreter](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/g3doc/guide/inference.md) 
+    LCE uses the [TensorFlow Lite Interpreter](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/g3doc/guide/inference.md) 
     to perform an inference. In addition to the already available built-in
-    Tensorflow Lite Ops, optimized LCE Ops are registered to the interpreter
+    TensorFlow Lite Ops, optimized LCE Ops are registered to the interpreter
     to execute the Larq specific subgraphs of the model. An example to create
-    and build LCE compatible Tensorflow Lite interpreter in user's applications
+    and build LCE compatible TensorFlow Lite interpreter in user's applications
     is provided [here](./docs/inference.md).
 
-To learn more about using LCE, see [Get started](./docs/get_started.md).
-
 ## Next steps
-- Visit [Get started](./docs/get_started.md) to learn more about how to integrate LCE 
-  in your application.
-- For deploying LCE in your android app visit LCE [android guides](./docs/quickstart_android.md)
 - Explore [Larq pre-traind models](https://github.com/larq/zoo).
+- Learn how to [build](https://larq.dev/guides/bnn-architecture/) and
+  [train](https://larq.dev/guides/bnn-optimization/) BNNs for your own
+  application with Larq.
 - Try our [example programs](./examples/).

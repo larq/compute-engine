@@ -194,7 +194,7 @@ class ModelConverter:
         result_summary = []
 
         if tf_2_or_newer():
-            result_summary.append("Session method: Tensorflow 1.x only")
+            result_summary.append("Session method: TensorFlow 1.x only")
         else:
             try:
                 tflite_model = self.convert_sessionmethod()

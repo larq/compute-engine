@@ -107,7 +107,7 @@ fi
 
 # Check if dependencies need to be downloaded
 if [ ! -d "${TF_DIR}/tensorflow/lite/tools/make/downloads" ]; then
-    # TODO: Remove this ugly hack once Tensorflow fixes their eigen URL's
+    # TODO: Remove this ugly hack once TensorFlow fixes their eigen URL's
 
     # Replace
     #   grep -v mirror.tensorflow
