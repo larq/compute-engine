@@ -18,7 +18,7 @@ setup(
     author="Plumerai",
     author_email="arash@plumerai.com",
     packages=find_packages(),
-    install_requires=[],
+    install_requires=["packaging>=19"],
     extras_require={
         "tensorflow": ["tensorflow>=1.13.1"],
         "tensorflow_gpu": ["tensorflow-gpu>=1.13.1"],
