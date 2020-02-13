@@ -1,3 +1,6 @@
+from packaging import version
+import tensorflow as tf
+
 from larq_compute_engine.mlir._graphdef_tfl_flatbuffer import (
     convert_graphdef_to_tflite_flatbuffer,
 )
@@ -9,8 +12,29 @@ from tensorflow.lite.python.util import (
     run_graph_optimizations,
 )
 from tensorflow.python.eager import def_function
-from tensorflow.python.framework import convert_to_constants, dtypes
+from tensorflow.python.framework.convert_to_constants import (
+    convert_variables_to_constants_v2,
+)
 from tensorflow.python.keras.saving import saving_utils
+
+
+def concrete_function_from_keras_model(model):
+    input_signature = None
+    if version.parse(tf.__version__) >= version.parse("2.1"):
+        # If the model's call is not a `tf.function`, then we need to first get its
+        # input signature from `model_input_signature` method. We can't directly
+        # call `trace_model_call` because otherwise the batch dimension is set
+        # to None.
+        # Once we have better support for dynamic shapes, we can remove this.
+        if not isinstance(model.call, def_function.Function):
+            # Pass `keep_original_batch_size=True` will ensure that we get an input
+            # signature including the batch dimension specified by the user.
+            input_signature = saving_utils.model_input_signature(
+                model, keep_original_batch_size=True
+            )
+
+    func = saving_utils.trace_model_call(model, input_signature)
+    return func.get_concrete_function()
 
 
 def convert_keras_model(model):
@@ -19,28 +43,18 @@ def convert_keras_model(model):
     Returns:
       The converted data in serialized format.
     """
-
-    input_signature = None
-    # If the model's call is not a `tf.function`, then we need to first get its
-    # input signature from `model_input_signature` method. We can't directly
-    # call `trace_model_call` because otherwise the batch dimension is set
-    # to None.
-    # Once we have better support for dynamic shapes, we can remove this.
-    if not isinstance(model.call, def_function.Function):
-        # Pass `keep_original_batch_size=True` will ensure that we get an input
-        # signature including the batch dimension specified by the user.
-        input_signature = saving_utils.model_input_signature(
-            model, keep_original_batch_size=True
+    if not tf.executing_eagerly():
+        raise RuntimeError(
+            "Graph mode is not supported. Please enable eager execution using "
+            "tf.enable_eager_execution() when using TensorFlow 1.x"
         )
-
-    func = saving_utils.trace_model_call(model, input_signature)
-    concrete_func = func.get_concrete_function()
-
-    frozen_func = convert_to_constants.convert_variables_to_constants_v2(
-        concrete_func, lower_control_flow=False
-    )
+    func = concrete_function_from_keras_model(model)
+    if version.parse(tf.__version__) >= version.parse("1.15"):
+        frozen_func = convert_variables_to_constants_v2(func, lower_control_flow=False)
+    else:
+        frozen_func = convert_variables_to_constants_v2(func)
     input_tensors = [
-        tensor for tensor in frozen_func.inputs if tensor.dtype != dtypes.resource
+        tensor for tensor in frozen_func.inputs if tensor.dtype != tf.dtypes.resource
     ]
     output_tensors = frozen_func.outputs
 

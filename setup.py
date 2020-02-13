@@ -1,6 +1,6 @@
 """Setup for pip package."""
 
-from setuptools import Extension, dist, find_packages, setup
+from setuptools import dist, find_packages, setup
 
 
 class BinaryDistribution(dist.Distribution):
@@ -12,16 +12,16 @@ class BinaryDistribution(dist.Distribution):
 
 setup(
     name="larq-compute-engine",
-    version="0.0.1",
-    python_requires=">=3.4",
+    version="0.1.0",
+    python_requires=">=3.6",
     description="An Open Source Collection of Highly Tuned Implementations of Primitives Operations for Binarized Neural Networks",
     author="Plumerai",
     author_email="arash@plumerai.com",
     packages=find_packages(),
-    install_requires=[],
+    install_requires=["packaging>=19"],
     extras_require={
-        "tensorflow": ["tensorflow>=1.13.1"],
-        "tensorflow_gpu": ["tensorflow-gpu>=1.13.1"],
+        "tensorflow": ["tensorflow>=1.14"],
+        "tensorflow_gpu": ["tensorflow-gpu>=1.14"],
     },
     include_package_data=True,
     zip_safe=False,

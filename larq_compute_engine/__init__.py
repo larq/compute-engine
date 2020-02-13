@@ -1,10 +1,3 @@
-from larq_compute_engine.tf.python.ops.compute_engine_ops import bsign
-from larq_compute_engine.tf.python.ops.compute_engine_ops import (
-    bconv2d,
-    bconv2d8,
-    bconv2d32,
-    bconv2d64,
-)
-from larq_compute_engine.tf.python.modelconverter import ModelConverter
+from larq_compute_engine.mlir.python.converter import convert_keras_model
 
-__all__ = ["bsign", "bconv2d", "bconv2d8", "bconv2d32", "bconv2d64", "ModelConverter"]
+__all__ = ["convert_keras_model"]
