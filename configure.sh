@@ -37,8 +37,8 @@ function is_windows() {
 
 # Check if we are building against manylinux1 or manylinux2010 pip package,
 # default manylinux2010
-if is_windows; then
-  echo "On windows, skipping toolchain flags.."
+if ! is_linux; then
+  echo "On Windows or Mac, skipping toolchain flags.."
   PIP_MANYLINUX2010=0
 else
   while [[ "$PIP_MANYLINUX2010" == "" ]]; do
@@ -64,6 +64,9 @@ if [[ "$PIP_MANYLINUX2010" == "1" ]]; then
     write_to_bazelrc "build --config=manylinux2010"
     write_to_bazelrc "test --config=manylinux2010"
   fi
+fi
+
+if ! is_windows; then
   # By default, build TF in C++ 14 mode.
   write_to_bazelrc "build --cxxopt=-std=c++14"
   write_to_bazelrc "build --host_cxxopt=-std=c++14"
