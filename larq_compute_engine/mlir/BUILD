@@ -1,4 +1,5 @@
 load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl")
+load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -135,14 +136,33 @@ cc_library(
     ],
 )
 
-cc_binary(
-    name = "tf_lce_translate",
-    srcs = ["tf_lce_translate.cc"],
+pybind_extension(
+    name = "_graphdef_tfl_flatbuffer",
+    srcs = ["python/graphdef_tfl_flatbuffer.cc"],
+    module_name = "graphdef_tfl_flatbuffer",
     deps = [
         ":lce_tfl_passes",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_translate_lib",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tf_tfl_translate_cl_options",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:translate_cl_options",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:translate_lib",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_graphdef",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:import_utils",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:mlir_roundtrip_flags",
+        "@org_tensorflow//tensorflow/core:ops",
+        "@pybind11",
+    ],
+)
+
+py_library(
+    name = "converter",
+    srcs = ["python/converter.py"],
+    deps = [
+        ":_graphdef_tfl_flatbuffer",
+    ],
+)
+
+py_test(
+    name = "converter_test",
+    srcs = ["python/converter_test.py"],
+    deps = [
+        ":converter",
     ],
 )
