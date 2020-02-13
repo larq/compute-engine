@@ -26,8 +26,7 @@ git clone https://github.com/larq/compute-engine.git lce-volume
 
 # download and start a docker container
 docker pull tensorflow/tensorflow:custom-op-ubuntu16
-docker run -it -v $PWD/lce-volume:/tmp/lce-volume tensorflow/tensorflow:custom-op-ubuntu16 /bin/bash
-# cd /tmp/lce-volume in the docker container
+docker run -it -v $PWD/lce-volume:/tmp/lce-volume -w /tmp/lce-volume tensorflow/tensorflow:custom-op-ubuntu16 /bin/bash
 ```
 the `lce-volume` in the host machine is now mapped to the `/tmp/lce-volume/`directory
 inside the container.
