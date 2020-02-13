@@ -62,7 +62,7 @@ jobs:
           python -m pip install auditwheel==2.0.0
 
           for f in artifacts/*.whl; do
-            auditwheel show $f
+            auditwheel show $f || true
             # auditwheel repair fails likely due similar reasons as
             # https://github.com/tensorflow/addons/pull/435
             # auditwheel repair --plat manylinux2010_x86_64 $f
