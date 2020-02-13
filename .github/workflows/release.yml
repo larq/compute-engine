@@ -1,10 +1,9 @@
 name: lce-release
 
-# on:
-#   release:
-#     tags:
-#       - v*
-on: [push]
+on:
+  release:
+    tags:
+      - v*
 
 jobs:
   macos-release-wheel:
