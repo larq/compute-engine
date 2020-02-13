@@ -87,8 +87,6 @@ Follow these steps to deploy a BNN with LCE:
     and build LCE compatible TensorFlow Lite interpreter in user's applications
     is provided [here](./docs/inference.md).
 
-To learn more about using LCE, see [Get started](./docs/get_started.md).
-
 ## Next steps
 - Explore [Larq pre-traind models](https://github.com/larq/zoo).
 - Learn how to [build](https://larq.dev/guides/bnn-architecture/) and
