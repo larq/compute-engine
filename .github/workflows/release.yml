@@ -26,9 +26,9 @@ jobs:
           python --version
           python -m pip install delocate wheel setuptools numpy six --no-cache-dir
 
-          ./configure.sh <<< $'yes\n'
+          ./configure.sh
 
-          bazelisk build :build_pip_pkg
+          bazelisk build :build_pip_pkg --copt=-fvisibility=hidden
           bazel-bin/build_pip_pkg artifacts
 
           for f in artifacts/*.whl; do
