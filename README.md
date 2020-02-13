@@ -5,7 +5,7 @@ neural networks with exteremely low-precision weights and activations,
 -such as Binarized Neural Networks (BNNs).
 LCE provides a collection of hand-optimized [TensorFlow](https://www.tensorflow.org/) 
 and [TensorFlow Lite](https://www.tensorflow.org/lite)
-custom Ops for specific instruction sets, developed in inline assembly or in C++ 
+custom ops for specific instruction sets, developed in inline assembly or in C++ 
 using compiler intrinsics. LCE leverages optimization techniques
 such as **tiling** to maximize the number of cache hits, **vectorization** to maximize 
 the computational throughput, and **multi-threading parallelization** to take
@@ -59,7 +59,7 @@ Follow these steps to deploy a BNN with LCE:
 
 1. **Building LCE**
 
-    The LCE documentation provides the build instructions for [Andorid](./docs/quickstart_android.md)
+    The LCE documentation provides the build instructions for [Android](./docs/quickstart_android.md)
     and [ARM64-based boards](./docs/build_arm.md) such as Raspberry Pi.
     Please follow the provided instructions to create a native LCE build
     or cross-compile for one of the supported targets.
@@ -88,7 +88,7 @@ Follow these steps to deploy a BNN with LCE:
     is provided [here](./docs/inference.md).
 
 ## Next steps
-- Explore [Larq pre-traind models](https://github.com/larq/zoo).
+- Explore [Larq pre-trained models](https://github.com/larq/zoo).
 - Learn how to [build](https://larq.dev/guides/bnn-architecture/) and
   [train](https://larq.dev/guides/bnn-optimization/) BNNs for your own
   application with Larq.
