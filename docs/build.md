@@ -1,19 +1,19 @@
 # Building Larq Compute Engine #
 
 The Larq Compute Engine (LCE) repository consists of two main components:
-LCE for [Tensorflow](#LCE-for-Tensorflow) and LCE for [Tensorflow Lite](#LCE-for-Tensorflow-Lite).
-Each of these components are a collection of optimzied ops for Tensorflow and
-Tensorflow Lite.
+LCE for [TensorFlow](#LCE-for-TensorFlow) and LCE for [TensorFlow Lite](#LCE-for-TensorFlow-Lite).
+Each of these components are a collection of optimized ops for TensorFlow and
+TensorFlow Lite.
 These two components can be built indepent of each other. Below we describe
 the build process for each of these components.
 
 ### Setup Docker container ###
 We will build the LCE inside a [Docker](https://www.docker.com/) container.
-The image that you use depends on the version of Tensorflow:
+The image that you use depends on the version of TensorFlow:
 
-- To build the LCE for Tensorflow 2.x (`manylinux2010` compatible)
+- To build the LCE for TensorFlow 2.x (`manylinux2010` compatible)
   use `custom-op-ubuntu16`
-- To build the LCE for Tensorflow 1.x (not `manylinux2010` compatible)
+- To build the LCE for TensorFlow 1.x (not `manylinux2010` compatible)
   use `custom-op-ubuntu14`
 
 You can clone the LCE repository in a directoy of the
@@ -22,7 +22,7 @@ host machine and mount that directroy as a
 ``` bash
 # create the docker shared volume directory
 mkdir lce-volume
-git clone https://github.com/plumerai/compute-engine.git lce-volume
+git clone https://github.com/larq/compute-engine.git lce-volume
 
 # download and start a docker container
 docker pull tensorflow/tensorflow:custom-op-ubuntu16
@@ -54,17 +54,17 @@ brew install bazelbuild/tap/bazelisk
 ### Configure .bazelrc ###
 Run the ```./configure.sh``` script in the root directory and answer
 "Yes" to the ```manylinux2010``` question when you want to build for
-Tensorflow 2.x or Tensorflow 1.15, and "No" for Tensorflow 1.14 and below.
+TensorFlow 2.x or TensorFlow 1.15, and "No" for TensorFlow 1.14 and below.
 
-## LCE for Tensorflow Lite ##
-LCE for Tensorflow Lite has a diverse platform support, covering
+## LCE for TensorFlow Lite ##
+LCE for TensorFlow Lite has a diverse platform support, covering
 [Android](./quickstart_android.md), [ARM-based boards](./build_arm.md)
 such as Raspberry Pi and x86 machines. To build/install/run LCE on
 each of these platforms, please refer to the corresponding guide.
 
-## LCE for Tensorflow ##
+## LCE for TensorFlow ##
 
-LCE provides a Python PIP package for its Tensorflow Ops.
+LCE provides a Python PIP package for its TensorFlow Ops.
 You can build the LCE pip package with bazel:
 ``` bash
 bazel build :build_pip_pkg
@@ -84,7 +84,7 @@ import larq_compute_engine as lce
 print(lce.bsign([[1,-2], [-3,-4]], [[-1,-2], [3,4]]))
 ```
 
-To run all python unittests of LCE for Tensorflow, execute the following
+To run all python unittests of LCE for TensorFlow, execute the following
 bazel command:
 ``` bash
 bazel test larq_compute_engine:py_tests --python_top=//larq_compute_engine:pyruntime
