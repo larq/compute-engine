@@ -69,4 +69,4 @@ jobs:
       - name: Install pip dependencies
         run: pip install tensorflow==2.1.0 larq_zoo==0.5.0 pytest --no-cache
       - name: Build LCE MLIR passes
-        run: ./bazelisk run larq_compute_engine/mlir:converter_test
+        run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false 
