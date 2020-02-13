@@ -14,7 +14,7 @@ following order:
    [Cross-compiling LCE with Bazel](#cross-compiling-lce-with-bazel)
 2. To natively compile LCE, see the section
    [Building LCE with Make](#building-lce-with-make).
-3. To cross-compile LCE using the Make system for users that do not whish to
+3. To cross-compile LCE using the Make system for users that do not wish to
    install Bazel, see the section
    [Cross-compiling LCE with Make](#cross-compiling-lce-with-make).
 
@@ -111,4 +111,3 @@ benchmark program `benchmark_model`. In the `lib` folder, you can find the
 TensorFlow Lite static library `libtensorflow-lite.a` which includes the LCE
 customs ops.
 Copy the `benchmark_model` program to your ARM machine to run it.
-
