@@ -53,20 +53,20 @@ jobs:
         run: ./bazelisk run larq_compute_engine/tflite/tests:cc_tests_aarch64_qemu --config=aarch64
 
   MLIR:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - name: Install Bazelisk
         run: |
-          curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-darwin-amd64 > bazelisk
+          curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-linux-amd64 > bazelisk
           chmod +x bazelisk
       - uses: actions/setup-python@v1
         with:
           python-version: 3.7
       - name: Configure Bazel
-        run: ./configure.sh <<< $'yes\n' #yes for manylinux2010
+        run: ./configure.sh <<< $'no\n' #no manylinux2010
         shell: bash
       - name: Install pip dependencies
         run: pip install tensorflow==2.1.0 larq_zoo==0.5.0 pytest --no-cache
       - name: Build LCE MLIR passes
-        run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false 
+        run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false
