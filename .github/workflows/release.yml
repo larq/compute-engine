@@ -72,3 +72,29 @@ jobs:
         with:
           name: ${{ runner.os }}-wheels
           path: artifacts
+
+  upload-wheels:
+    name: Publish wheels to PyPi
+    needs: [manylinux-release-wheel, macos-release-wheel]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: Linux-wheels
+          path: Linux-wheels
+      - uses: actions/download-artifact@v1
+        with:
+          name: macOS-wheels
+          path: macOS-wheels
+      - run: |
+          set -e -x
+          mkdir -p dist
+          cp Linux-wheels/*.whl dist/
+          cp macOS-wheels/*.whl dist/
+          ls -la dist/
+          sha256sum dist/*.whl
+      # TODO(lgeiger):Enable this after the first release
+      # - uses: pypa/gh-action-pypi-publish@master
+      #   with:
+      #     user: __token__
+      #     password: ${{ secrets.pypi_token }}
