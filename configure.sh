@@ -48,16 +48,19 @@ while [[ "$PIP_MANYLINUX2010" == "" ]]; do
 done
 
 # Check if it's installed
-if [[ $(pip show tensorflow) == *tensorflow* ]] || [[ $(pip show tf-nightly) == *tf-nightly* ]] || [[ $(pip show tensorflow-cpu) == *tensorflow-cpu* ]]; then
+if [[ $(pip show tensorflow) == *tensorflow* ]] || [[ $(pip show tensorflow-cpu) == *tensorflow-cpu* ]]; then
   echo 'Using installed tensorflow'
 else
-  # Uninstall GPU version if it is installed.
+  # Uninstall GPU version or nightly if it is installed.
   if [[ $(pip show tensorflow-gpu) == *tensorflow-gpu* ]]; then
-    echo 'Already have gpu version of tensorflow installed. Uninstalling......\n'
+    echo 'Already have a gpu version of tensorflow installed. Uninstalling......\n'
     pip uninstall tensorflow-gpu
   elif [[ $(pip show tf-nightly-gpu) == *tf-nightly-gpu* ]]; then
-    echo 'Already have gpu version of tensorflow installed. Uninstalling......\n'
+    echo 'Already have a gpu version of tensorflow installed. Uninstalling......\n'
     pip uninstall tf-nightly-gpu
+  elif [[ $(pip show tf-nightly) == *tf-nightly* ]]; then
+    echo 'Already have a nightly version of tensorflow installed. Uninstalling......\n'
+    pip uninstall tf-nightly
   fi
   # Install CPU version
   if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
