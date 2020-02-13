@@ -69,14 +69,11 @@ py_library(
     name = "compute_engine_py",
     srcs = ([
         "__init__.py",
-        "tf/__init__.py",
-        "tf/python/__init__.py",
-        "tf/python/ops/__init__.py",
+        "//larq_compute_engine/mlir:__init__.py",
+        "//larq_compute_engine/mlir:python/__init__.py",
     ]),
-    srcs_version = "PY3",
     deps = [
-        ":compute_engine_ops_py",
-        ":compute_engine_utils_py",
+        "//larq_compute_engine/mlir:converter",
     ],
 )
 

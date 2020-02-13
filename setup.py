@@ -1,6 +1,6 @@
 """Setup for pip package."""
 
-from setuptools import Extension, dist, find_packages, setup
+from setuptools import dist, find_packages, setup
 
 
 class BinaryDistribution(dist.Distribution):
@@ -12,8 +12,8 @@ class BinaryDistribution(dist.Distribution):
 
 setup(
     name="larq-compute-engine",
-    version="0.0.1",
-    python_requires=">=3.4",
+    version="0.1.0",
+    python_requires=">=3.6",
     description="An Open Source Collection of Highly Tuned Implementations of Primitives Operations for Binarized Neural Networks",
     author="Plumerai",
     author_email="arash@plumerai.com",
