@@ -5,8 +5,7 @@ natively on your ARM device or cross-compile it from a non-ARM machine.
 [Bazel](https://bazel.build/) is the primary build system for LCE, and it can
 be used to cross-compile a binary for ARM-based systems using a non-ARM host.
 To natively build on an ARM system itself we provide a script that uses the
-Makefile build system, because Bazel it is currently not natively available on
-ARM.
+Makefile build system.
 
 This leaves us with three ways to build LCE, which we recommend in the
 following order:
@@ -103,11 +102,6 @@ larq_compute_engine/tflite/build_make/build_lce.sh --rpi
 ```
 When building for a 64-bit ARM architecture, replace `--rpi` with `--aarch64`.
 
-Just as with a native build, the resulting compiled files will be stored in
-`third_party/tensorflow/tensorflow/lite/tools/make/gen/<TARGET>` where,
-depending on your target platform, `<TARGET>` can be `linux_x86_64`,
-`rpi_armv7l`, or `aarch64_armv8-a`. In the `bin` folder, you can find the
-benchmark program `benchmark_model`. In the `lib` folder, you can find the
-TensorFlow Lite static library `libtensorflow-lite.a` which includes the LCE
-customs ops.
-Copy the `benchmark_model` program to your ARM machine to run it.
+See `(Building LCE with Make)(#building-lce-with-make) for the location of
+the resulting build files. Copy the `benchmark_model` program to your ARM
+machine to run it.
