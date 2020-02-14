@@ -80,6 +80,9 @@ LQCE_ALL_SRCS := \
 $(wildcard larq_compute_engine/tflite/*.cc) \
 $(wildcard larq_compute_engine/tflite/kernels/*.cc) \
 
+LQCE_EXAMPLE_SRCS := \
+	examples/lce_minimal.cc
+
 # These target-specific makefiles should modify or replace options like
 # CXXFLAGS or LIBS to work for a specific targetted architecture. All logic
 # based on platforms or architectures should happen within these files, to
@@ -90,9 +93,11 @@ include $(wildcard $(TF_MAKEFILE_DIR)/targets/*_makefile.inc)
 GENDIR := $(TF_MAKEFILE_DIR)/gen/$(TARGET)_$(TARGET_ARCH)/
 OBJDIR := $(GENDIR)obj/
 LIBDIR := $(GENDIR)lib/
+BINDIR := $(GENDIR)bin/
 
 LIB_PATH := $(LIBDIR)$(LIB_NAME)
 BENCHMARK_LIB := $(LIBDIR)$(BENCHMARK_LIB_NAME)
+LQCE_EXAMPLE_BINARY := $(BINDIR)lce_minimal
 
 CXX := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}g++
 CC := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}gcc
@@ -100,6 +105,9 @@ AR := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}ar
 
 LIB_OBJS := $(addprefix $(OBJDIR), \
 $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LQCE_ALL_SRCS)))))
+
+LQCE_EXAMPLE_OBJS := $(addprefix $(OBJDIR), \
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LQCE_EXAMPLE_SRCS))))
 
 # For normal manually-created TensorFlow Lite C++ source files.
 $(OBJDIR)%.o: %.cc
@@ -114,7 +122,7 @@ $(OBJDIR)%.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 # The target that's compiled if there's no command-line arguments.
-all: $(LIB_PATH) $(BENCHMARK_LIB)
+all: $(LIB_PATH) $(BENCHMARK_LIB) $(LQCE_EXAMPLE_BINARY)
 
 # Add together all the objects we've compiled to the '.a' archive.
 $(LIB_PATH): $(LIB_OBJS)
@@ -131,6 +139,12 @@ $(BENCHMARK_LIB): $(LIB_PATH) $(LIB_OBJS)
 	$(AR) $(ARFLAGS) $(BENCHMARK_LIB) $(LIB_OBJS)
 	# Move the original register.o to the end
 	$(AR) -m $(BENCHMARK_LIB) register.o
+
+$(LQCE_EXAMPLE_BINARY): $(LQCE_EXAMPLE_OBJS) $(LIB_PATH)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) \
+	-o $(LQCE_EXAMPLE_BINARY) $(LQCE_EXAMPLE_OBJS) \
+	$(LIBFLAGS) $(LIB_PATH) $(LDFLAGS) $(LIBS)
 
 lib: $(LIB_PATH)
 
