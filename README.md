@@ -37,26 +37,25 @@ advantage of multi-core modern desktop and mobile CPUs.
 
 ## Performance
 The table below presents **single-threaded** performance of Larq Compute Engine on multiple
-generations of Larq BNN models on the [Pixel phone (2016)](https://support.google.com/pixelphone/answer/7158570?hl=en-GB)
+generations of Larq BNN models on the [Pixel 1 phone (2016)](https://support.google.com/pixelphone/answer/7158570?hl=en-GB)
 and (Raspberry Pi 4 [BCM2711](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2711/README.md)) board:
 
-| Model          | Accuracy  | Pixel, ms   | RPi 4 (BCM2711), ms |
-| -------------- | :-------: | :---------: | :----------:        |
-| Quicknet       | 57.6 %    | 28.1        | 60.5                |
-| Quicknet-Large | 62.5 %    | 42.3        | 89.9                |
-| BiRealNet      | 57.4 %    | 54.0        | 116.2               |
+| Model          | Accuracy  | Pixel 1, ms   | RPi 4 (BCM2711), ms |
+| -------------- | :-------: | :-----------: | :----------:        |
+| Quicknet       | 57.6 %    | 28.1          | 60.5                |
+| Quicknet-Large | 62.5 %    | 42.3          | 89.9                |
 
-For reference, [daBNN](https://github.com/JDAI-CV/dabnn) reports an inference time of 61.3 ms for BiRealNet on the same Pixel phone.
-They furthermore report 43.2 ms on the same Pixel phone, using a modified Bi-Real Net 18 model that achieves 56.4% accuracy.
+For reference, [daBNN](https://github.com/JDAI-CV/dabnn) (the other main BNN library) reports an inference time of 61.3 ms for [Bi-RealNet](https://larq.dev/api/larq_zoo/#birealnet) (56.4% accuracy) on the Pixel 1 phone,
+while LCE achieves an inference time of 54.0 ms for BiRealNet on the same device.
+They furthermore report 43.2 ms for a modified Bi-RealNet model that achieves 56.4% accuracy.
 
 The following table presents **multi-threaded** performance of Larq Compute Engine on
 a Pixel 1 phone and a Raspberry Pi 4 board. These benchmarkes were performed with 4 cores:
 
-| Model          | Accuracy  | Pixel, ms   | RPi 4 (BCM2711), ms |
-| -------------- | :-------: | :---------: | :----------:        |
-| Quicknet       | 57.6 %    | 19.1        | 37.9                |
-| Quicknet-Large | 62.5 %    | 28.0        | 55.8                |
-| BiRealNet      | 57.4 %    | 28.9        | 63.3                |
+| Model          | Accuracy  | Pixel 1, ms   | RPi 4 (BCM2711), ms |
+| -------------- | :-------: | :-----------: | :----------:        |
+| Quicknet       | 57.6 %    | 19.1          | 37.9                |
+| Quicknet-Large | 62.5 %    | 28.0          | 55.8                |
 
 Benchmarked on February 14th, 2020 with LCE custom
 [TFLite Model Benchmark Tool](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/tools/benchmark)
