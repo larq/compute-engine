@@ -55,7 +55,7 @@ a Pixel 1 phone and a Raspberry Pi 4 board. These benchmarkes were performed wit
 | Quicknet       | 57.6 %    | 19.1        | 37.9                |
 | Quicknet-Large | 62.5 %    | 28.0        | 55.8                |
 
-Benchmarked on February, 14th with LCE custom
+Benchmarked on February 14th, 2020 with LCE custom
 [TFLite Model Benchmark Tool](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/tools/benchmark)
 (see [here](./larq_compute_engine/tflite/benchmark))
 and BNN models with randomized weights and inputs.
