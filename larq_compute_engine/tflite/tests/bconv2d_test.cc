@@ -407,7 +407,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
 
   auto expected_array = m_builtin.GetOutput();
   EXPECT_THAT(m_lce.GetOutput(),
-              ::testing::Pointwise(FloatNearPointwise(1e-7), expected_array));
+              ::testing::Pointwise(FloatNearPointwise(1e-4), expected_array));
 }
 
 INSTANTIATE_TEST_SUITE_P(
