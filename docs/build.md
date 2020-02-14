@@ -9,9 +9,10 @@ the build process for each of these components.
 
 ### Setup Docker container ###
 We will build the LCE inside a [Docker](https://www.docker.com/) container.
-To be able to build the LCE and the LCE converter's PIP package
-for TensorFlow 2.x  (`manylinux2010` compatible), we use `custom-op-ubuntu16`
-image.
+To be able to build LCE and the LCE converter's
+[`manylinux2010`](https://www.python.org/dev/peps/pep-0571/) compatible PIP
+package, we use the [`tensorflow/tensorflow:custom-op-ubuntu16`](https://hub.docker.com/r/tensorflow/tensorflow) image. 
+For macOS, make sure to have a C++ compiler installed.
 
 You can clone the LCE repository in a directoy of the
 host machine and mount that directroy as a
