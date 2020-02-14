@@ -48,7 +48,7 @@ and (Raspberry Pi 4 [BCM2711](https://www.raspberrypi.org/documentation/hardware
 For reference, [daBNN](https://github.com/JDAI-CV/dabnn) reports an inference time of 43.2 ms on the same Pixel phone, using a modified Bi-Real Net 18 model that achieves 56.4% accuracy.
 
 The following table presents **multi-threaded** performance of Larq Compute Engine on
-a Pixel 1 phone and a Raspberry Pi 4 board:
+a Pixel 1 phone and a Raspberry Pi 4 board. These benchmarkes were performed with 4 cores:
 
 | Model          | Accuracy  | Pixel, ms   | RPi 4 (BCM2711), ms |
 | -------------- | :-------: | :---------: | :----------:        |
