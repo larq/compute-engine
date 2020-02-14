@@ -32,7 +32,7 @@ First configure Bazel using the instructions [here](build.md). Make sure you
 have run the `./configure.sh` script as instructed.
 
 To cross-compile an LCE inference binary for ARM architectures, the bazel
-target needs to be built with the `--config=rpi` (32-bit ARM) or
+target needs to be built with the `--config=rpi3` (32-bit ARM) or
 `--config=aarch64` (64-bit ARM) flag. For example, to build the LCE benchmark
 tool, run the following command from the LCE root directory:
 
