@@ -2,9 +2,9 @@
 
 [![Tests](https://github.com/larq/compute-engine/workflows/Tests/badge.svg)](https://github.com/larq/compute-engine/actions?workflow=Tests) [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/larq-compute-engine.svg)](https://pypi.org/project/larq-compute-engine/) [![PyPI](https://img.shields.io/pypi/v/larq-compute-engine.svg)](https://pypi.org/project/larq-compute-engine/) [![PyPI - License](https://img.shields.io/pypi/l/larq-compute-engine.svg)](https://github.com/larq/compute-engine/blob/master/LICENSE) [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/larq)
 
-<div style="text-align: center">
-  <img src="./docs/images/larq-chip.gif" height="300px" alt="Larq Compute Engine hero image"/>
-</div>
+<p style="text-align: center;">
+  <img src="./docs/images/larq-chip.gif" height="300px" alt="Larq Compute Engine hero image" />
+</p>
 
 Larq Compute Engine (LCE) is a highly optimized inference engine for deploying
 extremely quantized neural networks, such as
