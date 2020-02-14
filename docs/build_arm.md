@@ -35,20 +35,16 @@ have run the `./configure.sh` script as instructed.
 To cross-compile the LCE example application for ARM architectures, the bazel
 target needs to be built with the `--config=rpi3` (32-bit ARM) or
 `--config=aarch64` (64-bit ARM) flag. For example, to build the example
-application for 32-bit ARM systems, run the following command from the LCE root
+application for 64-bit ARM systems, run the following command from the LCE root
 directory:
 ```bash
 bazel build \
-    --config=rpi3 \
+    --config=aarch64 \
     //examples:lce_minimal
  ```
 
-To build the LCE benchmark tool, for 64-bit ARM systems, run the following:
-```bash
-bazel build \
-    --config=aarch64 \
-    //larq_compute_engine/tflite/benchmark:lce_benchmark_model
- ```
+To build the LCE benchmark tool, build the bazel target
+`//larq_compute_engine/tflite/benchmark:lce_benchmark_model`
 
 The resulting binaries will be stored at
 `bazel-bin/examples/lce_minimal` and

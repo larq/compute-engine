@@ -1,6 +1,6 @@
 # Larq Compute Engine: Android Quickstart
 
-To build Larq Compute Engine (LCE) for Android,
+To build Larq Compute Engine (LCE) applications for Android,
 you must have the [Android NDK](https://developer.android.com/ndk) and
 [SDK](https://developer.android.com/studio) installed on your system.
 Below we explain how to install the Android prerequisites in the LCE
@@ -25,7 +25,7 @@ root directory:
 
 After executing the bash script, please accept the Android SDK licence agreement.
 The script will download and unpack the android NDK and SKD under the directory
-`/tmp/lce_android` of the LCE docker container.
+`/tmp/lce_android` in the LCE docker container.
 
 #### Custom android version
 
@@ -45,17 +45,25 @@ build --action_env ANDROID_SDK_HOME="/usr/local/android/android-sdk-linux"
 ```
 
 #### Build LCE inference binary
-To build an LCE inference binary for Android (see [here](./inference.md) for creating your
-custom LCE inference binary or [here](../examples/lce_minimal) for a minimal
-example) the Bazel target needs to build with ```--config=android_arm64``` flag.
-For example, to build the [LCE benchmark tool](../larq_compute_engine/tflite/benchmark/) 
-for Android, run the following command from the LCE root directory:
+To build an LCE application for Android (see [here](./inference.md) for creating your
+own LCE application) the Bazel target needs to build with ```--config=android_arm64``` flag.
 
+To build the [minimal example](../examples/lce_minimal) for Android,
+run the following command from the LCE root directory:
 ```bash
 bazel build -c opt \
     --config=android_arm64 \
-    //larq_compute_engine/tflite/benchmark:lce_benchmark_model
- ```
+    //examples:lce_minimal
+```
+
+Too build the [LCE benchmark tool](../larq_compute_engine/tflite/benchmark/) 
+for Android, simply build the bazel target
+`//larq_compute_engine/tflite/benchmark:lce_benchmark_model`.
+
+The resulting binaries will be stored at
+`bazel-bin/examples/lce_minimal` and
+`bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model`.
+See below on how to copy them to your android device.
 
 #### Run inference
 To run the inference with a [Larq converted model](./lce_converter.md) on an android phone,
