@@ -1,7 +1,7 @@
 name: lce-release
 
 on:
-  release:
+  push:
     tags:
       - v*
 

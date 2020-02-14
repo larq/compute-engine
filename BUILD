@@ -4,6 +4,7 @@ sh_binary(
     data = [
         "LICENSE",
         "MANIFEST.in",
+        "README.md",
         "setup.py",
         "//larq_compute_engine:compute_engine_py",
     ],

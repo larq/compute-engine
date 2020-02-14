@@ -51,6 +51,7 @@ function main() {
 
   cp ${PIP_FILE_PREFIX}setup.py "${TMPDIR}"
   cp ${PIP_FILE_PREFIX}MANIFEST.in "${TMPDIR}"
+  cp ${PIP_FILE_PREFIX}README.md "${TMPDIR}"
   cp ${PIP_FILE_PREFIX}LICENSE "${TMPDIR}"
   rsync -avm -L --exclude='*_test.py' ${PIP_FILE_PREFIX}larq_compute_engine "${TMPDIR}"
 
