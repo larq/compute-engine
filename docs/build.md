@@ -50,7 +50,7 @@ brew install bazelbuild/tap/bazelisk
 ### Configure .bazelrc ###
 Run the ```./configure.sh``` script in the root directory and answer
 "Yes" to the ```manylinux2010``` question if you want to build the
-LCE converter's PIP package for TensorFlow 2.x.
+LCE converter's PIP package inside the `tensorflow/tensorflow:custom-op-ubuntu16` container.
 
 ## LCE for TensorFlow Lite ##
 LCE for TensorFlow Lite has a diverse platform support, covering
