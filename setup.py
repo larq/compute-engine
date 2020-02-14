@@ -3,6 +3,11 @@
 from setuptools import dist, find_packages, setup
 
 
+def readme():
+    with open("README.md", "r") as f:
+        return f.read()
+
+
 class BinaryDistribution(dist.Distribution):
     """This class is needed in order to create OS specific wheels."""
 
@@ -12,12 +17,15 @@ class BinaryDistribution(dist.Distribution):
 
 setup(
     name="larq-compute-engine",
-    version="0.1.0",
+    version="0.1.0rc1",
     python_requires=">=3.6",
-    description="An Open Source Collection of Highly Tuned Implementations of Primitives Operations for Binarized Neural Networks",
+    description="Highly optimized inference engine for binarized neural networks.",
+    long_description=readme(),
+    long_description_content_type="text/markdown",
     author="Plumerai",
     author_email="arash@plumerai.com",
     packages=find_packages(),
+    url="https://larq.dev/",
     install_requires=["packaging>=19"],
     extras_require={
         "tensorflow": ["tensorflow>=1.14"],
