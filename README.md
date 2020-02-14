@@ -29,8 +29,8 @@ advantage of multi-core modern desktop and mobile CPUs.
     - LCE enables high performance, on-device machine learning inference by
       providing hand-optimized kernels and network level optimizations for BNN models.
 
-    - LCE currently supports ARM64-based mobile platforms such Android phones
-      and the Raspberry Pi.
+    - LCE currently supports ARM64-based mobile platforms such as Android phones
+      and Raspberry Pi boards.
 
     - Thread parallelism support in LCE is essential for modern mobile devices with
       multi-core CPUs.
