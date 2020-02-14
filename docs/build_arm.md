@@ -102,6 +102,6 @@ larq_compute_engine/tflite/build_make/build_lce.sh --rpi
 ```
 When building for a 64-bit ARM architecture, replace `--rpi` with `--aarch64`.
 
-See `(Building LCE with Make)(#building-lce-with-make) for the location of
+See [Building LCE with Make](#building-lce-with-make) for the location of
 the resulting build files. Copy the `benchmark_model` program to your ARM
 machine to run it.
