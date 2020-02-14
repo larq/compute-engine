@@ -17,7 +17,7 @@ advantage of multi-core modern desktop and mobile CPUs.
       TensorFlow provides a smooth end-to-end training and deployment experience.
 
     - A collection of Larq pre-trained BNN models for common machine learning tasks
-      is available in [Larq Zoo](https://github.com/larq/zoo)
+      is available in [Larq Zoo](https://larq.dev/models/)
       and can be used out-of-the-box with LCE.
 
     - LCE provides a custom [MLIR-based model converter](./docs/mlir_converter.md) which
@@ -67,8 +67,8 @@ Follow these steps to deploy a BNN with LCE:
 
 1. **Pick a Larq model**
 
-    You can use [Larq](https://github.com/larq/larq) to build and train your own
-    model or pick a pre-trained model from [Larq Zoo](https://github.com/larq/zoo).
+    You can use [Larq](https://larq.dev) to build and train your own
+    model or pick a pre-trained model from [Larq Zoo](https://larq.dev/models/).
 
 1. **Convert the Larq model**
 
@@ -97,7 +97,7 @@ Follow these steps to deploy a BNN with LCE:
     is provided [here](./docs/inference.md).
 
 ## Next steps
-- Explore [Larq pre-trained models](https://github.com/larq/zoo).
+- Explore [Larq pre-trained models](https://larq.dev/models/).
 - Learn how to [build](https://larq.dev/guides/bnn-architecture/) and
   [train](https://larq.dev/guides/bnn-optimization/) BNNs for your own
   application with Larq.
