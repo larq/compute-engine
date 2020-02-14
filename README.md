@@ -36,8 +36,9 @@ advantage of multi-core modern desktop and mobile CPUs.
       multi-core CPUs.
 
 ## Performance
-The table below presents **single-threaded** performance of Larq Compute Engine on multiple
-generations of Larq BNN models on the [Pixel 1 phone (2016)](https://support.google.com/pixelphone/answer/7158570?hl=en-GB)
+The table below presents **single-threaded** performance of Larq Compute Engine on
+different versions of a novel BNN model called Quicknet (soon to be released in [larq-zoo](https://larq.dev/models/))
+on the [Pixel 1 phone (2016)](https://support.google.com/pixelphone/answer/7158570?hl=en-GB)
 and (Raspberry Pi 4 [BCM2711](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2711/README.md)) board:
 
 | Model          | Accuracy  | RPi 4 (BCM2711), ms | Pixel 1, ms   |
