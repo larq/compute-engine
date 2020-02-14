@@ -1,6 +1,7 @@
 """Setup for pip package."""
 
-from setuptools import dist, find_packages, setup
+from setuptools import dist, Extension, find_packages, setup
+from sys import platform
 
 
 def readme():
@@ -15,6 +16,8 @@ class BinaryDistribution(dist.Distribution):
         return True
 
 
+ext_modules = [Extension("_foo", ["stub.cc"])] if platform.startswith("linux") else []
+
 setup(
     name="larq-compute-engine",
     version="0.1.0rc1",
@@ -25,6 +28,7 @@ setup(
     author="Plumerai",
     author_email="arash@plumerai.com",
     packages=find_packages(),
+    ext_modules=ext_modules,
     url="https://larq.dev/",
     install_requires=["packaging>=19"],
     extras_require={
