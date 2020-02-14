@@ -44,8 +44,10 @@ and (Raspberry Pi 4 [BCM2711](https://www.raspberrypi.org/documentation/hardware
 | -------------- | :-------: | :---------: | :----------:        |
 | Quicknet       | 57.6 %    | 28.1        | 60.5                |
 | Quicknet-Large | 62.5 %    | 42.3        | 89.9                |
+| BiRealNet      | 57.4 %    | 54.0        | 116.2               |
 
-For reference, [daBNN](https://github.com/JDAI-CV/dabnn) reports an inference time of 43.2 ms on the same Pixel phone, using a modified Bi-Real Net 18 model that achieves 56.4% accuracy.
+For reference, [daBNN](https://github.com/JDAI-CV/dabnn) reports an inference time of 61.3 ms for BiRealNet on the same Pixel phone.
+They furthermore report 43.2 ms on the same Pixel phone, using a modified Bi-Real Net 18 model that achieves 56.4% accuracy.
 
 The following table presents **multi-threaded** performance of Larq Compute Engine on
 a Pixel 1 phone and a Raspberry Pi 4 board. These benchmarkes were performed with 4 cores:
@@ -54,6 +56,7 @@ a Pixel 1 phone and a Raspberry Pi 4 board. These benchmarkes were performed wit
 | -------------- | :-------: | :---------: | :----------:        |
 | Quicknet       | 57.6 %    | 19.1        | 37.9                |
 | Quicknet-Large | 62.5 %    | 28.0        | 55.8                |
+| BiRealNet      | 57.4 %    | 28.9        | 63.3                |
 
 Benchmarked on February 14th, 2020 with LCE custom
 [TFLite Model Benchmark Tool](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/tools/benchmark)
