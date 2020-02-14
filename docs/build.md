@@ -9,12 +9,10 @@ the build process for each of these components.
 
 ### Setup Docker container ###
 We will build the LCE inside a [Docker](https://www.docker.com/) container.
-The image that you use depends on the version of TensorFlow:
-
-- To build the LCE for TensorFlow 2.x (`manylinux2010` compatible)
-  use `custom-op-ubuntu16`
-- To build the LCE for TensorFlow 1.x (not `manylinux2010` compatible)
-  use `custom-op-ubuntu14`
+To be able to build LCE and the LCE converter's
+[`manylinux2010`](https://www.python.org/dev/peps/pep-0571/) compatible PIP
+package, we use the [`tensorflow/tensorflow:custom-op-ubuntu16`](https://hub.docker.com/r/tensorflow/tensorflow) image. 
+For macOS, make sure to have a C++ compiler installed.
 
 You can clone the LCE repository in a directoy of the
 host machine and mount that directroy as a
@@ -52,8 +50,8 @@ brew install bazelbuild/tap/bazelisk
 
 ### Configure .bazelrc ###
 Run the ```./configure.sh``` script in the root directory and answer
-"Yes" to the ```manylinux2010``` question when you want to build for
-TensorFlow 2.x or TensorFlow 1.15, and "No" for TensorFlow 1.14 and below.
+"Yes" to the ```manylinux2010``` question if you want to build the
+LCE converter's PIP package inside the `tensorflow/tensorflow:custom-op-ubuntu16` container.
 
 ## LCE for TensorFlow Lite ##
 LCE for TensorFlow Lite has a diverse platform support, covering
