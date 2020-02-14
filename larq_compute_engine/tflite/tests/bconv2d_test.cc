@@ -346,7 +346,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   };
   std::array<T, 5> float_list{0.125, 0.25, 0.75, 0.875, 1.0};
   auto float_generator = [&float_list]() {
-    const int index = rand() & float_list.size();
+    const int index = rand() % float_list.size();
     return float_list[index];
   };
 
