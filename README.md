@@ -1,8 +1,8 @@
 # Larq Compute Engine
 Larq Compute Engine (LCE) is a highly optimized inference engine for deploying
-neural networks with exteremely low-precision weights and activations, such as
+extremely quantized neural networks, such as
 Binarized Neural Networks (BNNs). It currently supports various mobile platforms
-and has been benchmarked on Pixel 1 phone and Raspberry Pi.
+and has been benchmarked on a Pixel 1 phone and a Raspberry Pi.
 LCE provides a collection of hand-optimized [TensorFlow Lite](https://www.tensorflow.org/lite)
 custom Ops for supported instruction sets, developed in inline assembly or in C++ 
 using compiler intrinsics. LCE leverages optimization techniques
@@ -11,14 +11,14 @@ the computational throughput, and **multi-threading parallelization** to take
 advantage of multi-core modern desktop and mobile CPUs.
 
 ## Key Features
-- **effortless End-to-end integration** from training to deployment:
+- **Effortless end-to-end integration** from training to deployment:
 
     - Tight integration of LCE with [Larq](https://larq.dev) and
       TensorFlow provides a smooth end-to-end training and deployment experience.
 
     - A collection of Larq pre-trained BNN models for common machine learning tasks
       is available in [Larq Zoo](https://github.com/larq/zoo)
-      and can be used seamlessly with LCE.
+      and can be used out-of-the-box with LCE.
 
     - LCE provides a custom [MLIR-based model converter](./docs/mlir_converter.md) which
       is fully compatible with TensorFlow Lite and performs additional
