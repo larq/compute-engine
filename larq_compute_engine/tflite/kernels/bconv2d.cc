@@ -471,7 +471,8 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
     padding_functor.cache_correction_values(
         GetTensorData<T>(filter), params->filter_height, params->filter_width,
         params->channels_out, params->channels_in, params->dilations[1],
-        params->dilations[2], GetTensorData<T>(padding_buffer));
+        params->dilations[2], GetTensorData<T>(fused_multiply),
+        GetTensorData<T>(padding_buffer));
     params->padding_cache_filled = true;
   }
 

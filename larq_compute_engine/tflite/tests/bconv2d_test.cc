@@ -329,9 +329,11 @@ TEST_P(BConv2DOpTest, SimpleTest) {
 
   using T = float;
   std::vector<T> input_data, filters_data;
+  std::vector<T> channel_multipliers;
   std::vector<T> fused_multiply_data, fused_add_data, bias_data;
   input_data.resize(input_num_elem);
   filters_data.resize(filters_num_elem);
+  channel_multipliers.resize(filter_count, 0);
   bias_data.resize(filter_count, 0);
   fused_multiply_data.resize(filter_count, 0);
   fused_add_data.resize(filter_count, 0);
@@ -342,17 +344,33 @@ TEST_P(BConv2DOpTest, SimpleTest) {
     const int index = rand() % list.size();
     return list[index];
   };
+  std::array<T, 5> float_list{0.125, 0.25, 0.75, 0.875, 1.0};
+  auto float_generator = [&float_list]() {
+    const int index = rand() & float_list.size();
+    return float_list[index];
+  };
 
   std::generate(std::begin(input_data), std::end(input_data), rand_generator);
   std::generate(std::begin(filters_data), std::end(filters_data),
                 rand_generator);
+  std::generate(std::begin(channel_multipliers), std::end(channel_multipliers),
+                float_generator);
+  std::generate(std::begin(bias_data), std::end(bias_data), float_generator);
+
+  // Fuse the multipliers to the filters, just as tflite would do it
+  // The bconv op will take the sign, so it will automatically ignore this
+  for (int i = 0; i < filter_count; ++i) {
+    for (int j = 0; j < filter_height * filter_width * input_depth; ++j) {
+      filters_data[i * (filter_height * filter_width * input_depth) + j] *=
+          channel_multipliers[i];
+    }
+  }
 
   const std::int32_t dotproduct_size =
       filter_height * filter_width * input_depth;
   for (int i = 0; i < filter_count; ++i) {
-    fused_multiply_data[i] = -2.0;
-    fused_add_data[i] = dotproduct_size;
-    bias_data[i] = 0.25f;
+    fused_multiply_data[i] = -2.0 * channel_multipliers[i];
+    fused_add_data[i] = dotproduct_size * channel_multipliers[i];
     fused_add_data[i] += bias_data[i];
   }
 

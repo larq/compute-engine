@@ -208,7 +208,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                       filter_height, filter_width, output_depth, stride_height,
                       stride_width, dilation_height_factor,
                       dilation_width_factor, output_data, output_height,
-                      output_width, padding_buffer);
+                      output_width, fused_multiply_data, padding_buffer);
     }
   }
 }
