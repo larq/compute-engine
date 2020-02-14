@@ -36,28 +36,29 @@ advantage of multi-core modern desktop and mobile CPUs.
       multi-core CPUs.
 
 ## Performance
-The table below presents **single-threaded** performance of Larq Compute Engine on multiple
-generations of Larq BNN models on the [Pixel phone (2016)](https://support.google.com/pixelphone/answer/7158570?hl=en-GB)
+The table below presents **single-threaded** performance of Larq Compute Engine on
+different versions of a novel BNN model called Quicknet (soon to be released in [larq-zoo](https://larq.dev/models/))
+on the [Pixel 1 phone (2016)](https://support.google.com/pixelphone/answer/7158570?hl=en-GB)
 and (Raspberry Pi 4 [BCM2711](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2711/README.md)) board:
 
-| Model         | Accuracy  | Pixel, ms   | RPi 4 (BCM2711), ms |
-| ------------- | :-------: | :---------: | :----------:        |
-| TODO          | TODO      | TODO        | TODO                |
-| TODO          | TODO      | TODO        | TODO                |
-| TODO          | TODO      | TODO        | TODO                |
-| TODO          | TODO      | TODO        | TODO                |
+| Model          | Accuracy  | RPi 4 (BCM2711), ms | Pixel 1, ms   |
+| -------------- | :-------: | :----------:        | :-----------: |
+| Quicknet       | 57.6 %    | 60.5                | 28.1          |
+| Quicknet-Large | 62.5 %    | 89.9                | 42.3          |
+
+For reference, [dabnn](https://github.com/JDAI-CV/dabnn) (the other main BNN library) reports an inference time of 61.3 ms for [Bi-RealNet](https://larq.dev/api/larq_zoo/#birealnet) (56.4% accuracy) on the Pixel 1 phone,
+while LCE achieves an inference time of 54.0 ms for BiRealNet on the same device.
+They furthermore present a modified version, BiRealNet-Stem, which achieves the same accuracy of 56.4% in 43.2 ms.
 
 The following table presents **multi-threaded** performance of Larq Compute Engine on
-a Pixel 1 phone and a Raspberry Pi 4 board:
+a Pixel 1 phone and a Raspberry Pi 4 board. These benchmarkes were performed with 4 cores:
 
-| Model              | Accuracy  | Pixel, ms   | RPi 4 (BCM2711), ms |
-| ------------------ | :-------: | :---------: | :----------:        |
-| TODO               | TODO      | TODO        | TODO                |
-| TODO               | TODO      | TODO        | TODO                |
-| TODO               | TODO      | TODO        | TODO                |
-| TODO               | TODO      | TODO        | TODO                |
+| Model          | Accuracy  | RPi 4 (BCM2711), ms | Pixel 1, ms   |
+| -------------- | :-------: | :----------:        | :-----------: |
+| Quicknet       | 57.6 %    | 37.9                | 19.1          |
+| Quicknet-Large | 62.5 %    | 55.8                | 28.0          |
 
-Benchmarked on February, TODO with LCE custom
+Benchmarked on February 14th, 2020 with LCE custom
 [TFLite Model Benchmark Tool](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/tools/benchmark)
 (see [here](./larq_compute_engine/tflite/benchmark))
 and BNN models with randomized weights and inputs.
