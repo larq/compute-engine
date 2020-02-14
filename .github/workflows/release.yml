@@ -57,7 +57,7 @@ jobs:
             tensorflow/tensorflow:custom-op-ubuntu16 \
             .github/tools/release_linux.sh
 
-          sudo apt-get -y -qq install patchelf --no-install-recommends
+          sudo apt-get -y -qq install patchelf rename --no-install-recommends
           python -m pip install auditwheel==2.0.0
 
           for f in artifacts/*.whl; do
@@ -66,6 +66,9 @@ jobs:
             # https://github.com/tensorflow/addons/pull/435
             # auditwheel repair --plat manylinux2010_x86_64 $f
           done
+
+          # Manually rename wheels since auditwheel fails
+          rename  's/linux_x86_64/manylinux2010_x86_64/' artifacts/*.whl
           ls -al artifacts/
       - uses: actions/upload-artifact@v1
         with:
@@ -92,8 +95,7 @@ jobs:
           cp macOS-wheels/*.whl dist/
           ls -la dist/
           sha256sum dist/*.whl
-      # TODO(lgeiger):Enable this after the first release
-      # - uses: pypa/gh-action-pypi-publish@master
-      #   with:
-      #     user: __token__
-      #     password: ${{ secrets.pypi_token }}
+      - uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.pypi_token }}
