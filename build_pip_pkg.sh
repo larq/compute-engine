@@ -16,6 +16,12 @@
 set -e
 set -x
 
+PLATFORM="$(uname -s | tr 'A-Z' 'a-z')"
+
+function is_linux() {
+    [[ "${PLATFORM}" == "linux" ]]
+}
+
 PIP_FILE_PREFIX="bazel-bin/build_pip_pkg.runfiles/larq_compute_engine/"
 
 function abspath() {
@@ -53,6 +59,9 @@ function main() {
   cp ${PIP_FILE_PREFIX}MANIFEST.in "${TMPDIR}"
   cp ${PIP_FILE_PREFIX}README.md "${TMPDIR}"
   cp ${PIP_FILE_PREFIX}LICENSE "${TMPDIR}"
+  if is_linux; then
+    touch ${TMPDIR}/stub.cc
+  fi
   rsync -avm -L --exclude='*_test.py' ${PIP_FILE_PREFIX}larq_compute_engine "${TMPDIR}"
 
   pushd ${TMPDIR}

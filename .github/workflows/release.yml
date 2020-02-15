@@ -11,7 +11,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: ['3.6', '3.7']
+        python-version: ["3.6", "3.7"]
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-python@v1
@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        python-version: ['3.6', '3.7']
+        python-version: ["3.6", "3.7"]
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-python@v1
@@ -57,23 +57,18 @@ jobs:
             tensorflow/tensorflow:custom-op-ubuntu16 \
             .github/tools/release_linux.sh
 
-          sudo apt-get -y -qq install patchelf rename --no-install-recommends
-          python -m pip install auditwheel==2.0.0
+          sudo apt-get -y -qq install patchelf --no-install-recommends
+          python -m pip install auditwheel --no-cache-dir
 
           for f in artifacts/*.whl; do
-            auditwheel show $f || true
-            # auditwheel repair fails likely due similar reasons as
-            # https://github.com/tensorflow/addons/pull/435
-            # auditwheel repair --plat manylinux2010_x86_64 $f
+            auditwheel repair --plat manylinux2010_x86_64 $f
           done
 
-          # Manually rename wheels since auditwheel fails
-          rename  's/linux_x86_64/manylinux2010_x86_64/' artifacts/*.whl
-          ls -al artifacts/
+          ls -al wheelhouse/
       - uses: actions/upload-artifact@v1
         with:
           name: ${{ runner.os }}-wheels
-          path: artifacts
+          path: wheelhouse
 
   upload-wheels:
     name: Publish wheels to PyPi
