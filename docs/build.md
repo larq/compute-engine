@@ -7,7 +7,7 @@ The Larq Compute Engine (LCE) repository consists of two main components:
 
 - **LCE Converter:** which takes a Larq model and generates a TensorFlow Lite
   [FlatBuffer](https://google.github.io/flatbuffers/) file (`.tflite`) compatible
-  with LCE Runtime.
+  with LCE runtime.
 
 Before proceeding with building LCE components, you need to setup the the LCE
 build enviroment first.
@@ -19,11 +19,11 @@ build enviroment first.
 We build the Larq Compute Engine (LCE) components inside a
 [docker](https://www.docker.com/) container. We also recommend to use
 [docker volumes](https://docs.docker.com/storage/volumes/)
-to migrate the build targets in-between the host machine and the container,
+to migrate the build targets in-between the host machine and the container.
 
-To be able to build the LCE Runtime and the LCE Converter's
+To be able to build the LCE runtime and the LCE converter's
 [`manylinux2010`](https://www.python.org/dev/peps/pep-0571/) compatible PIP
-package, we need to use the [`tensorflow/tensorflow:custom-op-ubuntu16`](https://hub.docker.com/r/tensorflow/tensorflow)
+package, we need to use the [`tensorflow:custom-op-ubuntu16`](https://hub.docker.com/r/tensorflow/tensorflow)
 image.
 
 First, download the docker image:
@@ -39,8 +39,8 @@ mkdir lce-volume
 git clone https://github.com/larq/compute-engine.git lce-volume
 ```
 
-then map `lce-volume` directory in the host machine
-to `/tmp/lce-volume` directory inside the container:
+then map the `lce-volume` directory to `/tmp/lce-volume` directory inside
+the container:
 
 ``` bash
 docker run -it -v $PWD/lce-volume:/tmp/lce-volume \
@@ -55,7 +55,7 @@ and access the build artifacts directly from the host machine.
 [Bazel](https://bazel.build/) is the primary build system for LCE.
 However, to avoid Bazel compatibility issues,
 we recommend to use [Bazelisk](https://github.com/bazelbuild/bazelisk).
-To install Bazelisk on Linux, run the following command
+To install Bazelisk on Linux, run the following two commands
 (replace ```v1.2.1``` with your preferred
 [bazelisk version](https://github.com/bazelbuild/bazelisk/releases)):
 
@@ -74,17 +74,17 @@ brew install bazelbuild/tap/bazelisk
 
 ### 3. Configure Bazel ###
 
-Run the ```./configure.sh``` script in the root directory and answer
+Run the ```./configure.sh``` script in the LCE root directory and answer
 "Yes" to the ```manylinux2010``` question if you want to build the
-LCE converter's PIP package inside the `tensorflow/tensorflow:custom-op-ubuntu16`
+LCE converter's PIP package inside the `tensorflow:custom-op-ubuntu16`
 container. This script generates the Bazel configuration file `.bazelrc`
 in the LCE root directory.
 
 ## Build LCE Runtime ##
 
-LCE Runtime has a diverse platform support, covering
+LCE runtime has a diverse platform support, covering
 [Android](./quickstart_android.md) and [ARM-based boards](./build_arm.md)
-such as Raspberry Pi. To build/install/run LCE Runtime on
+such as Raspberry Pi. To build/install/run LCE runtime on
 each of these platforms, please refer to the corresponding guide.
 
 ## Build LCE Converter ##
