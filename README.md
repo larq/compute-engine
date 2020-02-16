@@ -46,7 +46,7 @@ and Raspberry Pi 4 B ([BCM2711](https://www.raspberrypi.org/documentation/hardwa
 
 | Model          | Accuracy  | RPi 4 B, ms (1 thread) | Pixel 1, ms (1 thread) |
 | -------------- | :-------: | :----------:           | :-----------:          |
-| Quicknet       | 57.6 %    | 60.5                   | 27.9                   |
+| Quicknet       | 58.3 %    | 60.5                   | 27.9                   |
 | Quicknet-Large | 62.5 %    | 89.9                   | 41.8                   |
 
 For reference, [dabnn](https://github.com/JDAI-CV/dabnn) (the other main BNN library) reports an inference time of 61.3 ms for [Bi-RealNet](https://larq.dev/api/larq_zoo/#birealnet) (56.4% accuracy) on the Pixel 1 phone,
@@ -58,7 +58,7 @@ a Pixel 1 phone and a Raspberry Pi 4 board:
 
 | Model          | Accuracy  | RPi 4 B, ms (4 threads) | Pixel 1, ms (4 threads) |
 | -------------- | :-------: | :----------:            | :-----------:           |
-| Quicknet       | 57.6 %    | 37.9                    | 19.1                    |
+| Quicknet       | 58.3 %    | 37.9                    | 19.1                    |
 | Quicknet-Large | 62.5 %    | 55.8                    | 28.0                    |
 
 Benchmarked on February 14th, 2020 with LCE custom
