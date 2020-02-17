@@ -1,4 +1,4 @@
-# Build Larq Compute Engine #
+# Build Larq Compute Engine
 
 The Larq Compute Engine (LCE) repository consists of two main components:
 
@@ -12,9 +12,9 @@ The Larq Compute Engine (LCE) repository consists of two main components:
 Before proceeding with building LCE components, you need to setup the LCE
 build enviroment first.
 
-## Setup the build environment ##
+## Setup the build environment
 
-### 1. Setup Docker container ###
+### 1. Setup Docker container
 
 We build the Larq Compute Engine (LCE) components inside a
 [docker](https://www.docker.com/) container. We also recommend to use
@@ -28,13 +28,13 @@ image.
 
 First, download the docker image:
 
-``` bash
+```bash
 docker pull tensorflow/tensorflow:custom-op-ubuntu16
 ```
 
 Clone the LCE repository in the host machine:
 
-``` bash
+```bash
 mkdir lce-volume
 git clone https://github.com/larq/compute-engine.git lce-volume
 ```
@@ -42,7 +42,7 @@ git clone https://github.com/larq/compute-engine.git lce-volume
 To start the container and map the `lce-volume` directory to the `/tmp/lce-volume`
 directory inside the container:
 
-``` bash
+```bash
 docker run -it -v $PWD/lce-volume:/tmp/lce-volume \
     -w /tmp/lce-volume tensorflow/tensorflow:custom-op-ubuntu16 /bin/bash
 ```
@@ -50,13 +50,13 @@ docker run -it -v $PWD/lce-volume:/tmp/lce-volume \
 Now, you will be able to build your targets inside the container
 and access the build artifacts directly from the host machine.
 
-### 2. Install Bazelisk ###
+### 2. Install Bazelisk
 
 [Bazel](https://bazel.build/) is the primary build system for LCE.
 However, to avoid Bazel compatibility issues,
 we recommend to use [Bazelisk](https://github.com/bazelbuild/bazelisk).
 To install Bazelisk on Linux, run the following two commands
-(replace ```v1.2.1``` with your preferred
+(replace `v1.2.1` with your preferred
 [bazelisk version](https://github.com/bazelbuild/bazelisk/releases)):
 
 ```shell
@@ -72,14 +72,14 @@ LCE converter's PIP package inside the `tensorflow:custom-op-ubuntu16`
 container. This script generates the Bazel configuration file `.bazelrc`
 in the LCE root directory.
 
-## Build LCE Runtime ##
+## Build LCE Runtime
 
 LCE runtime has a diverse platform support, covering
-[Android](./quickstart_android.md) and [ARM-based boards](./build_arm.md)
+[Android](/compute-engine/quickstart_android) and [ARM-based boards](/compute-engine/build_arm)
 such as Raspberry Pi. To build/install/run LCE runtime on
 each of these platforms, please refer to the corresponding guide.
 
-## Build LCE Converter ##
+## Build LCE Converter
 
 The LCE converter is available on [PyPI](https://pypi.org/project/larq-compute-engine/)
 and can be installed with Python's [pip](https://pip.pypa.io/en/stable/)
@@ -92,7 +92,7 @@ pip install larq-compute-engine
 You can also run the following commands,
 to build the LCE pip package yourself:
 
-``` bash
+```bash
 bazel build :build_pip_pkg
 bazel-bin/build_pip_pkg artifacts
 ```
@@ -100,6 +100,6 @@ bazel-bin/build_pip_pkg artifacts
 The script stores the wheel file in the `artifacts/` directory located in the
 LCE root directory. To install the PIP package:
 
-``` bash
+```bash
 pip install artifacts/*.whl
 ```
