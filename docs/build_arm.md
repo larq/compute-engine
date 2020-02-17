@@ -102,7 +102,7 @@ sudo apt-get update
 sudo apt-get install crossbuild-essential-armhf
 ```
 
-For Arch based systems, the package could be called `arm-linux-gnueabihf`. Run the following commands:
+For Arch based systems, the package is called `arm-linux-gnueabihf`. Run the following commands:
 
 ``` bash
 sudo pacman -Syy
