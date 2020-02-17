@@ -17,27 +17,27 @@ advantage of multi-core modern desktop and mobile CPUs.
 
 - **Effortless end-to-end integration** from training to deployment:
 
-  - Tight integration of LCE with [Larq](https://larq.dev) and
-    TensorFlow provides a smooth end-to-end training and deployment experience.
+    - Tight integration of LCE with [Larq](https://larq.dev) and
+      TensorFlow provides a smooth end-to-end training and deployment experience.
 
-  - A collection of Larq pre-trained BNN models for common machine learning tasks
-    is available in [Larq Zoo](https://docs.larq.dev/zoo/)
-    and can be used out-of-the-box with LCE.
+    - A collection of Larq pre-trained BNN models for common machine learning tasks
+      is available in [Larq Zoo](https://docs.larq.dev/zoo/)
+      and can be used out-of-the-box with LCE.
 
-  - LCE provides a custom [MLIR-based model converter](https://docs.larq.dev/compute-engine/converter) which
-    is fully compatible with TensorFlow Lite and performs additional
-    network level optimizations for Larq models.
+    - LCE provides a custom [MLIR-based model converter](https://docs.larq.dev/compute-engine/converter) which
+      is fully compatible with TensorFlow Lite and performs additional
+      network level optimizations for Larq models.
 
 - **Lightning fast deployment** on a variety of mobile platforms:
 
-  - LCE enables high performance, on-device machine learning inference by
-    providing hand-optimized kernels and network level optimizations for BNN models.
+    - LCE enables high performance, on-device machine learning inference by
+      providing hand-optimized kernels and network level optimizations for BNN models.
 
-  - LCE currently supports ARM64-based mobile platforms such as Android phones
-    and Raspberry Pi boards.
+    - LCE currently supports ARM64-based mobile platforms such as Android phones
+      and Raspberry Pi boards.
 
-  - Thread parallelism support in LCE is essential for modern mobile devices with
-    multi-core CPUs.
+    - Thread parallelism support in LCE is essential for modern mobile devices with
+      multi-core CPUs.
 
 ## Performance
 
@@ -75,33 +75,19 @@ Follow these steps to deploy a BNN with LCE:
 
 1. **Pick a Larq model**
 
-   You can use [Larq](https://larq.dev) to build and train your own
-   model or pick a pre-trained model from [Larq Zoo](https://docs.larq.dev/zoo/).
+    You can use [Larq](https://larq.dev) to build and train your own model or pick a pre-trained model from [Larq Zoo](https://docs.larq.dev/zoo/).
 
-1. **Convert the Larq model**
+2. **Convert the Larq model**
 
-   LCE is built on top of TensorFlow Lite and uses the TensorFlow Lite
-   [FlatBuffer format](https://google.github.io/flatbuffers/)
-   to convert and serialize Larq models for inference.
-   We provide an [LCE Converter](https://docs.larq.dev/compute-engine/converter) with additional
-   optimization passes to increase the speed of execution of Larq models
-   on supported target platforms.
+    LCE is built on top of TensorFlow Lite and uses the TensorFlow Lite [FlatBuffer format](https://google.github.io/flatbuffers/) to convert and serialize Larq models for inference. We provide an [LCE Converter](https://docs.larq.dev/compute-engine/converter) with additional optimization passes to increase the speed of execution of Larq models on supported target platforms.
 
-1. **Build LCE**
+3. **Build LCE**
 
-   The LCE documentation provides the build instructions for [Android](https://docs.larq.dev/compute-engine/quickstart_android)
-   and [ARM64-based boards](https://docs.larq.dev/compute-engine/build_arm) such as Raspberry Pi.
-   Please follow the provided instructions to create a native LCE build
-   or cross-compile for one of the supported targets.
+    The LCE documentation provides the build instructions for [Android](https://docs.larq.dev/compute-engine/quickstart_android) and [ARM64-based boards](https://docs.larq.dev/compute-engine/build_arm) such as Raspberry Pi. Please follow the provided instructions to create a native LCE build or cross-compile for one of the supported targets.
 
-1. **Run inference**
+4. **Run inference**
 
-   LCE uses the [TensorFlow Lite Interpreter](https://www.tensorflow.org/lite/guide/inference)
-   to perform an inference. In addition to the already available built-in
-   TensorFlow Lite operators, optimized LCE operators are registered to the interpreter
-   to execute the Larq specific subgraphs of the model. An example to create
-   and build an LCE compatible TensorFlow Lite interpreter for your own
-   applications is provided [here](https://docs.larq.dev/compute-engine/inference).
+    LCE uses the [TensorFlow Lite Interpreter](https://www.tensorflow.org/lite/guide/inference) to perform an inference. In addition to the already available built-in TensorFlow Lite operators, optimized LCE operators are registered to the interpreter to execute the Larq specific subgraphs of the model. An example to create and build an LCE compatible TensorFlow Lite interpreter for your own applications is provided [here](https://docs.larq.dev/compute-engine/inference).
 
 ## Next steps
 
