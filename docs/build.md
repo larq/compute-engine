@@ -9,7 +9,7 @@ The Larq Compute Engine (LCE) repository consists of two main components:
   [FlatBuffer](https://google.github.io/flatbuffers/) file (`.tflite`) compatible
   with LCE runtime.
 
-Before proceeding with building LCE components, you need to setup the the LCE
+Before proceeding with building LCE components, you need to setup the LCE
 build enviroment first.
 
 ## Setup the build environment ##
@@ -39,7 +39,7 @@ mkdir lce-volume
 git clone https://github.com/larq/compute-engine.git lce-volume
 ```
 
-then map the `lce-volume` directory to `/tmp/lce-volume` directory inside
+then map the `lce-volume` directory to the `/tmp/lce-volume` directory inside
 the container:
 
 ``` bash
@@ -89,16 +89,24 @@ each of these platforms, please refer to the corresponding guide.
 
 ## Build LCE Converter ##
 
-LCE converter provides a Python PIP package.
-Build the LCE pip package with Bazel:
+The LCE converter is available on [PyPI](https://pypi.org/project/larq-compute-engine/)
+and can be installed with Python's [pip](https://pip.pypa.io/en/stable/)
+package manager:
+
+```shell
+pip install larq-compute-engine
+```
+
+You can also run the following commands,
+to build the LCE pip package yourself:
 
 ``` bash
 bazel build :build_pip_pkg
 bazel-bin/build_pip_pkg artifacts
 ```
 
-The script stores the wheel file in the `artifacts/` directory located in the LCE
-root directory. To install the PIP package:
+The script stores the wheel file in the `artifacts/` directory located in the
+LCE root directory. To install the PIP package:
 
 ``` bash
 pip install artifacts/*.whl
