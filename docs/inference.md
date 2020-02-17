@@ -2,7 +2,7 @@
 To perform an inference with Larq Compute Engine (LCE), we use the [TensorFlow Lite
 interpreter](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/g3doc/guide/inference.md).
 An LCE-compatible TensorFlow Lite interpreter drives the Larq model inference and
-uses LCE custom Ops instead of built-in TensorFlow Lite Ops for each applicable
+uses LCE custom operators instead of built-in TensorFlow Lite operators for each applicable
 subgraph of the model.
 
 This guide describes how to create a TensorFlow Lite interpreter with registered
@@ -13,7 +13,7 @@ using LCE C++ API.
 Running an inference with TensorFlow Lite consists of multiple steps,
 which are comprehensively described in the [TensorFlow Lite inference guide](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/g3doc/guide/inference.md#load-and-run-a-model-in-c).
 Below we list these steps with one additional step to register LCE customs
-Ops using the LCE C++ function `RegisterLCECustomOps()`:
+operators using the LCE C++ function `RegisterLCECustomOps()`:
 
 (1) Load `FlatBuffer` model:
 
@@ -23,7 +23,7 @@ std::unique_ptr<tflite::FlatBufferModel> model =
     tflite::FlatBufferModel::BuildFromFile(filename);
 ```
 
-(2) Build the `BuiltinOpResolver` with LCE Ops:
+(2) Build the `BuiltinOpResolver` with registered LCE operators:
 
 ```c++
 // create a builtin OpResolver
