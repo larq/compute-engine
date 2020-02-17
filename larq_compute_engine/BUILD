@@ -1,3 +1,6 @@
+load("@rules_python//python:defs.bzl", "py_library", "py_runtime", "py_test")
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
 licenses(["notice"])  # Apache 2.0
 
 package(default_visibility = ["//visibility:public"])
@@ -115,7 +118,6 @@ test_suite(
         "bsign_ops_py_test",
     ],
 )
-
 
 sh_binary(
     name = "download_compiler",
