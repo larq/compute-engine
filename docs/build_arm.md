@@ -1,50 +1,52 @@
 # Building Larq Compute Engine for ARM-based systems
-This page descibes how to build a Larq Compute Engine (LCE) inference binary
-for 32-bit, as well as 64-bit ARM-based systems. You can either build LCE
-natively on your ARM device or cross-compile it from a non-ARM machine.
-[Bazel](https://bazel.build/) is the primary build system for LCE, and it can
-be used to cross-compile a binary for ARM-based systems using a non-ARM host.
-To natively build on an ARM system itself we provide a script that uses the
+This page descibes how to build Larq Compute Engine (LCE) binaries
+for 32-bit, as well as 64-bit ARM-based systems.
+[Bazel](https://bazel.build/) is the primary build system for LCE and can
+be used to cross-compile binaries for ARM architectures directly from the host.
+To natively build on an ARM system, we provide a solution based on the
 Makefile build system.
 
-This leaves us with three ways to build LCE, which we recommend in the
-following order:
-1. To cross-compile LCE from a host machine, see the section
+This leaves us with three ways to build LCE binaries, which we recommend in
+the following order:
+1. To cross-compile LCE from a host machine, see
    [Cross-compiling LCE with Bazel](#cross-compiling-lce-with-bazel)
-2. To natively compile LCE, see the section
+2. To natively compile LCE, see
    [Building LCE with Make](#building-lce-with-make).
 3. To cross-compile LCE using the Make system for users that do not wish to
-   install Bazel, see the section
+   install Bazel, see
    [Cross-compiling LCE with Make](#cross-compiling-lce-with-make).
 
-In this guide, we use the [LCE benchmark tool](../larq_compute_engine/tflite/benchmark)
-source to build an inference binary. See [here](./inference.md) to find out how
-you can create your own custom LCE inference application.
+This guide will show you how to build the [LCE example program](../examples/lce_minimal.cc).
+See [here](./inference.md) to find out how you can create your own LCE
+inference binary.
 
-Although the Raspberry Pi 3 and Raspberry Pi 4 have 64-bit CPUs, note that the
-popular distribution Raspbian for the Raspberry Pi is a 32-bit OS. In order to
-use the optimized 64-bit kernels of LCE on a Raspberry Pi, a 64-bit OS such as
-[Manjaro](https://manjaro.org/download/#raspberry-pi-4-xfce) should be used.
+NOTE: Although the Raspberry Pi 3 and Raspberry Pi 4 have 64-bit CPUs, the
+officially supported OS Raspbian for the Raspberry Pi is a 32-bit OS. In order
+to use the optimized 64-bit kernels of LCE on a Raspberry Pi, a 64-bit OS such
+as [Manjaro](https://manjaro.org/download/#raspberry-pi-4-xfce) should be used.
 
 ## Cross-compiling LCE with Bazel
 
-First configure Bazel using the instructions [here](build.md). Make sure you
-have run the `./configure.sh` script as instructed.
+First configure Bazel using the instructions [here](build.md#configure-bazelrc).
 
-To cross-compile an LCE inference binary for ARM architectures, the bazel
+To cross-compile the LCE example for ARM architectures, the bazel
 target needs to be built with the `--config=rpi3` (32-bit ARM) or
-`--config=aarch64` (64-bit ARM) flag. For example, to build the LCE benchmark
-tool, run the following command from the LCE root directory:
-
+`--config=aarch64` (64-bit ARM) flag. For example, to build the example
+for 64-bit ARM systems, run the following command from the LCE root
+directory:
 ```bash
 bazel build \
     --config=aarch64 \
-    //larq_compute_engine/tflite/benchmark:lce_benchmark_model
+    //examples:lce_minimal
  ```
 
-The resulting binary will be stored at
+To build the LCE benchmark tool, build the bazel target
+`//larq_compute_engine/tflite/benchmark:lce_benchmark_model`
+
+The resulting binaries will be stored at
+`bazel-bin/examples/lce_minimal` and
 `bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model`. You can
-copy this file to your ARM machine and run it there.
+copy these to your ARM machine and run them there.
 
 ## Building LCE with Make
 To build LCE with Make, first make sure the tensorflow submodule is loaded
@@ -76,9 +78,9 @@ The resulting compiled files will be stored in
 `third_party/tensorflow/tensorflow/lite/tools/make/gen/<TARGET>` where,
 depending on your target platform, `<TARGET>` can be `linux_x86_64`,
 `rpi_armv7l`, or `aarch64_armv8-a`. In the `bin` folder, you can find the
-benchmark program `benchmark_model`. In the `lib` folder, you can find the
-TensorFlow Lite static library `libtensorflow-lite.a` which includes the LCE
-customs ops.
+example program `lce_minimal` and benchmark program `benchmark_model`.
+In the `lib` folder, you can find the TensorFlow Lite static library
+`libtensorflow-lite.a` which includes the LCE customs ops.
 
 ## Cross-compiling LCE with Make
 First make sure the tensorflow submodule is loaded (this only has to be done
