@@ -1,36 +1,33 @@
 # Building Larq Compute Engine for ARM-based systems
-This page descibes how to build Larq Compute Engine (LCE) applications
-for 32-bit, as well as 64-bit ARM-based systems. You can either build LCE
-natively on your ARM device or cross-compile it from a non-ARM machine.
-[Bazel](https://bazel.build/) is the primary build system for LCE, and it can
-be used to cross-compile a binary for ARM-based systems using a non-ARM host.
-To natively build on an ARM system itself we provide a script that uses the
+This page descibes how to build Larq Compute Engine (LCE) binaries
+for 32-bit, as well as 64-bit ARM-based systems.
+[Bazel](https://bazel.build/) is the primary build system for LCE and can
+be used to cross-compile binaries for ARM architectures directly from the host.
+To natively build on an ARM system, we provide a solution based on the
 Makefile build system.
 
-This leaves us with three ways to build LCE applications, which we recommend in
+This leaves us with three ways to build LCE binaries, which we recommend in
 the following order:
-1. To cross-compile LCE from a host machine, see the section
+1. To cross-compile LCE from a host machine, see
    [Cross-compiling LCE with Bazel](#cross-compiling-lce-with-bazel)
-2. To natively compile LCE, see the section
+2. To natively compile LCE, see
    [Building LCE with Make](#building-lce-with-make).
 3. To cross-compile LCE using the Make system for users that do not wish to
-   install Bazel, see the section
+   install Bazel, see
    [Cross-compiling LCE with Make](#cross-compiling-lce-with-make).
 
-This guide will show you how to build the [LCE example application](../examples/lce_minimal.cc)
-and the [LCE benchmark tool](../larq_compute_engine/tflite/benchmark).
+This guide will show you how to build the [LCE example application](../examples/lce_minimal.cc).
 See [here](./inference.md) to find out how you can create your own LCE
 inference application.
 
-Although the Raspberry Pi 3 and Raspberry Pi 4 have 64-bit CPUs, note that the
-popular distribution Raspbian for the Raspberry Pi is a 32-bit OS. In order to
-use the optimized 64-bit kernels of LCE on a Raspberry Pi, a 64-bit OS such as
-[Manjaro](https://manjaro.org/download/#raspberry-pi-4-xfce) should be used.
+NOTE: Although the Raspberry Pi 3 and Raspberry Pi 4 have 64-bit CPUs, the
+officially supported OS Raspbian for the Raspberry Pi is a 32-bit OS. In order
+to use the optimized 64-bit kernels of LCE on a Raspberry Pi, a 64-bit OS such
+as [Manjaro](https://manjaro.org/download/#raspberry-pi-4-xfce) should be used.
 
 ## Cross-compiling LCE with Bazel
 
-First configure Bazel using the instructions [here](build.md). Make sure you
-have run the `./configure.sh` script as instructed.
+First configure Bazel using the instructions [here](build.md#configure-bazelrc).
 
 To cross-compile the LCE example application for ARM architectures, the bazel
 target needs to be built with the `--config=rpi3` (32-bit ARM) or
