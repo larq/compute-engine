@@ -65,7 +65,7 @@ sudo wget -O /usr/local/bin/bazel \
 sudo chmod +x /usr/local/bin/bazel
 ```
 
-On macOS, Bazelisk can be installed via [Homebrew](https://brew.sh/)
+On macOS, Bazelisk can be installed via the [Homebrew](https://brew.sh/)
 package manager:
 
 ```
