@@ -49,7 +49,7 @@ The resulting binaries will be stored at
 copy these to your ARM machine and run them there.
 
 ## Building LCE with Make
-To build LCE with Make, first make sure the tensorflow submodule is loaded
+To build LCE with Make, first clone the Larq Compute Engine repo and make sure the tensorflow submodule is loaded
 (this only has to be done once):
 ``` bash
 git submodule update --init
@@ -59,10 +59,16 @@ To simplify the build process for various supported targets, we provide the
 argument.
 
 To natively build the LCE library and C++ example programs, first you need to
-install the compiler toolchain on your target device. For example, on a
+install the compiler toolchain on your target device. On Debian based systems like a
 Raspberry Pi board with Raspbian, run the following command:
 ```
 sudo apt-get install build-essential
+```
+
+On an Arch based system like a Raspberry Pi board with Manjaro operating system, run the following command instead:
+
+```
+sudo pacman -S base-devel
 ```
 
 You should then be able to natively compile LCE by running the following from
@@ -83,7 +89,7 @@ In the `lib` folder, you can find the TensorFlow Lite static library
 `libtensorflow-lite.a` which includes the LCE customs ops.
 
 ## Cross-compiling LCE with Make
-First make sure the tensorflow submodule is loaded (this only has to be done
+First clone the Larq Compute Engine repo and make sure the tensorflow submodule is loaded (this only has to be done
 once):
 ``` bash
 git submodule update --init
@@ -95,7 +101,14 @@ For Debian based systems, run the following commands:
 sudo apt-get update
 sudo apt-get install crossbuild-essential-armhf
 ```
-On non-Debian based systems, the package could be called `arm-linux-gnueabihf`.
+
+On an Arch based systems, the package is called `arm-linux-gnueabihf`:
+
+``` bash
+sudo pacman -Syy
+sudo pacman -S arm-linux-gnueabihf
+```
+
 
 To build for 32-bit ARM architectures, run the following command from the LCE
 root directory:
