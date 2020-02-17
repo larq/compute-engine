@@ -32,6 +32,13 @@ filegroup(
     ],
 )
 
+filegroup(
+    name = "aarch64_linux_all_files",
+    srcs = [
+        "@aarch64_compiler//:compiler_pieces",
+    ],
+)
+
 cc_toolchain_config(
     name = "local_config",
     cpu = "local",
@@ -75,13 +82,13 @@ cc_toolchain_config(
 
 cc_toolchain(
     name = "cc-compiler-aarch64",
-    all_files = ":arm_linux_all_files",
-    compiler_files = ":arm_linux_all_files",
+    all_files = ":aarch64_linux_all_files",
+    compiler_files = ":aarch64_linux_all_files",
     dwp_files = ":empty",
-    linker_files = ":arm_linux_all_files",
-    objcopy_files = "arm_linux_all_files",
-    strip_files = "arm_linux_all_files",
+    linker_files = ":aarch64_linux_all_files",
+    objcopy_files = "aarch64_linux_all_files",
+    strip_files = "aarch64_linux_all_files",
     supports_param_files = 1,
     toolchain_config = ":aarch64_config",
-    toolchain_identifier = "arm-linux-gnueabihf",
+    toolchain_identifier = "aarch64-linux-gnu",
 )
