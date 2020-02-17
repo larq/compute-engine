@@ -39,8 +39,8 @@ mkdir lce-volume
 git clone https://github.com/larq/compute-engine.git lce-volume
 ```
 
-then map the `lce-volume` directory to the `/tmp/lce-volume` directory inside
-the container:
+To start the container and map the `lce-volume` directory to the `/tmp/lce-volume`
+directory inside the container:
 
 ``` bash
 docker run -it -v $PWD/lce-volume:/tmp/lce-volume \
@@ -64,14 +64,6 @@ sudo wget -O /usr/local/bin/bazel \
     https://github.com/bazelbuild/bazelisk/releases/download/v1.2.1/bazelisk-linux-amd64
 sudo chmod +x /usr/local/bin/bazel
 ```
-
-On macOS, Bazelisk can be installed via the [Homebrew](https://brew.sh/)
-package manager:
-
-```
-brew install bazelbuild/tap/bazelisk
-```
-
 ### 3. Configure Bazel ###
 
 Run the ```./configure.sh``` script in the LCE root directory and answer

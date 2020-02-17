@@ -48,7 +48,7 @@ build --action_env ANDROID_SDK_HOME="/usr/local/android/android-sdk-linux"
 To build an LCE inference binary for Android (see [here](./inference.md) for creating your
 own LCE binary) the Bazel target needs to build with ```--config=android_arm64``` flag.
 
-To build the [minimal example](../examples/lce_minimal) for Android,
+To build the [minimal example](../examples/lce_minimal.cc) for Android,
 run the following command from the LCE root directory:
 ```bash
 bazel build -c opt \
@@ -56,7 +56,7 @@ bazel build -c opt \
     //examples:lce_minimal
 ```
 
-Too build the [LCE benchmark tool](../larq_compute_engine/tflite/benchmark/) 
+To build the [LCE benchmark tool](../larq_compute_engine/tflite/benchmark/)
 for Android, simply build the bazel target
 `//larq_compute_engine/tflite/benchmark:lce_benchmark_model`.
 
@@ -67,7 +67,7 @@ See below on how to copy them to your android device.
 
 #### Run inference
 To run the inference with a [Larq converted model](./lce_converter.md) on an android phone,
-please follow the following steps (replace the `lce_benchmark_model` with your
+please follow these steps on your host machine (replace the `lce_benchmark_model` with your
 desired inference binary):
 
 (1) Install the [Android Debug Bridge (adb)](https://developer.android.com/studio/command-line/adb) on your host machine.
@@ -82,7 +82,10 @@ desired inference binary):
 adb devices
 ```
 
-(4) Copy the inference binary from the Docker container to your host machine:
+(4) Since Bazel stores the build artifacts outside the `lce-volume` directory,
+    You need to run the following command inside the container to copy the inference
+    binary from the bazel output direcotry to the `lce-volume` directory in order to be able to access it on the host
+    machine:
 ```bash
 cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model <volume-dir>
 ```
