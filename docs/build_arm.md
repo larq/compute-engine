@@ -37,6 +37,9 @@ directory:
 ```bash
 bazel build \
     --config=aarch64 \
+    //larq_compute_engine:download_compiler
+bazel build \
+    --config=aarch64 \
     //examples:lce_minimal
  ```
 
