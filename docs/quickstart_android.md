@@ -1,4 +1,4 @@
-# Larq Compute Engine: Android Quickstart
+# Larq Compute Engine Android Quickstart
 
 To build Larq Compute Engine (LCE) for Android,
 you must have the [Android NDK](https://developer.android.com/ndk) and

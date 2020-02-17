@@ -1,4 +1,4 @@
-# LCE Converter
+# Larq Compute Engine Converter
 
 The LCE converter allows you to convert a Keras model built with `larq` to an LCE-compatible TensorFlow Lite FlatBuffer format for inference.
 

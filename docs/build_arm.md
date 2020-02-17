@@ -1,4 +1,4 @@
-# Building Larq Compute Engine for ARM-based systems
+# Build Larq Compute Engine for ARM
 This page descibes how to build Larq Compute Engine (LCE) binaries
 for 32-bit, as well as 64-bit ARM-based systems.
 [Bazel](https://bazel.build/) is the primary build system for LCE and can
