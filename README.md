@@ -94,7 +94,7 @@ Follow these steps to deploy a BNN with LCE:
    Please follow the provided instructions to create a native LCE build
    or cross-compile for one of the supported targets.
 
-1) **Run inference**
+1. **Run inference**
 
    LCE uses the [TensorFlow Lite Interpreter](https://www.tensorflow.org/lite/guide/inference)
    to perform an inference. In addition to the already available built-in
