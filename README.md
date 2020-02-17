@@ -106,8 +106,8 @@ Follow these steps to deploy a BNN with LCE:
 ## Next steps
 
 - Explore [Larq pre-trained models](https://docs.larq.dev/larq/api/larq_zoo).
-- Learn how to [build](https://larq.dev/larq/guides/bnn-architecture/) and
-  [train](https://larq.dev/larq/guides/bnn-optimization/) BNNs for your own
+- Learn how to [build](https://docs.larq.dev/larq/guides/bnn-architecture/) and
+  [train](https://docs.larq.dev/larq/guides/bnn-optimization/) BNNs for your own
   application with Larq.
 - If you're a mobile developer, visit [Android quickstart](https://docs.larq.dev/compute-engine/quickstart_android).
 - See our build instructions for Raspberry Pi and Arm64-based boards [here](https://docs.larq.dev/compute-engine/build_arm).
