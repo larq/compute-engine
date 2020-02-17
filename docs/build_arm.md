@@ -65,7 +65,7 @@ Raspberry Pi board with Raspbian, run the following command:
 sudo apt-get install build-essential
 ```
 
-Or on an Arch based system like a Raspberry Pi board with Manjaro, run the following command instead:
+On an Arch based system like a Raspberry Pi board with Manjaro operating system, run the following command instead:
 
 ```
 sudo pacman -S base-devel
@@ -102,7 +102,7 @@ sudo apt-get update
 sudo apt-get install crossbuild-essential-armhf
 ```
 
-For Arch based systems, the package is called `arm-linux-gnueabihf`. Run the following commands:
+On an Arch based systems, the package is called `arm-linux-gnueabihf`:
 
 ``` bash
 sudo pacman -Syy
