@@ -7,7 +7,7 @@ extremely quantized neural networks, such as
 Binarized Neural Networks (BNNs). It currently supports various mobile platforms
 and has been benchmarked on a Pixel 1 phone and a Raspberry Pi.
 LCE provides a collection of hand-optimized [TensorFlow Lite](https://www.tensorflow.org/lite)
-custom Ops for supported instruction sets, developed in inline assembly or in C++ 
+custom operators for supported instruction sets, developed in inline assembly or in C++ 
 using compiler intrinsics. LCE leverages optimization techniques
 such as **tiling** to maximize the number of cache hits, **vectorization** to maximize 
 the computational throughput, and **multi-threading parallelization** to take
@@ -41,8 +41,8 @@ advantage of multi-core modern desktop and mobile CPUs.
 ## Performance
 The table below presents **single-threaded** performance of Larq Compute Engine on
 different versions of a novel BNN model called Quicknet (soon to be released in [Larq Zoo](https://larq.dev/models/))
-on the [Pixel 1 phone (2016)](https://support.google.com/pixelphone/answer/7158570?hl=en-GB)
-and Raspberry Pi 4 B ([BCM2711](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2711/README.md)) board:
+on a [Pixel 1 phone (2016)](https://support.google.com/pixelphone/answer/7158570?hl=en-GB)
+and a Raspberry Pi 4 Model B ([BCM2711](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2711/README.md)) board:
 
 | Model          | Accuracy  | RPi 4 B, ms (1 thread) | Pixel 1, ms (1 thread) |
 | -------------- | :-------: | :----------:           | :-----------:          |
@@ -54,7 +54,8 @@ while LCE achieves an inference time of 54.0 ms for Bi-RealNet on the same devic
 They furthermore present a modified version, BiRealNet-Stem, which achieves the same accuracy of 56.4% in 43.2 ms.
 
 The following table presents **multi-threaded** performance of Larq Compute Engine on
-a Pixel 1 phone and a Raspberry Pi 4 board:
+a Pixel 1 phone and a Raspberry Pi 4 Model B ([BCM2711](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2711/README.md)) 
+board:
 
 | Model          | Accuracy  | RPi 4 B, ms (4 threads) | Pixel 1, ms (4 threads) |
 | -------------- | :-------: | :----------:            | :-----------:           |
@@ -95,7 +96,7 @@ Follow these steps to deploy a BNN with LCE:
 
     LCE uses the [TensorFlow Lite Interpreter](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/g3doc/guide/inference.md) 
     to perform an inference. In addition to the already available built-in
-    TensorFlow Lite Ops, optimized LCE Ops are registered to the interpreter
+    TensorFlow Lite operators, optimized LCE operators are registered to the interpreter
     to execute the Larq specific subgraphs of the model. An example to create
     and build LCE compatible TensorFlow Lite interpreter in user's applications
     is provided [here](./docs/inference.md).
