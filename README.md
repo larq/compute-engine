@@ -44,7 +44,7 @@ different versions of a novel BNN model called Quicknet (trained on ImageNet dat
 on a [Pixel 1 phone (2016)](https://support.google.com/pixelphone/answer/7158570?hl=en-GB)
 and a Raspberry Pi 4 Model B ([BCM2711](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2711/README.md)) board:
 
-| Model          | Top 1 Accuracy | RPi 4 B, ms (1 thread) | Pixel 1, ms (1 thread) |
+| Model          | Top-1 Accuracy | RPi 4 B, ms (1 thread) | Pixel 1, ms (1 thread) |
 | -------------- | :-------:      | :----------:           | :-----------:          |
 | Quicknet       | 58.3 %         | 60.5                   | 27.9                   |
 | Quicknet-Large | 62.5 %         | 89.9                   | 41.8                   |
@@ -57,7 +57,7 @@ The following table presents **multi-threaded** performance of Larq Compute Engi
 a Pixel 1 phone and a Raspberry Pi 4 Model B ([BCM2711](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2711/README.md)) 
 board:
 
-| Model          | Top 1 Accuracy | RPi 4 B, ms (4 threads) | Pixel 1, ms (4 threads) |
+| Model          | Top-1 Accuracy | RPi 4 B, ms (4 threads) | Pixel 1, ms (4 threads) |
 | -------------- | :-------:      | :----------:            | :-----------:           |
 | Quicknet       | 58.3 %         | 37.9                    | 19.1                    |
 | Quicknet-Large | 62.5 %         | 55.8                    | 28.0                    |
