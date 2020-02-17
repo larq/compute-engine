@@ -1,6 +1,6 @@
 # Larq Compute Engine: Android Quickstart
 
-To build Larq Compute Engine (LCE) applications for Android,
+To build Larq Compute Engine (LCE) for Android,
 you must have the [Android NDK](https://developer.android.com/ndk) and
 [SDK](https://developer.android.com/studio) installed on your system.
 Below we explain how to install the Android prerequisites in the LCE
@@ -44,9 +44,9 @@ build --action_env ANDROID_SDK_API_LEVEL="23"
 build --action_env ANDROID_SDK_HOME="/usr/local/android/android-sdk-linux"
 ```
 
-#### Build LCE inference binary
-To build an LCE application for Android (see [here](./inference.md) for creating your
-own LCE application) the Bazel target needs to build with ```--config=android_arm64``` flag.
+#### Build an LCE inference binary
+To build an LCE inference binary for Android (see [here](./inference.md) for creating your
+own LCE binary) the Bazel target needs to build with ```--config=android_arm64``` flag.
 
 To build the [minimal example](../examples/lce_minimal) for Android,
 run the following command from the LCE root directory:
