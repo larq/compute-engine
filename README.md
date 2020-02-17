@@ -24,7 +24,7 @@ advantage of multi-core modern desktop and mobile CPUs.
     is available in [Larq Zoo](https://docs.larq.dev/zoo/)
     and can be used out-of-the-box with LCE.
 
-  - LCE provides a custom [MLIR-based model converter](https://docs.larq.dev/compute-engine/converter.md) which
+  - LCE provides a custom [MLIR-based model converter](https://docs.larq.dev/compute-engine/converter) which
     is fully compatible with TensorFlow Lite and performs additional
     network level optimizations for Larq models.
 
