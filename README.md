@@ -51,7 +51,7 @@ and a Raspberry Pi 4 Model B ([BCM2711](https://www.raspberrypi.org/documentatio
 | Quicknet ([.h5](https://github.com/larq/zoo/releases/download/Quicknet/quicknet.h5))             |     58.3 %     |          60.5          |          27.9          |
 | Quicknet-Large ([.h5](https://github.com/larq/zoo/releases/download/Quicknet/quicknet_large.h5)) |     62.5 %     |          89.9          |          41.8          |
 
-For reference, [dabnn](https://github.com/JDAI-CV/dabnn) (the other main BNN library) reports an inference time of 61.3 ms for [Bi-RealNet](https://larq.dev/api/larq_zoo/#birealnet) (56.4% accuracy) on the Pixel 1 phone,
+For reference, [dabnn](https://github.com/JDAI-CV/dabnn) (the other main BNN library) reports an inference time of 61.3 ms for [Bi-RealNet](https://docs.larq.dev/larq/api/larq_zoo/#birealnet) (56.4% accuracy) on the Pixel 1 phone,
 while LCE achieves an inference time of 54.0 ms for Bi-RealNet on the same device.
 They furthermore present a modified version, BiRealNet-Stem, which achieves the same accuracy of 56.4% in 43.2 ms.
 
@@ -105,9 +105,9 @@ Follow these steps to deploy a BNN with LCE:
 
 ## Next steps
 
-- Explore [Larq pre-trained models](https://larq.dev/models/).
-- Learn how to [build](https://larq.dev/guides/bnn-architecture/) and
-  [train](https://larq.dev/guides/bnn-optimization/) BNNs for your own
+- Explore [Larq pre-trained models](https://docs.larq.dev/larq/api/larq_zoo).
+- Learn how to [build](https://larq.dev/larq/guides/bnn-architecture/) and
+  [train](https://larq.dev/larq/guides/bnn-optimization/) BNNs for your own
   application with Larq.
 - If you're a mobile developer, visit [Android quickstart](https://docs.larq.dev/compute-engine/quickstart_android).
 - See our build instructions for Raspberry Pi and Arm64-based boards [here](https://docs.larq.dev/compute-engine/build_arm).
