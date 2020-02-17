@@ -49,7 +49,7 @@ The resulting binaries will be stored at
 copy these to your ARM machine and run them there.
 
 ## Building LCE with Make
-To build LCE with Make, first make sure the tensorflow submodule is loaded
+To build LCE with Make, first clone the Larq Compute Engine repo and make sure the tensorflow submodule is loaded
 (this only has to be done once):
 ``` bash
 git submodule update --init
@@ -63,6 +63,12 @@ install the compiler toolchain on your target device. For example, on a
 Raspberry Pi board with Raspbian, run the following command:
 ```
 sudo apt-get install build-essential
+```
+
+Or on a Raspberry Pi board with Manjaro, run the following command:
+
+```
+sudo pacman -S base-devel
 ```
 
 You should then be able to natively compile LCE by running the following from
