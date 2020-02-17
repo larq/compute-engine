@@ -37,7 +37,7 @@ directory:
 ```bash
 bazel build \
     --config=aarch64 \
-    //third_party/toolchains/cpus/arm:download_compiler
+    //larq_compute_engine:download_compiler
 bazel build \
     --config=aarch64 \
     //examples:lce_minimal

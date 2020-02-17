@@ -85,13 +85,3 @@ cc_toolchain(
     toolchain_config = ":aarch64_config",
     toolchain_identifier = "arm-linux-gnueabihf",
 )
-
-sh_binary(
-    name = "download_compiler",
-    srcs = ["download_compiler_placeholder.sh"],
-    data = select({
-        ":arm32_build": ["@arm_compiler//:compiler_pieces"],
-        ":aarch64_build": ["@aarch64_compiler//:compiler_pieces"],
-        "//conditions:default": [],
-    }),
-)
