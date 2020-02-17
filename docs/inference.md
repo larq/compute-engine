@@ -7,7 +7,7 @@ uses LCE custom operators instead of built-in TensorFlow Lite operators for each
 subgraph of the model.
 
 This guide describes how to create a TensorFlow Lite interpreter with registered
-LCE custom Ops and perform an inference with a [converted Larq model](/compute-engine/converter)
+LCE custom Ops and perform an inference with a [converted Larq model](https://docs.larq.dev/compute-engine/converter)
 using LCE C++ API.
 
 ## Load and run a model in C++

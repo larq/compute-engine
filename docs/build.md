@@ -75,7 +75,7 @@ in the LCE root directory.
 ## Build LCE Runtime
 
 LCE runtime has a diverse platform support, covering
-[Android](/compute-engine/quickstart_android) and [ARM-based boards](/compute-engine/build_arm)
+[Android](https://docs.larq.dev/compute-engine/quickstart_android) and [ARM-based boards](https://docs.larq.dev/compute-engine/build_arm)
 such as Raspberry Pi. To build/install/run LCE runtime on
 each of these platforms, please refer to the corresponding guide.
 

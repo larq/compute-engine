@@ -19,7 +19,7 @@ the following order:
    [Cross-compiling LCE with Make](#cross-compiling-lce-with-make).
 
 This guide will show you how to build the [LCE example program](https://github.com/larq/compute-engine/blob/master/examples/lce_minimal.cc).
-See [here](/compute-engine/inference) to find out how you can create your own LCE
+See [here](https://docs.larq.dev/compute-engine/inference) to find out how you can create your own LCE
 inference binary.
 
 NOTE: Although the Raspberry Pi 3 and Raspberry Pi 4 have 64-bit CPUs, the
@@ -29,7 +29,7 @@ as [Manjaro](https://manjaro.org/download/#raspberry-pi-4-xfce) should be used.
 
 ## Cross-compiling LCE with Bazel
 
-First configure Bazel using the instructions [here](/compute-engine/build#configure-bazelrc).
+First configure Bazel using the instructions [here](https://docs.larq.dev/compute-engine/build#configure-bazelrc).
 
 To cross-compile the LCE example for ARM architectures, the bazel
 target needs to be built with the `--config=rpi3` (32-bit ARM) or

@@ -6,11 +6,11 @@ you must have the [Android NDK](https://developer.android.com/ndk) and
 Below we explain how to install the Android prerequisites in the LCE
 Docker container and how to configure the LCE Bazel build settings
 accordingly. Before proceeding with the next steps, please follow
-the instructions in the main [LCE build guide](/compute-engine/build) to setup the
+the instructions in the main [LCE build guide](https://docs.larq.dev/compute-engine/build) to setup the
 Docker container for LCE and the Bazel build system.
 
 NOTE: we recommend using the docker volume as described in the
-[LCE build guide](/compute-engine/build) to be able to easily transfer
+[LCE build guide](https://docs.larq.dev/compute-engine/build) to be able to easily transfer
 files in-between the container and host machine.
 
 #### Install prerequisites
@@ -47,7 +47,7 @@ build --action_env ANDROID_SDK_HOME="/usr/local/android/android-sdk-linux"
 
 #### Build an LCE inference binary
 
-To build an LCE inference binary for Android (see [here](/compute-engine/inference) for creating your
+To build an LCE inference binary for Android (see [here](https://docs.larq.dev/compute-engine/inference) for creating your
 own LCE binary) the Bazel target needs to build with `--config=android_arm64` flag.
 
 To build the [minimal example](https://github.com/larq/compute-engine/blob/master/examples/lce_minimal.cc) for Android,
@@ -70,7 +70,7 @@ See below on how to copy them to your android device.
 
 #### Run inference
 
-To run the inference with a [Larq converted model](/compute-engine/converter) on an android phone,
+To run the inference with a [Larq converted model](https://docs.larq.dev/compute-engine/converter) on an android phone,
 please follow these steps on your host machine (replace the `lce_benchmark_model` with your
 desired inference binary):
 
