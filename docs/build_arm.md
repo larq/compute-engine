@@ -16,9 +16,9 @@ the following order:
    install Bazel, see
    [Cross-compiling LCE with Make](#cross-compiling-lce-with-make).
 
-This guide will show you how to build the [LCE example application](../examples/lce_minimal.cc).
+This guide will show you how to build the [LCE example program](../examples/lce_minimal.cc).
 See [here](./inference.md) to find out how you can create your own LCE
-inference application.
+inference binary.
 
 NOTE: Although the Raspberry Pi 3 and Raspberry Pi 4 have 64-bit CPUs, the
 officially supported OS Raspbian for the Raspberry Pi is a 32-bit OS. In order
@@ -29,10 +29,10 @@ as [Manjaro](https://manjaro.org/download/#raspberry-pi-4-xfce) should be used.
 
 First configure Bazel using the instructions [here](build.md#configure-bazelrc).
 
-To cross-compile the LCE example application for ARM architectures, the bazel
+To cross-compile the LCE example for ARM architectures, the bazel
 target needs to be built with the `--config=rpi3` (32-bit ARM) or
 `--config=aarch64` (64-bit ARM) flag. For example, to build the example
-application for 64-bit ARM systems, run the following command from the LCE root
+for 64-bit ARM systems, run the following command from the LCE root
 directory:
 ```bash
 bazel build \
