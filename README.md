@@ -96,7 +96,7 @@ Follow these steps to deploy a BNN with LCE:
 
 1) **Run inference**
 
-   LCE uses the [TensorFlow Lite Interpreter](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/g3doc/guide/inference.md)
+   LCE uses the [TensorFlow Lite Interpreter](https://www.tensorflow.org/lite/guide/inference)
    to perform an inference. In addition to the already available built-in
    TensorFlow Lite operators, optimized LCE operators are registered to the interpreter
    to execute the Larq specific subgraphs of the model. An example to create
