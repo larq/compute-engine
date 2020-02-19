@@ -50,9 +50,8 @@ static bool IsConst(Operation* op) {
          isa<QConstOp>(op);
 }
 
-bool IsBinaryFilter(Value filter) {
-  return true;
-  auto op = filter.getDefiningOp();
+bool IsBinaryFilter(Value* filter) {
+  auto op = filter->getDefiningOp();
   if (!IsConst(op)) return false;
 
   auto tensor_attr = op->getAttr("value").cast<DenseElementsAttr>();
