@@ -11,7 +11,7 @@ Docker container for LCE and the Bazel build system.
 
 NOTE: we recommend using the docker volume as described in the
 [LCE build guide](https://docs.larq.dev/compute-engine/build) to be able to easily transfer
-files in-between the container and host machine.
+files in-between the container and the host machine.
 
 #### Install prerequisites
 
@@ -25,7 +25,7 @@ root directory:
 ```
 
 After executing the bash script, please accept the Android SDK licence agreement.
-The script will download and unpack the android NDK and SKD under the directory
+The script will download and unpack the Android NDK and SKD under the directory
 `/tmp/lce_android` in the LCE docker container.
 
 #### Custom android version
@@ -64,20 +64,31 @@ for Android, simply build the bazel target
 `//larq_compute_engine/tflite/benchmark:lce_benchmark_model`.
 
 The resulting binaries will be stored at
-`bazel-bin/examples/lce_minimal` and
-`bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model`.
-See below on how to copy them to your android device.
+`bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model`
+and `bazel-bin/examples/lce_minimal`.
+The `bazel-bin` directory inside the `lce-volume` is a soft link to
+the build artifacts directory outside the `lce-volume`.
+As a result, in order to be able to access the inference binaries on the host machine,
+you need to manually copy them from the `bazel-bin` to the `lce-volume` directory. 
+To do so, run the following command from the LCE root directory:
+
+```bash
+cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model .
+```
+
+In the next section, we describe how to transfer and execute the inference binaries
+on your Android device.
 
 #### Run inference
 
-To run the inference with a [Larq converted model](https://docs.larq.dev/compute-engine/converter) on an android phone,
+To run the inference with a [Larq converted model](https://docs.larq.dev/compute-engine/converter) on an Android phone,
 please follow these steps on your host machine (replace the `lce_benchmark_model` with your
 desired inference binary):
 
 (1) Install the [Android Debug Bridge (adb)](https://developer.android.com/studio/command-line/adb) on your host machine.
 
 (2) Follow the instructions [here](https://developer.android.com/studio/debug/dev-options#enable)
-to enable `USB debugging` on your android phone.
+to enable `USB debugging` on your Android phone.
 
 (3) Connect your phone and run the following command to confirm that your host
 computer is connected to the phone:
@@ -86,34 +97,25 @@ computer is connected to the phone:
 adb devices
 ```
 
-(4) Since Bazel stores the build artifacts outside the `lce-volume` directory,
-You need to run the following command inside the container to copy the inference
-binary from the bazel output direcotry to the `lce-volume` directory in order to be able to access it on the host
-machine:
-
-```bash
-cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model <volume-dir>
-```
-
-(5) Transfer the LCE inference binary to your phone:
+(4) Transfer the LCE inference binary to your phone:
 
 ```bash
 adb push lce_benchmark_model  /data/local/tmp
 ```
 
-(6) Make the binary executable:
+(5) Make the binary executable:
 
 ```shell
 adb shell chmod +x /data/local/tmp/lce_benchmark_model
 ```
 
-(7) Transfer the converted `.tflite` model file to your phone:
+(6) Transfer the converted `.tflite` model file to your phone:
 
 ```shell
 adb push binarynet.tflite /data/local/tmp
 ```
 
-(8) Run the inference:
+(7) Run the inference:
 
 ```shell
 adb shell /data/local/tmp/lce_benchmark_model \
