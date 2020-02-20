@@ -155,9 +155,8 @@ build --action_env ANDROID_SDK_HOME="/tmp/lce_android"
 EOM
 
 if is_windows; then
-  # Tensorflow uses M_* math constants that only get defined by MSVC headers if
-  # _USE_MATH_DEFINES is defined.
-  write_to_bazelrc "build --copt=/D_USE_MATH_DEFINES"
+  # Fix winsock2.h conflicts
+  write_to_bazelrc "build --copt=-DWIN32_LEAN_AND_MEAN --host_copt=-DWIN32_LEAN_AND_MEAN --copt=-DNOGDI --host_copt=-DNOGDI --copt=-D_USE_MATH_DEFINES"
 else
   write_to_bazelrc "build --config=noaws --config=nogcp --config=nohdfs --config=nonccl"
 fi
