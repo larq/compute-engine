@@ -10,7 +10,7 @@ jobs:
       image: tensorflow/tensorflow:custom-op-ubuntu16
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v1
         with:
           submodules: true
       - name: Install Bazelisk
