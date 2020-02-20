@@ -32,15 +32,8 @@ function abspath() {
 }
 
 function main() {
-  while [[ ! -z "${1}" ]]; do
-    if [[ ${1} == "make" ]]; then
-      echo "Using Makefile to build pip package."
-      PIP_FILE_PREFIX=""
-    else
-      DEST=${1}
-    fi
-    shift
-  done
+  DEST=${1}
+  BUILD_FLAG=${@:2}
 
   if [[ -z ${DEST} ]]; then
     echo "No destination dir provided"
@@ -72,7 +65,7 @@ function main() {
   strip -x ${TMPDIR}/larq_compute_engine/mlir/*.so
 
   echo $(date) : "=== Building wheel"
-  python setup.py bdist_wheel > /dev/null
+  python setup.py bdist_wheel ${BUILD_FLAG} > /dev/null
 
   cp dist/*.whl "${DEST}"
   popd
