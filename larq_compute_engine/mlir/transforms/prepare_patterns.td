@@ -25,7 +25,7 @@ class I32VectorElementsAttr<int len> : ElementsAttrBase<
 
 def GetBias : NativeCodeCall<"GetBias(*$0)">;
 def GetMultiplier : NativeCodeCall<"GetMultiplier(*$0)">;
-def BinaryFilter : Constraint<CPred<"IsBinaryFilter(*$0)">>;
+def BinaryFilter : Constraint<CPred<"IsBinaryFilter($0)">>;
 
 def : Pat<(TF_Conv2DOp (TF_LqceBsignOp $input), $filter, $strides, $use_cudnn,
                        $padding, $explicit_padding, $data_format, $dilations),
