@@ -123,7 +123,7 @@ build:nogcp --define=no_gcp_support=true
 build:nohdfs --define=no_hdfs_support=true
 build:nonccl --define=no_nccl_support=true
 
-build --config=v2 --config=noaws --config=nogcp --config=nohdfs --config=nonccl
+build --config=v2
 
 # Android configs. Bazel needs to have --cpu and --fat_apk_cpu both set to the
 # target CPU to build transient dependencies correctly. See
@@ -153,3 +153,11 @@ build --action_env ANDROID_SDK_API_LEVEL="28"
 build --action_env ANDROID_SDK_HOME="/tmp/lce_android"
 
 EOM
+
+if is_windows; then
+  # Tensorflow uses M_* math constants that only get defined by MSVC headers if
+  # _USE_MATH_DEFINES is defined.
+  write_to_bazelrc "build --copt=/D_USE_MATH_DEFINES"
+else
+  write_to_bazelrc "build --config=noaws --config=nogcp --config=nohdfs --config=nonccl"
+fi

@@ -84,3 +84,22 @@ jobs:
         run: pip install tensorflow==1.14 --no-cache
       - name: Run converter tests TF 1.14
         run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false
+
+  MLIRW:
+    runs-on: windows-latest
+    if: "!contains(github.event.head_commit.message, 'ci-skip')"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Bazelisk
+        run: curl -sSOL https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-windows-amd64.exe
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+      - name: Run tests
+        env:
+          BAZEL_VC: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/"
+        shell: bash
+        run: |
+          ./configure.sh
+          pip install tensorflow==2.1.0 larq_zoo==0.5.0 pytest tensorflow_datasets==1.3.2 --no-cache
+          ./bazelisk-windows-amd64.exe run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false
