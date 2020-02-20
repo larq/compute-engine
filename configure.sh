@@ -114,8 +114,8 @@ build:aarch64 -c opt  \
 # Options to build TensorFlow 1.x or 2.x.
 build:v1 --define=tf_api_version=1
 build:v2 --define=tf_api_version=2
-test:v1 --action_env=TF2_BEHAVIOR=0
-test:v2 --action_env=TF2_BEHAVIOR=1
+build:v1 --action_env=TF2_BEHAVIOR=0
+build:v2 --action_env=TF2_BEHAVIOR=1
 
 # Options to disable default on features
 build:noaws --define=no_aws_support=true
@@ -124,7 +124,6 @@ build:nohdfs --define=no_hdfs_support=true
 build:nonccl --define=no_nccl_support=true
 
 build --config=v2 --config=noaws --config=nogcp --config=nohdfs --config=nonccl
-test --config=v2
 
 # Android configs. Bazel needs to have --cpu and --fat_apk_cpu both set to the
 # target CPU to build transient dependencies correctly. See
