@@ -88,7 +88,7 @@ jobs:
           python --version
           python -m pip install wheel setuptools numpy six --no-cache-dir
           ./configure.sh
-          ./bazelisk-windows-amd64.exe build :build_pip_pkg --experimental_shortened_obj_file_path=true
+          ./bazelisk-windows-amd64.exe build :build_pip_pkg --features=compiler_param_file
           bazel-bin/build_pip_pkg artifacts
       - uses: actions/upload-artifact@v1
         with:
