@@ -48,8 +48,8 @@ and a Raspberry Pi 4 Model B ([BCM2711](https://www.raspberrypi.org/documentatio
 
 | Model                                                                                            | Top-1 Accuracy | RPi 4 B, ms (1 thread) | Pixel 1, ms (1 thread) |
 | ------------------------------------------------------------------------------------------------ | :------------: | :--------------------: | :--------------------: |
-| Quicknet ([.h5](https://github.com/larq/zoo/releases/download/Quicknet/quicknet.h5))             |     58.3 %     |          60.5          |          27.9          |
-| Quicknet-Large ([.h5](https://github.com/larq/zoo/releases/download/Quicknet/quicknet_large.h5)) |     62.5 %     |          89.9          |          41.8          |
+| Quicknet ([.h5](https://github.com/larq/zoo/releases/download/quicknet-v0.1.0/quicknet_weights.h5))             |     58.3 %     |          60.5          |          27.9          |
+| Quicknet-Large ([.h5](https://github.com/larq/zoo/releases/download/quicknet_large-v0.1.0/quicknet_large_weights.h5)) |     62.5 %     |          89.9          |          41.8          |
 
 For reference, [dabnn](https://github.com/JDAI-CV/dabnn) (the other main BNN library) reports an inference time of 61.3 ms for [Bi-RealNet](https://docs.larq.dev/larq/api/larq_zoo/#birealnet) (56.4% accuracy) on the Pixel 1 phone,
 while LCE achieves an inference time of 54.0 ms for Bi-RealNet on the same device.
