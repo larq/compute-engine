@@ -40,8 +40,18 @@ def concrete_function_from_keras_model(model):
 def convert_keras_model(model):
     """Converts a Keras model to TFLite flatbuffer.
 
-    Returns:
-      The converted data in serialized format.
+    !!! example
+        ```python
+        tflite_model = convert_keras_model(model)
+        with open("/tmp/my_model.tflite", "wb") as f:
+            f.write(tflite_model)
+        ```
+
+    # Arguments
+    model: A [`tf.keras.Model`](https://www.tensorflow.org/api_docs/python/tf/keras/Model) to convert.
+
+    # Returns
+    The converted data in serialized format.
     """
     if not tf.executing_eagerly():
         raise RuntimeError(
