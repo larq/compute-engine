@@ -61,8 +61,8 @@ board:
 
 | Model                                                                                            | Top-1 Accuracy | RPi 4 B, ms (4 threads) | Pixel 1, ms (4 threads) |
 | ------------------------------------------------------------------------------------------------ | :------------: | :---------------------: | :---------------------: |
-| Quicknet ([.h5](https://github.com/larq/zoo/releases/download/Quicknet/quicknet.h5))             |     58.3 %     |          37.9           |          19.1           |
-| Quicknet-Large ([.h5](https://github.com/larq/zoo/releases/download/Quicknet/quicknet_large.h5)) |     62.5 %     |          55.8           |          28.0           |
+| Quicknet ([.h5](https://github.com/larq/zoo/releases/download/quicknet-v0.1.0/quicknet_weights.h5))             |     58.3 %     |          37.9           |          19.1           |
+| Quicknet-Large ([.h5](https://github.com/larq/zoo/releases/download/quicknet_large-v0.1.0/quicknet_large_weights.h5)) |     62.5 %     |          55.8           |          28.0           |
 
 Benchmarked on February 14th, 2020 with LCE custom
 [TFLite Model Benchmark Tool](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/tools/benchmark)
