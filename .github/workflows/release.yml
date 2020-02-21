@@ -70,9 +70,37 @@ jobs:
           name: ${{ runner.os }}-wheels
           path: wheelhouse
 
+  windows-release-wheel:
+    name: Build release wheels for Windows
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ['3.6', '3.7']
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Bazelisk
+        run: curl -sSOL https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-windows-amd64.exe
+      - name: Build Windows wheels
+        env:
+          BAZEL_VC: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/"
+        shell: bash
+        run: |
+          python --version
+          python -m pip install wheel setuptools numpy six --no-cache-dir
+          ./configure.sh
+          ./bazelisk-windows-amd64.exe build :build_pip_pkg --experimental_shortened_obj_file_path=true
+          bazel-bin/build_pip_pkg artifacts
+      - uses: actions/upload-artifact@v1
+        with:
+          name: ${{ runner.os }}-wheels
+          path: artifacts
+
   upload-wheels:
     name: Publish wheels to PyPi
-    needs: [manylinux-release-wheel, macos-release-wheel]
+    needs: [manylinux-release-wheel, macos-release-wheel, windows-release-wheel]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v1
@@ -83,11 +111,16 @@ jobs:
         with:
           name: macOS-wheels
           path: macOS-wheels
+      - uses: actions/download-artifact@v1
+        with:
+          name: Windows-wheels
+          path: Windows-wheels
       - run: |
           set -e -x
           mkdir -p dist
           cp Linux-wheels/*.whl dist/
           cp macOS-wheels/*.whl dist/
+          cp Windows-wheels/*.whl dist/
           ls -la dist/
           sha256sum dist/*.whl
       - uses: pypa/gh-action-pypi-publish@master

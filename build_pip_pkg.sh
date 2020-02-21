@@ -23,7 +23,16 @@ function is_linux() {
     [[ "${PLATFORM}" == "linux" ]]
 }
 
-PIP_FILE_PREFIX="bazel-bin/build_pip_pkg.runfiles/larq_compute_engine/"
+function is_windows() {
+  # On windows, the shell script is actually running in msys
+  [[ "${PLATFORM}" =~ msys_nt*|mingw*|cygwin*|uwin* ]]
+}
+
+if is_windows; then
+  PIP_FILE_PREFIX="bazel-bin/build_pip_pkg.exe.runfiles/larq_compute_engine/"
+else
+  PIP_FILE_PREFIX="bazel-bin/build_pip_pkg.runfiles/larq_compute_engine/"
+fi
 
 function abspath() {
   cd "$(dirname $1)"
@@ -56,7 +65,14 @@ function main() {
   if is_linux; then
     touch ${TMPDIR}/stub.cc
   fi
-  rsync -avm -L --exclude='*_test.py' ${PIP_FILE_PREFIX}larq_compute_engine "${TMPDIR}"
+  if is_windows; then
+    from=$(cygpath -w ${PIP_FILE_PREFIX}larq_compute_engine)
+    to=$(cygpath -w "${TMPDIR}"/larq_compute_engine)
+    start robocopy //S "${from}" "${to}" //xf *_test.py
+    sleep 5
+  else
+    rsync -avm -L --exclude='*_test.py' ${PIP_FILE_PREFIX}larq_compute_engine "${TMPDIR}"
+  fi
 
   pushd ${TMPDIR}
 
@@ -65,7 +81,8 @@ function main() {
   strip -x ${TMPDIR}/larq_compute_engine/mlir/*.so
 
   echo $(date) : "=== Building wheel"
-  python setup.py bdist_wheel ${BUILD_FLAG} > /dev/null
+  # Windows has issues with locking library files for deletion so do not fail here
+  python setup.py bdist_wheel ${BUILD_FLAG} || true
 
   cp dist/*.whl "${DEST}"
   popd
