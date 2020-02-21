@@ -155,8 +155,15 @@ build --action_env ANDROID_SDK_HOME="/tmp/lce_android"
 EOM
 
 if is_windows; then
+  # Suppress warning messages
+  write_to_bazelrc "build --copt=-w --host_copt=-w"
   # Fix winsock2.h conflicts
   write_to_bazelrc "build --copt=-DWIN32_LEAN_AND_MEAN --host_copt=-DWIN32_LEAN_AND_MEAN --copt=-DNOGDI --host_copt=-DNOGDI --copt=-D_USE_MATH_DEFINES"
+  # Output more verbose information when something goes wrong
+  write_to_bazelrc "build --verbose_failures"
+  # The host and target platforms are the same in Windows build. So we don't
+  # have to distinct them. This avoids building the same targets twice.
+  write_to_bazelrc "build --distinct_host_configuration=false"
 else
   write_to_bazelrc "build --config=noaws --config=nogcp --config=nohdfs --config=nonccl"
 fi
