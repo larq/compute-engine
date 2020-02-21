@@ -1,9 +1,6 @@
 name: lce-release
 
-on:
-  push:
-    tags:
-      - v*
+on: [push]
 
 jobs:
   macos-release-wheel:
@@ -123,7 +120,3 @@ jobs:
           cp Windows-wheels/*.whl dist/
           ls -la dist/
           sha256sum dist/*.whl
-      - uses: pypa/gh-action-pypi-publish@master
-        with:
-          user: __token__
-          password: ${{ secrets.pypi_token }}
