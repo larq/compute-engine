@@ -164,6 +164,8 @@ if is_windows; then
   # The host and target platforms are the same in Windows build. So we don't
   # have to distinct them. This avoids building the same targets twice.
   write_to_bazelrc "build --distinct_host_configuration=false"
+
+  write_to_bazelrc "build --copt /DEIGEN_STRONG_INLINE=inline --copt=-DTENSORFLOW_MONOLITHIC_BUILD --copt=/DPLATFORM_WINDOWS --copt=/DEIGEN_HAS_C99_MATH --copt=/DTENSORFLOW_USE_EIGEN_THREADPOOL --copt=/DEIGEN_AVOID_STL_ARRAY --copt=/Iexternal/gemmlowp --copt=/wd4018 --copt=/wd4577 --copt=/DNOGDI --copt=/UTF_COMPILE_LIBRARY"
 else
   write_to_bazelrc "build --config=noaws --config=nogcp --config=nohdfs --config=nonccl"
 fi
