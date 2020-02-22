@@ -37,7 +37,7 @@ def concrete_function_from_keras_model(model):
     return func.get_concrete_function()
 
 
-def convert_keras_model(model):
+def convert_keras_model(model: tf.keras.Model) -> bytes:
     """Converts a Keras model to TFLite flatbuffer.
 
     !!! example
