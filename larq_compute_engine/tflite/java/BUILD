@@ -14,30 +14,36 @@ package(
 # bazel build -c opt --fat_apk_cpu=x86,x86_64,arm64-v8a,armeabi-v7a \
 #   larq_compute_engine/tflite/java:tensorflowlite_lce
 aar_with_jni(
-    name = "tensorflowlite_lce",
-    android_library = ":tflite_lce_android_lib",
+    name = "tensorflow-lite-lce",
+    android_library = ":tensorflowlite_lce",
 )
 
 android_library(
-    name = "tflite_lce_android_lib",
+    name = "tensorflowlite_lce",
     javacopts = JAVACOPTS,
     manifest = "@org_tensorflow//tensorflow/lite/java:AndroidManifest.xml",
     proguard_specs = ["@org_tensorflow//tensorflow/lite/java:proguard.flags"],
     deps = [
-        ":tflite_lce_native",
+        ":tensorflowlite_lce_native",
         "@org_checkerframework_qual",
+    ],
+)
+
+java_library(
+    name = "tensorflowlite_java",
+    resource_jars =[
         "@org_tensorflow//tensorflow/lite/java:tensorflowlite",
     ],
 )
 
 cc_library(
-    name = "tflite_lce_native",
-    srcs = ["libtflite_lce_jni.so"],
+    name = "tensorflowlite_lce_native",
+    srcs = ["libtensorflowlite_jni.so"],
     visibility = ["//visibility:private"],
 )
 
 tflite_jni_binary(
-    name = "libtflite_lce_jni.so",
+    name = "libtensorflowlite_jni.so",
     deps = [
         "@org_tensorflow//tensorflow/lite/delegates/nnapi/java/src/main/native",
         "@org_tensorflow//tensorflow/lite/java/src/main/native",
