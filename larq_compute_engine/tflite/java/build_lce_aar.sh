@@ -1,6 +1,9 @@
 #!/bin/bash
 
-# this is a bash script based on tensorflow lite android AAR build script
+# This is a bash script based on TFLite android AAR build script.
+# Additionally, we extract the TFLite Java API sources from the
+# `libtensorflowlite_java.jar` target and replace the `classes.jar` file of
+# LCE AAR with them.
 
 set -e
 set -x
@@ -34,25 +37,22 @@ function build_lce_aar() {
   cp $BUILDER-bin/$BASEDIR/java/libtensorflowlite_java.jar $OUTDIR/classes.jar
 }
 
-# function build_arch() {
-#   local ARCH=$1
-#   local CONFIG=$2
-#   local OUTDIR=$3
-#   mkdir -p $OUTDIR/jni/$ARCH/
-#   $BUILDER build $BUILD_OPTS $CROSSTOOL_OPTS --cpu=$CONFIG \
-#     $BASEDIR/java:libtensorflowlite_jni.so
-#   cp $BUILDER-bin/$BASEDIR/java/libtensorflowlite_jni.so $OUTDIR/jni/$ARCH/
-# }
-
 rm -rf $TMPDIR
 mkdir -p $TMPDIR/jni
 
 build_lce_aar $TMPDIR
-# build_arch arm64-v8a arm64-v8a $TMPDIR
-# build_arch armeabi-v7a armeabi-v7a $TMPDIR
-# build_arch x86 x86 $TMPDIR
-# build_arch x86_64 x86_64 $TMPDIR
 
-AAR_FILE=`grealpath tflite-lce-${VERSION}.aar`
+if [[ "$OSTYPE" == "linux-gnu" ]]; then
+    AAR_FILE=`realpath tflite-lce-${VERSION}.aar`
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    # on macOS get 'grealpath' by installing 'coreutils' package:
+    # "brew install coreutils"
+    AAR_FILE=`grealpath tflite-lce-${VERSION}.aar`
+else
+    # Unknown.
+    echo "ERROR: could not detect the OS."
+    exit 1
+fi
+
 (cd $TMPDIR && zip $AAR_FILE -r *)
 echo "New AAR file is $AAR_FILE"

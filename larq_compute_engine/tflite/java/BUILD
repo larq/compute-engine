@@ -9,10 +9,10 @@ package(
     licenses = ["notice"],  # Apache 2.0
 )
 
-# Building tensorflowlite_lce.aar including 4 variants of .so
+# Building tensorflow-lite-lce.aar including 4 variants of .so
 # To build the LCE compatible TFLite AAR, run the following command:
 # bazel build -c opt --fat_apk_cpu=x86,x86_64,arm64-v8a,armeabi-v7a \
-#   larq_compute_engine/tflite/java:tensorflowlite_lce
+#   larq_compute_engine/tflite/java:tensorflow-lite-lce
 aar_with_jni(
     name = "tensorflow-lite-lce",
     android_library = ":tensorflowlite_lce",
@@ -31,9 +31,26 @@ android_library(
 
 java_library(
     name = "tensorflowlite_java",
-    resource_jars =[
+    resource_jars = [
         "@org_tensorflow//tensorflow/lite/java:tensorflowlite",
     ],
+)
+
+# This includes all builtin and LCE ops.
+# If you want a smaller binary, you should copy and
+# modify lce_ops_jni.cc.
+cc_library(
+    name = "lce_ops_jni",
+    srcs = [
+        "lce_ops_jni.cc",
+    ],
+    copts = tflite_copts(),
+    deps = [
+        "//larq_compute_engine/tflite/kernels:lce_op_kernels",
+        "@org_tensorflow//tensorflow/lite/java/src/main/native:native_framework_only",
+        "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
+    ],
+    alwayslink = 1,
 )
 
 cc_library(
@@ -45,7 +62,7 @@ cc_library(
 tflite_jni_binary(
     name = "libtensorflowlite_jni.so",
     deps = [
+        ":lce_ops_jni",
         "@org_tensorflow//tensorflow/lite/delegates/nnapi/java/src/main/native",
-        "@org_tensorflow//tensorflow/lite/java/src/main/native",
     ],
 )

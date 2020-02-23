@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+#include "larq_compute_engine/tflite/kernels/lce_ops_register.h"
 #include "tensorflow/lite/kernels/register.h"
 
 namespace tflite {
@@ -22,8 +23,9 @@ namespace tflite {
 // builtin ops. For smaller binary sizes users should avoid linking this in, and
 // should provide a custom make CreateOpResolver() instead.
 std::unique_ptr<OpResolver> CreateOpResolver() {  // NOLINT
-  return std::unique_ptr<tflite::ops::builtin::BuiltinOpResolver>(
-      new tflite::ops::builtin::BuiltinOpResolver());
+  auto resolver = new tflite::ops::builtin::BuiltinOpResolver();
+  compute_engine::tflite::RegisterLCECustomOps(resolver);
+  return std::unique_ptr<tflite::ops::builtin::BuiltinOpResolver>(resolver);
 }
 
 }  // namespace tflite
