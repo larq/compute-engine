@@ -147,10 +147,10 @@ build:android_x86_64 --fat_apk_cpu=x86_64
 # The default android SDK/NDK paths are hardcoded here and the user needs
 # to change the paths according to the local configuration or
 # the "install_android.sh" script
-build --action_env ANDROID_NDK_HOME="/tmp/lce_android/ndk/19.2.5345600/"
+build --action_env ANDROID_NDK_HOME="/tmp/lce_android/ndk/17.2.4988734"
 build --action_env ANDROID_NDK_API_LEVEL="21"
-build --action_env ANDROID_BUILD_TOOLS_VERSION="27.0.3"
-build --action_env ANDROID_SDK_API_LEVEL="28"
+build --action_env ANDROID_BUILD_TOOLS_VERSION="28.0.3"
+build --action_env ANDROID_SDK_API_LEVEL="29"
 build --action_env ANDROID_SDK_HOME="/tmp/lce_android"
 
 EOM

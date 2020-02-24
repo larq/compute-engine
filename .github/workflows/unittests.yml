@@ -102,7 +102,7 @@ jobs:
       - name: "Setup: Configure Bazel"
         run: ./configure.sh <<< $'yes\n' #yes for manylinux2010
         shell: bash
-      - name: "Download/install Android NDK/SDK"
+      - name: "Download and install Android NDK/SDK"
         run: ./third_party/install_android.sh
       - name: "Build LCE AAR"
-        run: larq_compute_engine/tflite/build_make/build_lce.sh --native --pip
+        run: ./larq_compute_engine/tflite/java/build_lce_aar.sh
