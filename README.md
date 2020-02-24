@@ -42,7 +42,7 @@ advantage of multi-core modern desktop and mobile CPUs.
 ## Performance
 
 The table below presents **single-threaded** performance of Larq Compute Engine on
-different versions of a novel BNN model called Quicknet (trained on ImageNet dataset, soon to be released in [Larq Zoo](https://docs.larq.dev/zoo/))
+different versions of a novel BNN model called QuickNet, a state-of-the-art BNN available in [Larq Zoo](https://docs.larq.dev/zoo/)),
 on a [Pixel 1 phone (2016)](https://support.google.com/pixelphone/answer/7158570?hl=en-GB)
 and a Raspberry Pi 4 Model B ([BCM2711](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2711/README.md)) board:
 
