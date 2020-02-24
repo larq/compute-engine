@@ -1,9 +1,9 @@
 # default LCE Android Env. variables
 export ANDROID_SDK_URL="https://dl.google.com/android/repository/sdk-tools-linux-3859397.zip"
 export ANDROID_HOME="/tmp/lce_android"
-export ANDROID_VERSION=28
-export ANDROID_BUILD_TOOLS_VERSION=27.0.3
-export ANDROID_NDK_VERSION=19.2.5345600
+export ANDROID_VERSION=29
+export ANDROID_BUILD_TOOLS_VERSION=28.0.3
+export ANDROID_NDK_VERSION=17.2.4988734
 
 # download android SDK
 mkdir -p $ANDROID_HOME; cd $ANDROID_HOME;
@@ -20,6 +20,7 @@ rm lce_android_sdk.zip;
 
 # install android platform and build tools
 echo -e "Updating SDK manager ... "
+yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses
 $ANDROID_HOME/tools/bin/sdkmanager --update
 echo -e "DONE.\n\n"
 
