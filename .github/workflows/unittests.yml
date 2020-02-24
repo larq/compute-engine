@@ -84,3 +84,25 @@ jobs:
         run: pip install tensorflow==1.14 --no-cache
       - name: Run converter tests TF 1.14
         run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false
+
+  Android_AAR:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, 'ci-skip')"
+    container:
+      image: tensorflow/tensorflow:custom-op-ubuntu16
+
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          submodules: true
+      - name: Install Bazelisk
+        run: |
+          curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-linux-amd64 > bazelisk
+          chmod +x bazelisk
+      - name: "Setup: Configure Bazel"
+        run: ./configure.sh <<< $'yes\n' #yes for manylinux2010
+        shell: bash
+      - name: "Download/install Android NDK/SDK"
+        run: ./third_party/install_android.sh
+      - name: "Build LCE AAR"
+        run: larq_compute_engine/tflite/build_make/build_lce.sh --native --pip
