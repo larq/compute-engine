@@ -136,6 +136,14 @@ cc_library(
     ],
 )
 
+cc_binary(
+    name = "lce-tf-opt",
+    deps = [
+        ":lce_tfl_passes",
+        "@local_config_mlir//:MlirOptMain",
+    ],
+)
+
 pybind_extension(
     name = "_graphdef_tfl_flatbuffer",
     srcs = ["python/graphdef_tfl_flatbuffer.cc"],
