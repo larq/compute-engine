@@ -75,6 +75,9 @@ typedef struct {
   std::vector<std::uint8_t> padding_buffer;
   std::vector<std::uint8_t> bitpacked_weights_buffer;
 
+  bool is_weight_bitpacked = false;
+  bool is_padding_correction_cached = false;
+
 } TfLiteBConv2DParams;
 
 inline void decide_bitpack_before_im2col(TfLiteBConv2DParams* conv_params,
@@ -271,6 +274,9 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
     }
   }
 
+  conv_params->is_weight_bitpacked = false;
+  conv_params->is_padding_correction_cached = false;
+
   return kTfLiteOk;
 }
 
@@ -369,7 +375,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   // Only in the first run:
   // Allocate the padding buffer and compute correction values
   if (params->padding_type == TfLitePadding::kTfLitePaddingSame &&
-      params->padding_buffer.empty()) {
+      !params->is_padding_correction_cached) {
     using PaddingFunctor =
         ce::core::PaddingFunctor<float, float, ce::core::FilterFormat::OHWI>;
     PaddingFunctor padding_functor;
@@ -388,13 +394,14 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
         params->dilations[1], params->dilations[2],
         GetTensorData<float>(fused_multiply),
         reinterpret_cast<float*>(params->padding_buffer.data()));
+    params->is_padding_correction_cached = true;
   }
 
   // Only in the first run:
   // Allocate the packed weight buffer and bitpack the weights.
   // Ideally we would like to use the filter buffer itself,
   // but this is stored in read-only memory-mapped-files..
-  if (params->bitpacked_weights_buffer.empty()) {
+  if (!params->is_weight_bitpacked) {
     // The filters have shape
     // [output channels, height, width, input channels]
     // and we now view it as a matrix of shape
@@ -422,6 +429,8 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
     params->bitpacked_weights_buffer.resize(num_bytes);
     memcpy(params->bitpacked_weights_buffer.data(), filter_data_bp.data(),
            num_bytes);
+
+    params->is_weight_bitpacked = true;
   }
 
   // Using the standard TF Lite ConvParams struct.
