@@ -73,10 +73,10 @@ typedef struct {
   int32_t im2col_index;
 
   std::vector<std::uint8_t> padding_buffer;
-  std::vector<std::uint8_t> bitpacked_weights_buffer;
-
-  bool is_weight_bitpacked = false;
   bool is_padding_correction_cached = false;
+
+  std::vector<std::uint8_t> bitpacked_weights_buffer;
+  bool is_weight_bitpacked = false;
 
 } TfLiteBConv2DParams;
 
@@ -222,56 +222,62 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
          conv_params->dilations[1] /* height */ != 1 ||
          conv_params->filter_width != 1 || conv_params->filter_height != 1);
 
+    // Figure out how many temporary buffers we need
+    int temporaries_count = 0;
     if (conv_params->need_im2col) {
-      conv_params->im2col_index = 0;
+      conv_params->im2col_index = temporaries_count++;
+    }
 
-      // Allocate int array of that size
-      TfLiteIntArrayFree(node->temporaries);
-      node->temporaries = TfLiteIntArrayCreate(1);
+    // Allocate int array of that size
+    TfLiteIntArrayFree(node->temporaries);
+    node->temporaries = TfLiteIntArrayCreate(temporaries_count);
 
-      // Now allocate the buffers
+    // Now allocate the buffers
+    if (conv_params->need_im2col) {
       if (conv_params->im2col_id == kTensorNotAllocated) {
         context->AddTensors(context, 1, &conv_params->im2col_id);
         node->temporaries->data[conv_params->im2col_index] =
             conv_params->im2col_id;
       }
-
-      // Resize the tensor
-      int channels_in =
-          conv_params->bitpack_before_im2col
-              ? ((conv_params->channels_in + bitwidth - 1) / bitwidth)
-              : conv_params->channels_in;
-
-      // determine the im2col buffer size
-      TfLiteIntArray* im2col_size = TfLiteIntArrayCreate(4);
-      im2col_size->data[0] = conv_params->batch;
-      im2col_size->data[1] = conv_params->out_height;
-      im2col_size->data[2] = conv_params->out_width;
-      im2col_size->data[3] =
-          channels_in * conv_params->filter_height * conv_params->filter_width;
-
-      // get the pointer to im2col tensor
-      TfLiteTensor* im2col =
-          GetTemporary(context, node, conv_params->im2col_index);
-
-      // Determine the type
-      if (conv_params->bitpack_before_im2col) {
-        if (bitwidth == 8)
-          im2col->type = kTfLiteInt8;
-        else if (bitwidth == 32)
-          im2col->type = kTfLiteInt32;
-        else if (bitwidth == 64)
-          im2col->type = kTfLiteInt64;
-        else
-          TF_LITE_ENSURE(context, false);
-      } else {
-        // im2col before bitpacking so use the same type as the input
-        im2col->type = input->type;
-      }
-      im2col->allocation_type = kTfLiteArenaRw;
-      TF_LITE_ENSURE_OK(context,
-                        context->ResizeTensor(context, im2col, im2col_size));
     }
+  }
+
+  // Resize the im2col tensor
+  if (conv_params->need_im2col) {
+    int channels_in =
+        conv_params->bitpack_before_im2col
+            ? ((conv_params->channels_in + bitwidth - 1) / bitwidth)
+            : conv_params->channels_in;
+
+    // determine the im2col buffer size
+    TfLiteIntArray* im2col_size = TfLiteIntArrayCreate(4);
+    im2col_size->data[0] = conv_params->batch;
+    im2col_size->data[1] = conv_params->out_height;
+    im2col_size->data[2] = conv_params->out_width;
+    im2col_size->data[3] =
+        channels_in * conv_params->filter_height * conv_params->filter_width;
+
+    // get the pointer to im2col tensor
+    TfLiteTensor* im2col =
+        GetTemporary(context, node, conv_params->im2col_index);
+
+    // Determine the type
+    if (conv_params->bitpack_before_im2col) {
+      if (bitwidth == 8)
+        im2col->type = kTfLiteInt8;
+      else if (bitwidth == 32)
+        im2col->type = kTfLiteInt32;
+      else if (bitwidth == 64)
+        im2col->type = kTfLiteInt64;
+      else
+        TF_LITE_ENSURE(context, false);
+    } else {
+      // im2col before bitpacking so use the same type as the input
+      im2col->type = input->type;
+    }
+    im2col->allocation_type = kTfLiteArenaRw;
+    TF_LITE_ENSURE_OK(context,
+                      context->ResizeTensor(context, im2col, im2col_size));
   }
 
   conv_params->is_weight_bitpacked = false;
@@ -377,7 +383,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   if (params->padding_type == TfLitePadding::kTfLitePaddingSame &&
       !params->is_padding_correction_cached) {
     using PaddingFunctor =
-        ce::core::PaddingFunctor<float, float, ce::core::FilterFormat::OHWI>;
+        ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
     PaddingFunctor padding_functor;
 
     std::size_t padding_cache_size =
@@ -389,11 +395,10 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
     params->padding_buffer.resize(padding_cache_size);
 
     padding_functor.cache_correction_values(
-        GetTensorData<float>(filter), params->filter_height,
-        params->filter_width, params->channels_out, params->channels_in,
-        params->dilations[1], params->dilations[2],
-        GetTensorData<float>(fused_multiply),
-        reinterpret_cast<float*>(params->padding_buffer.data()));
+        GetTensorData<T>(filter), params->filter_height, params->filter_width,
+        params->channels_out, params->channels_in, params->dilations[1],
+        params->dilations[2], GetTensorData<T>(fused_multiply),
+        reinterpret_cast<T*>(params->padding_buffer.data()));
     params->is_padding_correction_cached = true;
   }
 
@@ -408,6 +413,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
     // bitpack first: [output channels * height * width, input_channels]
     // im2col first:  [output channels, height * width * input_channels]
     // and bitpack it along the last dimension
+
     int cols, rows;
     if (params->bitpack_before_im2col) {
       cols = params->channels_in;
@@ -420,7 +426,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
 
     std::vector<TBitpacked> filter_data_bp;
     size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
-    ce::core::packbits_matrix(GetTensorData<float>(filter), rows, cols,
+    ce::core::packbits_matrix(GetTensorData<T>(filter), rows, cols,
                               filter_data_bp, filter_rows_bp, filter_cols_bp,
                               filter_bitpadding, ce::core::Axis::RowWise);
 
