@@ -511,6 +511,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
       memcpy(GetTensorData<TBitpacked>(bitpacked_weights),
              filter_data_bp.data(), num_bytes);
     }
+    params->bitpacked_weights = true;
   }
 
   // Using the standard TF Lite ConvParams struct.
