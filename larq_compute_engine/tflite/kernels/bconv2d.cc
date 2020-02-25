@@ -72,7 +72,7 @@ typedef struct {
   // So in pseudo-code: `node->temporaries[index] = id;`
   int32_t im2col_index;
 
-  std::vector<std::uint8_t> padding_buffer;
+  std::vector<float> padding_buffer;
   bool is_padding_correction_cached = false;
 
   std::vector<std::uint8_t> bitpacked_weights_buffer;
@@ -378,19 +378,16 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
                              ? GetTemporary(context, node, params->im2col_index)
                              : nullptr;
 
-  // Only in the first run:
-  // Allocate the padding buffer and compute correction values
-  if (params->padding_type == TfLitePadding::kTfLitePaddingSame &&
-      !params->is_padding_correction_cached) {
+  if (!params->is_padding_correction_cached &&
+      params->padding_type == TfLitePadding::kTfLitePaddingSame) {
+    // In the first run, fill the cache
     using PaddingFunctor =
         ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
     PaddingFunctor padding_functor;
 
-    std::size_t padding_cache_size =
-        padding_functor.get_cache_size(
-            params->filter_height, params->filter_width, params->channels_out,
-            params->dilations[1], params->dilations[2]) *
-        sizeof(float);
+    std::size_t padding_cache_size = padding_functor.get_cache_size(
+        params->filter_height, params->filter_width, params->channels_out,
+        params->dilations[1], params->dilations[2]);
 
     params->padding_buffer.resize(padding_cache_size);
 
@@ -398,7 +395,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
         GetTensorData<T>(filter), params->filter_height, params->filter_width,
         params->channels_out, params->channels_in, params->dilations[1],
         params->dilations[2], GetTensorData<T>(fused_multiply),
-        reinterpret_cast<T*>(params->padding_buffer.data()));
+        params->padding_buffer.data());
     params->is_padding_correction_cached = true;
   }
 
@@ -456,7 +453,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
       GetTensorData<float>(fused_multiply), GetTensorData<float>(fused_add),
       GetTensorShape(output), GetTensorData<T>(output), GetTensorShape(im2col),
       GetTensorData<T>(im2col), params->bitpack_before_im2col,
-      reinterpret_cast<T*>(params->padding_buffer.data()),
+      params->padding_buffer.data(),
       CpuBackendContext::GetFromContext(context));
 }
 
