@@ -13,12 +13,11 @@ def HasOneUse : Constraint<CPred<"$0->hasOneUse()">>;
 multiclass FuseAddOrSubWithBConv2D<dag binaryOp> {
   def : Pat<(binaryOp (TF_LqceBconv2d64Op:$output $input, $filter,
                           $fused_multiply, (ConstantOp F32ElementsAttr:$fused_add), $strides,
-                          $padding, $explicit_paddings, $data_format,
-                          $dilations, $filter_format),
+                          $padding, $data_format, $dilations, $filter_format),
                       (ConstantOp F32ElementsAttr:$value), TFL_AF_None),
             (TF_LqceBconv2d64Op $input, $filter, $fused_multiply,
                           (binaryOp (ConstantOp $fused_add), (ConstantOp $value), TFL_AF_None),
-                          $strides, $padding, $explicit_paddings, $data_format,
+                          $strides, $padding, $data_format,
                           $dilations, $filter_format),
             [(HasOneUse $output)]>;
 }
@@ -30,7 +29,7 @@ multiclass FuseMulOrDivWithBConv2D<dag binaryOp> {
   def : Pat<(binaryOp (TF_LqceBconv2d64Op:$conv_output $input, $filter,
                         (ConstantOp F32ElementsAttr:$fused_multiply),
                         (ConstantOp F32ElementsAttr:$fused_add),
-                        $strides, $padding, $explicit_paddings, $data_format,
+                        $strides, $padding, $data_format,
                         $dilations, $filter_format),
                       (ConstantOp F32ElementsAttr:$value), $TFL_AF_None),
             (TF_LqceBconv2d64Op $input, $filter,
@@ -38,7 +37,7 @@ multiclass FuseMulOrDivWithBConv2D<dag binaryOp> {
                                   (ConstantOp $value), TFL_AF_None),
                         (binaryOp (ConstantOp $fused_add),
                                   (ConstantOp $value), TFL_AF_None),
-                        $strides, $padding, $explicit_paddings, $data_format,
+                        $strides, $padding, $data_format,
                         $dilations, $filter_format),
          [(HasOneUse $conv_output)]>;
 }

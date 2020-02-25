@@ -33,6 +33,6 @@ def : Pat<(TF_Conv2DOp (TF_LqceBsignOp $input), $filter, $strides, $use_cudnn,
             (TF_TransposeOp $filter, (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
             (TF_ConstOp (GetMultiplier $filter)),
             (TF_ConstOp (GetBias $filter)),
-            $strides, $padding, $explicit_padding,
-            $data_format, $dilations, ConstantAttr<StrAttr, "OHWI">),
+            $strides, $padding, $data_format,
+            $dilations, ConstantAttr<StrAttr, "OHWI">),
           [(BinaryFilter $filter)], (addBenefit 90)>;

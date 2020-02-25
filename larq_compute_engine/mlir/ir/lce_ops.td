@@ -42,7 +42,6 @@ TODO
 
     I64ArrayAttr:$strides,
     TF_AnyStrAttrOf<["SAME", "VALID", "EXPLICIT"]>:$padding,
-    DefaultValuedAttr<I64ArrayAttr, "{}">:$explicit_paddings,
     DefaultValuedAttr<TF_ConvnetDataFormatAttr, "NHWC">:$data_format,
     DefaultValuedAttr<I64ArrayAttr, "{1, 1, 1, 1}">:$dilations,
     DefaultValuedAttr<TF_AnyStrAttrOf<["HWIO", "OHWI", "OHWI_PACKED"]>, "HWIO">:$filter_format
