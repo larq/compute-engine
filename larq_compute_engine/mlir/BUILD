@@ -141,6 +141,7 @@ cc_binary(
     deps = [
         ":lce_tfl_passes",
         "@local_config_mlir//:MlirOptMain",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_dialect_registration",
     ],
 )
 
