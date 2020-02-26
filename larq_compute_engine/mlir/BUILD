@@ -136,6 +136,15 @@ cc_library(
     ],
 )
 
+cc_binary(
+    name = "lce-tf-opt",
+    deps = [
+        ":lce_tfl_passes",
+        "@local_config_mlir//:MlirOptMain",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_dialect_registration",
+    ],
+)
+
 pybind_extension(
     name = "_graphdef_tfl_flatbuffer",
     srcs = ["python/graphdef_tfl_flatbuffer.cc"],

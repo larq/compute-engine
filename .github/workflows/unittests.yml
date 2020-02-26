@@ -61,6 +61,29 @@ jobs:
         run: |
           curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-darwin-amd64 > bazelisk
           chmod +x bazelisk
+      - name: Install GNU find
+        run: |
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install findutils
+          ln -sf /usr/local/bin/gfind /usr/local/bin/find
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+      - name: Configure Bazel
+        run: ./configure.sh
+      - name: Install pip dependencies
+        run: pip install numpy six --no-cache-dir
+      - name: Run FileCheck tests
+        run: ./bazelisk test larq_compute_engine/mlir/tests:all --test_output=all --distinct_host_configuration=false
+
+  MLIR_Python:
+    runs-on: macos-latest
+    if: "!contains(github.event.head_commit.message, 'ci-skip')"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Bazelisk
+        run: |
+          curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-darwin-amd64 > bazelisk
+          chmod +x bazelisk
       - uses: actions/setup-python@v1
         with:
           python-version: 3.7
