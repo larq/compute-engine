@@ -55,6 +55,7 @@ typedef struct {
   // padding
   TfLitePadding padding_type{};
   TfLitePaddingValues padding_values{};
+  int padding_value = 0;  // Must be 0 or 1
 
   // output tensor dimensions
   int64_t out_width{0};
@@ -125,12 +126,23 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
     conv_params->dilations[i] = dilation_vector[i].AsInt64();
 
   // reading padding
-  conv_params->padding_type =
-      m["padding"].ToString() == "VALID" ||
-              m["padding"].ToString() ==
-                  "valid"  // TODO: not sure if this check is needed
-          ? TfLitePadding::kTfLitePaddingValid
-          : TfLitePadding::kTfLitePaddingSame;
+  if (m["padding"].ToString() == "VALID" ||
+      m["padding"].ToString() == "valid") {
+    conv_params->padding_type = kTfLitePaddingValid;
+    conv_params->padding_value = 0;
+  } else if (m["padding"].ToString() == "SAME" ||
+             m["padding"].ToString() == "same") {
+    conv_params->padding_type = kTfLitePaddingSame;
+    conv_params->padding_value = 0;
+  } else if (m["padding"].ToString() == "SAME_ONE" ||
+             m["padding"].ToString() == "same_one") {
+    conv_params->padding_type = kTfLitePaddingSame;
+    conv_params->padding_value = 1;
+  } else {
+    context->ReportError(context, "Invalid padding attribute.");
+    return conv_params;
+  }
+
   return conv_params;
 }
 
@@ -379,7 +391,8 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
                              : nullptr;
 
   if (!params->is_padding_correction_cached &&
-      params->padding_type == TfLitePadding::kTfLitePaddingSame) {
+      params->padding_type == TfLitePadding::kTfLitePaddingSame &&
+      params->padding_value == 0) {
     // In the first run, fill the cache
     using PaddingFunctor =
         ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
@@ -453,7 +466,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
       GetTensorData<float>(fused_multiply), GetTensorData<float>(fused_add),
       GetTensorShape(output), GetTensorData<T>(output), GetTensorShape(im2col),
       GetTensorData<T>(im2col), params->bitpack_before_im2col,
-      params->padding_buffer.data(),
+      params->padding_buffer.data(), params->padding_value,
       CpuBackendContext::GetFromContext(context));
 }
 

@@ -26,6 +26,7 @@
 #include "absl/strings/substitute.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
 #include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/kernels/padding.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/kernels/test_util.h"
 #include "tensorflow/lite/model.h"
@@ -33,6 +34,21 @@
 // using namespace tflite;
 
 namespace tflite {
+
+constexpr int Padding_ONE = Padding_MAX + 1;
+
+const char* GetPaddingName(enum Padding padding) {
+  switch (padding) {
+    case Padding_VALID:
+      return "VALID";
+    case Padding_SAME:
+      return "SAME";
+    case Padding_ONE:
+      return "SAME_ONE";
+    default:
+      return "UNKNOWN";
+  };
+}
 
 namespace ops {
 namespace builtin {
@@ -159,7 +175,7 @@ struct TestParam {
     // WARNING: substitute accests only 11 arguments
     return absl::Substitute("Op$0_I$1_K$2_P$3_S$4_D$5_T$6", param.kernel_name,
                             param_input_oss.str(), param_filter_oss.str(),
-                            param.padding == Padding_VALID ? "VALID" : "SAME",
+                            GetPaddingName(param.padding),
                             param_strides_oss.str(), param_dilation_oss.str(),
                             param.num_threads);
   }
@@ -179,7 +195,6 @@ struct TestParam {
   int dilation_height_factor = 1;
   int dilation_width_factor = 1;
 
-  // TOOD: currently we are ignoring padding
   Padding padding = Padding_VALID;
 
   int num_threads = 1;
@@ -219,7 +234,7 @@ class BaseBConv2DOpModel : public SingleOpModel {
         fbb.Int(1);
       });
       fbb.String("filter_format", "OHWI");
-      fbb.String("padding", padding == Padding_VALID ? "VALID" : "SAME");
+      fbb.String("padding", GetPaddingName(padding));
     });
     fbb.Finish();
     SetCustomOp("LqceBconv2d", fbb.GetBuffer(), registration);
@@ -318,9 +333,11 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   const int stride_width = param.stride_width;
   const int dilation_height_factor = param.dilation_height_factor;
   const int dilation_width_factor = param.dilation_width_factor;
-  // TOOD: currently we are ignoring padding
   const Padding padding = param.padding;
   const int num_threads = param.num_threads;
+
+  const Padding tflite_padding =
+      (padding == Padding_ONE ? Padding_VALID : padding);
 
   const int input_num_elem =
       input_batch_count * input_height * input_width * input_depth;
@@ -329,10 +346,10 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       filter_height * filter_width * input_depth * filter_count;
 
   using T = float;
-  std::vector<T> input_data, filters_data;
+  std::vector<T> bconv_input_data, builtin_input_data, filters_data;
   std::vector<T> channel_multipliers;
   std::vector<T> fused_multiply_data, fused_add_data, bias_data;
-  input_data.resize(input_num_elem);
+  bconv_input_data.resize(input_num_elem);
   filters_data.resize(filters_num_elem);
   channel_multipliers.resize(filter_count, 0);
   bias_data.resize(filter_count, 0);
@@ -351,12 +368,63 @@ TEST_P(BConv2DOpTest, SimpleTest) {
     return float_list[index];
   };
 
-  std::generate(std::begin(input_data), std::end(input_data), rand_generator);
+  std::generate(std::begin(bconv_input_data), std::end(bconv_input_data),
+                rand_generator);
   std::generate(std::begin(filters_data), std::end(filters_data),
                 rand_generator);
   std::generate(std::begin(channel_multipliers), std::end(channel_multipliers),
                 float_generator);
   std::generate(std::begin(bias_data), std::end(bias_data), float_generator);
+
+  int tflite_input_height = input_height;
+  int tflite_input_width = input_width;
+  if (padding == Padding_ONE) {
+    // Manually pad with ones
+    int output_height, output_width;
+    TfLitePaddingValues padding_values = ComputePaddingHeightWidth(
+        stride_height, stride_width, dilation_height_factor,
+        dilation_width_factor, input_height, input_width, filter_height,
+        filter_width, kTfLitePaddingSame, &output_height, &output_width);
+
+    // How many pixels does the kernel stick out at the {left, top, right,
+    // bottom}
+    const int overflow_left = padding_values.width;
+    const int overflow_top = padding_values.height;
+    const int overflow_right =
+        padding_values.width + padding_values.width_offset;
+    const int overflow_bottom =
+        padding_values.height + padding_values.height_offset;
+
+    tflite_input_height = input_height + overflow_top + overflow_bottom;
+    tflite_input_width = input_width + overflow_left + overflow_right;
+
+    const int tflite_input_elements =
+        tflite_input_height * tflite_input_width * input_depth;
+
+    builtin_input_data.resize(tflite_input_elements);
+    T* tflite_ptr = builtin_input_data.data();
+    T* bconv_ptr = bconv_input_data.data();
+    for (int in_y = 0; in_y < tflite_input_height; ++in_y) {
+      for (int in_x = 0; in_x < tflite_input_width; ++in_x) {
+        if ((in_y < overflow_top ||
+             in_y >= tflite_input_height - overflow_bottom ||
+             in_x < overflow_left ||
+             in_x >= tflite_input_width - overflow_right)) {
+          // Outside region: use +1s
+          for (int in_c = 0; in_c < input_depth; ++in_c) *tflite_ptr++ = 1.0f;
+        } else {
+          // Inside region: use the bconv values
+          for (int in_c = 0; in_c < input_depth; ++in_c)
+            *tflite_ptr++ = *bconv_ptr++;
+        }
+      }
+    }
+    // Check if we got exactly to the end of both buffers
+    EXPECT_THAT(bconv_ptr, bconv_input_data.data() + input_num_elem);
+    EXPECT_THAT(tflite_ptr, builtin_input_data.data() + tflite_input_elements);
+  } else {
+    builtin_input_data = bconv_input_data;
+  }
 
   // Fuse the multipliers to the filters, just as tflite would do it
   // The bconv op will take the sign, so it will automatically ignore this
@@ -384,7 +452,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       {TensorType_FLOAT32, {}}, stride_width, stride_height, padding,
       dilation_width_factor, dilation_height_factor, num_threads);
 
-  m_lce.SetInput(input_data);
+  m_lce.SetInput(bconv_input_data);
   m_lce.SetFilter(filters_data);
   m_lce.SetFusedMultiply(fused_multiply_data);
   m_lce.SetFusedAdd(fused_add_data);
@@ -394,14 +462,15 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       ::tflite::ops::builtin::
           Register_CONVOLUTION_GENERIC_OPT(),  // registration
       {TensorType_FLOAT32,
-       {input_batch_count, input_height, input_width, input_depth}},  // input
+       {input_batch_count, tflite_input_height, tflite_input_width,
+        input_depth}},  // input
       {TensorType_FLOAT32,
        {filter_count, filter_height, filter_width, input_depth}},  // filter
       {TensorType_FLOAT32, {}},                                    // output
-      stride_width, stride_height, padding, ActivationFunctionType_NONE,
+      stride_width, stride_height, tflite_padding, ActivationFunctionType_NONE,
       dilation_width_factor, dilation_height_factor, num_threads);
 
-  m_builtin.SetInput(input_data);
+  m_builtin.SetInput(builtin_input_data);
   m_builtin.SetFilter(filters_data);
   m_builtin.SetBias(bias_data);
   m_builtin.Invoke();
@@ -426,8 +495,8 @@ INSTANTIATE_TEST_SUITE_P(
                           std::array<int, 2>{2, 3}),  // strides height/width
         ::testing::Values(std::array<int, 2>{1, 1},
                           std::array<int, 2>{3, 2}),  // dilation height/width
-        ::testing::Values(Padding_VALID, Padding_SAME),  // padding
-        ::testing::Values(1, 2),                         // number of threads
+        ::testing::Values(Padding_VALID, Padding_SAME, Padding_ONE),  // padding
+        ::testing::Values(1, 2),  // number of threads
         ::testing::ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
     TestParam::TestNameSuffix);
 }  // namespace testing
