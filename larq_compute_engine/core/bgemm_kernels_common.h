@@ -24,6 +24,7 @@ template <typename AccumScalar, typename DstScalar,
 struct BGemmParams {
   AccumScalar multiplier_fixedpoint = 0;
   int multiplier_exponent = 0;
+  int32_t backtransform_add = 0;
   // post_mutiply and post_add are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
@@ -47,6 +48,7 @@ struct BinaryBasicSpec {
   using DstScalar = tDstScalar;
   AccumScalar multiplier_fixedpoint = 0;
   int multiplier_exponent = 0;
+  int32_t backtransform_add = 0;
   // post_mutiply and post_add are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
@@ -87,6 +89,7 @@ struct BinaryKernelParams {
   std::int32_t depth;
   std::uint32_t clamp_min;
   std::uint32_t clamp_max;
+  std::int32_t backtransform_add;
   std::uint8_t flags;
   const T zero_data[LhsCols] = {0};
   T dst_tmp_buf[LhsCols * RhsCols];
@@ -115,6 +118,7 @@ inline void MakeBinaryKernelParams(
   if (spec.post_multiply && spec.post_add) {
     flags |= RUY_ASM_FLAG_HAS_BIAS;
   }
+  params->backtransform_add = spec.backtransform_add;
   params->flags = flags;
   params->start_row = start_row;
   params->start_col = start_col;

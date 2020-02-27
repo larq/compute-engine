@@ -91,6 +91,9 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
           TBitpacked rhs_val = Element(rhs, k, j);
           accum += xorpopcount<TBitpacked, AccumScalar>(lhs_val, rhs_val);
         }
+        // Backtransform can still be done in int32
+        accum = spec.backtransform_add - 2 * accum;
+        // Post multiply and add are done in float
         DstScalar dst_val = static_cast<DstScalar>(accum);
         if (spec.post_multiply) {
           dst_val *= spec.post_multiply[i];

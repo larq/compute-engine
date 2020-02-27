@@ -165,7 +165,7 @@ class PaddingFunctor {
                              filter_count) +
                 y * (effective_filter_width * filter_count) + x * filter_count +
                 out_c;
-            const Tfilter mul = 0.5f * post_multiply_data[out_c];
+            const Tfilter mul = -1.0f * post_multiply_data[out_c];
             output_cache[output_idx] = mul * corrections[direction];
           }
         }

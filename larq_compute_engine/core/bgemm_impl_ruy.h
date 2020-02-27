@@ -53,6 +53,7 @@ struct BGemmImplUsingRuy {
     dst.data = dst_data;
 
     TSpec spec;
+    spec.backtransform_add = params.backtransform_add;
     spec.post_multiply = params.post_multiply;
     spec.post_add = params.post_add;
 

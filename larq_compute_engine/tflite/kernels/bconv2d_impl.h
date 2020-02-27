@@ -168,6 +168,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
 
   // Accumulation type, destination type
   BGemmParams<std::int32_t, T> gemm_params;
+  gemm_params.backtransform_add =
+      filter_shape.Dims(1) * filter_shape.Dims(2) * filter_shape.Dims(3);
   gemm_params.post_multiply = post_multiply_data;
   gemm_params.post_add = post_add_data;
 
