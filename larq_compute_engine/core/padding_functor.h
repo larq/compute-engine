@@ -31,7 +31,7 @@ class PaddingFunctor {
       const Tfilter* filter_data, const int filter_height,
       const int filter_width, const int filter_count, const int input_channels,
       const int dilation_rows, const int dilation_cols,
-      const Tfilter* fused_multiply_data, Tdata* output_cache) {
+      const Tfilter* post_multiply_data, Tdata* output_cache) {
     const int effective_filter_width = (filter_width - 1) * dilation_cols + 1;
     const int effective_filter_height = (filter_height - 1) * dilation_rows + 1;
 
@@ -165,7 +165,7 @@ class PaddingFunctor {
                              filter_count) +
                 y * (effective_filter_width * filter_count) + x * filter_count +
                 out_c;
-            const Tfilter mul = 0.5f * fused_multiply_data[out_c];
+            const Tfilter mul = 0.5f * post_multiply_data[out_c];
             output_cache[output_idx] = mul * corrections[direction];
           }
         }
@@ -182,7 +182,7 @@ class PaddingFunctor {
                   const int dilation_rows, const int dilation_cols,
                   Tdata* output_data, const int output_height,
                   const int output_width,
-                  const Tfilter* fused_multiply_data = nullptr,
+                  const Tfilter* post_multiply_data = nullptr,
                   const Tdata* padding_cache = nullptr) {
     const int effective_filter_width = (filter_width - 1) * dilation_cols + 1;
     const int effective_filter_height = (filter_height - 1) * dilation_rows + 1;
@@ -201,7 +201,7 @@ class PaddingFunctor {
                                        dilation_cols));
       cache_correction_values(filter_data, filter_height, filter_width,
                               filter_count, input_channels, dilation_rows,
-                              dilation_cols, fused_multiply_data,
+                              dilation_cols, post_multiply_data,
                               temp_cache.data());
       padding_cache = temp_cache.data();
     }

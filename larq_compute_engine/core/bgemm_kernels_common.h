@@ -24,11 +24,11 @@ template <typename AccumScalar, typename DstScalar,
 struct BGemmParams {
   AccumScalar multiplier_fixedpoint = 0;
   int multiplier_exponent = 0;
-  // fused_mutiply and fused_add are currently float
+  // post_mutiply and post_add are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
-  const float* fused_multiply = nullptr;
-  const float* fused_add = nullptr;
+  const float* post_multiply = nullptr;
+  const float* post_add = nullptr;
   AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
   AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
 };
@@ -47,11 +47,11 @@ struct BinaryBasicSpec {
   using DstScalar = tDstScalar;
   AccumScalar multiplier_fixedpoint = 0;
   int multiplier_exponent = 0;
-  // fused_mutiply and fused_add are currently float
+  // post_mutiply and post_add are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
-  const float* fused_multiply = nullptr;
-  const float* fused_add = nullptr;
+  const float* post_multiply = nullptr;
+  const float* post_add = nullptr;
   AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
   AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
 
@@ -70,11 +70,11 @@ struct BinaryKernelParams {
   const T* lhs_base_ptr;
   const T* rhs_base_ptr;
   float* dst_base_ptr;
-  // fused_mutiply and fused_add are currently float
+  // post_mutiply and post_add are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
-  const float* fused_multiply;
-  const float* fused_add;
+  const float* post_multiply;
+  const float* post_add;
   std::int32_t start_row;
   std::int32_t start_col;
   std::int32_t last_row;
@@ -110,9 +110,9 @@ inline void MakeBinaryKernelParams(
       dst->data.get() + start_col * dst->layout.stride + start_row;
 
   std::uint8_t flags = 0;
-  params->fused_multiply = spec.fused_multiply;
-  params->fused_add = spec.fused_add;
-  if (spec.fused_multiply && spec.fused_add) {
+  params->post_multiply = spec.post_multiply;
+  params->post_add = spec.post_add;
+  if (spec.post_multiply && spec.post_add) {
     flags |= RUY_ASM_FLAG_HAS_BIAS;
   }
   params->flags = flags;
