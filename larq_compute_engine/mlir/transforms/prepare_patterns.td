@@ -23,14 +23,14 @@ class I32VectorElementsAttr<int len> : ElementsAttrBase<
     "RankedTensorType::get({" # len # "}, $_builder.getIntegerType(32)), $0)";
 }
 
-def GetBias : NativeCodeCall<"GetBias(*$0)">;
-def GetMultiplier : NativeCodeCall<"GetMultiplier(*$0)">;
+def GetBias : NativeCodeCall<"GetBias($0)">;
+def GetMultiplier : NativeCodeCall<"GetMultiplier($0)">;
 def BinaryFilter : Constraint<CPred<"IsBinaryFilter($0)">>;
 
-def : Pat<(TF_Conv2DOp (TF_LqceBsignOp $input), $filter, $strides, $use_cudnn,
+def : Pat<(TF_Conv2DOp (TF_LqceBsignOp $input), (ConstantOp $filter), $strides, $use_cudnn,
                        $padding, $explicit_padding, $data_format, $dilations),
           (TF_LqceBconv2d64Op $input,
-            (TF_TransposeOp $filter, (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
+            (TF_TransposeOp (ConstantOp $filter), (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
             (TF_ConstOp (GetMultiplier $filter)),
             (TF_ConstOp (GetBias $filter)),
             $strides, $padding, $data_format,
