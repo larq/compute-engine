@@ -70,7 +70,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                     const RuntimeShape& output_shape, T* output_data,
                     const RuntimeShape& im2col_shape, T* im2col_data,
                     bool bitpack_before_im2col, T* padding_buffer,
-                    const int padding_value,
+                    const int pad_value,
                     CpuBackendContext* cpu_backend_context) {
   TF_LITE_ASSERT_EQ(input_shape.DimensionsCount(), 4);
   TF_LITE_ASSERT_EQ(filter_shape.DimensionsCount(), 4);
@@ -184,7 +184,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   BGemm(lhs_params, lhs_data, rhs_params, rhs_data, dst_params, output_data,
         gemm_params, cpu_backend_context);
 
-  if (params.padding_type == PaddingType::kSame && padding_value == 0) {
+  if (params.padding_type == PaddingType::kSame && pad_value == 0) {
     using PaddingFunctor =
         ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
 

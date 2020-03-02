@@ -243,7 +243,7 @@ class BaseBConv2DOpModel : public SingleOpModel {
   BaseBConv2DOpModel(register_function registration, const TensorData& input,
                      const TensorData& filter, const TensorData& output,
                      int stride_width = 1, int stride_height = 1,
-                     enum Padding padding = Padding_VALID,
+                     enum Padding padding = Padding_VALID, int pad_values = 0,
                      int dilation_width_factor = 1,
                      int dilation_height_factor = 1, int num_threads = -1) {
     input_ = AddInput(input);
@@ -270,6 +270,7 @@ class BaseBConv2DOpModel : public SingleOpModel {
       });
       fbb.String("filter_format", "OHWI");
       fbb.String("padding", GetPaddingName(padding));
+      fbb.Int("pad_values", pad_values);
     });
     fbb.Finish();
     SetCustomOp("LqceBconv2d", fbb.GetBuffer(), registration);
@@ -371,8 +372,11 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   const Padding padding = param.padding;
   const int num_threads = param.num_threads;
 
-  const Padding tflite_padding =
+  const Padding builtin_padding =
       (padding == Padding_ONE ? Padding_VALID : padding);
+  const Padding bconv_padding =
+      (padding == Padding_ONE ? Padding_SAME : padding);
+  const int pad_values = (padding == Padding_ONE ? 1 : 0);
 
   const int input_num_elem =
       input_batch_count * input_height * input_width * input_depth;
@@ -412,7 +416,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
 
   int padded_input_height = input_height;
   int padded_input_width = input_width;
-  if (padding == Padding_ONE) {
+  if (pad_values == 1) {
     // Use a Pad op to pad with ones
     int output_height, output_width;
     TfLitePaddingValues padding_values = ComputePaddingHeightWidth(
@@ -476,8 +480,8 @@ TEST_P(BConv2DOpTest, SimpleTest) {
        {input_batch_count, input_height, input_width, input_depth}},
       {TensorType_FLOAT32,
        {filter_count, filter_height, filter_width, input_depth}},
-      {TensorType_FLOAT32, {}}, stride_width, stride_height, padding,
-      dilation_width_factor, dilation_height_factor, num_threads);
+      {TensorType_FLOAT32, {}}, stride_width, stride_height, bconv_padding,
+      pad_values, dilation_width_factor, dilation_height_factor, num_threads);
 
   m_lce.SetInput(input_data);
   m_lce.SetFilter(filters_data);
@@ -494,7 +498,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       {TensorType_FLOAT32,
        {filter_count, filter_height, filter_width, input_depth}},  // filter
       {TensorType_FLOAT32, {}},                                    // output
-      stride_width, stride_height, tflite_padding, ActivationFunctionType_NONE,
+      stride_width, stride_height, builtin_padding, ActivationFunctionType_NONE,
       dilation_width_factor, dilation_height_factor, num_threads);
 
   m_builtin.SetInput(padded_input_data);

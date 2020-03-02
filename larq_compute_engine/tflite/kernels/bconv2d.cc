@@ -55,7 +55,7 @@ typedef struct {
   // padding
   TfLitePadding padding_type{};
   TfLitePaddingValues padding_values{};
-  int padding_value = 0;  // Must be 0 or 1
+  int pad_value = 0;  // Must be 0 or 1
 
   // output tensor dimensions
   int64_t out_width{0};
@@ -129,17 +129,19 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
   if (m["padding"].ToString() == "VALID" ||
       m["padding"].ToString() == "valid") {
     conv_params->padding_type = kTfLitePaddingValid;
-    conv_params->padding_value = 0;
   } else if (m["padding"].ToString() == "SAME" ||
              m["padding"].ToString() == "same") {
     conv_params->padding_type = kTfLitePaddingSame;
-    conv_params->padding_value = 0;
-  } else if (m["padding"].ToString() == "SAME_ONE" ||
-             m["padding"].ToString() == "same_one") {
-    conv_params->padding_type = kTfLitePaddingSame;
-    conv_params->padding_value = 1;
   } else {
     context->ReportError(context, "Invalid padding attribute.");
+    return conv_params;
+  }
+
+  conv_params->pad_value =
+      m["pad_values"].IsNull() ? 0 : m["pad_values"].AsInt64();
+
+  if (conv_params->pad_value != 0 && conv_params->pad_value != 1) {
+    context->ReportError(context, "Attribute pad_values must be 0 or 1.");
     return conv_params;
   }
 
@@ -392,7 +394,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
 
   if (!params->is_padding_correction_cached &&
       params->padding_type == TfLitePadding::kTfLitePaddingSame &&
-      params->padding_value == 0) {
+      params->pad_value == 0) {
     // In the first run, fill the cache
     using PaddingFunctor =
         ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
@@ -466,7 +468,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
       GetTensorData<float>(fused_multiply), GetTensorData<float>(fused_add),
       GetTensorShape(output), GetTensorData<T>(output), GetTensorShape(im2col),
       GetTensorData<T>(im2col), params->bitpack_before_im2col,
-      params->padding_buffer.data(), params->padding_value,
+      params->padding_buffer.data(), params->pad_value,
       CpuBackendContext::GetFromContext(context));
 }
 
