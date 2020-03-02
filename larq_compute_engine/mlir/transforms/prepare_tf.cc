@@ -53,15 +53,30 @@ bool IsBinaryFilter(Attribute filter) {
   return true;
 }
 
-bool IsSpatialOnlyPadding(Attribute constant) {
-  if (constant.isa<DenseElementsAttr>()) {
-    auto elements = constant.cast<DenseElementsAttr>();
-    return elements.getValue<int>({0, 0}) == 0 &&
-           elements.getValue<int>({0, 1}) == 0 &&
-           elements.getValue<int>({3, 0}) == 0 &&
-           elements.getValue<int>({3, 1}) == 0;
-  }
-  return false;
+bool IsSamePadding(Attribute paddings_attr, Value* input, Value* output) {
+  if (!paddings_attr.isa<DenseElementsAttr>()) return false;
+  auto paddings = paddings_attr.dyn_cast<DenseElementsAttr>();
+  auto input_shape = input->getType().cast<RankedTensorType>().getShape();
+  auto output_shape = output->getType().cast<RankedTensorType>().getShape();
+
+  int pad_height_left = paddings.getValue<int>({1, 0});
+  int pad_height_right = paddings.getValue<int>({1, 1});
+  int pad_width_left = paddings.getValue<int>({2, 0});
+  int pad_width_right = paddings.getValue<int>({2, 1});
+
+  int pad_height = pad_height_left + pad_height_right;
+  int pad_width = pad_width_left + pad_width_right;
+
+  return paddings.getValue<int>({0, 0}) == 0 &&
+         paddings.getValue<int>({0, 1}) == 0 &&
+         input_shape[1] == output_shape[1] &&
+         input_shape[2] == output_shape[2] &&
+         pad_height_left == pad_height / 2 &&
+         pad_height_right == (pad_height + 1) / 2 &&
+         pad_width_left == pad_width / 2 &&
+         pad_width_right == (pad_width + 1) / 2 &&
+         paddings.getValue<int>({3, 0}) == 0 &&
+         paddings.getValue<int>({3, 1}) == 0;
 }
 
 #include "larq_compute_engine/mlir/transforms/generated_prepare.inc"

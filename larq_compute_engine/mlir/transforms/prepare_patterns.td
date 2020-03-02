@@ -44,7 +44,7 @@ def ConstFloatValueIsOne : Constraint<
   "$0.cast<DenseElementsAttr>().getNumElements() == 1 && "
   "*$0.cast<DenseElementsAttr>().getValues<float>().begin() == 1.0f">>;
 
-def SpatialOnlyPadding : Constraint<CPred<"IsSpatialOnlyPadding($0)">>;
+def SamePadding : Constraint<CPred<"IsSamePadding($0, $1, $2)">>;
 
 def : Pat<(TF_Conv2DOp: $output
             (TF_PadV2Op (TF_LqceBsignOp $input), (ConstantOp $paddings), (ConstantOp $pad_values)),
@@ -62,6 +62,5 @@ def : Pat<(TF_Conv2DOp: $output
             ConstantAttr<StrAttr, "OHWI">),
           [(BinaryFilter $filter),
            (ConstFloatValueIsOne $pad_values),
-           // TODO: also check other padding dimensions
-           (SpatialOnlyPadding $paddings)],
+           (SamePadding $paddings, $input, $output)],
           (addBenefit 90)>;

@@ -71,6 +71,21 @@ func @do_not_fuse_bconv2d_padding_same(%arg0: tensor<256x32x32x3xf32>) -> tensor
   // CHECK-NEXT: %2 = "tf.Conv2D"
 }
 
+// CHECK-LABEL: @do_not_fuse_bconv2d_unsupported_constant_padding
+func @do_not_fuse_bconv2d_unsupported_constant_padding(%arg0: tensor<256x32x32x3xf32>) -> tensor<256x32x32x16xf32> {
+  %cst = constant dense<1.0> : tensor<3x3x3x16xf32>
+  %cst0 = constant dense<0.0> : tensor<f32>
+  %cst1 = constant dense<[[0, 0], [1, 1], [1, 1], [0, 0]]> : tensor<4x2xi32>
+  %0 = "tf.LqceBsign"(%arg0) : (tensor<256x32x32x3xf32>) -> tensor<256x32x32x3xf32>
+  %1 = "tf.PadV2"(%0, %cst1, %cst0) : (tensor<256x32x32x3xf32>, tensor<4x2xi32>, tensor<f32>) -> tensor<256x34x34x3xf32>
+  %2 = "tf.Conv2D"(%1, %cst) {padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x34x34x3xf32>, tensor<3x3x3x16xf32>) -> tensor<256x32x32x16xf32>
+  return %2 : tensor<256x32x32x16xf32>
+
+  // CHECK: %0 = "tf.LqceBsign"
+  // CHECK-NEXT: %1 = "tf.PadV2"
+  // CHECK-NEXT: %2 = "tf.Conv2D"
+}
+
 // CHECK-LABEL: @do_not_fuse_bconv2d_padding_wrong_size
 func @do_not_fuse_bconv2d_padding_wrong_size(%arg0: tensor<256x32x32x3xf32>) -> tensor<256x36x36x16xf32> {
   %cst = constant dense<1.0> : tensor<3x3x3x16xf32>
@@ -86,11 +101,11 @@ func @do_not_fuse_bconv2d_padding_wrong_size(%arg0: tensor<256x32x32x3xf32>) -> 
   // CHECK-NEXT: %2 = "tf.Conv2D"
 }
 
-// CHECK-LABEL: @do_not_fuse_bconv2d_unsupported_constant_padding
-func @do_not_fuse_bconv2d_unsupported_constant_padding(%arg0: tensor<256x32x32x3xf32>) -> tensor<256x32x32x16xf32> {
+// CHECK-LABEL: @do_not_fuse_bconv2d_unsymmetric_padding
+func @do_not_fuse_bconv2d_unsymmetric_padding(%arg0: tensor<256x32x32x3xf32>) -> tensor<256x32x32x16xf32> {
   %cst = constant dense<1.0> : tensor<3x3x3x16xf32>
-  %cst0 = constant dense<0.0> : tensor<f32>
-  %cst1 = constant dense<[[0, 0], [1, 1], [1, 1], [0, 0]]> : tensor<4x2xi32>
+  %cst0 = constant dense<1.0> : tensor<f32>
+  %cst1 = constant dense<[[0, 0], [2, 0], [2, 0], [0, 0]]> : tensor<4x2xi32>
   %0 = "tf.LqceBsign"(%arg0) : (tensor<256x32x32x3xf32>) -> tensor<256x32x32x3xf32>
   %1 = "tf.PadV2"(%0, %cst1, %cst0) : (tensor<256x32x32x3xf32>, tensor<4x2xi32>, tensor<f32>) -> tensor<256x34x34x3xf32>
   %2 = "tf.Conv2D"(%1, %cst) {padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x34x34x3xf32>, tensor<3x3x3x16xf32>) -> tensor<256x32x32x16xf32>
