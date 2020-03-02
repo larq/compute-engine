@@ -12,7 +12,8 @@ func @fuse_bsign(%arg0: tensor<8x16xf32>) -> tensor<8x16xf32> {
   // CHECK-NEXT: return %0
 }
 
-func @bconv2d(%arg0: tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32> {
+// CHECK-LABEL: @fuse_bconv2d
+func @fuse_bconv2d(%arg0: tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32> {
   %cst = "tf.Const"() { value = dense<[[[[1.0, -1.0], [1.0, 1.0]], [[-1.0, 1.0], [-1.0, 1.0]]]]> : tensor<1x2x2x2xf32> } : () -> tensor<1x2x2x2xf32>
   %0 = "tf.LqceBsign"(%arg0) : (tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32>
   %1 = "tf.Conv2D"(%0, %cst) {padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<1x2x2x2xf32>) -> tensor<1x112x112x2xf32>
