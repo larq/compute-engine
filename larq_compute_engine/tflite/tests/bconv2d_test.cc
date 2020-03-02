@@ -108,6 +108,41 @@ class ConvolutionOpModel : public BaseConvolutionOpModel {
   std::vector<float> GetOutput() { return ExtractVector<float>(output_); }
 };
 
+// From lite/kernels/pad_test.cc
+template <typename T>
+class PadOpModel : public SingleOpModel {
+ public:
+  PadOpModel(const TensorData& input, std::initializer_list<int> paddings_shape,
+             std::initializer_list<int> paddings, T constant_values,
+             const TensorData& output) {
+    input_ = AddInput(input);
+    paddings_ = AddConstInput(TensorType_INT32, paddings, paddings_shape);
+    constant_values_ =
+        AddConstInput(GetTensorType<T>(), {constant_values}, {1});
+
+    output_ = AddOutput(output);
+
+    SetBuiltinOp(BuiltinOperator_PADV2, BuiltinOptions_PadV2Options,
+                 CreatePadV2Options(builder_).Union());
+    BuildInterpreter({input.shape});
+  }
+
+  void SetInput(std::vector<T>& data) { PopulateTensor<T>(input_, data); }
+
+  void SetPaddings(std::initializer_list<int> paddings) {
+    PopulateTensor<int>(paddings_, paddings);
+  }
+
+  std::vector<T> GetOutput() { return ExtractVector<T>(output_); }
+  std::vector<int> GetOutputShape() { return GetTensorShape(output_); }
+
+ protected:
+  int input_;
+  int output_;
+  int paddings_;
+  int constant_values_;
+};
+
 }  // namespace
 }  // namespace tflite
 
@@ -346,10 +381,10 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       filter_height * filter_width * input_depth * filter_count;
 
   using T = float;
-  std::vector<T> bconv_input_data, builtin_input_data, filters_data;
+  std::vector<T> input_data, padded_input_data, filters_data;
   std::vector<T> channel_multipliers;
   std::vector<T> fused_multiply_data, fused_add_data, bias_data;
-  bconv_input_data.resize(input_num_elem);
+  input_data.resize(input_num_elem);
   filters_data.resize(filters_num_elem);
   channel_multipliers.resize(filter_count, 0);
   bias_data.resize(filter_count, 0);
@@ -368,18 +403,17 @@ TEST_P(BConv2DOpTest, SimpleTest) {
     return float_list[index];
   };
 
-  std::generate(std::begin(bconv_input_data), std::end(bconv_input_data),
-                rand_generator);
+  std::generate(std::begin(input_data), std::end(input_data), rand_generator);
   std::generate(std::begin(filters_data), std::end(filters_data),
                 rand_generator);
   std::generate(std::begin(channel_multipliers), std::end(channel_multipliers),
                 float_generator);
   std::generate(std::begin(bias_data), std::end(bias_data), float_generator);
 
-  int tflite_input_height = input_height;
-  int tflite_input_width = input_width;
+  int padded_input_height = input_height;
+  int padded_input_width = input_width;
   if (padding == Padding_ONE) {
-    // Manually pad with ones
+    // Use a Pad op to pad with ones
     int output_height, output_width;
     TfLitePaddingValues padding_values = ComputePaddingHeightWidth(
         stride_height, stride_width, dilation_height_factor,
@@ -395,35 +429,28 @@ TEST_P(BConv2DOpTest, SimpleTest) {
     const int overflow_bottom =
         padding_values.height + padding_values.height_offset;
 
-    tflite_input_height = input_height + overflow_top + overflow_bottom;
-    tflite_input_width = input_width + overflow_left + overflow_right;
+    // The parameter {4,2} means that the paddings array is four pairs.
+    // The four pairs correspond to: Batch, Height, Width, Channels
+    PadOpModel<float> padop(
+        {TensorType_FLOAT32,
+         {input_batch_count, input_height, input_width, input_depth}},
+        {4, 2},
+        {0, 0, overflow_top, overflow_bottom, overflow_left, overflow_right, 0,
+         0},
+        1.0f, {TensorType_FLOAT32, {}});
 
-    const int tflite_input_elements =
-        tflite_input_height * tflite_input_width * input_depth;
+    padop.SetInput(input_data);
+    padop.Invoke();
 
-    builtin_input_data.resize(tflite_input_elements);
-    T* tflite_ptr = builtin_input_data.data();
-    T* bconv_ptr = bconv_input_data.data();
-    for (int in_y = 0; in_y < tflite_input_height; ++in_y) {
-      for (int in_x = 0; in_x < tflite_input_width; ++in_x) {
-        if ((in_y < overflow_top ||
-             in_y >= tflite_input_height - overflow_bottom ||
-             in_x < overflow_left ||
-             in_x >= tflite_input_width - overflow_right)) {
-          // Outside region: use +1s
-          for (int in_c = 0; in_c < input_depth; ++in_c) *tflite_ptr++ = 1.0f;
-        } else {
-          // Inside region: use the bconv values
-          for (int in_c = 0; in_c < input_depth; ++in_c)
-            *tflite_ptr++ = *bconv_ptr++;
-        }
-      }
-    }
-    // Check if we got exactly to the end of both buffers
-    EXPECT_THAT(bconv_ptr, bconv_input_data.data() + input_num_elem);
-    EXPECT_THAT(tflite_ptr, builtin_input_data.data() + tflite_input_elements);
+    padded_input_height = input_height + overflow_top + overflow_bottom;
+    padded_input_width = input_width + overflow_left + overflow_right;
+    EXPECT_THAT(padop.GetOutputShape(),
+                ElementsAreArray(
+                    {1, padded_input_height, padded_input_width, input_depth}));
+
+    padded_input_data = padop.GetOutput();
   } else {
-    builtin_input_data = bconv_input_data;
+    padded_input_data = input_data;
   }
 
   // Fuse the multipliers to the filters, just as tflite would do it
@@ -452,7 +479,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       {TensorType_FLOAT32, {}}, stride_width, stride_height, padding,
       dilation_width_factor, dilation_height_factor, num_threads);
 
-  m_lce.SetInput(bconv_input_data);
+  m_lce.SetInput(input_data);
   m_lce.SetFilter(filters_data);
   m_lce.SetFusedMultiply(fused_multiply_data);
   m_lce.SetFusedAdd(fused_add_data);
@@ -462,7 +489,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       ::tflite::ops::builtin::
           Register_CONVOLUTION_GENERIC_OPT(),  // registration
       {TensorType_FLOAT32,
-       {input_batch_count, tflite_input_height, tflite_input_width,
+       {input_batch_count, padded_input_height, padded_input_width,
         input_depth}},  // input
       {TensorType_FLOAT32,
        {filter_count, filter_height, filter_width, input_depth}},  // filter
@@ -470,7 +497,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       stride_width, stride_height, tflite_padding, ActivationFunctionType_NONE,
       dilation_width_factor, dilation_height_factor, num_threads);
 
-  m_builtin.SetInput(builtin_input_data);
+  m_builtin.SetInput(padded_input_data);
   m_builtin.SetFilter(filters_data);
   m_builtin.SetBias(bias_data);
   m_builtin.Invoke();
