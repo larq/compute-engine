@@ -53,6 +53,17 @@ bool IsBinaryFilter(Attribute filter) {
   return true;
 }
 
+bool IsSpatialOnlyPadding(Attribute constant) {
+  if (constant.isa<DenseElementsAttr>()) {
+    auto elements = constant.cast<DenseElementsAttr>();
+    return elements.getValue<int>({0, 0}) == 0 &&
+           elements.getValue<int>({0, 1}) == 0 &&
+           elements.getValue<int>({3, 0}) == 0 &&
+           elements.getValue<int>({3, 1}) == 0;
+  }
+  return false;
+}
+
 #include "larq_compute_engine/mlir/transforms/generated_prepare.inc"
 
 void PrepareLCE::runOnFunction() {
