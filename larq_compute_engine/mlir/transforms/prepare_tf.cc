@@ -3,7 +3,6 @@
 #include "mlir/Pass/Pass.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "tensorflow/compiler/mlir/lite/quantization/quantization_utils.h"
-#include "tensorflow/compiler/mlir/lite/transforms/passes.h"
 #include "tensorflow/compiler/mlir/lite/utils/validators.h"
 #include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.h"
 
@@ -25,7 +24,7 @@ struct PrepareLCE : public FunctionPass<PrepareLCE> {
 // Together they become
 // `y = (a + b*n) + (-2b) * popcount
 
-DenseElementsAttr GetBias(Value filter) {
+DenseElementsAttr GetBias(Attribute filter) {
   auto filter_type = filter.getType().cast<ShapedType>();
   auto filter_shape = filter_type.getShape();
   // Here the weights are still HWIO
@@ -36,7 +35,7 @@ DenseElementsAttr GetBias(Value filter) {
   return DenseElementsAttr::get(type, static_cast<float_t>(dotproduct_size));
 }
 
-DenseElementsAttr GetMultiplier(Value filter) {
+DenseElementsAttr GetMultiplier(Attribute filter) {
   auto filter_type = filter.getType().cast<ShapedType>();
   auto filter_shape = filter_type.getShape();
 
@@ -45,18 +44,10 @@ DenseElementsAttr GetMultiplier(Value filter) {
   return DenseElementsAttr::get(type, -2.0f);
 }
 
-static bool IsConst(Operation* op) {
-  return isa<ConstantOp>(op) || isa<TF::ConstOp>(op) || isa<ConstOp>(op) ||
-         isa<QConstOp>(op);
-}
+bool IsBinaryFilter(Attribute filter) {
+  if (!filter.isa<DenseElementsAttr>()) return false;
 
-bool IsBinaryFilter(Value* filter) {
-  auto op = filter->getDefiningOp();
-  if (!IsConst(op)) return false;
-
-  auto tensor_attr = op->getAttr("value").cast<DenseElementsAttr>();
-  for (auto value : tensor_attr.getValues<float>()) {
-    // TODO(arash): There is probably a better way to do this?
+  for (auto value : filter.cast<DenseElementsAttr>().getValues<float>()) {
     if (std::abs((std::abs(value) - 1.0f)) > 0.005f) return false;
   }
   return true;
