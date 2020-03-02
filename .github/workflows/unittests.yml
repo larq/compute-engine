@@ -61,10 +61,6 @@ jobs:
         run: |
           curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-darwin-amd64 > bazelisk
           chmod +x bazelisk
-      - name: Install GNU find
-        run: |
-          HOMEBREW_NO_AUTO_UPDATE=1 brew install findutils
-          ln -sf /usr/local/bin/gfind /usr/local/bin/find
       - uses: actions/setup-python@v1
         with:
           python-version: 3.7

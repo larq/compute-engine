@@ -20,28 +20,37 @@
 set -e
 set -o pipefail
 
+PLATFORM="$(uname -s | tr 'A-Z' 'a-z')"
+
+function is_macos() {
+  [[ "${PLATFORM}" == "darwin" ]]
+}
+
+function is_windows() {
+  # On windows, the shell script is actually running in msys
+  [[ "${PLATFORM}" =~ msys_nt*|mingw*|cygwin*|uwin* ]]
+}
+
 if [ -z "${RUNFILES_DIR}" ]; then
   # Some versions of bazel do not set RUNFILES_DIR. Instead they just cd
   # into the directory.
   RUNFILES_DIR="$PWD"
 fi
 
-# Detect whether cygwin/msys2 paths need to be translated.
-set +e  # Ignore errors if not found.
-cygpath="$(which cygpath 2>/dev/null)"
-set -e
-
 function find_executables() {
   set -e
   local p="$1"
-  if [ -z "$cygpath" ]; then
-    # For non-windows, use the perm based executable check, which has been
-    # supported by find for a very long time.
-    find "${p}" -xtype f -perm /u=x,g=x,o=x -print
-  else
+  if is_macos; then
+    # For macOS use -type since the default find doesn't support -xtype
+    find . -perm +111 -type f -or -type l -print
+  elif is_windows; then
     # For windows, always use the newer -executable find predicate (which is
     # not supported by ancient versions of find).
     find "${p}" -xtype f -executable -print
+  else
+    # For linux, use the perm based executable check, which has been
+    # supported by find for a very long time.
+    find "${p}" -xtype f -perm /u=x,g=x,o=x -print
   fi
 }
 
@@ -54,7 +63,8 @@ SUBPATH=""
 for runfile_path in $(find_executables "${RUNFILES_DIR}"); do
   # Prepend so that local things override.
   EXEDIR="$(dirname ${runfile_path})"
-  if ! [ -z "$cygpath" ]; then
+  if is_windows; then
+    cygpath="$(which cygpath)"
     EXEDIR="$($cygpath -u "$EXEDIR")"
   fi
   SUBPATH="${EXEDIR}:$SUBPATH"
