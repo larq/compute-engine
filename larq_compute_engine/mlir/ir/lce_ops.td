@@ -44,7 +44,7 @@ TODO
     TF_AnyStrAttrOf<["SAME", "VALID"]>:$padding,
     DefaultValuedAttr<TF_ConvnetDataFormatAttr, "NHWC">:$data_format,
     DefaultValuedAttr<I64ArrayAttr, "{1, 1, 1, 1}">:$dilations,
-    DefaultValuedAttr<TF_AnyStrAttrOf<["HWIO", "OHWI", "OHWI_PACKED"]>, "OHWI">:$filter_format
+    DefaultValuedAttr<TF_AnyStrAttrOf<["OHWI", "OHWI_PACKED"]>, "OHWI">:$filter_format
   );
 
   let results = (outs
