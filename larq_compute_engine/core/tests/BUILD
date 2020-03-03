@@ -24,38 +24,12 @@ cc_test(
     ],
 )
 
-cc_test(
-    name = "fused_bgemm_tests",
-    size = "small",
-    srcs = ["fused_bgemm_tests.cc"],
-    copts = ["-Iext/gtest/include"],
-    deps = [
-        "//larq_compute_engine/core:fused_bgemm_functor",
-        "//larq_compute_engine/core:utils",
-        "@com_google_googletest//:gtest_main",
-        "@eigen_archive//:eigen",
-    ],
-)
-
-cc_test(
-    name = "bconv2d_tests",
-    size = "small",
-    srcs = ["bconv2d_tests.cc"],
-    copts = ["-Iexternal/gtest/include"],
-    deps = [
-        "//larq_compute_engine/core:bconv2d_functor",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
 # collection of all CC architecture independent tests
 # each new cc test needs to be added here
 test_suite(
     name = "cc_tests",
     tests = [
-        "bconv2d_tests",
         "bgemm_tests",
-        "fused_bgemm_tests",
         "packbits_tests",
     ],
 )

@@ -2,7 +2,6 @@
 
 #include "bconv2d_impl.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
-#include "larq_compute_engine/core/bconv2d_functor.h"
 #include "larq_compute_engine/core/padding_functor.h"
 #include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
@@ -24,12 +23,14 @@ namespace bconv2d {
 using ::compute_engine::core::Layout;
 
 enum class KernelType {
-  // kReference: the same impl. path as the BConv2D op for TF
-  kReference,
-  // kGenericOptimized: the impl. path using optimized BGEMM kernel
+  // kGenericOptimized: the impl. path using reference BGEMM kernels in RUY.
+  // TODO(arashb): the generic optimized needs to be redirected to the
+  // reference impl. of RUY kernels.
   kGenericOptimized,
-  // kRuyOptimized: the impl. path using RUY framework
-  kRuyOptimized,  // TODO
+
+  // kRuyOptimized: the impl. path using RUY framework with hand-optimized
+  // BGEMM kernels.
+  kRuyOptimized,
 };
 
 const int kTensorNotAllocated = -1;
@@ -228,7 +229,7 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
   decide_bitpack_before_im2col(conv_params, bitwidth);
 
   // pre-allocate temporary tensors for optimized version
-  if (kernel_type == KernelType::kGenericOptimized) {
+  if (kernel_type == KernelType::kRuyOptimized) {
     conv_params->need_im2col =
         (conv_params->strides[2] /* width */ != 1 ||
          conv_params->strides[1] /* height */ != 1 ||
@@ -303,46 +304,6 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
 template <KernelType kernel_type, int bitwidth>
 TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   return Prepare(kernel_type, bitwidth, context, node);
-}
-
-template <class T, class TBitpacked>
-void EvalRef(TfLiteContext* context, TfLiteNode* node,
-             const TfLiteBConv2DParams* params) {
-  const auto* input = GetInput(context, node, 0);
-  const auto* filter = GetInput(context, node, 1);
-  auto* output = GetOutput(context, node, 0);
-
-  const auto stride_height = params->strides[1];
-  const auto stride_width = params->strides[2];
-  const int padding =
-      params->padding_type == TfLitePadding::kTfLitePaddingValid ? 1 : 2;
-
-  using TBGemmFunctor =
-      ce::core::ReferenceBGemmFunctor<TBitpacked, Layout::RowMajor, TBitpacked,
-                                      Layout::ColMajor, T>;
-  using TFusedBGemmFunctor =
-      ce::core::FusedBGemmFunctor<T, Layout::RowMajor, T, Layout::ColMajor, T,
-                                  TBitpacked, TBGemmFunctor>;
-  using TConvFunctor =
-      ce::core::Im2ColBConvFunctor<T, T, T, TFusedBGemmFunctor>;
-  using PaddingFunctor =
-      ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
-
-  static TConvFunctor conv_functor;
-  conv_functor(input->data.f, params->batch, params->input_height,
-               params->input_width, params->channels_in, filter->data.f,
-               params->filter_height, params->filter_width,
-               params->channels_out, stride_height, stride_width, padding,
-               output->data.f, params->out_height, params->out_width);
-
-  if (params->padding_type == TfLitePadding::kTfLitePaddingSame) {
-    PaddingFunctor padding_functor;
-    padding_functor(params->batch, params->input_height, params->input_width,
-                    params->channels_in, filter->data.f, params->filter_height,
-                    params->filter_width, params->channels_out, stride_height,
-                    stride_width, params->dilations[1], params->dilations[2],
-                    output->data.f, params->out_height, params->out_width);
-  }
 }
 
 inline PaddingType RuntimePaddingType(TfLitePadding padding) {
@@ -476,9 +437,7 @@ template <KernelType kernel_type, class TBitpacked>
 TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   auto* conv_params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
 
-  if (kernel_type == KernelType::kReference) {
-    EvalRef<float, TBitpacked>(context, node, conv_params);
-  } else if (kernel_type == KernelType::kGenericOptimized) {
+  if (kernel_type == KernelType::kRuyOptimized) {
     EvalOpt<float, TBitpacked>(context, node, conv_params);
   } else {
     return kTfLiteError;
@@ -489,51 +448,27 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
 
 }  // namespace bconv2d
 
-// TfLiteRegistration* Register_BCONV_2D8_REF() {
-//   static TfLiteRegistration r = {
-//       bconv2d::Init, bconv2d::Free,
-//       bconv2d::Prepare<bconv2d::KernelType::kReference, 8>,
-//       bconv2d::Eval<bconv2d::KernelType::kReference, std::uint8_t>};
-//   return &r;
-// }
-
-TfLiteRegistration* Register_BCONV_2D32_REF() {
-  static TfLiteRegistration r = {
-      bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kReference, 32>,
-      bconv2d::Eval<bconv2d::KernelType::kReference, std::uint32_t>};
-  return &r;
-}
-
-TfLiteRegistration* Register_BCONV_2D64_REF() {
-  static TfLiteRegistration r = {
-      bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kReference, 64>,
-      bconv2d::Eval<bconv2d::KernelType::kReference, std::uint64_t>};
-  return &r;
-}
-
 // TfLiteRegistration* Register_BCONV_2D8_OPT() {
 //   static TfLiteRegistration r = {
 //       bconv2d::Init, bconv2d::Free,
-//       bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized, 8>,
-//       bconv2d::Eval<bconv2d::KernelType::kGenericOptimized, std::uint8_t>};
+//       bconv2d::Prepare<bconv2d::KernelType::kRuyOptimized, 8>,
+//       bconv2d::Eval<bconv2d::KernelType::kRuyOptimized, std::uint8_t>};
 //   return &r;
 // }
 
 TfLiteRegistration* Register_BCONV_2D32_OPT() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized, 32>,
-      bconv2d::Eval<bconv2d::KernelType::kGenericOptimized, std::uint32_t>};
+      bconv2d::Prepare<bconv2d::KernelType::kRuyOptimized, 32>,
+      bconv2d::Eval<bconv2d::KernelType::kRuyOptimized, std::uint32_t>};
   return &r;
 }
 
 TfLiteRegistration* Register_BCONV_2D64_OPT() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kGenericOptimized, 64>,
-      bconv2d::Eval<bconv2d::KernelType::kGenericOptimized, std::uint64_t>};
+      bconv2d::Prepare<bconv2d::KernelType::kRuyOptimized, 64>,
+      bconv2d::Eval<bconv2d::KernelType::kRuyOptimized, std::uint64_t>};
   return &r;
 }
 
@@ -542,7 +477,8 @@ TfLiteRegistration* Register_BCONV_2D64_OPT() {
 // #if defined TFLITE_WITH_RUY
 //   return Register_BCONV_2D8_OPT();
 // #else
-//   return Register_BCONV_2D8_REF();
+//   static_assert(false, "LCE needs to be compiled with TFLite RUY
+//   activated.");
 // #endif
 // }
 
@@ -550,7 +486,7 @@ TfLiteRegistration* Register_BCONV_2D32() {
 #if defined TFLITE_WITH_RUY
   return Register_BCONV_2D32_OPT();
 #else
-  return Register_BCONV_2D32_REF();
+  static_assert(false, "LCE needs to be compiled with TFLite RUY activated.");
 #endif
 }
 
@@ -558,7 +494,7 @@ TfLiteRegistration* Register_BCONV_2D64() {
 #if defined TFLITE_WITH_RUY
   return Register_BCONV_2D64_OPT();
 #else
-  return Register_BCONV_2D64_REF();
+  static_assert(false, "LCE needs to be compiled with TFLite RUY activated.");
 #endif
 }
 
