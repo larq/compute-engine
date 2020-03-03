@@ -53,11 +53,13 @@ bool IsBinaryFilter(Attribute filter) {
   return true;
 }
 
-bool IsSamePadding(Attribute paddings_attr, Value* input, Value* output) {
+bool IsSamePadding(Attribute paddings_attr, Value* input, Value* output,
+                   ArrayAttr strides_attr) {
   if (!paddings_attr.isa<DenseElementsAttr>()) return false;
   auto paddings = paddings_attr.dyn_cast<DenseElementsAttr>();
   auto input_shape = input->getType().cast<RankedTensorType>().getShape();
   auto output_shape = output->getType().cast<RankedTensorType>().getShape();
+  auto strides = strides_attr.getValue();
 
   int pad_height_left = paddings.getValue<int>({1, 0});
   int pad_height_right = paddings.getValue<int>({1, 1});
@@ -67,10 +69,15 @@ bool IsSamePadding(Attribute paddings_attr, Value* input, Value* output) {
   int pad_height = pad_height_left + pad_height_right;
   int pad_width = pad_width_left + pad_width_right;
 
+  int stride_height = strides[1].cast<IntegerAttr>().getInt();
+  int stride_width = strides[2].cast<IntegerAttr>().getInt();
+
   return paddings.getValue<int>({0, 0}) == 0 &&
          paddings.getValue<int>({0, 1}) == 0 &&
-         input_shape[1] == output_shape[1] &&
-         input_shape[2] == output_shape[2] &&
+         output_shape[1] ==
+             (input_shape[1] + stride_height - 1) / stride_height &&
+         output_shape[2] ==
+             (input_shape[2] + stride_width - 1) / stride_width &&
          pad_height_left == pad_height / 2 &&
          pad_height_right == (pad_height + 1) / 2 &&
          pad_width_left == pad_width / 2 &&
