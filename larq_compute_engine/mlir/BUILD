@@ -116,8 +116,8 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:transforms/decode_constant.h",
     ],
     deps = [
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_tensor",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow",
     ],
     alwayslink = 1,
 )
