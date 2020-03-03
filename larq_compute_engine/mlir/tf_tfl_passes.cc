@@ -20,6 +20,16 @@ void AddTFToLCETFLConversionPasses(mlir::OpPassManager* pass_manager) {
   pass_manager->addPass(mlir::CreateTFExecutorToControlDialectConversion());
   pass_manager->addPass(mlir::TFControlFlow::CreateRaiseTFControlFlowPass());
 
+  // Enable fusing composite ops that can be lowered to built-in TFLite ops.
+  pass_manager->addPass(mlir::TFL::CreatePrepareCompositeFunctionsPass());
+
+  // Legalize while early to allow further constant folding.
+  // TODO(jpienaar): This may not actually matter as we do canonicalization
+  // after the legalize below, for now it needs to be below the above passes
+  // that work on TF dialect and before inliner so that the function calls in
+  // body and cond are inlined for optimization.
+  pass_manager->addNestedPass<mlir::FuncOp>(mlir::TFL::CreateLegalizeTFWhilePass());
+
   // TODO(jpienaar): Revise post dialect constants.
   pass_manager->addPass(mlir::TF::CreateDecodeConstantPass());
   // Canonicalization includes const folding, which is utilized here to optimize
@@ -28,6 +38,7 @@ void AddTFToLCETFLConversionPasses(mlir::OpPassManager* pass_manager) {
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCSEPass());
 
+  pass_manager->addPass(mlir::createInlinerPass());
 
   // Inject Larq Compute Engine Ops
   pass_manager->addPass(mlir::TFL::CreatePrepareLCEPass());
