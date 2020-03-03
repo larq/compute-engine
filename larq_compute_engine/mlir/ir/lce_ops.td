@@ -3,9 +3,7 @@
 // We extend the TensorFlow dialect in order to allow for easy generation of
 // of the TFLite flatbuffer using TensorFlows infrastructure.
 
-#ifndef TF_OP_BASE
 include "tensorflow/compiler/mlir/tensorflow/ir/tf_op_base.td"
-#endif
 
 #ifndef TFL_OPS
 def TFL_AF_None  : StrEnumAttrCase<"NONE">;
