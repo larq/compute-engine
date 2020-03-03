@@ -7,6 +7,21 @@
 include "tensorflow/compiler/mlir/tensorflow/ir/tf_op_base.td"
 #endif
 
+#ifndef TFL_OPS
+def TFL_AF_None  : StrEnumAttrCase<"NONE">;
+def TFL_AF_Relu  : StrEnumAttrCase<"RELU">;
+def TFL_AF_Relu1 : StrEnumAttrCase<"RELU_N1_TO_1">;
+def TFL_AF_Relu6 : StrEnumAttrCase<"RELU6">;
+def TFL_AF_Tanh  : StrEnumAttrCase<"TANH">;
+def TFL_AF_Sign  : StrEnumAttrCase<"SIGN_BIT">;
+
+def TFL_AFAttr : StrEnumAttr<
+    "ActivationFunctionType", "fused activation enum", [
+      TFL_AF_None,  TFL_AF_Relu, TFL_AF_Relu1,
+      TFL_AF_Relu6, TFL_AF_Tanh, TFL_AF_Sign
+    ]>;
+#endif
+
 def TF_LqceBsignOp : TF_Op<"LqceBsign", [NoSideEffect, SameOperandsAndResultType]> {
   let summary = "Returns an element-wise indication of the binary sign of a number.";
 
@@ -45,7 +60,8 @@ TODO
     DefaultValuedAttr<I32Attr, "0">:$pad_values,
     DefaultValuedAttr<TF_ConvnetDataFormatAttr, "NHWC">:$data_format,
     DefaultValuedAttr<I64ArrayAttr, "{1, 1, 1, 1}">:$dilations,
-    DefaultValuedAttr<TF_AnyStrAttrOf<["OHWI", "OHWI_PACKED"]>, "OHWI">:$filter_format
+    DefaultValuedAttr<TF_AnyStrAttrOf<["OHWI", "OHWI_PACKED"]>, "OHWI">:$filter_format,
+    TFL_AFAttr:$activation
   );
 
   let results = (outs
