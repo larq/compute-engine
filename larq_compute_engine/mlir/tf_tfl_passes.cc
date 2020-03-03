@@ -28,7 +28,8 @@ void AddTFToLCETFLConversionPasses(mlir::OpPassManager* pass_manager) {
   // after the legalize below, for now it needs to be below the above passes
   // that work on TF dialect and before inliner so that the function calls in
   // body and cond are inlined for optimization.
-  pass_manager->addNestedPass<mlir::FuncOp>(mlir::TFL::CreateLegalizeTFWhilePass());
+  pass_manager->addNestedPass<mlir::FuncOp>(
+      mlir::TFL::CreateLegalizeTFWhilePass());
 
   // TODO(jpienaar): Revise post dialect constants.
   pass_manager->addPass(mlir::TF::CreateDecodeConstantPass());
