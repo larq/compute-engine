@@ -78,6 +78,9 @@ cat << EOM >> .bazelrc
 # Disable visibility checks (works around some private deps in TensorFlow).
 build --nocheck_visibility
 
+# For compatibility with TensorFlow config
+common --experimental_repo_remote_exec
+
 build --copt=-DTFLITE_WITH_RUY
 
 # These can be activated using --config=rpi3 and --config=aarch64

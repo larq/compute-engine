@@ -1,6 +1,6 @@
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "larq_compute_engine/mlir/transforms/utils.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 

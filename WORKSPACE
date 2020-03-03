@@ -55,10 +55,10 @@ arm_compiler_configure(
 #    reliable downloads.
 http_archive(
     name = "org_tensorflow",
-    sha256 = "638e541a4981f52c69da4a311815f1e7989bf1d67a41d204511966e1daed14f7",
-    strip_prefix = "tensorflow-2.1.0",
+    sha256 = "2f434c204a606c674bd7c5657a3c6e941504d9806e9d5aa7a1e5b254a21ef351",
+    strip_prefix = "tensorflow-f97b7ba2bf92a8e3c06a2b713eae19ca1c932737",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/v2.1.0.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/f97b7ba2bf92a8e3c06a2b713eae19ca1c932737.tar.gz",
     ],
 )
 
@@ -77,8 +77,11 @@ http_archive(
 
 http_archive(
     name = "bazel_skylib",
-    sha256 = "2ef429f5d7ce7111263289644d233707dba35e39696377ebab8b0bc701f7818e",
-    urls = ["https://github.com/bazelbuild/bazel-skylib/releases/download/0.8.0/bazel-skylib.0.8.0.tar.gz"],
+    sha256 = "1dde365491125a3db70731e25658dfdd3bc5dbdfd11b840b3e987ecf043c7ca0",
+    urls = [
+        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/bazel-skylib/releases/download/0.9.0/bazel_skylib-0.9.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/0.9.0/bazel_skylib-0.9.0.tar.gz",
+    ],
 )  # https://github.com/bazelbuild/bazel-skylib/releases
 # END: Upstream TensorFlow dependencies
 
