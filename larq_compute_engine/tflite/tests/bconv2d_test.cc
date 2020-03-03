@@ -43,8 +43,6 @@ const char* GetPaddingName(enum Padding padding) {
       return "VALID";
     case Padding_SAME:
       return "SAME";
-    case Padding_ONE:
-      return "SAME_ONE";
     default:
       return "UNKNOWN";
   };
@@ -207,12 +205,16 @@ struct TestParam {
     param_dilation_oss << param.dilation_height_factor << "x"
                        << param.dilation_width_factor;
 
+    const int pad_values = (param.padding == Padding_ONE ? 1 : 0);
+    const Padding padding =
+        (param.padding == Padding_ONE ? Padding_SAME : param.padding);
+
     // WARNING: substitute accests only 11 arguments
-    return absl::Substitute("Op$0_I$1_K$2_P$3_S$4_D$5_T$6", param.kernel_name,
-                            param_input_oss.str(), param_filter_oss.str(),
-                            GetPaddingName(param.padding),
-                            param_strides_oss.str(), param_dilation_oss.str(),
-                            param.num_threads);
+    return absl::Substitute("Op$0_I$1_K$2_P$3_PV$4_S$5_D$6_T$7",
+                            param.kernel_name, param_input_oss.str(),
+                            param_filter_oss.str(), GetPaddingName(padding),
+                            pad_values, param_strides_oss.str(),
+                            param_dilation_oss.str(), param.num_threads);
   }
 
   int input_batch_count = 1;
