@@ -38,17 +38,6 @@ cc_test(
 )
 
 cc_test(
-    name = "im2col_tests",
-    size = "small",
-    srcs = ["im2col_tests.cc"],
-    copts = ["-Iext/gtest/include"],
-    deps = [
-        "//larq_compute_engine/core:im2col_functor",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_test(
     name = "bconv2d_tests",
     size = "small",
     srcs = ["bconv2d_tests.cc"],
@@ -62,12 +51,11 @@ cc_test(
 # collection of all CC architecture independent tests
 # each new cc test needs to be added here
 test_suite(
-    name = "cc_tests_general",
+    name = "cc_tests",
     tests = [
         "bconv2d_tests",
         "bgemm_tests",
         "fused_bgemm_tests",
-        "im2col_tests",
         "packbits_tests",
     ],
 )
