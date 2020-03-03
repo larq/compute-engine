@@ -53,14 +53,6 @@ cc_library(
     ],
 )
 
-# BUILDING IM2COL
-cc_library(
-    name = "im2col_functor",
-    hdrs = [
-        "im2col_functor.h",
-    ],
-)
-
 cc_library(
     name = "padding_functor",
     hdrs = ["padding_functor.h"],
