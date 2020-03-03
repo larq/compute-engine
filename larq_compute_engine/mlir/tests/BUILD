@@ -10,6 +10,6 @@ lce_lit_test_suite(
     srcs = glob(["*.mlir"]),
     data = [
         "//larq_compute_engine/mlir:lce-tf-opt",
-        "@llvm//:FileCheck",
+        "@llvm-project//llvm:FileCheck",
     ],
 )

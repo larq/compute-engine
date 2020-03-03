@@ -28,14 +28,12 @@ void AddTFToLCETFLConversionPasses(mlir::OpPassManager* pass_manager) {
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCSEPass());
 
-  // The below passes only make sense if Builtin TFLite ops are enabled
-  // for emission.
 
   // Inject Larq Compute Engine Ops
   pass_manager->addPass(mlir::TFL::CreatePrepareLCEPass());
   // Prepare for TFLite dialect, rerun canonicalization, and then legalize to
   // the TFLite dialect.
-  pass_manager->addPass(mlir::TFL::CreatePrepareTFPass());
+  pass_manager->addPass(mlir::TFL::CreatePrepareTFPass(true));
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
   pass_manager->addPass(mlir::TFL::CreateLegalizeTFPass());
   pass_manager->addPass(mlir::TFL::CreateOptimizePass());
