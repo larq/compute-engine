@@ -37,8 +37,8 @@ TODO
   let arguments = (ins
     TensorOf<[F32]>:$input,
     TensorOf<[F32]>:$filter,
-    TensorOf<[F32]>:$fused_multiply,
-    TensorOf<[F32]>:$fused_add,
+    TensorOf<[F32]>:$post_multiply,
+    TensorOf<[F32]>:$post_add,
 
     I64ArrayAttr:$strides,
     TF_AnyStrAttrOf<["SAME", "VALID"]>:$padding,
