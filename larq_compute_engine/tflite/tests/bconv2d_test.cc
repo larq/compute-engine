@@ -26,6 +26,7 @@
 #include "absl/strings/substitute.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
 #include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/kernels/padding.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/kernels/test_util.h"
 #include "tensorflow/lite/model.h"
@@ -33,6 +34,19 @@
 // using namespace tflite;
 
 namespace tflite {
+
+constexpr int Padding_ONE = Padding_MAX + 1;
+
+const char* GetPaddingName(enum Padding padding) {
+  switch (padding) {
+    case Padding_VALID:
+      return "VALID";
+    case Padding_SAME:
+      return "SAME";
+    default:
+      return "UNKNOWN";
+  };
+}
 
 namespace ops {
 namespace builtin {
@@ -90,6 +104,41 @@ class ConvolutionOpModel : public BaseConvolutionOpModel {
   void SetBias(std::vector<float>& f) { PopulateTensor(bias_, f); }
 
   std::vector<float> GetOutput() { return ExtractVector<float>(output_); }
+};
+
+// From lite/kernels/pad_test.cc
+template <typename T>
+class PadOpModel : public SingleOpModel {
+ public:
+  PadOpModel(const TensorData& input, std::initializer_list<int> paddings_shape,
+             std::initializer_list<int> paddings, T constant_values,
+             const TensorData& output) {
+    input_ = AddInput(input);
+    paddings_ = AddConstInput(TensorType_INT32, paddings, paddings_shape);
+    constant_values_ =
+        AddConstInput(GetTensorType<T>(), {constant_values}, {1});
+
+    output_ = AddOutput(output);
+
+    SetBuiltinOp(BuiltinOperator_PADV2, BuiltinOptions_PadV2Options,
+                 CreatePadV2Options(builder_).Union());
+    BuildInterpreter({input.shape});
+  }
+
+  void SetInput(std::vector<T>& data) { PopulateTensor<T>(input_, data); }
+
+  void SetPaddings(std::initializer_list<int> paddings) {
+    PopulateTensor<int>(paddings_, paddings);
+  }
+
+  std::vector<T> GetOutput() { return ExtractVector<T>(output_); }
+  std::vector<int> GetOutputShape() { return GetTensorShape(output_); }
+
+ protected:
+  int input_;
+  int output_;
+  int paddings_;
+  int constant_values_;
 };
 
 }  // namespace
@@ -156,12 +205,16 @@ struct TestParam {
     param_dilation_oss << param.dilation_height_factor << "x"
                        << param.dilation_width_factor;
 
+    const int pad_values = (param.padding == Padding_ONE ? 1 : 0);
+    const Padding padding =
+        (param.padding == Padding_ONE ? Padding_SAME : param.padding);
+
     // WARNING: substitute accests only 11 arguments
-    return absl::Substitute("Op$0_I$1_K$2_P$3_S$4_D$5_T$6", param.kernel_name,
-                            param_input_oss.str(), param_filter_oss.str(),
-                            param.padding == Padding_VALID ? "VALID" : "SAME",
-                            param_strides_oss.str(), param_dilation_oss.str(),
-                            param.num_threads);
+    return absl::Substitute("Op$0_I$1_K$2_P$3_PV$4_S$5_D$6_T$7",
+                            param.kernel_name, param_input_oss.str(),
+                            param_filter_oss.str(), GetPaddingName(padding),
+                            pad_values, param_strides_oss.str(),
+                            param_dilation_oss.str(), param.num_threads);
   }
 
   int input_batch_count = 1;
@@ -179,7 +232,6 @@ struct TestParam {
   int dilation_height_factor = 1;
   int dilation_width_factor = 1;
 
-  // TOOD: currently we are ignoring padding
   Padding padding = Padding_VALID;
 
   int num_threads = 1;
@@ -193,7 +245,7 @@ class BaseBConv2DOpModel : public SingleOpModel {
   BaseBConv2DOpModel(register_function registration, const TensorData& input,
                      const TensorData& filter, const TensorData& output,
                      int stride_width = 1, int stride_height = 1,
-                     enum Padding padding = Padding_VALID,
+                     enum Padding padding = Padding_VALID, int pad_values = 0,
                      int dilation_width_factor = 1,
                      int dilation_height_factor = 1, int num_threads = -1) {
     input_ = AddInput(input);
@@ -219,7 +271,8 @@ class BaseBConv2DOpModel : public SingleOpModel {
         fbb.Int(1);
       });
       fbb.String("filter_format", "OHWI");
-      fbb.String("padding", padding == Padding_VALID ? "VALID" : "SAME");
+      fbb.String("padding", GetPaddingName(padding));
+      fbb.Int("pad_values", pad_values);
     });
     fbb.Finish();
     SetCustomOp("LqceBconv2d", fbb.GetBuffer(), registration);
@@ -318,9 +371,14 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   const int stride_width = param.stride_width;
   const int dilation_height_factor = param.dilation_height_factor;
   const int dilation_width_factor = param.dilation_width_factor;
-  // TOOD: currently we are ignoring padding
   const Padding padding = param.padding;
   const int num_threads = param.num_threads;
+
+  const Padding builtin_padding =
+      (padding == Padding_ONE ? Padding_VALID : padding);
+  const Padding bconv_padding =
+      (padding == Padding_ONE ? Padding_SAME : padding);
+  const int pad_values = (padding == Padding_ONE ? 1 : 0);
 
   const int input_num_elem =
       input_batch_count * input_height * input_width * input_depth;
@@ -329,7 +387,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       filter_height * filter_width * input_depth * filter_count;
 
   using T = float;
-  std::vector<T> input_data, filters_data;
+  std::vector<T> input_data, padded_input_data, filters_data;
   std::vector<T> channel_multipliers;
   std::vector<T> fused_multiply_data, fused_add_data, bias_data;
   input_data.resize(input_num_elem);
@@ -358,6 +416,49 @@ TEST_P(BConv2DOpTest, SimpleTest) {
                 float_generator);
   std::generate(std::begin(bias_data), std::end(bias_data), float_generator);
 
+  int padded_input_height = input_height;
+  int padded_input_width = input_width;
+  if (pad_values == 1) {
+    // Use a Pad op to pad with ones
+    int output_height, output_width;
+    TfLitePaddingValues padding_values = ComputePaddingHeightWidth(
+        stride_height, stride_width, dilation_height_factor,
+        dilation_width_factor, input_height, input_width, filter_height,
+        filter_width, kTfLitePaddingSame, &output_height, &output_width);
+
+    // How many pixels does the kernel stick out at the {left, top, right,
+    // bottom}
+    const int overflow_left = padding_values.width;
+    const int overflow_top = padding_values.height;
+    const int overflow_right =
+        padding_values.width + padding_values.width_offset;
+    const int overflow_bottom =
+        padding_values.height + padding_values.height_offset;
+
+    // The parameter {4,2} means that the paddings array is four pairs.
+    // The four pairs correspond to: Batch, Height, Width, Channels
+    PadOpModel<float> padop(
+        {TensorType_FLOAT32,
+         {input_batch_count, input_height, input_width, input_depth}},
+        {4, 2},
+        {0, 0, overflow_top, overflow_bottom, overflow_left, overflow_right, 0,
+         0},
+        1.0f, {TensorType_FLOAT32, {}});
+
+    padop.SetInput(input_data);
+    padop.Invoke();
+
+    padded_input_height = input_height + overflow_top + overflow_bottom;
+    padded_input_width = input_width + overflow_left + overflow_right;
+    EXPECT_THAT(padop.GetOutputShape(),
+                ElementsAreArray(
+                    {1, padded_input_height, padded_input_width, input_depth}));
+
+    padded_input_data = padop.GetOutput();
+  } else {
+    padded_input_data = input_data;
+  }
+
   // Fuse the multipliers to the filters, just as tflite would do it
   // The bconv op will take the sign, so it will automatically ignore this
   for (int i = 0; i < filter_count; ++i) {
@@ -381,8 +482,8 @@ TEST_P(BConv2DOpTest, SimpleTest) {
        {input_batch_count, input_height, input_width, input_depth}},
       {TensorType_FLOAT32,
        {filter_count, filter_height, filter_width, input_depth}},
-      {TensorType_FLOAT32, {}}, stride_width, stride_height, padding,
-      dilation_width_factor, dilation_height_factor, num_threads);
+      {TensorType_FLOAT32, {}}, stride_width, stride_height, bconv_padding,
+      pad_values, dilation_width_factor, dilation_height_factor, num_threads);
 
   m_lce.SetInput(input_data);
   m_lce.SetFilter(filters_data);
@@ -394,14 +495,15 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       ::tflite::ops::builtin::
           Register_CONVOLUTION_GENERIC_OPT(),  // registration
       {TensorType_FLOAT32,
-       {input_batch_count, input_height, input_width, input_depth}},  // input
+       {input_batch_count, padded_input_height, padded_input_width,
+        input_depth}},  // input
       {TensorType_FLOAT32,
        {filter_count, filter_height, filter_width, input_depth}},  // filter
       {TensorType_FLOAT32, {}},                                    // output
-      stride_width, stride_height, padding, ActivationFunctionType_NONE,
+      stride_width, stride_height, builtin_padding, ActivationFunctionType_NONE,
       dilation_width_factor, dilation_height_factor, num_threads);
 
-  m_builtin.SetInput(input_data);
+  m_builtin.SetInput(padded_input_data);
   m_builtin.SetFilter(filters_data);
   m_builtin.SetBias(bias_data);
   m_builtin.Invoke();
@@ -426,8 +528,8 @@ INSTANTIATE_TEST_SUITE_P(
                           std::array<int, 2>{2, 3}),  // strides height/width
         ::testing::Values(std::array<int, 2>{1, 1},
                           std::array<int, 2>{3, 2}),  // dilation height/width
-        ::testing::Values(Padding_VALID, Padding_SAME),  // padding
-        ::testing::Values(1, 2),                         // number of threads
+        ::testing::Values(Padding_VALID, Padding_SAME, Padding_ONE),  // padding
+        ::testing::Values(1, 2),  // number of threads
         ::testing::ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
     TestParam::TestNameSuffix);
 }  // namespace testing
