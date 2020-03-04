@@ -45,9 +45,6 @@ multiclass FuseMulOrDivWithBConv2D<dag binaryOp> {
 foreach binaryOp = [TFL_DivOp, TFL_MulOp] in
   defm : FuseMulOrDivWithBConv2D<binaryOp>;
 
-
-def IsPostOpIdentity : Constraint<CPred<"IsPostOpIdentity($0, $1)">>;
-
 class IsConstantValue<string val> : Constraint<CPred<"IsConstantValue($0, " # val # ")">>;
 
 // Fuse activation function into BConv2D
