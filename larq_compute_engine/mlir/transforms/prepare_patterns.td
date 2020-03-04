@@ -37,8 +37,6 @@ def : Pat<(TF_Conv2DOp (TF_LqceBsignOp $input), (ConstantOp $filter), $strides, 
             $dilations, ConstantAttr<StrAttr, "OHWI">),
           [(BinaryFilter $filter)], (addBenefit 90)>;
 
-def IsValid : AttrConstraint<CPred<"$_self.cast<StringAttr>().getValue() == \"VALID\"">>;
-
 def ConstFloatValueIsOne : Constraint<
   CPred<"$0.isa<DenseElementsAttr>() && "
   "$0.cast<DenseElementsAttr>().getNumElements() == 1 && "
@@ -48,7 +46,7 @@ def SamePadding : Constraint<CPred<"IsSamePadding($0, $1, $2, $3)">>;
 
 def : Pat<(TF_Conv2DOp: $output
             (TF_PadV2Op (TF_LqceBsignOp $input), (ConstantOp $paddings), (ConstantOp $pad_values)),
-            (ConstantOp $filter), $strides, $use_cudnn, IsValid: $padding,
+            (ConstantOp $filter), $strides, $use_cudnn, ConstantAttr<StrAttr, "VALID">,
             $explicit_padding, IsDataFormatNHWC: $data_format, $dilations),
           (TF_LqceBconv2d64Op $input,
             (TF_TransposeOp (ConstantOp $filter), (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
