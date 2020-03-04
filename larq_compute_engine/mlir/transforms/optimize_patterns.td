@@ -45,13 +45,13 @@ multiclass FuseMulOrDivWithBConv2D<dag binaryOp> {
 foreach binaryOp = [TFL_DivOp, TFL_MulOp] in
   defm : FuseMulOrDivWithBConv2D<binaryOp>;
 
-class IsConstantValue<string val> : Constraint<CPred<"IsConstantValue($0, " # val # ")">>;
+class ConstantValue<string val> : AttrConstraint<CPred<"IsConstantValue($_self, " # val # ")">>;
 
 // Fuse activation function into BConv2D
 multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
   def : Pat<(ActFnOp (TF_LqceBconv2d64Op:$conv_output $input, $filter,
-                        (ConstantOp $post_activation_multiplier),
-                        (ConstantOp $post_activation_bias),
+                        (ConstantOp ConstantValue<"1.0f">:$post_activation_multiplier),
+                        (ConstantOp ConstantValue<"0.0f">:$post_activation_bias),
                         $strides,
                         ConstantAttr<StrAttr, "VALID">: $padding,
                         $pad_values,
@@ -61,12 +61,10 @@ multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
                         (ConstantOp $post_activation_multiplier), (ConstantOp $post_activation_bias),
                         $strides, $padding, $pad_values, $data_format,
                         $dilations, $filter_format, ActFnAttr),
-         [(HasOneUse $conv_output),
-         (IsConstantValue<"1.0f"> $post_activation_multiplier),
-         (IsConstantValue<"0.0f"> $post_activation_bias)]>;
+         [(HasOneUse $conv_output)]>;
   def : Pat<(ActFnOp (TF_LqceBconv2d64Op:$conv_output $input, $filter,
-                        (ConstantOp $post_activation_multiplier),
-                        (ConstantOp $post_activation_bias),
+                        (ConstantOp ConstantValue<"1.0f">:$post_activation_multiplier),
+                        (ConstantOp ConstantValue<"0.0f">:$post_activation_bias),
                         $strides,
                         ConstantAttr<StrAttr, "SAME">: $padding,
                         ConstantAttr<I32Attr, "1">: $pad_values,
@@ -76,9 +74,7 @@ multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
                         (ConstantOp $post_activation_multiplier), (ConstantOp $post_activation_bias),
                         $strides, $padding, $pad_values, $data_format,
                         $dilations, $filter_format, ActFnAttr),
-         [(HasOneUse $conv_output),
-          (IsConstantValue<"1.0f"> $post_activation_multiplier),
-          (IsConstantValue<"0.0f"> $post_activation_bias)]>;
+         [(HasOneUse $conv_output)]>;
 }
 
 foreach actFnPair = [[TFL_ReluOp, TFL_AF_Relu],
