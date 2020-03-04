@@ -294,18 +294,18 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       // Load multiplication bias
       "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_MULTIPLIER) "]\n"
       // Offset these base pointers as needed given the current row, col.
-      "add x5, x1, %x[row], lsl #2\n"
+      "add x2, x1, %x[row], lsl #2\n"
       "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
-      "csel x1, x1, x5, eq\n"
+      "csel x1, x1, x2, eq\n"
       // Load 4 bias-multiplication values.
       "ld1 {v14.4s}, [x1], #16\n"
 
       // Load addition bias
       "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_BIAS) "]\n"
       // Offset these base pointers as needed given the current row, col.
-      "add x5, x1, %x[row], lsl #2\n"
+      "add x2, x1, %x[row], lsl #2\n"
       "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
-      "csel x1, x1, x5, eq\n"
+      "csel x1, x1, x2, eq\n"
       // Load 4 bias-addition values.
       "ld1 {v15.4s}, [x1], #16\n"
 
@@ -407,12 +407,12 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "mov x4, %[dst_ptr]\n"
       "mov w14, #0\n"
       "50:\n"
-      "mov w5, #0\n"
+      "mov w15, #0\n"
       "51:\n"
-      "ldr w13, [x3, x5, lsl #2]\n"
-      "str w13, [x4, x5, lsl #2]\n"
-      "add w5, w5, #1\n"
-      "cmp w5, w1\n"
+      "ldr w13, [x3, x15, lsl #2]\n"
+      "str w13, [x4, x15, lsl #2]\n"
+      "add w15, w15, #1\n"
+      "cmp w15, w1\n"
       "blt 51b\n"
       "add w14, w14, #1\n"
       "add x3, x3, #16\n"
@@ -424,10 +424,6 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
 
       // At this point we have completely finished writing values to the
       // destination matrix for the current block.
-
-      // Reload some params --- we had used x5 -- x7 for a few other things
-      // since the last time we had loaded them.
-      "ldr x5, [%[params], #" RUY_STR(RUY_OFFSET_LHS_BASE_PTR) "]\n"
 
       // Move to the next block of the destination matrix, for the next iter
       // of the main loop.  Notice that lhs_col_ptr, rhs_col_ptr have already
@@ -462,7 +458,7 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
         [dst_col_ptr] "+r"(dst_col_ptr), [dst_ptr] "+r"(dst_ptr), [row] "+r"(row), [col] "+r"(col)
       : [ params ] "r"(&params), [dst_rows] "r"(params.dst_rows),
         [dst_cols] "r"(params.dst_cols), [dst_tmp_buf] "r"(params.dst_tmp_buf)
-      : "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14", "cc",
+      : "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "cc",
         "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12",
         "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25",
         "v26", "v27", "v28", "v29", "v30", "v31");
@@ -734,18 +730,18 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       // Load multiplication bias
       "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_MULTIPLIER) "]\n"
       // Offset these base pointers as needed given the current row, col.
-      "add x5, x1, %x[row], lsl #2\n"
+      "add x2, x1, %x[row], lsl #2\n"
       "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
-      "csel x1, x1, x5, eq\n"
+      "csel x1, x1, x2, eq\n"
       // Load 4 bias-multiplication values.
       "ld1 {v14.4s}, [x1], #16\n"
 
       // Load addition bias
       "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_BIAS) "]\n"
       // Offset these base pointers as needed given the current row, col.
-      "add x5, x1, %x[row], lsl #2\n"
+      "add x2, x1, %x[row], lsl #2\n"
       "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
-      "csel x1, x1, x5, eq\n"
+      "csel x1, x1, x2, eq\n"
       // Load 4 bias-addition values.
       "ld1 {v15.4s}, [x1], #16\n"
 
@@ -847,12 +843,12 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "mov x4, %[dst_ptr]\n"
       "mov w14, #0\n"
       "50:\n"
-      "mov w5, #0\n"
+      "mov w15, #0\n"
       "51:\n"
-      "ldr w13, [x3, x5, lsl #2]\n"
-      "str w13, [x4, x5, lsl #2]\n"
-      "add w5, w5, #1\n"
-      "cmp w5, w1\n"
+      "ldr w13, [x3, x15, lsl #2]\n"
+      "str w13, [x4, x15, lsl #2]\n"
+      "add w15, w15, #1\n"
+      "cmp w15, w1\n"
       "blt 51b\n"
       "add w14, w14, #1\n"
       "add x3, x3, #16\n"
@@ -864,10 +860,6 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
 
       // At this point we have completely finished writing values to the
       // destination matrix for the current block.
-
-      // Reload some params --- we had used x5 -- x7 for a few other things
-      // since the last time we had loaded them.
-      "ldr x5, [%[params], #" RUY_STR(RUY_OFFSET_LHS_BASE_PTR) "]\n"
 
       // Move to the next block of the destination matrix, for the next iter
       // of the main loop.  Notice that lhs_col_ptr, rhs_col_ptr have already
@@ -902,7 +894,7 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
         [dst_col_ptr] "+r"(dst_col_ptr), [dst_ptr] "+r"(dst_ptr), [row] "+r"(row), [col] "+r"(col)
       : [ params ] "r"(&params), [dst_rows] "r"(params.dst_rows),
         [dst_cols] "r"(params.dst_cols), [dst_tmp_buf] "r"(params.dst_tmp_buf)
-      : "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14", "cc",
+      : "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "cc",
         "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12",
         "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25",
         "v26", "v27", "v28", "v29", "v30", "v31");
