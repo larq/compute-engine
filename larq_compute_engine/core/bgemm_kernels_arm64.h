@@ -409,8 +409,8 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "50:\n"
       "mov w5, #0\n"
       "51:\n"
-      "ldr w7, [x3, x5, lsl #2]\n"
-      "str w7, [x4, x5, lsl #2]\n"
+      "ldr w13, [x3, x5, lsl #2]\n"
+      "str w13, [x4, x5, lsl #2]\n"
       "add w5, w5, #1\n"
       "cmp w5, w1\n"
       "blt 51b\n"
@@ -429,7 +429,6 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       // since the last time we had loaded them.
       "ldr x5, [%[params], #" RUY_STR(RUY_OFFSET_LHS_BASE_PTR) "]\n"
       "ldr w6, [%[params], #" RUY_STR(RUY_OFFSET_START_ROW) "]\n"
-      "ldr w7, [%[params], #" RUY_STR(RUY_OFFSET_LAST_ROW) "]\n"
 
       // Move to the next block of the destination matrix, for the next iter
       // of the main loop.  Notice that lhs_col_ptr, rhs_col_ptr have already
@@ -851,8 +850,8 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "50:\n"
       "mov w5, #0\n"
       "51:\n"
-      "ldr w7, [x3, x5, lsl #2]\n"
-      "str w7, [x4, x5, lsl #2]\n"
+      "ldr w13, [x3, x5, lsl #2]\n"
+      "str w13, [x4, x5, lsl #2]\n"
       "add w5, w5, #1\n"
       "cmp w5, w1\n"
       "blt 51b\n"
@@ -871,7 +870,6 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       // since the last time we had loaded them.
       "ldr x5, [%[params], #" RUY_STR(RUY_OFFSET_LHS_BASE_PTR) "]\n"
       "ldr w6, [%[params], #" RUY_STR(RUY_OFFSET_START_ROW) "]\n"
-      "ldr w7, [%[params], #" RUY_STR(RUY_OFFSET_LAST_ROW) "]\n"
 
       // Move to the next block of the destination matrix, for the next iter
       // of the main loop.  Notice that lhs_col_ptr, rhs_col_ptr have already
