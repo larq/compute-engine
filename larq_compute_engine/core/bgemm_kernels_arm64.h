@@ -77,8 +77,8 @@ using namespace ruy;
 #define RUY_OFFSET_LHS_BASE_PTR 0
 #define RUY_OFFSET_RHS_BASE_PTR 8
 #define RUY_OFFSET_DST_BASE_PTR 16
-#define RUY_OFFSET_POST_MULTIPLY 24
-#define RUY_OFFSET_POST_ADD 32
+#define RUY_OFFSET_POST_ACTIVATION_MULTIPLIER 24
+#define RUY_OFFSET_POST_ACTIVATION_BIAS 32
 #define RUY_OFFSET_START_ROW 40
 #define RUY_OFFSET_START_COL 44
 #define RUY_OFFSET_LAST_ROW 48
@@ -97,9 +97,12 @@ void CheckOffsetsInKernelParams32BP(const Params&) {
   static_assert(offsetof(Params, lhs_base_ptr) == RUY_OFFSET_LHS_BASE_PTR, "");
   static_assert(offsetof(Params, rhs_base_ptr) == RUY_OFFSET_RHS_BASE_PTR, "");
   static_assert(offsetof(Params, dst_base_ptr) == RUY_OFFSET_DST_BASE_PTR, "");
-  static_assert(offsetof(Params, post_multiply) == RUY_OFFSET_POST_MULTIPLY,
+  static_assert(offsetof(Params, post_activation_multiplier) ==
+                    RUY_OFFSET_POST_ACTIVATION_MULTIPLIER,
                 "");
-  static_assert(offsetof(Params, post_add) == RUY_OFFSET_POST_ADD, "");
+  static_assert(
+      offsetof(Params, post_activation_bias) == RUY_OFFSET_POST_ACTIVATION_BIAS,
+      "");
   static_assert(offsetof(Params, start_row) == RUY_OFFSET_START_ROW, "");
   static_assert(offsetof(Params, start_col) == RUY_OFFSET_START_COL, "");
   static_assert(offsetof(Params, last_row) == RUY_OFFSET_LAST_ROW, "");
@@ -289,7 +292,7 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "dup v13.4s, w1 \n"
 
       // Load multiplication bias
-      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_MULTIPLY) "]\n"
+      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_MULTIPLIER) "]\n"
       // Offset these base pointers as needed given the current row, col.
       "add x5, x1, %x[row], lsl #2\n"
       "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
@@ -298,7 +301,7 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "ld1 {v14.4s}, [x1], #16\n"
 
       // Load addition bias
-      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ADD) "]\n"
+      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_BIAS) "]\n"
       // Offset these base pointers as needed given the current row, col.
       "add x5, x1, %x[row], lsl #2\n"
       "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
@@ -468,8 +471,8 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
 }
 
 #undef RUY_OFFSET_BACKTRANSFORM_ADD
-#undef RUY_OFFSET_POST_MULTIPLY
-#undef RUY_OFFSET_POST_ADD
+#undef RUY_OFFSET_POST_ACTIVATION_MULTIPLIER
+#undef RUY_OFFSET_POST_ACTIVATION_BIAS
 #undef RUY_OFFSET_FLAGS
 #undef RUY_OFFSET_LHS_BASE_PTR
 #undef RUY_OFFSET_CLAMP_MIN
@@ -488,8 +491,8 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
 #define RUY_OFFSET_LHS_BASE_PTR 0
 #define RUY_OFFSET_RHS_BASE_PTR 8
 #define RUY_OFFSET_DST_BASE_PTR 16
-#define RUY_OFFSET_POST_MULTIPLY 24
-#define RUY_OFFSET_POST_ADD 32
+#define RUY_OFFSET_POST_ACTIVATION_MULTIPLIER 24
+#define RUY_OFFSET_POST_ACTIVATION_BIAS 32
 #define RUY_OFFSET_START_ROW 40
 #define RUY_OFFSET_START_COL 44
 #define RUY_OFFSET_LAST_ROW 48
@@ -508,9 +511,12 @@ void CheckOffsetsInKernelParams64BP(const Params&) {
   static_assert(offsetof(Params, lhs_base_ptr) == RUY_OFFSET_LHS_BASE_PTR, "");
   static_assert(offsetof(Params, rhs_base_ptr) == RUY_OFFSET_RHS_BASE_PTR, "");
   static_assert(offsetof(Params, dst_base_ptr) == RUY_OFFSET_DST_BASE_PTR, "");
-  static_assert(offsetof(Params, post_multiply) == RUY_OFFSET_POST_MULTIPLY,
+  static_assert(offsetof(Params, post_activation_multiplier) ==
+                    RUY_OFFSET_POST_ACTIVATION_MULTIPLIER,
                 "");
-  static_assert(offsetof(Params, post_add) == RUY_OFFSET_POST_ADD, "");
+  static_assert(
+      offsetof(Params, post_activation_bias) == RUY_OFFSET_POST_ACTIVATION_BIAS,
+      "");
   static_assert(offsetof(Params, start_row) == RUY_OFFSET_START_ROW, "");
   static_assert(offsetof(Params, start_col) == RUY_OFFSET_START_COL, "");
   static_assert(offsetof(Params, last_row) == RUY_OFFSET_LAST_ROW, "");
@@ -728,7 +734,7 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "dup v13.4s, w1 \n"
 
       // Load multiplication bias
-      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_MULTIPLY) "]\n"
+      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_MULTIPLIER) "]\n"
       // Offset these base pointers as needed given the current row, col.
       "add x5, x1, %x[row], lsl #2\n"
       "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
@@ -737,7 +743,7 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "ld1 {v14.4s}, [x1], #16\n"
 
       // Load addition bias
-      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ADD) "]\n"
+      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_BIAS) "]\n"
       // Offset these base pointers as needed given the current row, col.
       "add x5, x1, %x[row], lsl #2\n"
       "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
@@ -907,8 +913,8 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
 }
 
 #undef RUY_OFFSET_BACKTRANSFORM_ADD
-#undef RUY_OFFSET_POST_MULTIPLY
-#undef RUY_OFFSET_POST_ADD
+#undef RUY_OFFSET_POST_ACTIVATION_MULTIPLIER
+#undef RUY_OFFSET_POST_ACTIVATION_BIAS
 #undef RUY_OFFSET_FLAGS
 #undef RUY_OFFSET_LHS_BASE_PTR
 #undef RUY_OFFSET_CLAMP_MIN

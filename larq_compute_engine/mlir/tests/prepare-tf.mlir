@@ -20,10 +20,10 @@ func @fuse_bconv2d(%arg0: tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32> {
   return %1 : tensor<1x112x112x2xf32>
 
   // CHECK: %cst = constant
-  // CHECK: %[[post_multiply:.*]] = constant dense<1.000000e+00> : tensor<2xf32>
-  // CHECK: %[[post_add:.*]] = constant dense<0.000000e+00> : tensor<2xf32>
+  // CHECK: %[[post_activation_multiplier:.*]] = constant dense<1.000000e+00> : tensor<2xf32>
+  // CHECK: %[[post_activation_bias:.*]] = constant dense<0.000000e+00> : tensor<2xf32>
   // CHECK-NEXT: %[[transpose:.*]] = "tf.Transpose"(%cst
-  // CHECK-NEXT: %[[conv:.*]] = "tf.LqceBconv2d64"(%arg0, %[[transpose]], %[[post_multiply]], %[[post_add]]) {data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<2x1x2x2xf32>, tensor<2xf32>, tensor<2xf32>) -> tensor<1x112x112x2xf32>
+  // CHECK-NEXT: %[[conv:.*]] = "tf.LqceBconv2d64"(%arg0, %[[transpose]], %[[post_activation_multiplier]], %[[post_activation_bias]]) {data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<2x1x2x2xf32>, tensor<2xf32>, tensor<2xf32>) -> tensor<1x112x112x2xf32>
   // CHECK-NEXT: return %[[conv]]
 }
 

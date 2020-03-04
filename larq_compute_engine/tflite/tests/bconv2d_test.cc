@@ -253,8 +253,9 @@ class BaseBConv2DOpModel : public SingleOpModel {
     output_ = AddOutput(output);
 
     int channels_out = GetShape(filter_)[0];
-    post_multiply_ = AddInput({TensorType_FLOAT32, {channels_out}});
-    post_add_ = AddInput({TensorType_FLOAT32, {channels_out}});
+    post_activation_multiplier_ =
+        AddInput({TensorType_FLOAT32, {channels_out}});
+    post_activation_bias_ = AddInput({TensorType_FLOAT32, {channels_out}});
 
     flexbuffers::Builder fbb;
     fbb.Map([&]() {
@@ -283,8 +284,8 @@ class BaseBConv2DOpModel : public SingleOpModel {
   int input_;
   int filter_;
   int output_;
-  int post_multiply_;
-  int post_add_;
+  int post_activation_multiplier_;
+  int post_activation_bias_;
 };
 
 class BConv2DOpModel : public BaseBConv2DOpModel {
@@ -297,11 +298,13 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
     PopulateTensor(input_, data);
   }
 
-  void SetPostMultiply(std::vector<float>& f) {
-    PopulateTensor(post_multiply_, f);
+  void SetPostActivationMultiplier(std::vector<float>& f) {
+    PopulateTensor(post_activation_multiplier_, f);
   }
 
-  void SetPostAdd(std::vector<float>& f) { PopulateTensor(post_add_, f); }
+  void SetPostActivationBias(std::vector<float>& f) {
+    PopulateTensor(post_activation_bias_, f);
+  }
 
   std::vector<float> GetOutput() { return ExtractVector<float>(output_); }
 };
@@ -389,13 +392,14 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   using T = float;
   std::vector<T> input_data, padded_input_data, filters_data;
   std::vector<T> channel_multipliers;
-  std::vector<T> post_multiply_data, post_add_data, bias_data;
+  std::vector<T> post_activation_multiplier_data, post_activation_bias_data,
+      bias_data;
   input_data.resize(input_num_elem);
   filters_data.resize(filters_num_elem);
   channel_multipliers.resize(filter_count, 0);
   bias_data.resize(filter_count, 0);
-  post_multiply_data.resize(filter_count, 0);
-  post_add_data.resize(filter_count, 0);
+  post_activation_multiplier_data.resize(filter_count, 0);
+  post_activation_bias_data.resize(filter_count, 0);
 
   srand(time(NULL));
   std::array<T, 2> list{1.0, -1.0};
@@ -471,8 +475,8 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   const std::int32_t dotproduct_size =
       filter_height * filter_width * input_depth;
   for (int i = 0; i < filter_count; ++i) {
-    post_multiply_data[i] = channel_multipliers[i];
-    post_add_data[i] = bias_data[i];
+    post_activation_multiplier_data[i] = channel_multipliers[i];
+    post_activation_bias_data[i] = bias_data[i];
   }
 
   BConv2DOpModel m_lce(
@@ -486,8 +490,8 @@ TEST_P(BConv2DOpTest, SimpleTest) {
 
   m_lce.SetInput(input_data);
   m_lce.SetFilter(filters_data);
-  m_lce.SetPostMultiply(post_multiply_data);
-  m_lce.SetPostAdd(post_add_data);
+  m_lce.SetPostActivationMultiplier(post_activation_multiplier_data);
+  m_lce.SetPostActivationBias(post_activation_bias_data);
   m_lce.Invoke();
 
   ConvolutionOpModel m_builtin(

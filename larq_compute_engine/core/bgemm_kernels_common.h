@@ -25,11 +25,11 @@ struct BGemmParams {
   AccumScalar multiplier_fixedpoint = 0;
   int multiplier_exponent = 0;
   int32_t backtransform_add = 0;
-  // post_mutiply and post_add are currently float
+  // post_mutiply and post_activation_bias are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
-  const float* post_multiply = nullptr;
-  const float* post_add = nullptr;
+  const float* post_activation_multiplier = nullptr;
+  const float* post_activation_bias = nullptr;
   AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
   AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
 };
@@ -49,11 +49,11 @@ struct BinaryBasicSpec {
   AccumScalar multiplier_fixedpoint = 0;
   int multiplier_exponent = 0;
   int32_t backtransform_add = 0;
-  // post_mutiply and post_add are currently float
+  // post_mutiply and post_activation_bias are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
-  const float* post_multiply = nullptr;
-  const float* post_add = nullptr;
+  const float* post_activation_multiplier = nullptr;
+  const float* post_activation_bias = nullptr;
   AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
   AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
 
@@ -72,11 +72,11 @@ struct BinaryKernelParams {
   const T* lhs_base_ptr;
   const T* rhs_base_ptr;
   float* dst_base_ptr;
-  // post_mutiply and post_add are currently float
+  // post_mutiply and post_activation_bias are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
-  const float* post_multiply;
-  const float* post_add;
+  const float* post_activation_multiplier;
+  const float* post_activation_bias;
   std::int32_t start_row;
   std::int32_t start_col;
   std::int32_t last_row;
@@ -113,9 +113,9 @@ inline void MakeBinaryKernelParams(
       dst->data.get() + start_col * dst->layout.stride + start_row;
 
   std::uint8_t flags = 0;
-  params->post_multiply = spec.post_multiply;
-  params->post_add = spec.post_add;
-  if (spec.post_multiply && spec.post_add) {
+  params->post_activation_multiplier = spec.post_activation_multiplier;
+  params->post_activation_bias = spec.post_activation_bias;
+  if (spec.post_activation_multiplier && spec.post_activation_bias) {
     flags |= RUY_ASM_FLAG_HAS_BIAS;
   }
   params->backtransform_add = spec.backtransform_add;

@@ -95,11 +95,11 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
         accum = spec.backtransform_add - 2 * accum;
         // Post multiply and add are done in float
         DstScalar dst_val = static_cast<DstScalar>(accum);
-        if (spec.post_multiply) {
-          dst_val *= spec.post_multiply[i];
+        if (spec.post_activation_multiplier) {
+          dst_val *= spec.post_activation_multiplier[i];
         }
-        if (spec.post_add) {
-          dst_val += spec.post_add[i];
+        if (spec.post_activation_bias) {
+          dst_val += spec.post_activation_bias[i];
         }
         *ElementPtr(dst, i, j) = dst_val;
       }

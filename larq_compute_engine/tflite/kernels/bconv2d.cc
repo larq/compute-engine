@@ -160,21 +160,21 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
 
   const auto* input = GetInput(context, node, 0);
   const auto* filter = GetInput(context, node, 1);
-  const auto* post_multiply = GetInput(context, node, 2);
-  const auto* post_add = GetInput(context, node, 3);
+  const auto* post_activation_multiplier = GetInput(context, node, 2);
+  const auto* post_activation_bias = GetInput(context, node, 3);
   auto* output = GetOutput(context, node, 0);
 
   TF_LITE_ENSURE_EQ(context, NumDimensions(input), 4);
   TF_LITE_ENSURE_EQ(context, NumDimensions(filter), 4);
-  TF_LITE_ENSURE_EQ(context, NumDimensions(post_multiply), 1);
-  TF_LITE_ENSURE_EQ(context, NumDimensions(post_add), 1);
+  TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_multiplier), 1);
+  TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_bias), 1);
 
-  // The inputs post_mutiply and post_add are currently float
+  // The inputs post_mutiply and post_activation_bias are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
   TF_LITE_ENSURE_EQ(context, input->type, kTfLiteFloat32);
-  TF_LITE_ENSURE_EQ(context, post_multiply->type, kTfLiteFloat32);
-  TF_LITE_ENSURE_EQ(context, post_add->type, kTfLiteFloat32);
+  TF_LITE_ENSURE_EQ(context, post_activation_multiplier->type, kTfLiteFloat32);
+  TF_LITE_ENSURE_EQ(context, post_activation_bias->type, kTfLiteFloat32);
   TF_LITE_ENSURE_EQ(context, output->type, kTfLiteFloat32);
 
   // reading the input dimensions
@@ -194,9 +194,9 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
   conv_params->filter_width = filter->dims->data[2];
   TF_LITE_ENSURE_EQ(context, conv_params->channels_in, filter->dims->data[3]);
 
-  TF_LITE_ENSURE_EQ(context, post_multiply->dims->data[0],
+  TF_LITE_ENSURE_EQ(context, post_activation_multiplier->dims->data[0],
                     conv_params->channels_out);
-  TF_LITE_ENSURE_EQ(context, post_add->dims->data[0],
+  TF_LITE_ENSURE_EQ(context, post_activation_bias->dims->data[0],
                     conv_params->channels_out);
 
   // computing the padding and output values (height, width)
@@ -384,8 +384,8 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
              TfLiteBConv2DParams* params) {
   const auto* input = GetInput(context, node, 0);
   const auto* filter = GetInput(context, node, 1);
-  const auto* post_multiply = GetInput(context, node, 2);
-  const auto* post_add = GetInput(context, node, 3);
+  const auto* post_activation_multiplier = GetInput(context, node, 2);
+  const auto* post_activation_bias = GetInput(context, node, 3);
   auto* output = GetOutput(context, node, 0);
 
   TfLiteTensor* im2col = params->need_im2col
@@ -409,7 +409,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
     padding_functor.cache_correction_values(
         GetTensorData<T>(filter), params->filter_height, params->filter_width,
         params->channels_out, params->channels_in, params->dilations[1],
-        params->dilations[2], GetTensorData<T>(post_multiply),
+        params->dilations[2], GetTensorData<T>(post_activation_multiplier),
         params->padding_buffer.data());
     params->is_padding_correction_cached = true;
   }
@@ -465,8 +465,9 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
       op_params, GetTensorShape(input), GetTensorData<T>(input),
       GetTensorShape(filter),
       reinterpret_cast<TBitpacked*>(params->bitpacked_weights_buffer.data()),
-      GetTensorData<float>(post_multiply), GetTensorData<float>(post_add),
-      GetTensorShape(output), GetTensorData<T>(output), GetTensorShape(im2col),
+      GetTensorData<float>(post_activation_multiplier),
+      GetTensorData<float>(post_activation_bias), GetTensorShape(output),
+      GetTensorData<T>(output), GetTensorShape(im2col),
       GetTensorData<T>(im2col), params->bitpack_before_im2col,
       params->padding_buffer.data(), params->pad_value,
       CpuBackendContext::GetFromContext(context));
