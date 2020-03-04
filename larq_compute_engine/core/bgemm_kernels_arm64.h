@@ -405,7 +405,7 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       // it to copy into the destination matrix the part that fits.
       "mov x3, %[dst_tmp_buf]\n"
       "mov x4, %[dst_ptr]\n"
-      "mov w6, #0\n"
+      "mov w14, #0\n"
       "50:\n"
       "mov w5, #0\n"
       "51:\n"
@@ -414,10 +414,10 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "add w5, w5, #1\n"
       "cmp w5, w1\n"
       "blt 51b\n"
-      "add w6, w6, #1\n"
+      "add w14, w14, #1\n"
       "add x3, x3, #16\n"
       "add x4, x4, x11\n"
-      "cmp w6, w2\n"
+      "cmp w14, w2\n"
       "blt 50b\n"
       "41:\n"
       "add %[dst_ptr], %[dst_ptr], #16\n"
@@ -428,7 +428,6 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       // Reload some params --- we had used x5 -- x7 for a few other things
       // since the last time we had loaded them.
       "ldr x5, [%[params], #" RUY_STR(RUY_OFFSET_LHS_BASE_PTR) "]\n"
-      "ldr w6, [%[params], #" RUY_STR(RUY_OFFSET_START_ROW) "]\n"
 
       // Move to the next block of the destination matrix, for the next iter
       // of the main loop.  Notice that lhs_col_ptr, rhs_col_ptr have already
@@ -463,7 +462,7 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
         [dst_col_ptr] "+r"(dst_col_ptr), [dst_ptr] "+r"(dst_ptr), [row] "+r"(row), [col] "+r"(col)
       : [ params ] "r"(&params), [dst_rows] "r"(params.dst_rows),
         [dst_cols] "r"(params.dst_cols), [dst_tmp_buf] "r"(params.dst_tmp_buf)
-      : "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "cc",
+      : "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14", "cc",
         "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12",
         "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25",
         "v26", "v27", "v28", "v29", "v30", "v31");
@@ -846,7 +845,7 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       // it to copy into the destination matrix the part that fits.
       "mov x3, %[dst_tmp_buf]\n"
       "mov x4, %[dst_ptr]\n"
-      "mov w6, #0\n"
+      "mov w14, #0\n"
       "50:\n"
       "mov w5, #0\n"
       "51:\n"
@@ -855,10 +854,10 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "add w5, w5, #1\n"
       "cmp w5, w1\n"
       "blt 51b\n"
-      "add w6, w6, #1\n"
+      "add w14, w14, #1\n"
       "add x3, x3, #16\n"
       "add x4, x4, x11\n"
-      "cmp w6, w2\n"
+      "cmp w14, w2\n"
       "blt 50b\n"
       "41:\n"
       "add %[dst_ptr], %[dst_ptr], #16\n"
@@ -869,7 +868,6 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       // Reload some params --- we had used x5 -- x7 for a few other things
       // since the last time we had loaded them.
       "ldr x5, [%[params], #" RUY_STR(RUY_OFFSET_LHS_BASE_PTR) "]\n"
-      "ldr w6, [%[params], #" RUY_STR(RUY_OFFSET_START_ROW) "]\n"
 
       // Move to the next block of the destination matrix, for the next iter
       // of the main loop.  Notice that lhs_col_ptr, rhs_col_ptr have already
@@ -904,7 +902,7 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
         [dst_col_ptr] "+r"(dst_col_ptr), [dst_ptr] "+r"(dst_ptr), [row] "+r"(row), [col] "+r"(col)
       : [ params ] "r"(&params), [dst_rows] "r"(params.dst_rows),
         [dst_cols] "r"(params.dst_cols), [dst_tmp_buf] "r"(params.dst_tmp_buf)
-      : "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "cc",
+      : "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14", "cc",
         "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12",
         "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25",
         "v26", "v27", "v28", "v29", "v30", "v31");
