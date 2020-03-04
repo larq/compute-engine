@@ -13,6 +13,8 @@ such as **tiling** to maximize the number of cache hits, **vectorization** to ma
 the computational throughput, and **multi-threading parallelization** to take
 advantage of multi-core modern desktop and mobile CPUs.
 
+*Larq Compute Engine is part of a family of libraries for BNN development; you can also check out [Larq](https://github.com/larq/larq) for building and training BNNs and and [Larq Zoo](https://github.com/larq/zoo) for pre-trained models.*
+
 ## Key Features
 
 - **Effortless end-to-end integration** from training to deployment:
@@ -100,3 +102,7 @@ Follow these steps to deploy a BNN with LCE:
 - If you're a mobile developer, visit [Android quickstart](https://docs.larq.dev/compute-engine/quickstart_android).
 - See our build instructions for Raspberry Pi and Arm64-based boards [here](https://docs.larq.dev/compute-engine/build_arm).
 - Try our [example programs](https://github.com/larq/compute-engine/tree/master/examples).
+
+## About
+
+Larq Compute Engine is being developed by a team of deep learning researchers and engineers at Plumerai to help accelerate both our own research and the general adoption of Binarized Neural Networks.
