@@ -54,6 +54,29 @@ inline std::int32_t compute_binary_inner_prod<std::uint64_t, std::int32_t>(
   return bitwidth - 2 * static_cast<std::int32_t>(__builtin_popcountll(a ^ b));
 }
 
+template <class TIn, class TOut>
+inline auto xor_popcount(const TIn& a, const TIn& b) -> TOut {
+  static_assert(std::is_unsigned<TIn>::value,
+                "Input of binary inner product should be of an unsigned type.");
+  static_assert(std::is_signed<TOut>::value,
+                "Output of binary inner product should be of a signed type.");
+
+  constexpr auto bitwidth = std::numeric_limits<TIn>::digits;
+  return std::bitset<bitwidth>(a ^ b).count();
+}
+
+template <>
+inline std::int32_t xor_popcount<std::uint32_t, std::int32_t>(
+    const std::uint32_t& a, const std::uint32_t& b) {
+  return __builtin_popcountl(a ^ b);
+}
+
+template <>
+inline std::int32_t xor_popcount<std::uint64_t, std::int32_t>(
+    const std::uint64_t& a, const std::uint64_t& b) {
+  return __builtin_popcountll(a ^ b);
+}
+
 // A naive implementation of binary matrix multiplication, useful for
 // debugging and understanding the algorithm.
 template <class TLhs = std::uint64_t, Layout LLhs = Layout::RowMajor,
