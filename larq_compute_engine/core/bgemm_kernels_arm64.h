@@ -284,9 +284,6 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       // Load some parameters needed for the end work on current block.
       "ldrb w4, [%[params], #" RUY_STR(RUY_OFFSET_FLAGS) "]\n"
 
-      // Load backtransform multiply (duplicate 4 times into v12)
-      "mov w1, -2\n"
-      "dup v12.4s, w1 \n"
       // Load backtransform add (duplicate 4 times into v13)
       "ldr w1, [%[params], #" RUY_STR(RUY_OFFSET_BACKTRANSFORM_ADD) "]\n"
       "dup v13.4s, w1 \n"
@@ -324,14 +321,14 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "ld1 {v7.4s}, [%[rhs_ptr]], #16\n"
 
       // Perform the backtransformation (in int32)
-      "mul v16.4s, v16.4s, v12.4s\n"
-      "mul v18.4s, v18.4s, v12.4s\n"
-      "mul v20.4s, v20.4s, v12.4s\n"
-      "mul v22.4s, v22.4s, v12.4s\n"
-      "add v16.4s, v16.4s, v13.4s\n"
-      "add v18.4s, v18.4s, v13.4s\n"
-      "add v20.4s, v20.4s, v13.4s\n"
-      "add v22.4s, v22.4s, v13.4s\n"
+      "shl v16.4s, v16.4s, #1\n"
+      "shl v18.4s, v18.4s, #1\n"
+      "shl v20.4s, v20.4s, #1\n"
+      "shl v22.4s, v22.4s, #1\n"
+      "sub v16.4s, v13.4s, v16.4s\n"
+      "sub v18.4s, v13.4s, v18.4s\n"
+      "sub v20.4s, v13.4s, v20.4s\n"
+      "sub v22.4s, v13.4s, v22.4s\n"
 
       // convert to single precision float before storing the NEON registers
       "scvtf v16.4s, v16.4s\n"
@@ -720,9 +717,6 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       // Load some parameters needed for the end work on current block.
       "ldrb w4, [%[params], #" RUY_STR(RUY_OFFSET_FLAGS) "]\n"
 
-      // Load backtransform multiply (duplicate 4 times into v12)
-      "mov w1, -2\n"
-      "dup v12.4s, w1 \n"
       // Load backtransform add (duplicate 4 times into v13)
       "ldr w1, [%[params], #" RUY_STR(RUY_OFFSET_BACKTRANSFORM_ADD) "]\n"
       "dup v13.4s, w1 \n"
@@ -760,14 +754,14 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "ld1 {v7.2d}, [%[rhs_ptr]], #16\n"
 
       // Perform the backtransformation (in int32)
-      "mul v24.4s, v24.4s, v12.4s\n"
-      "mul v25.4s, v25.4s, v12.4s\n"
-      "mul v26.4s, v26.4s, v12.4s\n"
-      "mul v27.4s, v27.4s, v12.4s\n"
-      "add v24.4s, v24.4s, v13.4s\n"
-      "add v25.4s, v25.4s, v13.4s\n"
-      "add v26.4s, v26.4s, v13.4s\n"
-      "add v27.4s, v27.4s, v13.4s\n"
+      "shl v24.4s, v24.4s, #1\n"
+      "shl v25.4s, v25.4s, #1\n"
+      "shl v26.4s, v26.4s, #1\n"
+      "shl v27.4s, v27.4s, #1\n"
+      "sub v24.4s, v13.4s, v24.4s\n"
+      "sub v25.4s, v13.4s, v25.4s\n"
+      "sub v26.4s, v13.4s, v26.4s\n"
+      "sub v27.4s, v13.4s, v27.4s\n"
 
       // convert to single precision float before storing the NEON registers
       "scvtf v24.4s, v24.4s\n"
