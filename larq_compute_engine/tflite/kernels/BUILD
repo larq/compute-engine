@@ -13,7 +13,6 @@ cc_library(
         "bconv2d_impl.h",
     ],
     deps = [
-        "//larq_compute_engine/core:bconv2d_functor",
         "//larq_compute_engine/core:bgemm_impl",
         "//larq_compute_engine/core:packbits",
         "//larq_compute_engine/core:padding_functor",

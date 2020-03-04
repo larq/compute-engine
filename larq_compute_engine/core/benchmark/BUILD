@@ -19,17 +19,12 @@ cc_binary(
 cc_binary(
     name = "benchmark",
     srcs = [
-        "bconv2d_bench.cc",
         "bgemm_bench.cc",
-        "im2col_bench.cc",
         "padding_bench.cc",
     ],
     linkopts = ["-lrt -lm"],
     deps = [
-        "//larq_compute_engine/core:bconv2d_functor",
         "//larq_compute_engine/core:bgemm_functor",
-        "//larq_compute_engine/core:fused_bgemm_functor",
-        "//larq_compute_engine/core:im2col_functor",
         "//larq_compute_engine/core:padding_functor",
         "@googlebenchmark//:benchmark",
         "@googlebenchmark//:benchmark_main",
