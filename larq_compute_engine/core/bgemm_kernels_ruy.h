@@ -21,29 +21,6 @@ struct BgemmKernel {};
 #include "bgemm_kernels_x86.h"
 #endif
 
-template <class TIn, class TOut>
-inline auto xorpopcount(const TIn& a, const TIn& b) -> TOut {
-  static_assert(std::is_unsigned<TIn>::value,
-                "Input of binary inner product should be of an unsigned type.");
-  static_assert(std::is_signed<TOut>::value,
-                "Output of binary inner product should be of a signed type.");
-
-  constexpr auto bitwidth = std::numeric_limits<TIn>::digits;
-  return std::bitset<bitwidth>(a ^ b).count();
-}
-
-template <>
-inline std::int32_t xorpopcount<std::uint32_t, std::int32_t>(
-    const std::uint32_t& a, const std::uint32_t& b) {
-  return __builtin_popcountl(a ^ b);
-}
-
-template <>
-inline std::int32_t xorpopcount<std::uint64_t, std::int32_t>(
-    const std::uint64_t& a, const std::uint64_t& b) {
-  return __builtin_popcountll(a ^ b);
-}
-
 template <typename LhsScalar, typename RhsScalar, typename DstScalar,
           typename Spec>
 struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
@@ -89,7 +66,8 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
         for (int k = 0; k < depth; k++) {
           TBitpacked lhs_val = Element(lhs, k, i);
           TBitpacked rhs_val = Element(rhs, k, j);
-          accum += xorpopcount<TBitpacked, AccumScalar>(lhs_val, rhs_val);
+          accum +=
+              ce::core::xor_popcount<TBitpacked, AccumScalar>(lhs_val, rhs_val);
         }
         DstScalar dst_val = static_cast<DstScalar>(accum);
         if (spec.fused_multiply) {
