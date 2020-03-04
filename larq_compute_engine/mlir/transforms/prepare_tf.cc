@@ -16,32 +16,13 @@ struct PrepareLCE : public FunctionPass<PrepareLCE> {
   void runOnFunction() override;
 };
 
-// The bconv will do the following:
-// output = fused_add[channel] + fused_multiply[channel] * popcount
-// We use this to implement two things:
-// - `y1 = n - 2 * popcount`     (the backtransformation to -1,+1 space)
-// - `y2 = a + b * y1`           (optional fused batchnorm)
-// Together they become
-// `y = (a + b*n) + (-2b) * popcount
-
-DenseElementsAttr GetBias(Attribute filter) {
-  auto filter_type = filter.getType().cast<ShapedType>();
-  auto filter_shape = filter_type.getShape();
-  // Here the weights are still HWIO
-  auto dotproduct_size = filter_shape[0] * filter_shape[1] * filter_shape[2];
-
-  RankedTensorType type =
-      RankedTensorType::get({filter_shape[3]}, filter_type.getElementType());
-  return DenseElementsAttr::get(type, static_cast<float_t>(dotproduct_size));
-}
-
-DenseElementsAttr GetMultiplier(Attribute filter) {
+DenseElementsAttr GetConstantVector(Attribute filter, float val) {
   auto filter_type = filter.getType().cast<ShapedType>();
   auto filter_shape = filter_type.getShape();
 
   RankedTensorType type =
       RankedTensorType::get({filter_shape[3]}, filter_type.getElementType());
-  return DenseElementsAttr::get(type, -2.0f);
+  return DenseElementsAttr::get(type, val);
 }
 
 bool IsBinaryFilter(Attribute filter) {

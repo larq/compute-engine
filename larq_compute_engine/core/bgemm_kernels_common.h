@@ -24,11 +24,12 @@ template <typename AccumScalar, typename DstScalar,
 struct BGemmParams {
   AccumScalar multiplier_fixedpoint = 0;
   int multiplier_exponent = 0;
-  // fused_mutiply and fused_add are currently float
+  int32_t backtransform_add = 0;
+  // post_mutiply and post_activation_bias are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
-  const float* fused_multiply = nullptr;
-  const float* fused_add = nullptr;
+  const float* post_activation_multiplier = nullptr;
+  const float* post_activation_bias = nullptr;
   AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
   AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
 };
@@ -47,11 +48,12 @@ struct BinaryBasicSpec {
   using DstScalar = tDstScalar;
   AccumScalar multiplier_fixedpoint = 0;
   int multiplier_exponent = 0;
-  // fused_mutiply and fused_add are currently float
+  int32_t backtransform_add = 0;
+  // post_mutiply and post_activation_bias are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
-  const float* fused_multiply = nullptr;
-  const float* fused_add = nullptr;
+  const float* post_activation_multiplier = nullptr;
+  const float* post_activation_bias = nullptr;
   AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
   AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
 
@@ -70,11 +72,11 @@ struct BinaryKernelParams {
   const T* lhs_base_ptr;
   const T* rhs_base_ptr;
   float* dst_base_ptr;
-  // fused_mutiply and fused_add are currently float
+  // post_mutiply and post_activation_bias are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
-  const float* fused_multiply;
-  const float* fused_add;
+  const float* post_activation_multiplier;
+  const float* post_activation_bias;
   std::int32_t start_row;
   std::int32_t start_col;
   std::int32_t last_row;
@@ -87,6 +89,7 @@ struct BinaryKernelParams {
   std::int32_t depth;
   std::uint32_t clamp_min;
   std::uint32_t clamp_max;
+  std::int32_t backtransform_add;
   std::uint8_t flags;
   const T zero_data[LhsCols] = {0};
   T dst_tmp_buf[LhsCols * RhsCols];
@@ -110,11 +113,12 @@ inline void MakeBinaryKernelParams(
       dst->data.get() + start_col * dst->layout.stride + start_row;
 
   std::uint8_t flags = 0;
-  params->fused_multiply = spec.fused_multiply;
-  params->fused_add = spec.fused_add;
-  if (spec.fused_multiply && spec.fused_add) {
+  params->post_activation_multiplier = spec.post_activation_multiplier;
+  params->post_activation_bias = spec.post_activation_bias;
+  if (spec.post_activation_multiplier && spec.post_activation_bias) {
     flags |= RUY_ASM_FLAG_HAS_BIAS;
   }
+  params->backtransform_add = spec.backtransform_add;
   params->flags = flags;
   params->start_row = start_row;
   params->start_col = start_col;

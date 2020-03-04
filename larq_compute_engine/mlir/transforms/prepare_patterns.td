@@ -23,16 +23,15 @@ class I32VectorElementsAttr<int len> : ElementsAttrBase<
     "RankedTensorType::get({" # len # "}, $_builder.getIntegerType(32)), $0)";
 }
 
-def GetBias : NativeCodeCall<"GetBias($0)">;
-def GetMultiplier : NativeCodeCall<"GetMultiplier($0)">;
+class GetConstantVector<string val> : NativeCodeCall<"GetConstantVector($0, " # val # ")">;
 def BinaryFilter : Constraint<CPred<"IsBinaryFilter($0)">>;
 
 def : Pat<(TF_Conv2DOp (TF_LqceBsignOp $input), (ConstantOp $filter), $strides, $use_cudnn,
                        $padding, $explicit_padding, IsDataFormatNHWC: $data_format, $dilations),
           (TF_LqceBconv2d64Op $input,
             (TF_TransposeOp (ConstantOp $filter), (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
-            (ConstantOp (GetMultiplier $filter)),
-            (ConstantOp (GetBias $filter)),
+            (ConstantOp (GetConstantVector<"1.0f"> $filter)),
+            (ConstantOp (GetConstantVector<"0.0f"> $filter)),
             $strides, $padding, ConstantAttr<I32Attr, "0">, $data_format,
             $dilations, ConstantAttr<StrAttr, "OHWI">),
           [(BinaryFilter $filter)], (addBenefit 90)>;
@@ -50,8 +49,8 @@ def : Pat<(TF_Conv2DOp: $output
             $explicit_padding, IsDataFormatNHWC: $data_format, $dilations),
           (TF_LqceBconv2d64Op $input,
             (TF_TransposeOp (ConstantOp $filter), (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
-            (ConstantOp (GetMultiplier $filter)),
-            (ConstantOp (GetBias $filter)),
+            (ConstantOp (GetConstantVector<"1.0f"> $filter)),
+            (ConstantOp (GetConstantVector<"0.0f"> $filter)),
             $strides,
             ConstantAttr<StrAttr, "SAME">,
             ConstantAttr<I32Attr, "1">,

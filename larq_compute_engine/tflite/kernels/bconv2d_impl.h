@@ -58,15 +58,15 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
   result_shape.ReplaceWith(shape->DimensionsCount(), shape->DimsData());
 }
 
-// The inputs fused_mutiply and fused_add are currently float
+// The inputs post_mutiply and post_activation_bias are currently float
 // in order to accomodate for batchnorm scales
 // Later this might be changed to the int8 system of multipliers+shifts
 template <class T, class TBitpacked>
 inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                     const T* input_data, const RuntimeShape& filter_shape,
                     const TBitpacked* packed_filter_data,
-                    const float* fused_multiply_data,
-                    const float* fused_add_data,
+                    const float* post_activation_multiplier_data,
+                    const float* post_activation_bias_data,
                     const RuntimeShape& output_shape, T* output_data,
                     const RuntimeShape& im2col_shape, T* im2col_data,
                     bool bitpack_before_im2col, T* padding_buffer,
@@ -169,8 +169,10 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
 
   // Accumulation type, destination type
   BGemmParams<std::int32_t, T> gemm_params;
-  gemm_params.fused_multiply = fused_multiply_data;
-  gemm_params.fused_add = fused_add_data;
+  gemm_params.backtransform_add =
+      filter_shape.Dims(1) * filter_shape.Dims(2) * filter_shape.Dims(3);
+  gemm_params.post_activation_multiplier = post_activation_multiplier_data;
+  gemm_params.post_activation_bias = post_activation_bias_data;
 
   // #if defined(TF_LITE_USE_CBLAS) && defined(__APPLE__)
 
@@ -209,7 +211,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                       filter_height, filter_width, output_depth, stride_height,
                       stride_width, dilation_height_factor,
                       dilation_width_factor, output_data, output_height,
-                      output_width, fused_multiply_data, padding_buffer);
+                      output_width, post_activation_multiplier_data,
+                      padding_buffer);
     }
   }
 }

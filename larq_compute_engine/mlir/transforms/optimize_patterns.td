@@ -12,11 +12,11 @@ def HasOneUse : Constraint<CPred<"$0->hasOneUse()">>;
 // TODO: Check shapes before fusing
 multiclass FuseAddOrSubWithBConv2D<dag binaryOp> {
   def : Pat<(binaryOp (TF_LqceBconv2d64Op:$output $input, $filter,
-                          $fused_multiply, (ConstantOp F32ElementsAttr:$fused_add), $strides,
+                          $post_activation_multiplier, (ConstantOp F32ElementsAttr:$post_activation_bias), $strides,
                           $padding, $pad_values, $data_format, $dilations, $filter_format),
                       (ConstantOp F32ElementsAttr:$value), TFL_AF_None),
-            (TF_LqceBconv2d64Op $input, $filter, $fused_multiply,
-                          (binaryOp (ConstantOp $fused_add), (ConstantOp $value), TFL_AF_None),
+            (TF_LqceBconv2d64Op $input, $filter, $post_activation_multiplier,
+                          (binaryOp (ConstantOp $post_activation_bias), (ConstantOp $value), TFL_AF_None),
                           $strides, $padding, $pad_values, $data_format,
                           $dilations, $filter_format),
             [(HasOneUse $output)]>;
@@ -27,15 +27,15 @@ foreach binaryOp = [TFL_AddOp, TFL_SubOp] in
 // TODO: Check shapes before fusing
 multiclass FuseMulOrDivWithBConv2D<dag binaryOp> {
   def : Pat<(binaryOp (TF_LqceBconv2d64Op:$conv_output $input, $filter,
-                        (ConstantOp F32ElementsAttr:$fused_multiply),
-                        (ConstantOp F32ElementsAttr:$fused_add),
+                        (ConstantOp F32ElementsAttr:$post_activation_multiplier),
+                        (ConstantOp F32ElementsAttr:$post_activation_bias),
                         $strides, $padding, $pad_values, $data_format,
                         $dilations, $filter_format),
                       (ConstantOp F32ElementsAttr:$value), $TFL_AF_None),
             (TF_LqceBconv2d64Op $input, $filter,
-                        (binaryOp (ConstantOp $fused_multiply),
+                        (binaryOp (ConstantOp $post_activation_multiplier),
                                   (ConstantOp $value), TFL_AF_None),
-                        (binaryOp (ConstantOp $fused_add),
+                        (binaryOp (ConstantOp $post_activation_bias),
                                   (ConstantOp $value), TFL_AF_None),
                         $strides, $padding, $pad_values, $data_format,
                         $dilations, $filter_format),

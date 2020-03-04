@@ -69,12 +69,15 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
           accum +=
               ce::core::xor_popcount<TBitpacked, AccumScalar>(lhs_val, rhs_val);
         }
+        // Backtransform can still be done in int32
+        accum = spec.backtransform_add - 2 * accum;
+        // Post multiply and add are done in float
         DstScalar dst_val = static_cast<DstScalar>(accum);
-        if (spec.fused_multiply) {
-          dst_val *= spec.fused_multiply[i];
+        if (spec.post_activation_multiplier) {
+          dst_val *= spec.post_activation_multiplier[i];
         }
-        if (spec.fused_add) {
-          dst_val += spec.fused_add[i];
+        if (spec.post_activation_bias) {
+          dst_val += spec.post_activation_bias[i];
         }
         *ElementPtr(dst, i, j) = dst_val;
       }

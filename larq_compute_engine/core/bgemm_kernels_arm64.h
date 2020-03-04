@@ -77,8 +77,8 @@ using namespace ruy;
 #define RUY_OFFSET_LHS_BASE_PTR 0
 #define RUY_OFFSET_RHS_BASE_PTR 8
 #define RUY_OFFSET_DST_BASE_PTR 16
-#define RUY_OFFSET_FUSED_MULTIPLY 24
-#define RUY_OFFSET_FUSED_ADD 32
+#define RUY_OFFSET_POST_ACTIVATION_MULTIPLIER 24
+#define RUY_OFFSET_POST_ACTIVATION_BIAS 32
 #define RUY_OFFSET_START_ROW 40
 #define RUY_OFFSET_START_COL 44
 #define RUY_OFFSET_LAST_ROW 48
@@ -89,16 +89,20 @@ using namespace ruy;
 #define RUY_OFFSET_DEPTH 76
 #define RUY_OFFSET_CLAMP_MIN 80
 #define RUY_OFFSET_CLAMP_MAX 84
-#define RUY_OFFSET_FLAGS 88
+#define RUY_OFFSET_BACKTRANSFORM_ADD 88
+#define RUY_OFFSET_FLAGS 92
 
 template <typename Params>
 void CheckOffsetsInKernelParams32BP(const Params&) {
   static_assert(offsetof(Params, lhs_base_ptr) == RUY_OFFSET_LHS_BASE_PTR, "");
   static_assert(offsetof(Params, rhs_base_ptr) == RUY_OFFSET_RHS_BASE_PTR, "");
   static_assert(offsetof(Params, dst_base_ptr) == RUY_OFFSET_DST_BASE_PTR, "");
-  static_assert(offsetof(Params, fused_multiply) == RUY_OFFSET_FUSED_MULTIPLY,
+  static_assert(offsetof(Params, post_activation_multiplier) ==
+                    RUY_OFFSET_POST_ACTIVATION_MULTIPLIER,
                 "");
-  static_assert(offsetof(Params, fused_add) == RUY_OFFSET_FUSED_ADD, "");
+  static_assert(
+      offsetof(Params, post_activation_bias) == RUY_OFFSET_POST_ACTIVATION_BIAS,
+      "");
   static_assert(offsetof(Params, start_row) == RUY_OFFSET_START_ROW, "");
   static_assert(offsetof(Params, start_col) == RUY_OFFSET_START_COL, "");
   static_assert(offsetof(Params, last_row) == RUY_OFFSET_LAST_ROW, "");
@@ -109,6 +113,8 @@ void CheckOffsetsInKernelParams32BP(const Params&) {
   static_assert(offsetof(Params, depth) == RUY_OFFSET_DEPTH, "");
   static_assert(offsetof(Params, clamp_min) == RUY_OFFSET_CLAMP_MIN, "");
   static_assert(offsetof(Params, clamp_max) == RUY_OFFSET_CLAMP_MAX, "");
+  static_assert(
+      offsetof(Params, backtransform_add) == RUY_OFFSET_BACKTRANSFORM_ADD, "");
   static_assert(offsetof(Params, flags) == RUY_OFFSET_FLAGS, "");
 }
 
@@ -278,8 +284,15 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       // Load some parameters needed for the end work on current block.
       "ldrb w4, [%[params], #" RUY_STR(RUY_OFFSET_FLAGS) "]\n"
 
+      // Load backtransform multiply (duplicate 4 times into v12)
+      "mov w1, -2\n"
+      "dup v12.4s, w1 \n"
+      // Load backtransform add (duplicate 4 times into v13)
+      "ldr w1, [%[params], #" RUY_STR(RUY_OFFSET_BACKTRANSFORM_ADD) "]\n"
+      "dup v13.4s, w1 \n"
+
       // Load multiplication bias
-      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_FUSED_MULTIPLY) "]\n"
+      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_MULTIPLIER) "]\n"
       // Offset these base pointers as needed given the current row, col.
       "add x5, x1, %x[row], lsl #2\n"
       "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
@@ -288,7 +301,7 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "ld1 {v14.4s}, [x1], #16\n"
 
       // Load addition bias
-      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_FUSED_ADD) "]\n"
+      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_BIAS) "]\n"
       // Offset these base pointers as needed given the current row, col.
       "add x5, x1, %x[row], lsl #2\n"
       "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
@@ -309,6 +322,16 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "ld1 {v5.4s}, [%[rhs_ptr]], #16\n"
       "ld1 {v6.4s}, [%[rhs_ptr]], #16\n"
       "ld1 {v7.4s}, [%[rhs_ptr]], #16\n"
+
+      // Perform the backtransformation (in int32)
+      "mul v16.4s, v16.4s, v12.4s\n"
+      "mul v18.4s, v18.4s, v12.4s\n"
+      "mul v20.4s, v20.4s, v12.4s\n"
+      "mul v22.4s, v22.4s, v12.4s\n"
+      "add v16.4s, v16.4s, v13.4s\n"
+      "add v18.4s, v18.4s, v13.4s\n"
+      "add v20.4s, v20.4s, v13.4s\n"
+      "add v22.4s, v22.4s, v13.4s\n"
 
       // convert to single precision float before storing the NEON registers
       "scvtf v16.4s, v16.4s\n"
@@ -447,8 +470,9 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
         "v26", "v27", "v28", "v29", "v30", "v31");
 }
 
-#undef RUY_OFFSET_FUSED_MULTIPLY
-#undef RUY_OFFSET_FUSED_ADD
+#undef RUY_OFFSET_BACKTRANSFORM_ADD
+#undef RUY_OFFSET_POST_ACTIVATION_MULTIPLIER
+#undef RUY_OFFSET_POST_ACTIVATION_BIAS
 #undef RUY_OFFSET_FLAGS
 #undef RUY_OFFSET_LHS_BASE_PTR
 #undef RUY_OFFSET_CLAMP_MIN
@@ -467,8 +491,8 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
 #define RUY_OFFSET_LHS_BASE_PTR 0
 #define RUY_OFFSET_RHS_BASE_PTR 8
 #define RUY_OFFSET_DST_BASE_PTR 16
-#define RUY_OFFSET_FUSED_MULTIPLY 24
-#define RUY_OFFSET_FUSED_ADD 32
+#define RUY_OFFSET_POST_ACTIVATION_MULTIPLIER 24
+#define RUY_OFFSET_POST_ACTIVATION_BIAS 32
 #define RUY_OFFSET_START_ROW 40
 #define RUY_OFFSET_START_COL 44
 #define RUY_OFFSET_LAST_ROW 48
@@ -479,16 +503,20 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
 #define RUY_OFFSET_DEPTH 76
 #define RUY_OFFSET_CLAMP_MIN 80
 #define RUY_OFFSET_CLAMP_MAX 84
-#define RUY_OFFSET_FLAGS 88
+#define RUY_OFFSET_BACKTRANSFORM_ADD 88
+#define RUY_OFFSET_FLAGS 92
 
 template <typename Params>
 void CheckOffsetsInKernelParams64BP(const Params&) {
   static_assert(offsetof(Params, lhs_base_ptr) == RUY_OFFSET_LHS_BASE_PTR, "");
   static_assert(offsetof(Params, rhs_base_ptr) == RUY_OFFSET_RHS_BASE_PTR, "");
   static_assert(offsetof(Params, dst_base_ptr) == RUY_OFFSET_DST_BASE_PTR, "");
-  static_assert(offsetof(Params, fused_multiply) == RUY_OFFSET_FUSED_MULTIPLY,
+  static_assert(offsetof(Params, post_activation_multiplier) ==
+                    RUY_OFFSET_POST_ACTIVATION_MULTIPLIER,
                 "");
-  static_assert(offsetof(Params, fused_add) == RUY_OFFSET_FUSED_ADD, "");
+  static_assert(
+      offsetof(Params, post_activation_bias) == RUY_OFFSET_POST_ACTIVATION_BIAS,
+      "");
   static_assert(offsetof(Params, start_row) == RUY_OFFSET_START_ROW, "");
   static_assert(offsetof(Params, start_col) == RUY_OFFSET_START_COL, "");
   static_assert(offsetof(Params, last_row) == RUY_OFFSET_LAST_ROW, "");
@@ -499,6 +527,8 @@ void CheckOffsetsInKernelParams64BP(const Params&) {
   static_assert(offsetof(Params, depth) == RUY_OFFSET_DEPTH, "");
   static_assert(offsetof(Params, clamp_min) == RUY_OFFSET_CLAMP_MIN, "");
   static_assert(offsetof(Params, clamp_max) == RUY_OFFSET_CLAMP_MAX, "");
+  static_assert(
+      offsetof(Params, backtransform_add) == RUY_OFFSET_BACKTRANSFORM_ADD, "");
   static_assert(offsetof(Params, flags) == RUY_OFFSET_FLAGS, "");
 }
 
@@ -696,8 +726,15 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       // Load some parameters needed for the end work on current block.
       "ldrb w4, [%[params], #" RUY_STR(RUY_OFFSET_FLAGS) "]\n"
 
+      // Load backtransform multiply (duplicate 4 times into v12)
+      "mov w1, -2\n"
+      "dup v12.4s, w1 \n"
+      // Load backtransform add (duplicate 4 times into v13)
+      "ldr w1, [%[params], #" RUY_STR(RUY_OFFSET_BACKTRANSFORM_ADD) "]\n"
+      "dup v13.4s, w1 \n"
+
       // Load multiplication bias
-      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_FUSED_MULTIPLY) "]\n"
+      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_MULTIPLIER) "]\n"
       // Offset these base pointers as needed given the current row, col.
       "add x5, x1, %x[row], lsl #2\n"
       "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
@@ -706,7 +743,7 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "ld1 {v14.4s}, [x1], #16\n"
 
       // Load addition bias
-      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_FUSED_ADD) "]\n"
+      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_BIAS) "]\n"
       // Offset these base pointers as needed given the current row, col.
       "add x5, x1, %x[row], lsl #2\n"
       "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
@@ -727,6 +764,16 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "ld1 {v5.2d}, [%[rhs_ptr]], #16\n"
       "ld1 {v6.2d}, [%[rhs_ptr]], #16\n"
       "ld1 {v7.2d}, [%[rhs_ptr]], #16\n"
+
+      // Perform the backtransformation (in int32)
+      "mul v24.4s, v24.4s, v12.4s\n"
+      "mul v25.4s, v25.4s, v12.4s\n"
+      "mul v26.4s, v26.4s, v12.4s\n"
+      "mul v27.4s, v27.4s, v12.4s\n"
+      "add v24.4s, v24.4s, v13.4s\n"
+      "add v25.4s, v25.4s, v13.4s\n"
+      "add v26.4s, v26.4s, v13.4s\n"
+      "add v27.4s, v27.4s, v13.4s\n"
 
       // convert to single precision float before storing the NEON registers
       "scvtf v24.4s, v24.4s\n"
@@ -865,7 +912,9 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
         "v26", "v27", "v28", "v29", "v30", "v31");
 }
 
-#undef RUY_OFFSET_BIAS
+#undef RUY_OFFSET_BACKTRANSFORM_ADD
+#undef RUY_OFFSET_POST_ACTIVATION_MULTIPLIER
+#undef RUY_OFFSET_POST_ACTIVATION_BIAS
 #undef RUY_OFFSET_FLAGS
 #undef RUY_OFFSET_LHS_BASE_PTR
 #undef RUY_OFFSET_CLAMP_MIN

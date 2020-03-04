@@ -53,8 +53,9 @@ struct BGemmImplUsingRuy {
     dst.data = dst_data;
 
     TSpec spec;
-    spec.fused_multiply = params.fused_multiply;
-    spec.fused_add = params.fused_add;
+    spec.backtransform_add = params.backtransform_add;
+    spec.post_activation_multiplier = params.post_activation_multiplier;
+    spec.post_activation_bias = params.post_activation_bias;
 
     // The allocator is used to allocate memory for pre-packed matrices
     ruy::Allocator allocator;
