@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "larq_compute_engine/mlir/transforms/utils.h"
 #include "mlir/Dialect/StandardOps/Ops.h"
@@ -15,19 +13,6 @@ namespace {
 struct OptimizeLCE : public FunctionPass<OptimizeLCE> {
   void runOnFunction() override;
 };
-
-template <typename T>
-std::string getDebugString(const T& llvmobject) {
-  std::string type_str;
-  llvm::raw_string_ostream rso(type_str);
-  llvmobject.print(rso);
-  return rso.str();
-}
-
-template <typename T>
-std::string getDebugString(T* llvmobject) {
-  return getDebugString(*llvmobject);
-}
 
 bool IsConstantValue(Attribute values, float expected_value) {
   if (!values.isa<DenseElementsAttr>()) return false;
