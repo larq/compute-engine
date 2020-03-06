@@ -50,13 +50,13 @@ jobs:
         run: ./configure.sh <<< $'yes\n' #yes for manylinux2010
         shell: bash
       - name: "TF Arm32: Cross-compile and run unit tests in qemu"
-        run: ./bazelisk run larq_compute_engine/core/tests:cc_tests_arm32_qemu --config=rpi3
+        run: ./bazelisk run larq_compute_engine/core/tests:cc_tests_arm32_qemu --config=rpi3 --compilation_mode dbg
       - name: "TF Lite Arm32: Cross-compile and run tflite tests in qemu"
-        run: ./bazelisk run larq_compute_engine/tflite/tests:cc_tests_arm32_qemu --config=rpi3
+        run: ./bazelisk run larq_compute_engine/tflite/tests:cc_tests_arm32_qemu --config=rpi3 --compilation_mode dbg
       - name: "TF Aarch64: Cross-compile and run unit tests in qemu"
-        run: ./bazelisk run larq_compute_engine/core/tests:cc_tests_aarch64_qemu --config=aarch64
+        run: ./bazelisk run larq_compute_engine/core/tests:cc_tests_aarch64_qemu --config=aarch64 --compilation_mode dbg
       - name: "TF Lite Aarch64: Cross-compile and run tflite tests in qemu"
-        run: ./bazelisk run larq_compute_engine/tflite/tests:cc_tests_aarch64_qemu --config=aarch64
+        run: ./bazelisk run larq_compute_engine/tflite/tests:cc_tests_aarch64_qemu --config=aarch64 --compilation_mode dbg
 
   MLIR:
     runs-on: macos-latest
