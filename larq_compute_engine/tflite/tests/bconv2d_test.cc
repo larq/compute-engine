@@ -577,8 +577,7 @@ TEST(BConv2DTests, BConvErrorTest) {
                              {TensorType_FLOAT32, {}}, 1, 1, Padding_SAME, 0,
                              ActivationFunctionType_RELU, 1, 1, 1);
       },
-      "Fused activations are not supported in combination with "
-      "zero-padding.");
+      "Fused activations are only supported with valid or one-padding.");
 }
 
 }  // namespace testing

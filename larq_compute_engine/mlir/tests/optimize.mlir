@@ -86,11 +86,11 @@ func @fuse_relu_into_bconv2d_padding_same(%arg0: tensor<256x32x32x3xf32>, %arg1:
 func @do_not_fuse_relu_into_bconv2d_padding_same(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16x3x3x3xf32>) -> tensor<256x32x32x16xf32> {
   %post_activation_multiplier = constant dense<1.0> : tensor<16xf32>
   %post_activation_bias = constant dense<0.0> : tensor<16xf32>
-  %0 = "tf.LqceBconv2d64"(%arg0, %arg1, %post_activation_multiplier, %post_activation_bias) {activation = "NONE", data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x32x32x16xf32>
+  %0 = "tf.LqceBconv2d64"(%arg0, %arg1, %post_activation_multiplier, %post_activation_bias) {activation = "NONE", data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x32x32x16xf32>
   %1 = "tfl.relu"(%0) : (tensor<256x32x32x16xf32>) -> tensor<256x32x32x16xf32>
   return %1 : tensor<256x32x32x16xf32>
 
-  // CHECK: %0 = "tf.LqceBconv2d64"(%arg0, %arg1, %cst, %cst_0) {activation = "NONE", data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", padding = "SAME", strides = [1, 1, 1, 1]}
+  // CHECK: %0 = "tf.LqceBconv2d64"(%arg0, %arg1, %cst, %cst_0) {activation = "NONE", data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "SAME", strides = [1, 1, 1, 1]}
   // CHECK-NEXT: %1 = "tfl.relu"(%0)
   // CHECK-NEXT: return %1
 }

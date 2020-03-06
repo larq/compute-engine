@@ -168,11 +168,11 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
   }
 
   if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame &&
-      conv_params->pad_value == 0 &&
+      conv_params->pad_value != 1 &&
       conv_params->activation != kTfLiteActNone) {
-    context->ReportError(context,
-                         "Fused activations are not supported in combination "
-                         "with zero-padding.");
+    context->ReportError(
+        context,
+        "Fused activations are only supported with valid or one-padding.");
     return conv_params;
   }
 
