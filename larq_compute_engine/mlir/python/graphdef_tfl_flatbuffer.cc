@@ -38,9 +38,7 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
            .ok()) {
     throw std::runtime_error("Could not parse input arrays.");
   }
-  if (!ParseOutputArrayInfo(output_arrays, &specs.output_arrays,
-                            &specs.output_arrays_order)
-           .ok()) {
+  if (!ParseOutputArrayInfo(output_arrays, &specs.outputs).ok()) {
     throw std::runtime_error("Could not parse output arrays.");
   }
 
