@@ -209,7 +209,7 @@ struct TestParam {
     const Padding padding =
         (param.padding == Padding_ONE ? Padding_SAME : param.padding);
 
-    // WARNING: substitute accests only 11 arguments
+    // WARNING: substitute accepts only 11 arguments
     return absl::Substitute("Op$0_I$1_K$2_P$3_PV$4_S$5_D$6_T$7",
                             param.kernel_name, param_input_oss.str(),
                             param_filter_oss.str(), GetPaddingName(padding),
@@ -472,8 +472,6 @@ TEST_P(BConv2DOpTest, SimpleTest) {
     }
   }
 
-  const std::int32_t dotproduct_size =
-      filter_height * filter_width * input_depth;
   for (int i = 0; i < filter_count; ++i) {
     post_activation_multiplier_data[i] = channel_multipliers[i];
     post_activation_bias_data[i] = bias_data[i];
