@@ -11,14 +11,15 @@ set -x
 TMPDIR=`mktemp -d`
 trap "rm -rf $TMPDIR" EXIT
 
-VERSION=1.0
+AAR_NAME=lce-lite
+VERSION=0.1.2
 
 BUILDER=bazel
 BASEDIR=larq_compute_engine/tflite
 CROSSTOOL="//external:android/crosstool"
 HOST_CROSSTOOL="@bazel_tools//tools/cpp:toolchain"
 
-BUILD_OPTS="-c opt --fat_apk_cpu=x86,x86_64,arm64-v8a,armeabi-v7a"
+BUILD_OPTS="-c opt --fat_apk_cpu=x86,x86_64,arm64-v8a"
 CROSSTOOL_OPTS="--crosstool_top=$CROSSTOOL --host_crosstool_top=$HOST_CROSSTOOL"
 
 test -d $BASEDIR || (echo "Aborting: not at top-level build directory"; exit 1)
@@ -43,11 +44,11 @@ mkdir -p $TMPDIR/jni
 build_lce_aar $TMPDIR
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    AAR_FILE=`realpath tflite-lce-${VERSION}.aar`
+    AAR_FILE=`realpath $AAR_NAME-${VERSION}.aar`
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     # on macOS get 'grealpath' by installing 'coreutils' package:
     # "brew install coreutils"
-    AAR_FILE=`grealpath tflite-lce-${VERSION}.aar`
+    AAR_FILE=`grealpath $AAR_NAME-${VERSION}.aar`
 else
     # Unknown.
     echo "ERROR: could not detect the OS."
