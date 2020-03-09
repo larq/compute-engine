@@ -52,7 +52,7 @@ def preprocess(data):
 
 
 @pytest.mark.parametrize(
-    "model_cls", [toy_model, lqz.BinaryResNetE18,],
+    "model_cls", [toy_model, lqz.BinaryResNetE18],
 )
 def test_simple_model(model_cls):
     model = model_cls(weights="imagenet")
@@ -60,26 +60,26 @@ def test_simple_model(model_cls):
 
     # Test on the flowers dataset
     dataset = (
-        tfds.load("oxford_flowers102", split=tfds.Split.VALIDATION)
+        tfds.load("oxford_flowers102", split="validation")
         .map(preprocess)
-        .shuffle(512)
-        .take(10)
-        .batch(1)
+        .shuffle(256)
+        .batch(10)
+        .take(1)
     )
-    for inputs in tfds.as_numpy(dataset):
-        outputs = model(inputs).numpy().flatten()
-        actual_outs = run_model(model_lce, list(inputs.flatten()))
-        for actual_out in actual_outs:
-            np.testing.assert_allclose(actual_out, outputs, rtol=0.001, atol=0.2)
+    inputs = next(tfds.as_numpy(dataset))
+
+    outputs = model(inputs).numpy()
+    for input, output in zip(inputs, outputs):
+        for actual_output in run_model(model_lce, list(input.flatten())):
+            np.testing.assert_allclose(actual_output, output, rtol=0.001, atol=0.2)
 
     # Test on some random inputs
-    for _ in range(10):
-        inputshape = (1,) + tuple(model.input.shape)[1:]
-        inputs = 2.0 * np.random.random(inputshape) - 1.0
-        outputs = model(inputs).numpy().flatten()
-        actual_outs = run_model(model_lce, list(inputs.flatten()))
-        for actual_out in actual_outs:
-            np.testing.assert_allclose(actual_out, outputs, rtol=0.001, atol=0.2)
+    input_shape = (10, *model.input.shape[1:])
+    inputs = np.random.uniform(-1, 1, size=input_shape).astype(np.float32)
+    outputs = model(inputs).numpy()
+    for input, output in zip(inputs, outputs):
+        for actual_output in run_model(model_lce, list(input.flatten())):
+            np.testing.assert_allclose(actual_output, output, rtol=0.001, atol=0.2)
 
 
 if __name__ == "__main__":
