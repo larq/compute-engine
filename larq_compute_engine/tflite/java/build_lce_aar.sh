@@ -12,7 +12,7 @@ TMPDIR=`mktemp -d`
 trap "rm -rf $TMPDIR" EXIT
 
 AAR_NAME=lce-lite
-VERSION=0.1.2
+VERSION=$(git describe --tags)
 
 BUILDER=bazel
 BASEDIR=larq_compute_engine/tflite
