@@ -50,13 +50,13 @@ jobs:
         run: ./configure.sh <<< $'yes\n' #yes for manylinux2010
         shell: bash
       - name: "TF Arm32: Cross-compile and run unit tests in qemu"
-        run: ./bazelisk run larq_compute_engine/core/tests:cc_tests_arm32_qemu --config=rpi3 --compilation_mode dbg
+        run: ./bazelisk test larq_compute_engine/core/tests:cc_tests_arm32_qemu --config=rpi3 --compilation_mode dbg --test_output=all
       - name: "TF Lite Arm32: Cross-compile and run tflite tests in qemu"
-        run: ./bazelisk run larq_compute_engine/tflite/tests:cc_tests_arm32_qemu --config=rpi3 --compilation_mode dbg
+        run: ./bazelisk test larq_compute_engine/tflite/tests:cc_tests_arm32_qemu --config=rpi3 --compilation_mode dbg --test_output=all
       - name: "TF Aarch64: Cross-compile and run unit tests in qemu"
-        run: ./bazelisk run larq_compute_engine/core/tests:cc_tests_aarch64_qemu --config=aarch64 --compilation_mode dbg
+        run: ./bazelisk test larq_compute_engine/core/tests:cc_tests_aarch64_qemu --config=aarch64 --compilation_mode dbg --test_output=all
       - name: "TF Lite Aarch64: Cross-compile and run tflite tests in qemu"
-        run: ./bazelisk run larq_compute_engine/tflite/tests:cc_tests_aarch64_qemu --config=aarch64 --compilation_mode dbg
+        run: ./bazelisk test larq_compute_engine/tflite/tests:cc_tests_aarch64_qemu --config=aarch64 --compilation_mode dbg --test_output=all
 
   MLIR:
     runs-on: macos-latest
@@ -94,19 +94,19 @@ jobs:
       - name: Install pip dependencies
         run: pip install tensorflow==2.1.0 larq_zoo==0.5.0 pytest tensorflow_datasets==1.3.2 --no-cache
       - name: Run converter tests TF 2.1
-        run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false
+        run: ./bazelisk test larq_compute_engine/mlir:converter_test --test_output=all --distinct_host_configuration=false
       - name: Install TF 2.0
         run: pip install tensorflow==2.0.0 --no-cache
       - name: Run converter tests TF 2.0
-        run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false
+        run: ./bazelisk test larq_compute_engine/mlir:converter_test --test_output=all --distinct_host_configuration=false
       - name: Install TF 1.15
         run: pip install tensorflow==1.15 --no-cache
       - name: Run converter tests TF 1.15
-        run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false
+        run: ./bazelisk test larq_compute_engine/mlir:converter_test --test_output=all --distinct_host_configuration=false
       - name: Install TF 1.14
         run: pip install tensorflow==1.14 --no-cache
       - name: Run converter tests TF 1.14
-        run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false
+        run: ./bazelisk test larq_compute_engine/mlir:converter_test --test_output=all --distinct_host_configuration=false
 
   Android_AAR:
     runs-on: ubuntu-latest
