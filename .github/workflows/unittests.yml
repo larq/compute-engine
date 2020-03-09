@@ -116,8 +116,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-        with:
-          submodules: true
       - name: Install Bazelisk
         run: |
           curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-linux-amd64 > bazelisk
@@ -128,4 +126,4 @@ jobs:
       - name: "Download and install Android NDK/SDK"
         run: ./third_party/install_android.sh
       - name: "Build LCE AAR"
-        run: ./larq_compute_engine/tflite/java/build_lce_aar.sh
+        run: BUILDER=./bazelisk ./larq_compute_engine/tflite/java/build_lce_aar.sh

@@ -13,7 +13,7 @@ trap "rm -rf $TMPDIR" EXIT
 
 VERSION=1.0
 
-BUILDER=bazel
+BUILDER="${BUILDER:-bazelisk}"
 BASEDIR=larq_compute_engine/tflite
 CROSSTOOL="//external:android/crosstool"
 HOST_CROSSTOOL="@bazel_tools//tools/cpp:toolchain"
@@ -26,7 +26,7 @@ test -d $BASEDIR || (echo "Aborting: not at top-level build directory"; exit 1)
 function build_lce_aar() {
   local OUTDIR=$1
   $BUILDER build $BUILD_OPTS $BASEDIR/java:tensorflow-lite-lce.aar
-  unzip -d $OUTDIR $BUILDER-bin/$BASEDIR/java/tensorflow-lite-lce.aar
+  unzip -d $OUTDIR bazel-bin/$BASEDIR/java/tensorflow-lite-lce.aar
   # targetSdkVersion is here to prevent the app from requesting spurious
   # permissions, such as permission to make phone calls. It worked for v1.0,
   # but minSdkVersion might be the preferred way to handle this.
@@ -34,7 +34,7 @@ function build_lce_aar() {
 
   $BUILDER build $BUILD_OPTS $BASEDIR/java:tensorflowlite_java
   # override the classes.jar with the Java sources from TF Lite Java API
-  cp $BUILDER-bin/$BASEDIR/java/libtensorflowlite_java.jar $OUTDIR/classes.jar
+  cp bazel-bin/$BASEDIR/java/libtensorflowlite_java.jar $OUTDIR/classes.jar
 }
 
 rm -rf $TMPDIR
