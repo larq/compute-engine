@@ -82,6 +82,11 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/dev-requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
       - name: Install Bazelisk
         run: |
           curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-darwin-amd64 > bazelisk
@@ -92,19 +97,19 @@ jobs:
       - name: Configure Bazel
         run: ./configure.sh
       - name: Install pip dependencies
-        run: pip install tensorflow==2.1.0 larq_zoo==0.5.0 pytest tensorflow_datasets==1.3.2 --no-cache
+        run: pip install -r dev-requirements.txt
       - name: Run converter tests TF 2.1
         run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false
       - name: Install TF 2.0
-        run: pip install tensorflow==2.0.0 --no-cache
+        run: pip install tensorflow==2.0.0
       - name: Run converter tests TF 2.0
         run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false
       - name: Install TF 1.15
-        run: pip install tensorflow==1.15 --no-cache
+        run: pip install tensorflow==1.15
       - name: Run converter tests TF 1.15
         run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false
       - name: Install TF 1.14
-        run: pip install tensorflow==1.14 --no-cache
+        run: pip install tensorflow==1.14
       - name: Run converter tests TF 1.14
         run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false
 
