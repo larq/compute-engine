@@ -14,6 +14,15 @@ struct OptimizeLCE : public FunctionPass<OptimizeLCE> {
   void runOnFunction() override;
 };
 
+bool IsConstantValue(Attribute values, float expected_value) {
+  if (!values.isa<DenseElementsAttr>()) return false;
+
+  for (auto value : values.cast<DenseElementsAttr>().getValues<float>()) {
+    if (value != expected_value) return false;
+  }
+  return true;
+}
+
 #include "larq_compute_engine/mlir/transforms/generated_optimize.inc"
 
 void OptimizeLCE::runOnFunction() {

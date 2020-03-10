@@ -19,6 +19,7 @@
 #include <ctime>
 #include <functional>
 #include <memory>
+#include <random>
 #include <tuple>
 #include <vector>
 
@@ -56,6 +57,15 @@ TfLiteRegistration* Register_CONVOLUTION_GENERIC_OPT();
 
 }  // namespace builtin
 }  // namespace ops
+
+std::string getActivationString(const enum ActivationFunctionType activation) {
+  if (activation == ActivationFunctionType_RELU) {
+    return "RELU";
+  } else if (activation == ActivationFunctionType_NONE) {
+    return "NONE";
+  }
+  return "UNKOWN";
+}
 
 namespace {
 
@@ -157,12 +167,13 @@ namespace testing {
 
 typedef TfLiteRegistration* (*register_function)(void);
 
-typedef std::tuple<std::array<int, 4>,  // input shape [BHWI]
-                   std::array<int, 3>,  // filter shape [HWO]
-                   std::array<int, 2>,  // strides [HW]
-                   std::array<int, 2>,  // dilations [HW]
-                   Padding,             // paddding
-                   int,                 // number of threads
+typedef std::tuple<std::array<int, 4>,           // input shape [BHWI]
+                   std::array<int, 3>,           // filter shape [HWO]
+                   std::array<int, 2>,           // strides [HW]
+                   std::array<int, 2>,           // dilations [HW]
+                   Padding,                      // paddding
+                   enum ActivationFunctionType,  // activation function
+                   int,                          // number of threads
                    std::pair<std::string, register_function>  // registration
                    >
     TestParamTuple;
@@ -183,9 +194,10 @@ struct TestParam {
         dilation_height_factor(::testing::get<3>(param_tuple)[0]),
         dilation_width_factor(::testing::get<3>(param_tuple)[1]),
         padding(::testing::get<4>(param_tuple)),
-        num_threads(::testing::get<5>(param_tuple)),
-        kernel_name(::testing::get<6>(param_tuple).first),
-        registration(::testing::get<6>(param_tuple).second) {}
+        activation(::testing::get<5>(param_tuple)),
+        num_threads(::testing::get<6>(param_tuple)),
+        kernel_name(::testing::get<7>(param_tuple).first),
+        registration(::testing::get<7>(param_tuple).second) {}
 
   static std::string TestNameSuffix(
       const ::testing::TestParamInfo<TestParamTuple>& info) {
@@ -206,12 +218,12 @@ struct TestParam {
     const Padding padding =
         (param.padding == Padding_ONE ? Padding_SAME : param.padding);
 
-    // WARNING: substitute accepts only 11 arguments
-    return absl::Substitute("Op$0_I$1_K$2_P$3_PV$4_S$5_D$6_T$7",
-                            param.kernel_name, param_input_oss.str(),
-                            param_filter_oss.str(), GetPaddingName(padding),
-                            pad_values, param_strides_oss.str(),
-                            param_dilation_oss.str(), param.num_threads);
+    // WARNING: substitute accests only 11 arguments
+    return absl::Substitute(
+        "Op$0_I$1_K$2_P$3_PV$4_S$5_D$6_T$7_Act$8", param.kernel_name,
+        param_input_oss.str(), param_filter_oss.str(), GetPaddingName(padding),
+        pad_values, param_strides_oss.str(), param_dilation_oss.str(),
+        param.num_threads, getActivationString(param.activation));
   }
 
   int input_batch_count = 1;
@@ -231,6 +243,8 @@ struct TestParam {
 
   Padding padding = Padding_VALID;
 
+  ::tflite::ActivationFunctionType activation = ActivationFunctionType_NONE;
+
   int num_threads = 1;
 
   std::string kernel_name = "Unknown";
@@ -239,12 +253,14 @@ struct TestParam {
 
 class BaseBConv2DOpModel : public SingleOpModel {
  public:
-  BaseBConv2DOpModel(register_function registration, const TensorData& input,
-                     const TensorData& filter, const TensorData& output,
-                     int stride_width = 1, int stride_height = 1,
-                     enum Padding padding = Padding_VALID, int pad_values = 0,
-                     int dilation_width_factor = 1,
-                     int dilation_height_factor = 1, int num_threads = -1) {
+  BaseBConv2DOpModel(
+      register_function registration, const TensorData& input,
+      const TensorData& filter, const TensorData& output, int stride_width = 1,
+      int stride_height = 1, enum Padding padding = Padding_VALID,
+      int pad_values = 0,
+      enum ActivationFunctionType activation = ActivationFunctionType_NONE,
+      int dilation_width_factor = 1, int dilation_height_factor = 1,
+      int num_threads = -1) {
     input_ = AddInput(input);
     filter_ = AddInput(filter);
     output_ = AddOutput(output);
@@ -271,6 +287,7 @@ class BaseBConv2DOpModel : public SingleOpModel {
       fbb.String("filter_format", "OHWI");
       fbb.String("padding", GetPaddingName(padding));
       fbb.Int("pad_values", pad_values);
+      fbb.String("activation", getActivationString(activation));
     });
     fbb.Finish();
     SetCustomOp("LqceBconv2d", fbb.GetBuffer(), registration);
@@ -372,6 +389,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   const int dilation_height_factor = param.dilation_height_factor;
   const int dilation_width_factor = param.dilation_width_factor;
   const Padding padding = param.padding;
+  const ActivationFunctionType activation = param.activation;
   const int num_threads = param.num_threads;
 
   const Padding builtin_padding =
@@ -388,45 +406,44 @@ TEST_P(BConv2DOpTest, SimpleTest) {
 
   using T = float;
   std::vector<T> input_data, padded_input_data, filters_data;
-  std::vector<T> channel_multipliers;
   std::vector<T> post_activation_multiplier_data, post_activation_bias_data,
       bias_data;
   input_data.resize(input_num_elem);
   filters_data.resize(filters_num_elem);
-  channel_multipliers.resize(filter_count, 0);
   bias_data.resize(filter_count, 0);
   post_activation_multiplier_data.resize(filter_count, 0);
   post_activation_bias_data.resize(filter_count, 0);
 
-  srand(time(NULL));
-  std::array<T, 2> list{1.0, -1.0};
-  auto rand_generator = [&list]() {
-    const int index = rand() % list.size();
-    return list[index];
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  auto sign_generator = [&gen]() {
+    return std::bernoulli_distribution(0.5)(gen) ? 1.0 : -1.0;
   };
-  std::array<T, 5> float_list{0.125, 0.25, 0.75, 0.875, 1.0};
-  auto float_generator = [&float_list]() {
-    const int index = rand() % float_list.size();
-    return float_list[index];
+  auto float_generator = [&gen]() {
+    return std::uniform_real_distribution<>(-1.5, 1.5)(gen);
   };
 
-  std::generate(std::begin(input_data), std::end(input_data), rand_generator);
+  std::generate(std::begin(input_data), std::end(input_data), sign_generator);
   std::generate(std::begin(filters_data), std::end(filters_data),
-                rand_generator);
-  std::generate(std::begin(channel_multipliers), std::end(channel_multipliers),
-                float_generator);
-  std::generate(std::begin(bias_data), std::end(bias_data), float_generator);
+                sign_generator);
+  std::generate(std::begin(post_activation_multiplier_data),
+                std::end(post_activation_multiplier_data), float_generator);
+  std::generate(std::begin(post_activation_bias_data),
+                std::end(post_activation_bias_data), float_generator);
 
   int padded_input_height = input_height;
   int padded_input_width = input_width;
+  int output_height, output_width;
+  TfLitePaddingValues padding_values = ComputePaddingHeightWidth(
+      stride_height, stride_width, dilation_height_factor,
+      dilation_width_factor, input_height, input_width, filter_height,
+      filter_width,
+      (bconv_padding == Padding_SAME ? kTfLitePaddingSame
+                                     : kTfLitePaddingValid),
+      &output_height, &output_width);
+
   if (pad_values == 1) {
     // Use a Pad op to pad with ones
-    int output_height, output_width;
-    TfLitePaddingValues padding_values = ComputePaddingHeightWidth(
-        stride_height, stride_width, dilation_height_factor,
-        dilation_width_factor, input_height, input_width, filter_height,
-        filter_width, kTfLitePaddingSame, &output_height, &output_width);
-
     // How many pixels does the kernel stick out at the {left, top, right,
     // bottom}
     const int overflow_left = padding_values.width;
@@ -452,26 +469,19 @@ TEST_P(BConv2DOpTest, SimpleTest) {
     padded_input_height = input_height + overflow_top + overflow_bottom;
     padded_input_width = input_width + overflow_left + overflow_right;
     EXPECT_THAT(padop.GetOutputShape(),
-                ElementsAreArray(
-                    {1, padded_input_height, padded_input_width, input_depth}));
+                ElementsAreArray({input_batch_count, padded_input_height,
+                                  padded_input_width, input_depth}));
 
     padded_input_data = padop.GetOutput();
   } else {
     padded_input_data = input_data;
   }
 
-  // Fuse the multipliers to the filters, just as tflite would do it
-  // The bconv op will take the sign, so it will automatically ignore this
-  for (int i = 0; i < filter_count; ++i) {
-    for (int j = 0; j < filter_height * filter_width * input_depth; ++j) {
-      filters_data[i * (filter_height * filter_width * input_depth) + j] *=
-          channel_multipliers[i];
-    }
-  }
-
-  for (int i = 0; i < filter_count; ++i) {
-    post_activation_multiplier_data[i] = channel_multipliers[i];
-    post_activation_bias_data[i] = bias_data[i];
+  if (padding == Padding_SAME && activation == ActivationFunctionType_RELU) {
+    // Fused ReLu is not supported for zero-padding.
+    // We could use `EXPECT_DEATH` here but it is extremely slow.
+    // Therefore we have a separate test below, and here we just return.
+    return;
   }
 
   BConv2DOpModel m_lce(
@@ -481,7 +491,8 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       {TensorType_FLOAT32,
        {filter_count, filter_height, filter_width, input_depth}},
       {TensorType_FLOAT32, {}}, stride_width, stride_height, bconv_padding,
-      pad_values, dilation_width_factor, dilation_height_factor, num_threads);
+      pad_values, activation, dilation_width_factor, dilation_height_factor,
+      num_threads);
 
   m_lce.SetInput(input_data);
   m_lce.SetFilter(filters_data);
@@ -498,15 +509,31 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       {TensorType_FLOAT32,
        {filter_count, filter_height, filter_width, input_depth}},  // filter
       {TensorType_FLOAT32, {}},                                    // output
-      stride_width, stride_height, builtin_padding, ActivationFunctionType_NONE,
+      stride_width, stride_height, builtin_padding, activation,
       dilation_width_factor, dilation_height_factor, num_threads);
 
   m_builtin.SetInput(padded_input_data);
   m_builtin.SetFilter(filters_data);
   m_builtin.SetBias(bias_data);
   m_builtin.Invoke();
-
   auto expected_array = m_builtin.GetOutput();
+
+  // Apply the post multiply and add to the tflite model
+  // We can not fuse it into the tflite bias because it should happen *after*
+  // the activation function
+  T* out_ptr = expected_array.data();
+  for (int batch = 0; batch < input_batch_count; ++batch) {
+    for (int out_y = 0; out_y < output_width; ++out_y) {
+      for (int out_x = 0; out_x < output_height; ++out_x) {
+        for (int out_c = 0; out_c < filter_count; ++out_c) {
+          *out_ptr *= post_activation_multiplier_data[out_c];
+          *out_ptr += post_activation_bias_data[out_c];
+          ++out_ptr;
+        }
+      }
+    }
+  }
+
   EXPECT_THAT(m_lce.GetOutput(),
               ::testing::Pointwise(FloatNearPointwise(1e-4), expected_array));
 }
@@ -534,9 +561,25 @@ INSTANTIATE_TEST_SUITE_P(
         ::testing::Values(std::array<int, 2>{1, 1},
                           std::array<int, 2>{3, 2}),  // dilation height/width
         ::testing::Values(Padding_VALID, Padding_SAME, Padding_ONE),  // padding
-        ::testing::Values(1, 2),  // number of threads
+        ::testing::Values(ActivationFunctionType_NONE,
+                          ActivationFunctionType_RELU),  // activation function
+        ::testing::Values(1, 2),                         // number of threads
         ::testing::ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
     TestParam::TestNameSuffix);
+
+TEST(BConv2DTests, BConvErrorTest) {
+  // Test if fused ReLu throws an error in combination with zero-padding
+  EXPECT_DEATH(
+      {
+        BConv2DOpModel m_lce(compute_engine::tflite::Register_BCONV_2D64,
+                             {TensorType_FLOAT32, {1, 16, 16, 64}},
+                             {TensorType_FLOAT32, {128, 3, 3, 64}},
+                             {TensorType_FLOAT32, {}}, 1, 1, Padding_SAME, 0,
+                             ActivationFunctionType_RELU, 1, 1, 1);
+      },
+      "Fused activations are only supported with valid or one-padding.");
+}
+
 }  // namespace testing
 }  // namespace tflite
 }  // namespace compute_engine

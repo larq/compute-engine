@@ -23,7 +23,7 @@ func @fuse_bconv2d(%arg0: tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32> {
   // CHECK: %[[post_activation_multiplier:.*]] = constant dense<1.000000e+00> : tensor<2xf32>
   // CHECK: %[[post_activation_bias:.*]] = constant dense<0.000000e+00> : tensor<2xf32>
   // CHECK-NEXT: %[[transpose:.*]] = "tf.Transpose"(%cst
-  // CHECK-NEXT: %[[conv:.*]] = "tf.LqceBconv2d64"(%arg0, %[[transpose]], %[[post_activation_multiplier]], %[[post_activation_bias]]) {data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<2x1x2x2xf32>, tensor<2xf32>, tensor<2xf32>) -> tensor<1x112x112x2xf32>
+  // CHECK-NEXT: %[[conv:.*]] = "tf.LqceBconv2d64"(%arg0, %[[transpose]], %[[post_activation_multiplier]], %[[post_activation_bias]]) {activation = "NONE", data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<2x1x2x2xf32>, tensor<2xf32>, tensor<2xf32>) -> tensor<1x112x112x2xf32>
   // CHECK-NEXT: return %[[conv]]
 }
 
@@ -53,7 +53,7 @@ func @fuse_bconv2d_padding(%arg0: tensor<256x32x32x3xf32>) -> tensor<256x16x16x1
   // CHECK:  %[[CST1:.*]] = constant dense<1.000000e+00> : tensor<16xf32>
   // CHECK:  %[[CST2:.*]] = constant dense<0.000000e+00> : tensor<16xf32>
   // CHECK:  %[[TRP:.*]] = "tf.Transpose"
-  // CHECK:  %[[CONV:.*]] = "tf.LqceBconv2d64"(%arg0, %[[TRP]], %[[CST1]], %[[CST2]]) {data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 1 : i32, padding = "SAME", strides = [1, 2, 2, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x16x16x16xf32>
+  // CHECK:  %[[CONV:.*]] = "tf.LqceBconv2d64"(%arg0, %[[TRP]], %[[CST1]], %[[CST2]]) {activation = "NONE", data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 1 : i32, padding = "SAME", strides = [1, 2, 2, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x16x16x16xf32>
 }
 
 // CHECK-LABEL: @do_not_fuse_bconv2d_padding_same

@@ -173,6 +173,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
       filter_shape.Dims(1) * filter_shape.Dims(2) * filter_shape.Dims(3);
   gemm_params.post_activation_multiplier = post_activation_multiplier_data;
   gemm_params.post_activation_bias = post_activation_bias_data;
+  gemm_params.clamp_min = params.quantized_activation_min;
+  gemm_params.clamp_max = params.quantized_activation_max;
 
   // #if defined(TF_LITE_USE_CBLAS) && defined(__APPLE__)
 

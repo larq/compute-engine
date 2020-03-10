@@ -71,6 +71,9 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
         }
         // Backtransform can still be done in int32
         accum = spec.backtransform_add - 2 * accum;
+        // Activation function can also be done in int32
+        accum = std::min<AccumScalar>(accum, spec.clamp_max);
+        accum = std::max<AccumScalar>(accum, spec.clamp_min);
         // Post multiply and add are done in float
         DstScalar dst_val = static_cast<DstScalar>(accum);
         if (spec.post_activation_multiplier) {

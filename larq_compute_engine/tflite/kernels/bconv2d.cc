@@ -64,6 +64,12 @@ typedef struct {
 
   ce::core::FilterFormat filter_format{ce::core::FilterFormat::Unknown};
 
+  TfLiteFusedActivation activation = kTfLiteActNone;
+  // These min,max take care of a Relu.
+  // Later they will *also* do the clamping in order to go from int32 to int8
+  std::int32_t output_activation_min;
+  std::int32_t output_activation_max;
+
   bool bitpack_before_im2col = false;
   bool need_im2col = false;
   // IDs are the arbitrary identifiers used by TF Lite to identify and access
@@ -80,6 +86,7 @@ typedef struct {
   std::vector<std::uint8_t> bitpacked_weights_buffer;
   bool is_weight_bitpacked = false;
 
+  bool conv_params_initialized = false;
 } TfLiteBConv2DParams;
 
 inline void decide_bitpack_before_im2col(TfLiteBConv2DParams* conv_params,
@@ -135,6 +142,20 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
     conv_params->padding_type = kTfLitePaddingSame;
   } else {
     context->ReportError(context, "Invalid padding attribute.");
+  }
+
+  // Read fused activation
+  if (m["activation"].IsNull() || m["activation"].ToString() == "" ||
+      m["activation"].ToString() == "NONE") {
+    conv_params->activation = kTfLiteActNone;
+  } else if (m["activation"].ToString() == "RELU") {
+    conv_params->activation = kTfLiteActRelu;
+  } else if (m["activation"].ToString() == "RELU1") {
+    conv_params->activation = kTfLiteActRelu1;
+  } else if (m["activation"].ToString() == "RELU6") {
+    conv_params->activation = kTfLiteActRelu6;
+  } else {
+    context->ReportError(context, "Invalid value for activation.");
     return conv_params;
   }
 
@@ -146,6 +167,18 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
     return conv_params;
   }
 
+  if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame &&
+      conv_params->pad_value != 1 &&
+      conv_params->activation != kTfLiteActNone) {
+    context->ReportError(
+        context,
+        "Fused activations are only supported with valid or one-padding.");
+    return conv_params;
+  }
+
+  // We can not return an error code here, so we set this flag and return an
+  // error code in Prepare
+  conv_params->conv_params_initialized = true;
   return conv_params;
 }
 
@@ -156,6 +189,9 @@ void Free(TfLiteContext* context, void* buffer) {
 TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
                      TfLiteContext* context, TfLiteNode* node) {
   auto* conv_params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
+
+  // If an error happened in Init, then report an error message
+  if (!conv_params->conv_params_initialized) return kTfLiteError;
 
   TF_LITE_ENSURE(context, node->inputs->size == 4);
 
@@ -213,6 +249,10 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
 
   conv_params->out_width = out_width;
   conv_params->out_height = out_height;
+
+  CalculateActivationRange(conv_params->activation,
+                           &conv_params->output_activation_min,
+                           &conv_params->output_activation_max);
 
   // determine the output dimensions
   TfLiteIntArray* output_shape = TfLiteIntArrayCreate(4);
@@ -333,11 +373,9 @@ inline void GetConvParamsType(const TfLiteBConv2DParams& conv_params,
   op_params.dilation_height_factor = conv_params.dilations[1];
   op_params.dilation_width_factor = conv_params.dilations[2];
 
-  // TODO: this is not required for binary conv, however we need to
-  // check if it is used in other components of TF lite internal method which
-  // we are reusing and what are the default values!
-  // op_params.float_activation_min = output_activation_min;
-  // op_params.float_activation_max = output_activation_max;
+  // Activation function
+  op_params.quantized_activation_min = conv_params.output_activation_min;
+  op_params.quantized_activation_max = conv_params.output_activation_max;
 }
 
 template <class T, class TBitpacked>
