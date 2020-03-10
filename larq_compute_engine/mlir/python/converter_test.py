@@ -1,25 +1,26 @@
 import sys
-import pytest
+import unittest
+from unittest import mock
+
 import larq_zoo as lqz
-from tensorflow.python.eager import context
+
+sys.modules["larq_compute_engine.mlir._graphdef_tfl_flatbuffer"] = mock.MagicMock()
 
 from larq_compute_engine.mlir.python.converter import convert_keras_model
-
-
-@pytest.fixture
-def eager_mode():
-    """pytest fixture for running test in eager mode"""
-    with context.eager_mode():
-        yield
-
-
-@pytest.mark.parametrize(
-    "model_cls", [lqz.BinaryResNetE18, lqz.BinaryDenseNet28,],
+from larq_compute_engine.mlir._graphdef_tfl_flatbuffer import (
+    convert_graphdef_to_tflite_flatbuffer as mocked_converter,
 )
-def test_larq_zoo_models(eager_mode, model_cls):
-    model = model_cls(weights=None)
-    convert_keras_model(model)
+
+
+class TestConverter(unittest.TestCase):
+    def test_larq_zoo_models(self):
+        model = lqz.BinaryResNetE18(weights=None)
+
+        convert_keras_model(model)
+        mocked_converter.assert_called_once_with(
+            mock.ANY, ["input_1"], ["DT_FLOAT"], [[1, 224, 224, 3]], ["Identity"],
+        )
 
 
 if __name__ == "__main__":
-    sys.exit(pytest.main([__file__]))
+    unittest.main()
