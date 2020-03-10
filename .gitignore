@@ -45,3 +45,6 @@ gradleBuild
 Podfile.lock
 Pods
 xcuserdata
+
+# User files
+venv

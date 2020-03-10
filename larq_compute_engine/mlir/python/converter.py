@@ -1,10 +1,7 @@
-from packaging import version
+from typing import List
+
 import tensorflow as tf
-
-from larq_compute_engine.mlir._graphdef_tfl_flatbuffer import (
-    convert_graphdef_to_tflite_flatbuffer,
-)
-
+from packaging import version
 from tensorflow.core.framework.types_pb2 import DataType
 from tensorflow.lite.python.util import (
     get_grappler_config,
@@ -15,10 +12,15 @@ from tensorflow.python.eager import def_function
 from tensorflow.python.framework.convert_to_constants import (
     convert_variables_to_constants_v2,
 )
+from tensorflow.python.framework.func_graph import FuncGraph
 from tensorflow.python.keras.saving import saving_utils
 
+from larq_compute_engine.mlir._graphdef_tfl_flatbuffer import (
+    convert_graphdef_to_tflite_flatbuffer,
+)
 
-def concrete_function_from_keras_model(model):
+
+def concrete_function_from_keras_model(model: tf.keras.Model):
     input_signature = None
     if version.parse(tf.__version__) >= version.parse("2.1"):
         # If the model's call is not a `tf.function`, then we need to first get its
@@ -35,6 +37,44 @@ def concrete_function_from_keras_model(model):
 
     func = saving_utils.trace_model_call(model, input_signature)
     return func.get_concrete_function()
+
+
+def convert_tensorflow_graph(
+    graph: FuncGraph, input_tensors: List[tf.Tensor], output_tensors: List[tf.Tensor]
+):
+    graph_def = graph.as_graph_def()
+    # Run a constant folding using grappler since we currently don't implement
+    # folding for LCE custom ops
+    graph_def = run_graph_optimizations(
+        graph_def,
+        input_tensors,
+        output_tensors,
+        config=get_grappler_config(["constfold"]),
+        graph=graph,
+    )
+
+    # Checks dimensions in input tensor.
+    for tensor in input_tensors:
+        # Note that shape_list might be empty for scalar shapes.
+        shape_list = tensor.shape.as_list()
+        if None in shape_list[1:]:
+            raise ValueError(
+                "None is only supported in the 1st dimension. Tensor '{0}' has "
+                "invalid shape '{1}'.".format(get_tensor_name(tensor), shape_list)
+            )
+        elif shape_list and shape_list[0] is None:
+            # Set the batch size to 1 if undefined.
+            shape = tensor.shape.as_list()
+            shape[0] = 1
+            tensor.set_shape(shape)
+
+    return convert_graphdef_to_tflite_flatbuffer(
+        graph_def.SerializeToString(),
+        [get_tensor_name(tensor) for tensor in input_tensors],
+        [DataType.Name(tensor.dtype.as_datatype_enum) for tensor in input_tensors],
+        [tensor.shape.as_list() for tensor in input_tensors],
+        [get_tensor_name(tensor) for tensor in output_tensors],
+    )
 
 
 def convert_keras_model(model: tf.keras.Model) -> bytes:
@@ -68,36 +108,4 @@ def convert_keras_model(model: tf.keras.Model) -> bytes:
     ]
     output_tensors = frozen_func.outputs
 
-    graph_def = frozen_func.graph.as_graph_def()
-    # Run a constant folding using grappler since we currently don't implement
-    # folding for LCE custom ops
-    graph_def = run_graph_optimizations(
-        graph_def,
-        input_tensors,
-        output_tensors,
-        config=get_grappler_config(["constfold"]),
-        graph=frozen_func.graph,
-    )
-
-    # Checks dimensions in input tensor.
-    for tensor in input_tensors:
-        # Note that shape_list might be empty for scalar shapes.
-        shape_list = tensor.shape.as_list()
-        if None in shape_list[1:]:
-            raise ValueError(
-                "None is only supported in the 1st dimension. Tensor '{0}' has "
-                "invalid shape '{1}'.".format(get_tensor_name(tensor), shape_list)
-            )
-        elif shape_list and shape_list[0] is None:
-            # Set the batch size to 1 if undefined.
-            shape = tensor.shape.as_list()
-            shape[0] = 1
-            tensor.set_shape(shape)
-
-    return convert_graphdef_to_tflite_flatbuffer(
-        graph_def.SerializeToString(),
-        [get_tensor_name(tensor) for tensor in input_tensors],
-        [DataType.Name(tensor.dtype.as_datatype_enum) for tensor in input_tensors],
-        [tensor.shape.as_list() for tensor in input_tensors],
-        [get_tensor_name(tensor) for tensor in output_tensors],
-    )
+    return convert_tensorflow_graph(frozen_func.graph, input_tensors, output_tensors)
