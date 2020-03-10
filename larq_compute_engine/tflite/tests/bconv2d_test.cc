@@ -197,7 +197,7 @@ struct TestParam {
         activation(::testing::get<5>(param_tuple)),
         num_threads(::testing::get<6>(param_tuple)),
         kernel_name(::testing::get<7>(param_tuple).first),
-        registration(::testing::get<8>(param_tuple).second) {}
+        registration(::testing::get<7>(param_tuple).second) {}
 
   static std::string TestNameSuffix(
       const ::testing::TestParamInfo<TestParamTuple>& info) {
@@ -469,8 +469,8 @@ TEST_P(BConv2DOpTest, SimpleTest) {
     padded_input_height = input_height + overflow_top + overflow_bottom;
     padded_input_width = input_width + overflow_left + overflow_right;
     EXPECT_THAT(padop.GetOutputShape(),
-                ElementsAreArray(
-                    {1, padded_input_height, padded_input_width, input_depth}));
+                ElementsAreArray({input_batch_count, padded_input_height,
+                                  padded_input_width, input_depth}));
 
     padded_input_data = padop.GetOutput();
   } else {
@@ -522,12 +522,14 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   // We can not fuse it into the tflite bias because it should happen *after*
   // the activation function
   T* out_ptr = expected_array.data();
-  for (int out_y = 0; out_y < output_width; ++out_y) {
-    for (int out_x = 0; out_x < output_height; ++out_x) {
-      for (int out_c = 0; out_c < filter_count; ++out_c) {
-        *out_ptr *= post_activation_multiplier_data[out_c];
-        *out_ptr += post_activation_bias_data[out_c];
-        ++out_ptr;
+  for (int batch = 0; batch < input_batch_count; ++batch) {
+    for (int out_y = 0; out_y < output_width; ++out_y) {
+      for (int out_x = 0; out_x < output_height; ++out_x) {
+        for (int out_c = 0; out_c < filter_count; ++out_c) {
+          *out_ptr *= post_activation_multiplier_data[out_c];
+          *out_ptr += post_activation_bias_data[out_c];
+          ++out_ptr;
+        }
       }
     }
   }
