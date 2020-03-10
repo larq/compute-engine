@@ -1,7 +1,0 @@
-packaging>=19
-
-[tensorflow]
-tensorflow>=1.14
-
-[tensorflow_gpu]
-tensorflow-gpu>=1.14
