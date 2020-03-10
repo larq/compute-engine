@@ -158,10 +158,8 @@ namespace testing {
 typedef TfLiteRegistration* (*register_function)(void);
 
 typedef std::tuple<int,                 // batch count
-                   std::array<int, 2>,  // input shape [HW]
-                   int,                 // input depth
-                   std::array<int, 2>,  // filter shape [HW]
-                   int,                 // filter count
+                   std::array<int, 3>,  // input shape [HWI]
+                   std::array<int, 3>,  // filter shape [HWO]
                    std::array<int, 2>,  // strides [HW]
                    std::array<int, 2>,  // dilations [HW]
                    Padding,             // paddding
@@ -177,18 +175,18 @@ struct TestParam {
       : input_batch_count(::testing::get<0>(param_tuple)),
         input_height(::testing::get<1>(param_tuple)[0]),
         input_width(::testing::get<1>(param_tuple)[1]),
-        input_depth(::testing::get<2>(param_tuple)),
-        filter_height(::testing::get<3>(param_tuple)[0]),
-        filter_width(::testing::get<3>(param_tuple)[1]),
-        filter_count(::testing::get<4>(param_tuple)),
-        stride_height(::testing::get<5>(param_tuple)[0]),
-        stride_width(::testing::get<5>(param_tuple)[1]),
-        dilation_height_factor(::testing::get<6>(param_tuple)[0]),
-        dilation_width_factor(::testing::get<6>(param_tuple)[1]),
-        padding(::testing::get<7>(param_tuple)),
-        num_threads(::testing::get<8>(param_tuple)),
-        kernel_name(::testing::get<9>(param_tuple).first),
-        registration(::testing::get<9>(param_tuple).second) {}
+        input_depth(::testing::get<1>(param_tuple)[2]),
+        filter_height(::testing::get<2>(param_tuple)[0]),
+        filter_width(::testing::get<2>(param_tuple)[1]),
+        filter_count(::testing::get<2>(param_tuple)[2]),
+        stride_height(::testing::get<3>(param_tuple)[0]),
+        stride_width(::testing::get<3>(param_tuple)[1]),
+        dilation_height_factor(::testing::get<4>(param_tuple)[0]),
+        dilation_width_factor(::testing::get<4>(param_tuple)[1]),
+        padding(::testing::get<5>(param_tuple)),
+        num_threads(::testing::get<6>(param_tuple)),
+        kernel_name(::testing::get<7>(param_tuple).first),
+        registration(::testing::get<7>(param_tuple).second) {}
 
   static std::string TestNameSuffix(
       const ::testing::TestParamInfo<TestParamTuple>& info) {
@@ -519,12 +517,21 @@ INSTANTIATE_TEST_SUITE_P(
     // WARNING: ::testing::Combine accepts max 10 arguments!!!
     ::testing::Combine(
         ::testing::Values(1),  // batches
-        ::testing::Values(std::array<int, 2>{7, 7},
-                          std::array<int, 2>{8, 5}),  // input height/width
-        ::testing::Values(1, 64, 130),                // input depth
-        ::testing::Values(std::array<int, 2>{1, 1}, std::array<int, 2>{3, 3},
-                          std::array<int, 2>{2, 3}),  // filter height/width
-        ::testing::Values(1, 4, 64),                  // filter count
+        ::testing::Values(std::array<int, 3>{7, 7, 1},
+                          std::array<int, 3>{8, 5, 1},
+                          std::array<int, 3>{7, 7, 64},
+                          std::array<int, 3>{8, 5, 64},
+                          std::array<int, 3>{7, 7, 130},
+                          std::array<int, 3>{8, 5, 130}),  // input_shape [HWI]
+        ::testing::Values(std::array<int, 3>{1, 1, 1},
+                          std::array<int, 3>{3, 3, 1},
+                          std::array<int, 3>{2, 3, 1},
+                          std::array<int, 3>{1, 1, 4},
+                          std::array<int, 3>{3, 3, 4},
+                          std::array<int, 3>{2, 3, 4},
+                          std::array<int, 3>{1, 1, 64},
+                          std::array<int, 3>{3, 3, 64},
+                          std::array<int, 3>{2, 3, 64}),  // filter_shape [HWO]
         ::testing::Values(std::array<int, 2>{1, 1},
                           std::array<int, 2>{2, 3}),  // strides height/width
         ::testing::Values(std::array<int, 2>{1, 1},
