@@ -7,7 +7,7 @@ import tensorflow_datasets as tfds
 import numpy as np
 
 from larq_compute_engine.mlir.python.converter import convert_keras_model
-from larq_compute_engine.mlir._end2end_verify import run_model
+from larq_compute_engine.tests._end2end_verify import run_model
 
 
 def toy_model(**kwargs):
@@ -71,7 +71,7 @@ def test_simple_model(model_cls):
     outputs = model(inputs).numpy()
     for input, output in zip(inputs, outputs):
         for actual_output in run_model(model_lce, list(input.flatten())):
-            np.testing.assert_allclose(actual_output, output, rtol=0.001, atol=0.2)
+            np.testing.assert_allclose(actual_output, output, rtol=0.001, atol=0.25)
 
     # Test on some random inputs
     input_shape = (10, *model.input.shape[1:])
@@ -79,7 +79,7 @@ def test_simple_model(model_cls):
     outputs = model(inputs).numpy()
     for input, output in zip(inputs, outputs):
         for actual_output in run_model(model_lce, list(input.flatten())):
-            np.testing.assert_allclose(actual_output, output, rtol=0.001, atol=0.2)
+            np.testing.assert_allclose(actual_output, output, rtol=0.001, atol=0.25)
 
 
 if __name__ == "__main__":

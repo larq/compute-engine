@@ -77,6 +77,25 @@ jobs:
       - name: Run FileCheck tests
         run: ./bazelisk test larq_compute_engine/mlir/tests:all --test_output=all --distinct_host_configuration=false
 
+  EndToEnd:
+    runs-on: macos-latest
+    if: "!contains(github.event.head_commit.message, 'ci-skip')"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Bazelisk
+        run: |
+          curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-darwin-amd64 > bazelisk
+          chmod +x bazelisk
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+      - name: Configure Bazel
+        run: ./configure.sh
+      - name: Install pip dependencies
+        run: pip install tensorflow-cpu==2.1.0 larq_zoo==0.5.0 pytest tensorflow_datasets==1.3.2 --no-cache
+      - name: Run End2End tests
+        run: ./bazelisk run larq_compute_engine/tests:end2end_test --distinct_host_configuration=false
+
   MLIR_Python:
     runs-on: macos-latest
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
@@ -93,8 +112,6 @@ jobs:
         run: ./configure.sh
       - name: Install pip dependencies
         run: pip install tensorflow==2.1.0 larq_zoo==0.5.0 pytest tensorflow_datasets==1.3.2 --no-cache
-      - name: Run End2End tests TF 2.1
-        run: ./bazelisk run larq_compute_engine/mlir:end2end_test --distinct_host_configuration=false
       - name: Run converter tests TF 2.1
         run: ./bazelisk run larq_compute_engine/mlir:converter_test --distinct_host_configuration=false
       - name: Install TF 2.0
