@@ -86,7 +86,7 @@ typedef struct {
   std::vector<std::uint8_t> bitpacked_weights_buffer;
   bool is_weight_bitpacked = false;
 
-  bool initialized = false;
+  bool conv_params_initialized = false;
 } TfLiteBConv2DParams;
 
 inline void decide_bitpack_before_im2col(TfLiteBConv2DParams* conv_params,
@@ -178,7 +178,7 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
 
   // We can not return an error code here, so we set this flag and return an
   // error code in Prepare
-  conv_params->initialized = true;
+  conv_params->conv_params_initialized = true;
   return conv_params;
 }
 
@@ -191,7 +191,7 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
   auto* conv_params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
 
   // If an error happened in Init, then report an error message
-  if (!conv_params->initialized) return kTfLiteError;
+  if (!conv_params->conv_params_initialized) return kTfLiteError;
 
   TF_LITE_ENSURE(context, node->inputs->size == 4);
 

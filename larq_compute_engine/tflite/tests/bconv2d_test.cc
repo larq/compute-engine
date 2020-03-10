@@ -19,6 +19,7 @@
 #include <ctime>
 #include <functional>
 #include <memory>
+#include <random>
 #include <tuple>
 #include <vector>
 
@@ -413,21 +414,18 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   post_activation_multiplier_data.resize(filter_count, 0);
   post_activation_bias_data.resize(filter_count, 0);
 
-  srand(time(NULL));
-  std::array<T, 2> list{1.0, -1.0};
-  auto rand_generator = [&list]() {
-    const int index = rand() % list.size();
-    return list[index];
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  auto sign_generator = [&gen]() {
+    return std::bernoulli_distribution(0.5)(gen) ? 1.0 : -1.0;
   };
-  std::array<T, 5> float_list{0.125, 0.25, 0.75, 0.875, 1.0};
-  auto float_generator = [&float_list]() {
-    const int index = rand() % float_list.size();
-    return float_list[index];
+  auto float_generator = [&gen]() {
+    return std::uniform_real_distribution<>(-1.5, 1.5)(gen);
   };
 
-  std::generate(std::begin(input_data), std::end(input_data), rand_generator);
+  std::generate(std::begin(input_data), std::end(input_data), sign_generator);
   std::generate(std::begin(filters_data), std::end(filters_data),
-                rand_generator);
+                sign_generator);
   std::generate(std::begin(post_activation_multiplier_data),
                 std::end(post_activation_multiplier_data), float_generator);
   std::generate(std::begin(post_activation_bias_data),

@@ -325,18 +325,21 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "shl v18.4s, v18.4s, #1\n"
       "shl v20.4s, v20.4s, #1\n"
       "shl v22.4s, v22.4s, #1\n"
+
+      // Load the clamp_max bound (in parallel with the sub)
+      "ldr w2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
+      "dup v12.4s, w2\n"  // clamp_min
+
       "sub v16.4s, v13.4s, v16.4s\n"
       "sub v18.4s, v13.4s, v18.4s\n"
       "sub v20.4s, v13.4s, v20.4s\n"
       "sub v22.4s, v13.4s, v22.4s\n"
 
-      // Perform the activation function, by clamping
-      // Load the clamp_min, clamp_max bounds
-      "ldr w2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
+      // Load the clamp_max bound (in parallel with the clamp_min)
       "ldr w3, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MAX) "]\n"
-      "dup v12.4s, w2\n"  // clamp_min
       "dup v13.4s, w3\n"  // clamp_max
 
+      // Perform the activation function, by clamping
       // Apply the clamp_min bound
       "smax v16.4s, v16.4s, v12.4s\n"
       "smax v18.4s, v18.4s, v12.4s\n"
@@ -776,18 +779,21 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "shl v25.4s, v25.4s, #1\n"
       "shl v26.4s, v26.4s, #1\n"
       "shl v27.4s, v27.4s, #1\n"
+
+      // Load the clamp_max bound (in parallel with the sub)
+      "ldr w2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
+      "dup v12.4s, w2\n"  // clamp_min
+
       "sub v24.4s, v13.4s, v24.4s\n"
       "sub v25.4s, v13.4s, v25.4s\n"
       "sub v26.4s, v13.4s, v26.4s\n"
       "sub v27.4s, v13.4s, v27.4s\n"
 
-      // Perform the activation function, by clamping
-      // Load the clamp_min, clamp_max bounds
-      "ldr w2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
+      // Load the clamp_max bound (in parallel with the clamp_min)
       "ldr w3, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MAX) "]\n"
-      "dup v12.4s, w2\n"  // clamp_min
       "dup v13.4s, w3\n"  // clamp_max
 
+      // Perform the activation function, by clamping
       // Apply the clamp_min bound
       "smax v24.4s, v24.4s, v12.4s\n"
       "smax v25.4s, v25.4s, v12.4s\n"
