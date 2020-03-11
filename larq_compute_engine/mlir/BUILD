@@ -168,14 +168,6 @@ py_library(
     ],
 )
 
-py_test(
-    name = "converter_test",
-    srcs = ["python/converter_test.py"],
-    deps = [
-        ":converter",
-    ],
-)
-
 exports_files([
     "python/converter.py",
     "__init__.py",
