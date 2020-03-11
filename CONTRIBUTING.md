@@ -25,13 +25,6 @@ We use [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html), [`black`]
 
 2. Wait until your PR is reviewed and merged.
 
-3. Create and push a new tag from the latest `master` branch (e.g. `v0.7.0`).
+3. Go to the [GitHub releases](https://github.com/larq/compute-engine/releases), edit the release notes of the draft release, change the tag to the desired version (e.g. `v0.7.0`) and hit "Publish release".
 
-   ```shell
-   git checkout master
-   git pull
-   git tag <version number>
-   git push --tags
-   ```
-
-4. A [GitHub action](https://github.com/larq/compute-engine/actions) will automatically build wheels publish a release to [PyPI](https://pypi.org/) based on the tag.
+4. A [GitHub action](https://github.com/larq/compute-engine/actions) will automatically publish a release to [PyPI](https://pypi.org/) based on the tag.
