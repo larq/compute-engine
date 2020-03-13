@@ -11,11 +11,11 @@ def HasOneUse : Constraint<CPred<"$0->hasOneUse()">>;
 
 // TODO: Check shapes before fusing
 multiclass FuseAddOrSubWithBConv2D<dag binaryOp> {
-  def : Pat<(binaryOp (TF_LqceBconv2d64Op:$output $input, $filter,
+  def : Pat<(binaryOp (TF_LceBconv2dOp:$output $input, $filter,
                           $post_activation_multiplier, (ConstantOp F32ElementsAttr:$post_activation_bias), $strides,
                           $padding, $pad_values, $data_format, $dilations, $filter_format, $activation),
                       (ConstantOp F32ElementsAttr:$value), TFL_AF_None),
-            (TF_LqceBconv2d64Op $input, $filter, $post_activation_multiplier,
+            (TF_LceBconv2dOp $input, $filter, $post_activation_multiplier,
                           (binaryOp (ConstantOp $post_activation_bias), (ConstantOp $value), TFL_AF_None),
                           $strides, $padding, $pad_values, $data_format,
                           $dilations, $filter_format, $activation),
@@ -26,13 +26,13 @@ foreach binaryOp = [TFL_AddOp, TFL_SubOp] in
 
 // TODO: Check shapes before fusing
 multiclass FuseMulOrDivWithBConv2D<dag binaryOp> {
-  def : Pat<(binaryOp (TF_LqceBconv2d64Op:$conv_output $input, $filter,
+  def : Pat<(binaryOp (TF_LceBconv2dOp:$conv_output $input, $filter,
                         (ConstantOp F32ElementsAttr:$post_activation_multiplier),
                         (ConstantOp F32ElementsAttr:$post_activation_bias),
                         $strides, $padding, $pad_values, $data_format,
                         $dilations, $filter_format, $activation),
                       (ConstantOp F32ElementsAttr:$value), TFL_AF_None),
-            (TF_LqceBconv2d64Op $input, $filter,
+            (TF_LceBconv2dOp $input, $filter,
                         (binaryOp (ConstantOp $post_activation_multiplier),
                                   (ConstantOp $value), TFL_AF_None),
                         (binaryOp (ConstantOp $post_activation_bias),
@@ -49,7 +49,7 @@ class ConstantValue<string val> : AttrConstraint<CPred<"IsConstantValue($_self, 
 
 // Fuse activation function into BConv2D
 multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
-  def : Pat<(ActFnOp (TF_LqceBconv2d64Op:$conv_output $input, $filter,
+  def : Pat<(ActFnOp (TF_LceBconv2dOp:$conv_output $input, $filter,
                         (ConstantOp ConstantValue<"1.0f">:$post_activation_multiplier),
                         (ConstantOp ConstantValue<"0.0f">:$post_activation_bias),
                         $strides,
@@ -57,12 +57,12 @@ multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
                         $pad_values,
                         $data_format,
                         $dilations, $filter_format, TFL_AF_None)),
-            (TF_LqceBconv2d64Op $input, $filter,
+            (TF_LceBconv2dOp $input, $filter,
                         (ConstantOp $post_activation_multiplier), (ConstantOp $post_activation_bias),
                         $strides, $padding, $pad_values, $data_format,
                         $dilations, $filter_format, ActFnAttr),
          [(HasOneUse $conv_output)]>;
-  def : Pat<(ActFnOp (TF_LqceBconv2d64Op:$conv_output $input, $filter,
+  def : Pat<(ActFnOp (TF_LceBconv2dOp:$conv_output $input, $filter,
                         (ConstantOp ConstantValue<"1.0f">:$post_activation_multiplier),
                         (ConstantOp ConstantValue<"0.0f">:$post_activation_bias),
                         $strides,
@@ -70,7 +70,7 @@ multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
                         ConstantAttr<I32Attr, "1">: $pad_values,
                         $data_format,
                         $dilations, $filter_format, TFL_AF_None)),
-            (TF_LqceBconv2d64Op $input, $filter,
+            (TF_LceBconv2dOp $input, $filter,
                         (ConstantOp $post_activation_multiplier), (ConstantOp $post_activation_bias),
                         $strides, $padding, $pad_values, $data_format,
                         $dilations, $filter_format, ActFnAttr),

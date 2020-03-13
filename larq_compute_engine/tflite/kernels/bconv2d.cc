@@ -318,14 +318,17 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
 
     // Determine the type
     if (conv_params->bitpack_before_im2col) {
-      if (bitwidth == 8)
-        im2col->type = kTfLiteInt8;
-      else if (bitwidth == 32)
-        im2col->type = kTfLiteInt32;
-      else if (bitwidth == 64)
-        im2col->type = kTfLiteInt64;
-      else
-        TF_LITE_ENSURE(context, false);
+      switch (bitwidth) {
+        case 32:
+          im2col->type = kTfLiteInt32;
+          break;
+        case 64:
+          im2col->type = kTfLiteInt64;
+          break;
+        default:
+          TF_LITE_ENSURE(context, false);
+          break;
+      }
     } else {
       // im2col before bitpacking so use the same type as the input
       im2col->type = input->type;
@@ -487,14 +490,6 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
 
 }  // namespace bconv2d
 
-// TfLiteRegistration* Register_BCONV_2D8_OPT() {
-//   static TfLiteRegistration r = {
-//       bconv2d::Init, bconv2d::Free,
-//       bconv2d::Prepare<bconv2d::KernelType::kRuyOptimized, 8>,
-//       bconv2d::Eval<bconv2d::KernelType::kRuyOptimized, std::uint8_t>};
-//   return &r;
-// }
-
 TfLiteRegistration* Register_BCONV_2D32_OPT() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
@@ -511,28 +506,16 @@ TfLiteRegistration* Register_BCONV_2D64_OPT() {
   return &r;
 }
 
-// use these registration wrappers to decide which impl. to use.
-// TfLiteRegistration* Register_BCONV_2D8() {
-// #if defined TFLITE_WITH_RUY
-//   return Register_BCONV_2D8_OPT();
-// #else
-//   static_assert(false, "LCE needs to be compiled with TFLite RUY
-//   activated.");
-// #endif
-// }
-
-TfLiteRegistration* Register_BCONV_2D32() {
-#if defined TFLITE_WITH_RUY
-  return Register_BCONV_2D32_OPT();
-#else
-  static_assert(false, "LCE needs to be compiled with TFLite RUY activated.");
-#endif
-}
-
-TfLiteRegistration* Register_BCONV_2D64() {
+// Use this registration wrapper to decide which impl. to use.
+TfLiteRegistration* Register_BCONV_2D() {
 #if defined TFLITE_WITH_RUY
   return Register_BCONV_2D64_OPT();
-#else
+#if RUY_PLATFORM(ARM_32)
+  return Register_BCONV_2D32_OPT();
+#else  // ARM 64 and x86
+  return Register_BCONV_2D64_OPT();
+#endif
+#else  // disabled TFLITE_WITH_RUY
   static_assert(false, "LCE needs to be compiled with TFLite RUY activated.");
 #endif
 }

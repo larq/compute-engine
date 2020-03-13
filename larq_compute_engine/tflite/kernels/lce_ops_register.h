@@ -11,18 +11,14 @@ namespace compute_engine {
 namespace tflite {
 
 TfLiteRegistration* Register_BSIGN();
-// TfLiteRegistration* Register_BCONV_2D8();
-TfLiteRegistration* Register_BCONV_2D32();
-TfLiteRegistration* Register_BCONV_2D64();
+TfLiteRegistration* Register_BCONV_2D();
 
 // By calling this function on TF lite mutable op resolver, all LCE custom ops
 // will be registerd to the op resolver.
 inline void RegisterLCECustomOps(::tflite::MutableOpResolver* resolver) {
-  resolver->AddCustom("LqceBsign", compute_engine::tflite::Register_BSIGN());
-  resolver->AddCustom("LqceBconv2d32",
-                      compute_engine::tflite::Register_BCONV_2D32());
-  resolver->AddCustom("LqceBconv2d64",
-                      compute_engine::tflite::Register_BCONV_2D64());
+  resolver->AddCustom("LceBsign", compute_engine::tflite::Register_BSIGN());
+  resolver->AddCustom("LceBconv2d",
+                      compute_engine::tflite::Register_BCONV_2D());
 };
 
 }  // namespace tflite

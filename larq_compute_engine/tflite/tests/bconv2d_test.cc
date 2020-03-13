@@ -159,9 +159,8 @@ using namespace tflite;
 namespace compute_engine {
 namespace tflite {
 
-// TfLiteRegistration* Register_BCONV_2D8();
-TfLiteRegistration* Register_BCONV_2D32();
-TfLiteRegistration* Register_BCONV_2D64();
+TfLiteRegistration* Register_BCONV_2D32_OPT();
+TfLiteRegistration* Register_BCONV_2D64_OPT();
 
 namespace testing {
 
@@ -248,7 +247,8 @@ struct TestParam {
   int num_threads = 1;
 
   std::string kernel_name = "Unknown";
-  register_function registration = compute_engine::tflite::Register_BCONV_2D32;
+  register_function registration =
+      compute_engine::tflite::Register_BCONV_2D32_OPT;
 };
 
 class BaseBConv2DOpModel : public SingleOpModel {
@@ -290,7 +290,7 @@ class BaseBConv2DOpModel : public SingleOpModel {
       fbb.String("activation", getActivationString(activation));
     });
     fbb.Finish();
-    SetCustomOp("LqceBconv2d", fbb.GetBuffer(), registration);
+    SetCustomOp("LceBconv2d", fbb.GetBuffer(), registration);
     BuildInterpreter({GetShape(input_), GetShape(filter_)}, num_threads);
   }
 
@@ -324,9 +324,8 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
 };
 
 const auto kKernelMap = new std::map<string, register_function>({
-    // {"BConv2D8", compute_engine::tflite::Register_BCONV_2D8},
-    {"BConv2D32", compute_engine::tflite::Register_BCONV_2D32},
-    {"BConv2D64", compute_engine::tflite::Register_BCONV_2D64},
+    {"BConv2D32", compute_engine::tflite::Register_BCONV_2D32_OPT},
+    {"BConv2D64", compute_engine::tflite::Register_BCONV_2D64_OPT},
 });
 
 class BConv2DOpTest : public ::testing::TestWithParam<TestParamTuple> {
@@ -571,7 +570,7 @@ TEST(BConv2DTests, BConvErrorTest) {
   // Test if fused ReLu throws an error in combination with zero-padding
   EXPECT_DEATH(
       {
-        BConv2DOpModel m_lce(compute_engine::tflite::Register_BCONV_2D64,
+        BConv2DOpModel m_lce(compute_engine::tflite::Register_BCONV_2D64_OPT,
                              {TensorType_FLOAT32, {1, 16, 16, 64}},
                              {TensorType_FLOAT32, {128, 3, 3, 64}},
                              {TensorType_FLOAT32, {}}, 1, 1, Padding_SAME, 0,

@@ -18,7 +18,7 @@ def TFL_AFAttr : StrEnumAttr<
     ]>;
 #endif
 
-def TF_LqceBsignOp : TF_Op<"LqceBsign", [NoSideEffect, SameOperandsAndResultType]> {
+def TF_LceBsignOp : TF_Op<"LceBsign", [NoSideEffect, SameOperandsAndResultType]> {
   let summary = "Returns an element-wise indication of the binary sign of a number.";
 
   let description = [{
@@ -36,7 +36,7 @@ def TF_LqceBsignOp : TF_Op<"LqceBsign", [NoSideEffect, SameOperandsAndResultType
   TF_DerivedOperandTypeAttr T = TF_DerivedOperandTypeAttr<0>;
 }
 
-def TF_LqceBconv2d64Op : TF_Op<"LqceBconv2d64", [NoSideEffect]> {
+def TF_LceBconv2dOp : TF_Op<"LceBconv2d", [NoSideEffect]> {
   let summary = [{
 Computes a 2-D binary convolution by binarizing and bitpacking the input and filter.
   }];

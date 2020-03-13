@@ -79,8 +79,8 @@ void PrepareLCE::runOnFunction() {
   // op->hasNoSideEffect() will return false. Therefor applyPatternsGreedily
   // won't automatically remove the dead nodes. See
   // https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/Operation.h#L457-L462
-  patterns.insert<mlir::CleanupDeadOps<TF::LqceBsignOp>,
-                  mlir::CleanupDeadOps<TF::LqceBconv2d64Op>>(ctx);
+  patterns.insert<mlir::CleanupDeadOps<TF::LceBsignOp>,
+                  mlir::CleanupDeadOps<TF::LceBconv2dOp>>(ctx);
   applyPatternsGreedily(func, patterns);
 }
 
