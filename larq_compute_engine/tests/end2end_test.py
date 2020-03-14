@@ -18,7 +18,7 @@ def toy_model(**kwargs):
                 filters=32,
                 kernel_size=3,
                 padding=padding,
-                # pad_values=pad_values,
+                pad_values=pad_values,
                 input_quantizer="ste_sign",
                 kernel_quantizer="ste_sign",
                 use_bias=False,
@@ -52,7 +52,7 @@ def preprocess(data):
 
 
 @pytest.mark.parametrize(
-    "model_cls", [toy_model, lqz.BinaryResNetE18],
+    "model_cls", [toy_model, lqz.sota.QuickNet],
 )
 def test_simple_model(model_cls):
     model = model_cls(weights="imagenet")

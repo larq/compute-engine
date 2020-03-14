@@ -4,9 +4,9 @@ import larq_compute_engine as lce
 import larq_zoo as lqz
 
 # Example of converting a model from Larq Zoo to TF lite
-model = lqz.BinaryResNetE18(weights="imagenet")
+model = lqz.sota.QuickNet(weights="imagenet")
 converted = lce.convert_keras_model(model)
-with open("binaryresnete18.tflite", "wb") as f:
+with open("quicknet.tflite", "wb") as f:
     f.write(converted)
 
 # Example of converting an h5 file
