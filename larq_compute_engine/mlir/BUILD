@@ -106,8 +106,11 @@ cc_library(
 )
 
 # This is part of @org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_dialect_passes
-# which includes most of TensorFlow. We extract this single target to keep
-# binary size and build time manageable.
+# which includes a lot of unnecessary dependencies. We extract this single
+# target to keep binary size and build time manageable.
+# TODO(lgeiger): Switch to upstream target once
+# https://github.com/tensorflow/tensorflow/commit/d8ee1d31d5618b1ca3313a18141937ec0e3d10e1
+# is released
 cc_library(
     name = "tf_decode_constant_pass",
     srcs = [
@@ -117,6 +120,8 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:transforms/decode_constant.h",
     ],
     deps = [
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Pass",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_tensor",
     ],
