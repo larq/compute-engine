@@ -27,3 +27,27 @@ py_test(
         "//larq_compute_engine/mlir:converter",
     ],
 )
+
+test_suite(
+    name = "cc_tests",
+    tests = [
+        "//larq_compute_engine/core/tests:cc_tests",
+        "//larq_compute_engine/tflite/tests:cc_tests",
+    ],
+)
+
+test_suite(
+    name = "cc_tests_arm32_qemu",
+    tests = [
+        "//larq_compute_engine/core/tests:cc_tests_arm32_qemu",
+        "//larq_compute_engine/tflite/tests:cc_tests_arm32_qemu",
+    ],
+)
+
+test_suite(
+    name = "cc_tests_aarch64_qemu",
+    tests = [
+        "//larq_compute_engine/core/tests:cc_tests_aarch64_qemu",
+        "//larq_compute_engine/tflite/tests:cc_tests_aarch64_qemu",
+    ],
+)
