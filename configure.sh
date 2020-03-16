@@ -124,7 +124,7 @@ build:nohdfs --define=no_hdfs_support=true
 build:nonccl --define=no_nccl_support=true
 
 build --config=v2 --config=noaws --config=nogcp --config=nohdfs --config=nonccl
-test --config=v2 --compilation_mode dbg
+test --config=v2 --compilation_mode=fastbuild
 
 # Android configs. Bazel needs to have --cpu and --fat_apk_cpu both set to the
 # target CPU to build transient dependencies correctly. See
