@@ -54,17 +54,6 @@ test_suite(
     ],
 )
 
-# For running the ARM tests using qemu
-# The script automatically runs every file that ends with _tests
-sh_test(
-    name = "cc_tests_arm32_qemu",
-    srcs = ["cc_tests_arm32_qemu.sh"],
-    data = [
-        ":cc_tests_arm32",
-        "@arm_compiler//:compiler_pieces",
-    ],
-)
-
 cc_test(
     name = "packbits_aarch64_tests",
     size = "small",
@@ -81,14 +70,5 @@ test_suite(
     tests = [
         ":packbits_aarch64_tests",
         ":packbits_tests",
-    ],
-)
-
-sh_test(
-    name = "cc_tests_aarch64_qemu",
-    srcs = ["cc_tests_aarch64_qemu.sh"],
-    data = [
-        ":cc_tests_aarch64",
-        "@aarch64_compiler//:compiler_pieces",
     ],
 )
