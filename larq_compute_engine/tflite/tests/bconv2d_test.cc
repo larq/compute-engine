@@ -36,7 +36,7 @@
 
 namespace tflite {
 
-constexpr int Padding_ONE = Padding_MAX + 1;
+constexpr Padding Padding_ONE = (Padding)(Padding_MAX + 1);
 
 const char* GetPaddingName(enum Padding padding) {
   switch (padding) {
@@ -167,13 +167,13 @@ namespace testing {
 
 typedef TfLiteRegistration* (*register_function)(void);
 
-typedef std::tuple<std::array<int, 4>,           // input shape [BHWI]
-                   std::array<int, 3>,           // filter shape [HWO]
-                   std::array<int, 2>,           // strides [HW]
-                   std::array<int, 2>,           // dilations [HW]
-                   Padding,                      // paddding
-                   enum ActivationFunctionType,  // activation function
-                   int,                          // number of threads
+typedef std::tuple<std::array<int, 4>,  // input shape [BHWI]
+                   std::array<int, 3>,  // filter shape [HWO]
+                   std::array<int, 2>,  // strides [HW]
+                   std::array<int, 2>,  // dilations [HW]
+                   std::tuple<Padding, ActivationFunctionType>,  // padding &
+                                                                 // activation
+                   int,  // number of threads
                    std::pair<std::string, register_function>  // registration
                    >
     TestParamTuple;
@@ -193,11 +193,11 @@ struct TestParam {
         stride_width(::testing::get<2>(param_tuple)[1]),
         dilation_height_factor(::testing::get<3>(param_tuple)[0]),
         dilation_width_factor(::testing::get<3>(param_tuple)[1]),
-        padding(::testing::get<4>(param_tuple)),
-        activation(::testing::get<5>(param_tuple)),
-        num_threads(::testing::get<6>(param_tuple)),
-        kernel_name(::testing::get<7>(param_tuple).first),
-        registration(::testing::get<7>(param_tuple).second) {}
+        padding(std::get<0>(::testing::get<4>(param_tuple))),
+        activation(std::get<1>(::testing::get<4>(param_tuple))),
+        num_threads(::testing::get<5>(param_tuple)),
+        kernel_name(::testing::get<6>(param_tuple).first),
+        registration(::testing::get<6>(param_tuple).second) {}
 
   static std::string TestNameSuffix(
       const ::testing::TestParamInfo<TestParamTuple>& info) {
@@ -477,13 +477,6 @@ TEST_P(BConv2DOpTest, SimpleTest) {
     padded_input_data = input_data;
   }
 
-  if (padding == Padding_SAME && activation == ActivationFunctionType_RELU) {
-    // Fused ReLu is not supported for zero-padding.
-    // We could use `EXPECT_DEATH` here but it is extremely slow.
-    // Therefore we have a separate test below, and here we just return.
-    return;
-  }
-
   BConv2DOpModel m_lce(
       registration,
       {TensorType_FLOAT32,
@@ -560,10 +553,18 @@ INSTANTIATE_TEST_SUITE_P(
                           std::array<int, 2>{2, 3}),  // strides height/width
         ::testing::Values(std::array<int, 2>{1, 1},
                           std::array<int, 2>{3, 2}),  // dilation height/width
-        ::testing::Values(Padding_VALID, Padding_SAME, Padding_ONE),  // padding
-        ::testing::Values(ActivationFunctionType_NONE,
-                          ActivationFunctionType_RELU),  // activation function
-        ::testing::Values(1, 2),                         // number of threads
+        ::testing::Values(                            // padding and activation
+            std::tuple<Padding, ActivationFunctionType>{
+                Padding_VALID, ActivationFunctionType_NONE},
+            std::tuple<Padding, ActivationFunctionType>{
+                Padding_VALID, ActivationFunctionType_RELU},
+            std::tuple<Padding, ActivationFunctionType>{
+                Padding_SAME, ActivationFunctionType_NONE},
+            std::tuple<Padding, ActivationFunctionType>{
+                Padding_ONE, ActivationFunctionType_NONE},
+            std::tuple<Padding, ActivationFunctionType>{
+                Padding_ONE, ActivationFunctionType_RELU}),
+        ::testing::Values(1, 2),  // number of threads
         ::testing::ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
     TestParam::TestNameSuffix);
 
