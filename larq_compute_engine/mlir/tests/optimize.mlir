@@ -121,3 +121,13 @@ func @do_not_fuse_relu_into_bconv2d_no_post_activation_multiplier(%arg0: tensor<
   // CHECK-NEXT: %1 = "tfl.relu"(%0)
   // CHECK-NEXT: return %1
 }
+
+// CHECK-LABEL: @bitpack_bconv2d
+func @bitpack_bconv2d(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16xf32>, %arg2: tensor<16xf32>) -> tensor<256x30x30x16xf32> {
+  %cst = constant dense<1.0> : tensor<16x3x3x3xf32>
+  %0 = "tf.LceBconv2d"(%arg0, %cst, %arg1, %arg2) {activation = "NONE", filter_format = "OHWI", padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x30x30x16xf32>
+  return %0 : tensor<256x30x30x16xf32>
+
+  // CHECK: %0 = "tf.LceBconv2d"(%arg0, %cst, %arg1, %arg2) {activation = "NONE", data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI_PACKED", pad_values = 0 : i32, padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x1xi32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x30x30x16xf32>
+  // CHECK-NEXT: return %0
+}

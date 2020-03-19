@@ -83,8 +83,10 @@ typedef struct {
   std::vector<float> padding_buffer;
   bool is_padding_correction_cached = false;
 
-  std::vector<std::uint8_t> bitpacked_weights_buffer;
-  bool is_weight_bitpacked = false;
+  // Weights in the flatbuffer file are bitpacked in a different
+  // order than what is expected by the kernels, so we repack the weights
+  std::vector<std::uint8_t> filter_packed;
+  bool is_filter_repacked = false;
 
   bool conv_params_initialized = false;
 } TfLiteBConv2DParams;
@@ -109,6 +111,8 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
     conv_params->filter_format = ce::core::FilterFormat::HWIO;
   } else if (m["filter_format"].ToString() == "OHWI") {
     conv_params->filter_format = ce::core::FilterFormat::OHWI;
+  } else if (m["filter_format"].ToString() == "OHWI_PACKED") {
+    conv_params->filter_format = ce::core::FilterFormat::OHWI_PACKED;
   } else {
     context->ReportError(context, "Invalid filter format.");
     return conv_params;
@@ -223,13 +227,21 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
 
   // reading the filter dimensions
   // only OHWI layout is supported for filters
-  TF_LITE_ENSURE_EQ(context, conv_params->filter_format,
-                    ce::core::FilterFormat::OHWI);
+  TF_LITE_ENSURE(
+      context,
+      conv_params->filter_format == ce::core::FilterFormat::OHWI ||
+          conv_params->filter_format == ce::core::FilterFormat::OHWI_PACKED);
 
   conv_params->channels_out = filter->dims->data[0];
   conv_params->filter_height = filter->dims->data[1];
   conv_params->filter_width = filter->dims->data[2];
-  TF_LITE_ENSURE_EQ(context, conv_params->channels_in, filter->dims->data[3]);
+  if (conv_params->filter_format == ce::core::FilterFormat::OHWI) {
+    TF_LITE_ENSURE_EQ(context, filter->type, kTfLiteFloat32);
+    TF_LITE_ENSURE_EQ(context, conv_params->channels_in, filter->dims->data[3]);
+  } else {
+    // TF Lite does not support the unsigned int32 type so we use int32 here
+    TF_LITE_ENSURE_EQ(context, filter->type, kTfLiteInt32);
+  }
 
   TF_LITE_ENSURE_EQ(context, post_activation_multiplier->dims->data[0],
                     conv_params->channels_out);
@@ -338,8 +350,10 @@ TfLiteStatus Prepare(KernelType kernel_type, const int bitwidth,
                       context->ResizeTensor(context, im2col, im2col_size));
   }
 
-  conv_params->is_weight_bitpacked = false;
+  // Prepare could be called multiple times, when the input tensor is resized,
+  // so we always reset these flags
   conv_params->is_padding_correction_cached = false;
+  conv_params->is_filter_repacked = false;
 
   return kTfLiteOk;
 }
@@ -394,34 +408,52 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
                              ? GetTemporary(context, node, params->im2col_index)
                              : nullptr;
 
-  if (!params->is_padding_correction_cached &&
-      params->padding_type == TfLitePadding::kTfLitePaddingSame &&
-      params->pad_value == 0) {
-    // In the first run, fill the cache
-    using PaddingFunctor =
-        ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
-    PaddingFunctor padding_functor;
+  if (!params->is_filter_repacked || !params->is_padding_correction_cached) {
+    const uint32_t* filter_flatbuffer = GetTensorData<uint32_t>(filter);
+    const T* filter_unpacked = nullptr;
 
-    std::size_t padding_cache_size = padding_functor.get_cache_size(
-        params->filter_height, params->filter_width, params->channels_out,
-        params->dilations[1], params->dilations[2]);
+    if (params->filter_format == ce::core::FilterFormat::OHWI_PACKED) {
+      // First unpack the filter to float
+      int cols = params->channels_in;
+      int rows =
+          params->channels_out * params->filter_height * params->filter_width;
 
-    params->padding_buffer.resize(padding_cache_size);
+      // This vector is declared static, so that it will be shared by all nodes.
+      static std::vector<T> unpacked_weights;
+      unpacked_weights.resize(rows * cols);
 
-    padding_functor.cache_correction_values(
-        GetTensorData<T>(filter), params->filter_height, params->filter_width,
-        params->channels_out, params->channels_in, params->dilations[1],
-        params->dilations[2], GetTensorData<T>(post_activation_multiplier),
-        params->padding_buffer.data());
+      ce::core::unpack_matrix(filter_flatbuffer, rows, cols,
+                              unpacked_weights.data());
+
+      filter_unpacked = unpacked_weights.data();
+    } else {
+      // Filter was already unpacked
+      filter_unpacked = GetTensorData<T>(filter);
+    }
+
+    // Fill the zero-padding cache
+    if (!params->is_padding_correction_cached &&
+        (params->padding_type == TfLitePadding::kTfLitePaddingSame &&
+         params->pad_value == 0)) {
+      using PaddingFunctor =
+          ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
+      PaddingFunctor padding_functor;
+
+      std::size_t padding_cache_size = padding_functor.get_cache_size(
+          params->filter_height, params->filter_width, params->channels_out,
+          params->dilations[1], params->dilations[2]);
+
+      params->padding_buffer.resize(padding_cache_size);
+
+      padding_functor.cache_correction_values(
+          filter_unpacked, params->filter_height, params->filter_width,
+          params->channels_out, params->channels_in, params->dilations[1],
+          params->dilations[2], GetTensorData<T>(post_activation_multiplier),
+          params->padding_buffer.data());
+    }
     params->is_padding_correction_cached = true;
-  }
 
-  // Only in the first run:
-  // Allocate the packed weight buffer and bitpack the weights.
-  // Ideally we would like to use the filter buffer itself,
-  // but this is stored in read-only memory-mapped-files..
-  if (!params->is_weight_bitpacked) {
-    // The filters have shape
+    // Repack the filters. They have shape
     // [output channels, height, width, input channels]
     // and we now view it as a matrix of shape
     // bitpack first: [output channels * height * width, input_channels]
@@ -440,17 +472,16 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
 
     std::vector<TBitpacked> filter_data_bp;
     size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
-    ce::core::packbits_matrix(GetTensorData<T>(filter), rows, cols,
-                              filter_data_bp, filter_rows_bp, filter_cols_bp,
-                              filter_bitpadding, ce::core::Axis::RowWise);
+    ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
+        filter_unpacked, rows, cols, filter_data_bp, filter_rows_bp,
+        filter_cols_bp, filter_bitpadding, ce::core::Axis::RowWise);
 
     size_t num_bytes = filter_data_bp.size() * sizeof(TBitpacked);
 
-    params->bitpacked_weights_buffer.resize(num_bytes);
-    memcpy(params->bitpacked_weights_buffer.data(), filter_data_bp.data(),
-           num_bytes);
+    params->filter_packed.resize(num_bytes);
+    memcpy(params->filter_packed.data(), filter_data_bp.data(), num_bytes);
 
-    params->is_weight_bitpacked = true;
+    params->is_filter_repacked = true;
   }
 
   // Using the standard TF Lite ConvParams struct.
@@ -460,13 +491,17 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   ConvParams op_params;
   GetConvParamsType(*params, op_params);
 
+  // `BConv2D` wants the *unpacked* filter shape
+  auto unpacked_filter_shape = GetTensorShape(filter);
+  unpacked_filter_shape.SetDim(3, GetTensorShape(input).Dims(3));
+
   // We pass the shape of the original unpacked filter, so that all the shape
   // information is correct (number of channels etc), but we pass the packed
   // weights data
   BConv2D<T, TBitpacked>(
       op_params, GetTensorShape(input), GetTensorData<T>(input),
-      GetTensorShape(filter),
-      reinterpret_cast<TBitpacked*>(params->bitpacked_weights_buffer.data()),
+      unpacked_filter_shape,
+      reinterpret_cast<TBitpacked*>(params->filter_packed.data()),
       GetTensorData<float>(post_activation_multiplier),
       GetTensorData<float>(post_activation_bias), GetTensorShape(output),
       GetTensorData<T>(output), GetTensorShape(im2col),

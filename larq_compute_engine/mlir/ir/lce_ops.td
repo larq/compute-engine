@@ -47,7 +47,7 @@ TODO
 
   let arguments = (ins
     TensorOf<[F32]>:$input,
-    TensorOf<[F32]>:$filter,
+    TensorOf<[F32, I32]>:$filter,
     TensorOf<[F32]>:$post_activation_multiplier,
     TensorOf<[F32]>:$post_activation_bias,
 

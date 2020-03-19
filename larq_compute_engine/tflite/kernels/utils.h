@@ -25,8 +25,9 @@ inline void packbits_tensor(const RuntimeShape& in_shape, const T* in_data,
   size_t bitpadding = 0;
   {
     gemmlowp::ScopedProfilingLabel label("Packbits");
-    ce::core::packbits_matrix(in_data, rows, cols, out_data, rows_bp, cols_bp,
-                              bitpadding, ce::core::Axis::RowWise);
+    ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
+        in_data, rows, cols, out_data, rows_bp, cols_bp, bitpadding,
+        ce::core::Axis::RowWise);
   }
 
   out_shape.ReplaceWith(dims, in_shape.DimsData());
