@@ -98,8 +98,10 @@ void RunBgemmKernelTyped(ruy::Tuning tuning,
                          ruy::Matrix<DstScalar>* dst) {
   using BKernel = BgemmKernel<ThePath, LhsScalar, RhsScalar, DstScalar, Spec>;
   BKernel kernel(tuning);
+#if !defined(NDEBUG) || !RUY_OPT_ENABLED(RUY_OPT_FAT_KERNEL)
   using LhsLayout = typename BKernel::LhsLayout;
   using RhsLayout = typename BKernel::RhsLayout;
+#endif
   // end_row and end_col may be larger than dst dimensions.
   // that is because kernels write directly to the destination matrix, whose
   // dimensions may not be a multiple of the kernel dimensions, and we try to
