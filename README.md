@@ -52,7 +52,7 @@ and a Raspberry Pi 4 Model B ([BCM2711](https://www.raspberrypi.org/documentatio
 | ------------------------------------------------------------------------------------------------                      | :------------: | :--------------------: | :--------------------: |
 | QuickNet ([.h5](https://github.com/larq/zoo/releases/download/quicknet-v0.2.0/quicknet_weights.h5))                   | 58.7 %         | 45.6                   | 21.2                   |
 | QuickNet-Large ([.h5](https://github.com/larq/zoo/releases/download/quicknet_large-v0.2.0/quicknet_large_weights.h5)) | 62.8 %         | 66.5                   | 32.0                   |
-| QuickNet-XL ([.h5](https://github.com/larq/zoo/releases/download/quicknet_xl-v0.1.0/quicknet_xl_weights.h5)                                                                                         | 67.1 %         | 121.2                  | 55.8                   |
+| QuickNet-XL ([.h5](https://github.com/larq/zoo/releases/download/quicknet_xl-v0.1.0/quicknet_xl_weights.h5))                                                                                         | 67.1 %         | 121.2                  | 55.8                   |
 
 For reference, [dabnn](https://github.com/JDAI-CV/dabnn) (the other main BNN library) reports an inference time of 61.3 ms for [Bi-RealNet](https://docs.larq.dev/larq/api/larq_zoo/#birealnet) (56.4% accuracy) on the Pixel 1 phone,
 while LCE achieves an inference time of 47.7 ms for Bi-RealNet on the same device.
@@ -66,7 +66,7 @@ board:
 | ------------------------------------------------------------------------------------------------                      | :------------: | :---------------------: | :---------------------: |
 | QuickNet ([.h5](https://github.com/larq/zoo/releases/download/quicknet-v0.2.0/quicknet_weights.h5))                   | 58.7 %         | 21.7                    | 11.6                    |
 | QuickNet-Large ([.h5](https://github.com/larq/zoo/releases/download/quicknet_large-v0.2.0/quicknet_large_weights.h5)) | 62.8 %         | 31.8                    | 16.9                    |
-| QuickNet-XL ([.h5](https://github.com/larq/zoo/releases/download/quicknet_xl-v0.1.0/quicknet_xl_weights.h5)                                                                                         | 67.1 %         | 52.4                    | 29.7                    |
+| QuickNet-XL ([.h5](https://github.com/larq/zoo/releases/download/quicknet_xl-v0.1.0/quicknet_xl_weights.h5))                                                                                         | 67.1 %         | 52.4                    | 29.7                    |
 
 
 Benchmarked on March 20th, 2020 with LCE custom
