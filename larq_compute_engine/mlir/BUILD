@@ -99,6 +99,7 @@ cc_library(
     ],
     deps = [
         ":larq_compute_engine",
+        "//larq_compute_engine/core:packbits",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
     ],
     alwayslink = 1,

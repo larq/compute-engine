@@ -26,6 +26,7 @@
 #include "absl/memory/memory.h"
 #include "absl/strings/substitute.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
+#include "larq_compute_engine/core/packbits.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/padding.h"
 #include "tensorflow/lite/kernels/register.h"
@@ -35,6 +36,12 @@
 // using namespace tflite;
 
 namespace tflite {
+
+// Use the same bitwidth as the MLIR converter
+// Since tflite does not have an unsigned 32-bit int type
+// we have to use the signed type here or it will throw errors.
+using PackedFilterType = int32_t;
+constexpr size_t packed_bitwidth = 32;
 
 constexpr Padding Padding_ONE = (Padding)(Padding_MAX + 1);
 
@@ -159,9 +166,8 @@ using namespace tflite;
 namespace compute_engine {
 namespace tflite {
 
-// TfLiteRegistration* Register_BCONV_2D8();
-TfLiteRegistration* Register_BCONV_2D32();
-TfLiteRegistration* Register_BCONV_2D64();
+TfLiteRegistration* Register_BCONV_2D32_OPT();
+TfLiteRegistration* Register_BCONV_2D64_OPT();
 
 namespace testing {
 
@@ -248,7 +254,8 @@ struct TestParam {
   int num_threads = 1;
 
   std::string kernel_name = "Unknown";
-  register_function registration = compute_engine::tflite::Register_BCONV_2D32;
+  register_function registration =
+      compute_engine::tflite::Register_BCONV_2D32_OPT;
 };
 
 class BaseBConv2DOpModel : public SingleOpModel {
@@ -284,13 +291,13 @@ class BaseBConv2DOpModel : public SingleOpModel {
         fbb.Int(dilation_width_factor);
         fbb.Int(1);
       });
-      fbb.String("filter_format", "OHWI");
+      fbb.String("filter_format", "OHWI_PACKED");
       fbb.String("padding", GetPaddingName(padding));
       fbb.Int("pad_values", pad_values);
       fbb.String("activation", getActivationString(activation));
     });
     fbb.Finish();
-    SetCustomOp("LqceBconv2d", fbb.GetBuffer(), registration);
+    SetCustomOp("LceBconv2d", fbb.GetBuffer(), registration);
     BuildInterpreter({GetShape(input_), GetShape(filter_)}, num_threads);
   }
 
@@ -306,7 +313,9 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
  public:
   using BaseBConv2DOpModel::BaseBConv2DOpModel;
 
-  void SetFilter(const std::vector<float>& f) { PopulateTensor(filter_, f); }
+  void SetFilter(const std::vector<PackedFilterType>& f) {
+    PopulateTensor(filter_, f);
+  }
 
   void SetInput(const std::vector<float>& data) {
     PopulateTensor(input_, data);
@@ -324,9 +333,8 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
 };
 
 const auto kKernelMap = new std::map<string, register_function>({
-    // {"BConv2D8", compute_engine::tflite::Register_BCONV_2D8},
-    {"BConv2D32", compute_engine::tflite::Register_BCONV_2D32},
-    {"BConv2D64", compute_engine::tflite::Register_BCONV_2D64},
+    {"BConv2D32", compute_engine::tflite::Register_BCONV_2D32_OPT},
+    {"BConv2D64", compute_engine::tflite::Register_BCONV_2D64_OPT},
 });
 
 class BConv2DOpTest : public ::testing::TestWithParam<TestParamTuple> {
@@ -404,12 +412,19 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   const int filters_num_elem =
       filter_height * filter_width * input_depth * filter_count;
 
+  const int packed_channels =
+      (input_depth + packed_bitwidth - 1) / packed_bitwidth;
+  const int packed_num_elem =
+      filter_count * filter_height * filter_width * packed_channels;
+
   using T = float;
   std::vector<T> input_data, padded_input_data, filters_data;
   std::vector<T> post_activation_multiplier_data, post_activation_bias_data,
       bias_data;
+  std::vector<PackedFilterType> packed_filters_data;
   input_data.resize(input_num_elem);
   filters_data.resize(filters_num_elem);
+  packed_filters_data.resize(packed_num_elem);
   bias_data.resize(filter_count, 0);
   post_activation_multiplier_data.resize(filter_count, 0);
   post_activation_bias_data.resize(filter_count, 0);
@@ -430,6 +445,14 @@ TEST_P(BConv2DOpTest, SimpleTest) {
                 std::end(post_activation_multiplier_data), float_generator);
   std::generate(std::begin(post_activation_bias_data),
                 std::end(post_activation_bias_data), float_generator);
+
+  // Bitpack filters
+  size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
+  using namespace compute_engine::core;
+  packbits_matrix<BitpackOrder::Canonical>(
+      filters_data.data(), filter_count * filter_height * filter_width,
+      input_depth, packed_filters_data, filter_rows_bp, filter_cols_bp,
+      filter_bitpadding, Axis::RowWise);
 
   int padded_input_height = input_height;
   int padded_input_width = input_width;
@@ -481,14 +504,14 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       registration,
       {TensorType_FLOAT32,
        {input_batch_count, input_height, input_width, input_depth}},
-      {TensorType_FLOAT32,
-       {filter_count, filter_height, filter_width, input_depth}},
+      {TensorType_INT32,
+       {filter_count, filter_height, filter_width, packed_channels}},
       {TensorType_FLOAT32, {}}, stride_width, stride_height, bconv_padding,
       pad_values, activation, dilation_width_factor, dilation_height_factor,
       num_threads);
 
   m_lce.SetInput(input_data);
-  m_lce.SetFilter(filters_data);
+  m_lce.SetFilter(packed_filters_data);
   m_lce.SetPostActivationMultiplier(post_activation_multiplier_data);
   m_lce.SetPostActivationBias(post_activation_bias_data);
   m_lce.Invoke();
@@ -572,7 +595,7 @@ TEST(BConv2DTests, BConvErrorTest) {
   // Test if fused ReLu throws an error in combination with zero-padding
   EXPECT_DEATH(
       {
-        BConv2DOpModel m_lce(compute_engine::tflite::Register_BCONV_2D64,
+        BConv2DOpModel m_lce(compute_engine::tflite::Register_BCONV_2D64_OPT,
                              {TensorType_FLOAT32, {1, 16, 16, 64}},
                              {TensorType_FLOAT32, {128, 3, 3, 64}},
                              {TensorType_FLOAT32, {}}, 1, 1, Padding_SAME, 0,

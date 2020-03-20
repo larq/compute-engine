@@ -8,3 +8,8 @@ for testfile in larq_compute_engine/core/tests/*_tests;
 do
     qemu-aarch64 "$testfile"
 done
+
+for testfile in larq_compute_engine/tflite/tests/*_test;
+do
+    qemu-aarch64 "$testfile"
+done

@@ -22,16 +22,16 @@ namespace core {
   ((row_index) * (lda) + (col_index))
 
 template <class TIn, class TOut>
-inline void pack_bitfield(const TIn* fptr, TOut* buf) {
+inline void pack_canonical(const TIn* fptr, TOut* buf) {
   const size_t bitwidth = std::numeric_limits<TOut>::digits;
   *buf = 0;
-  for (int i = 0; i < bitwidth; ++i) {
-    if (fptr[i] < 0) *buf |= (1 << i);
+  for (size_t i = 0; i < bitwidth; ++i) {
+    if (fptr[i] < 0) *buf |= (1ULL << i);
   }
 }
 
 template <class T>
-inline void pack_bitfield(const T* fptr, std::uint8_t* buf) {
+inline void pack_canonical(const T* fptr, std::uint8_t* buf) {
   struct bf {
     unsigned int b0 : 1;
     unsigned int b1 : 1;
@@ -63,7 +63,7 @@ inline void pack_bitfield(const T* fptr, std::uint8_t* buf) {
 }
 
 template <class T>
-inline void pack_bitfield(const T* fptr, std::uint32_t* buf) {
+inline void pack_canonical(const T* fptr, std::uint32_t* buf) {
   struct bf {
     unsigned int b0 : 1;
     unsigned int b1 : 1;
@@ -143,7 +143,7 @@ inline void pack_bitfield(const T* fptr, std::uint32_t* buf) {
 }
 
 template <class T>
-inline void pack_bitfield(const T* fptr, std::uint64_t* buf) {
+inline void pack_canonical(const T* fptr, std::uint64_t* buf) {
   struct bf {
     unsigned int b0 : 1;
     unsigned int b1 : 1;
@@ -284,15 +284,31 @@ inline void pack_bitfield(const T* fptr, std::uint64_t* buf) {
   *buf = u.u64;
 }
 
+template <class TIn, class TOut>
+inline void pack_optimized(const TIn* in, TOut* out) {
+  // In case there is no optimized code available, this default implementation
+  // falls back to the canonical ordering
+  return pack_canonical(in, out);
+}
+
 #ifdef __aarch64__
 // Template specialization for the float -> uint64 case
 template <>
-inline void pack_bitfield(const float* in, std::uint64_t* out) {
+inline void pack_optimized(const float* in, std::uint64_t* out) {
   return packbits_aarch64_64(in, out);
 }
 #endif
 
-template <class TIn, class TOut>
+// Helper function
+template <BitpackOrder bitpack_order, class TIn, class TOut>
+inline void pack_bitfield(const TIn* in, TOut* out) {
+  if (bitpack_order == BitpackOrder::Canonical)
+    pack_canonical(in, out);
+  else
+    pack_optimized(in, out);
+}
+
+template <BitpackOrder bitpack_order, class TIn, class TOut>
 inline void packbits_array(const TIn* input_array, const std::size_t n,
                            TOut* bitpacked_array) {
   constexpr size_t bitwidth = std::numeric_limits<TOut>::digits;
@@ -304,7 +320,7 @@ inline void packbits_array(const TIn* input_array, const std::size_t n,
   TOut* out = bitpacked_array;
 
   while (num_packed_elems--) {
-    pack_bitfield(in, out++);
+    pack_bitfield<bitpack_order>(in, out++);
     in += bitwidth;
   }
 
@@ -314,7 +330,7 @@ inline void packbits_array(const TIn* input_array, const std::size_t n,
   if (elements_left != 0) {
     std::array<TIn, bitwidth> padding_buffer = {0};
     memcpy(padding_buffer.data(), in, elements_left * sizeof(TIn));
-    pack_bitfield(padding_buffer.data(), out);
+    pack_bitfield<bitpack_order>(padding_buffer.data(), out);
   }
 }
 
@@ -323,13 +339,16 @@ inline void packbits_array(const TIn* input_array, const std::size_t n,
 // the bitpacking operation is performed. For example for a RowWise
 // bitpacking operation compresses an MxN matrix to a Mx(N/bitwidth)
 // matrix.
-template <class TIn, class TOutContainer>
+template <BitpackOrder bitpack_order, class TIn, class TOutContainer>
 inline void packbits_matrix(const TIn* input_data, const size_t input_num_rows,
                             const size_t input_num_cols, TOutContainer& output,
                             size_t& output_num_rows, size_t& output_num_cols,
                             size_t& output_bitpadding,
                             const Axis bitpacking_axis) {
-  using TOut = typename TOutContainer::value_type;
+  // Force the types to be unsigned so that the function can be called on signed
+  // types as well
+  using TOut =
+      typename std::make_unsigned<typename TOutContainer::value_type>::type;
   const size_t bitwidth = std::numeric_limits<TOut>::digits;
 
   if (bitpacking_axis == Axis::RowWise) {
@@ -348,9 +367,9 @@ inline void packbits_matrix(const TIn* input_data, const size_t input_num_rows,
 
     // iterate through each row of the input matrix and bitpack the row into
     // the corresponding memory location of the output matrix
-    auto output_data = output.data();
+    TOut* output_data = reinterpret_cast<TOut*>(output.data());
     for (size_t row_index = 0; row_index < input_num_rows; ++row_index)
-      packbits_array(
+      packbits_array<bitpack_order>(
           GET_POINTER_TO_ROW(input_data, input_row_size, row_index),
           input_row_size,
           GET_POINTER_TO_ROW(output_data, output_row_size, row_index));
@@ -374,7 +393,7 @@ inline void packbits_matrix(const TIn* input_data, const size_t input_num_rows,
     std::vector<TIn> input_buffer(input_num_rows);
     std::vector<TOut> output_buffer(output_num_rows);
 
-    auto output_data = output.data();
+    TOut* output_data = reinterpret_cast<TOut*>(output.data());
 
     // iterate through the columns
     for (size_t col_index = 0; col_index < input_num_cols; ++col_index) {
@@ -384,8 +403,8 @@ inline void packbits_matrix(const TIn* input_data, const size_t input_num_rows,
             input_data[GET_ELEM_INDEX(row_index, col_index, input_row_size)];
 
       // bitpack the buffer and store it in the the output matrix
-      packbits_array(input_buffer.data(), input_buffer.size(),
-                     output_buffer.data());
+      packbits_array<bitpack_order>(input_buffer.data(), input_buffer.size(),
+                                    output_buffer.data());
 
       // store the bitpacked values of the current column in the output matrix
       for (size_t row_index = 0; row_index < output_num_rows; ++row_index)
@@ -393,6 +412,39 @@ inline void packbits_matrix(const TIn* input_data, const size_t input_num_rows,
             output_buffer[row_index];
     }
     return;
+  }
+}
+
+template <typename TBitpacked, typename TUnpacked>
+void unpack_bitfield(const TBitpacked in, TUnpacked*& out,
+                     size_t num_elements) {
+  for (size_t i = 0; i < num_elements; ++i) {
+    *out++ = (in & (1ULL << i)) ? TUnpacked(-1.0f) : TUnpacked(1.0f);
+  }
+}
+
+// The matrix is stored in row-major mode.
+// Every row is bitpacked as TBitpacked, with canonical order
+// The argument `num_cols` is the *unpacked* number of cols!
+// Enough output memory is assumed.
+template <typename TBitpacked, typename TUnpacked>
+inline void unpack_matrix(const TBitpacked* input_data, const size_t num_rows,
+                          const size_t num_cols, TUnpacked* output_data) {
+  constexpr size_t bitwidth = std::numeric_limits<TBitpacked>::digits;
+
+  const TBitpacked* in_ptr = input_data;
+  TUnpacked* out_ptr = output_data;
+  for (size_t row_index = 0; row_index < num_rows; ++row_index) {
+    int num_full_blocks = num_cols / bitwidth;
+    int elements_left = num_cols - bitwidth * num_full_blocks;
+
+    while (num_full_blocks--) {
+      unpack_bitfield(*in_ptr++, out_ptr, bitwidth);
+    }
+
+    if (elements_left != 0) {
+      unpack_bitfield(*in_ptr++, out_ptr, elements_left);
+    }
   }
 }
 

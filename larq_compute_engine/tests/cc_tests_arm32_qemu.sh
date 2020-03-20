@@ -8,3 +8,8 @@ for testfile in larq_compute_engine/core/tests/*_tests;
 do
     qemu-arm "$testfile"
 done
+
+for testfile in larq_compute_engine/tflite/tests/*_test;
+do
+    qemu-arm "$testfile"
+done

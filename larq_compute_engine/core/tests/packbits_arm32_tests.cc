@@ -23,7 +23,8 @@ TEST(BitpackingTests, BitpackingARM32) {
   }
 
   std::vector<std::uint64_t> expected(n_packed);
-  ce::core::packbits_array<float, uint64_t>(input.data(), n, expected.data());
+  ce::core::packbits_array<ce::core::BitpackOrder::Optimized>(input.data(), n,
+                                                              expected.data());
 
   std::vector<std::uint64_t> output(n_packed);
   ce::core::packbits_arm32(input.data(), n, output.data());
