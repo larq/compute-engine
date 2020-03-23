@@ -6,7 +6,11 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 import numpy as np
 
-from larq_compute_engine.mlir.python.converter import convert_keras_model
+from larq_compute_engine.mlir.python.converter import (
+    calibrate_and_quantize,
+    convert_keras_model,
+)
+
 from larq_compute_engine.tests._end2end_verify import run_model
 
 
@@ -118,6 +122,20 @@ def test_simple_model(model_cls):
     for input, output in zip(inputs, outputs):
         for actual_output in run_model(model_lce, list(input.flatten())):
             np.testing.assert_allclose(actual_output, output, rtol=0.001, atol=0.25)
+
+
+@pytest.mark.parametrize("dtype", [np.float32, np.int8, np.uint8])
+def test_post_training_quantization_model(dtype):
+    model = lqz.sota.QuickNet(weights="imagenet")
+    model_lce = convert_keras_model(model)
+
+    def dataset_gen():
+        for _ in range(3):
+            yield [np.random.normal(size=(1, 224, 224, 3)).astype(np.float32)]
+
+    model_lce = calibrate_and_quantize(
+        model_lce, dataset_gen, input_type=dtype, output_type=dtype
+    )
 
 
 if __name__ == "__main__":

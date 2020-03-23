@@ -1,9 +1,12 @@
 from packaging import version
+from typing import Union, Callable, Iterator
+import numpy as np
 import tensorflow as tf
 
 from larq_compute_engine.mlir._graphdef_tfl_flatbuffer import (
     convert_graphdef_to_tflite_flatbuffer,
 )
+from larq_compute_engine.mlir.quantization._calibration_wrapper import Calibrator
 
 from tensorflow.core.framework.types_pb2 import DataType
 from tensorflow.lite.python.util import (
@@ -37,6 +40,48 @@ def concrete_function_from_keras_model(model):
     return func.get_concrete_function()
 
 
+def calibrate_and_quantize(
+    flatbuffer_model: bytes,
+    dataset_gen: Callable[[], Iterator],
+    input_type: Union[type, str] = np.float32,
+    output_type: Union[type, str] = np.float32,
+) -> bytes:
+    """Use post training quantization to convert floating point operations to integer.
+
+    !!! example
+        ```python
+        def dataset_gen():
+            for _ in range(3):
+                yield [np.random.normal(size=(1, 224, 224, 3)).astype(np.float32)]
+
+        tflite_model = convert_keras_model(model)
+        tflite_model = calibrate_and_quantize(tflite_model, dataset_gen)
+        with open("/tmp/my_model.tflite", "wb") as f:
+            f.write(tflite_model)
+        ```
+
+    # Arguments
+    flatbuffer_model: A TFLite flatbuffer model.
+    dataset_gen: An input generator that can be used to generate input samples for the
+        model. This must be a callable object that returns an object that supports the
+        `iter()` protocol (e.g. a generator function). The elements generated must have
+        same type and shape as inputs to the model.
+    input_type: A `str` or `type` representing the type of the input arrays.
+    output_type: A `str` or `type` representing the type of the model output.
+
+    # Returns
+    The quantized model in serialized format.
+    """
+    calibrator = Calibrator(flatbuffer_model)
+    calibrator.Prepare()
+    # Run the images through the model
+    for calibration_sample in dataset_gen():
+        calibrator.FeedTensor(calibration_sample)
+    return calibrator.QuantizeModel(
+        np.dtype(input_type).num, np.dtype(output_type).num,
+    )
+
+
 def convert_keras_model(
     model: tf.keras.Model,
     *,  # Require remaining arguments to be keyword-only.
@@ -59,7 +104,7 @@ def convert_keras_model(
             consecutive binary convolutions where possible.
 
     # Returns
-        The converted data in serialized format.
+        The converted model in serialized format.
     """
     if not tf.executing_eagerly():
         raise RuntimeError(

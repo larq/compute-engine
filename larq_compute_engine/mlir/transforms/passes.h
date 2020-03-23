@@ -13,6 +13,9 @@ std::unique_ptr<OpPassBase<FuncOp>> CreatePrepareLCEPass();
 std::unique_ptr<OpPassBase<FuncOp>> CreateOptimizeLCEPass(
     bool experimental_enable_bitpacked_activations);
 
+// Creates an instance of SanitizeLCE pass.
+std::unique_ptr<OpPassBase<FuncOp>> CreateSanitizeLCEPass();
+
 }  // namespace TFL
 }  // namespace mlir
 
