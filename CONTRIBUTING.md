@@ -13,7 +13,7 @@ If something is not working as expected, if you run into problems with Larq Comp
 
 ## Project setup
 
-See our [build guide](./docs/build.md) to get started.
+See our [build guide](https://docs.larq.dev/compute-engine/build/) to get started.
 
 ## Code style
 
