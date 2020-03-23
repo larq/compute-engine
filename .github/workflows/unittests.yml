@@ -73,9 +73,9 @@ jobs:
       - name: Install pip dependencies
         run: pip install tensorflow==2.1.0 larq~=0.9.1 larq_zoo==1.0.b3 pytest tensorflow_datasets==1.3.2 --no-cache-dir
       - name: Run FileCheck tests
-        run: ./bazelisk test larq_compute_engine/mlir/tests:all --test_output=all --distinct_host_configuration=false --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-macos --google_default_credentials
+        run: ./bazelisk test larq_compute_engine/mlir/tests:all --test_output=all --distinct_host_configuration=false $([ -z "$GOOGLE_APPLICATION_CREDENTIALS" ] || echo "--remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-macos --google_default_credentials")
       - name: Run End2End tests
-        run: ./bazelisk run larq_compute_engine/tests:end2end_test --distinct_host_configuration=false --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-macos --google_default_credentials
+        run: ./bazelisk run larq_compute_engine/tests:end2end_test --distinct_host_configuration=false $([ -z "$GOOGLE_APPLICATION_CREDENTIALS" ] || echo "--remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-macos --google_default_credentials")
 
   ConverterPython:
     runs-on: macos-latest
