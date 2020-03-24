@@ -181,7 +181,7 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
     return conv_params;
   }
 
-  // We can not return an error code here, so we set this flag and return an
+  // We cannot return an error code here, so we set this flag and return an
   // error code in Prepare
   conv_params->conv_params_initialized = true;
   return conv_params;

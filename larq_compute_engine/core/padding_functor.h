@@ -72,7 +72,7 @@ class PaddingFunctor {
     // to obtain our correction value.
     //
     // So we could save this value for every tuple.
-    // However (T) and (B) can not be both true at the same time,
+    // However (T) and (B) cannot be both true at the same time,
     // and neither can (L) and (R) because we will assume that the (effective)
     // filter size is always smaller than the image.
     //
@@ -271,7 +271,7 @@ class PaddingFunctor {
             cache_X = (overflow_right >= 0 ? overflow_right : 0);
             cache_Y = overflow_bot;
           } else {
-            // This can not happen.
+            // This cannot happen.
             continue;
           }
 

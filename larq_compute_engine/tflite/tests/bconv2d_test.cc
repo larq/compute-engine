@@ -542,7 +542,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   auto expected_array = m_builtin.GetOutput();
 
   // Apply the post multiply and add to the tflite model
-  // We can not fuse it into the tflite bias because it should happen *after*
+  // We cannot fuse it into the tflite bias because it should happen *after*
   // the activation function
   T* out_ptr = expected_array.data();
   for (int batch = 0; batch < input_batch_count; ++batch) {
