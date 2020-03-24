@@ -173,7 +173,7 @@ void PopulateBinaryTrMulParamsAllCompiledPaths(ruy::Path the_path,
                              Spec>::Search(the_path, params);
 }
 
-template <Path CompiledPaths, typename LhsScalar, typename RhsScalar,
+template <ruy::Path CompiledPaths, typename LhsScalar, typename RhsScalar,
           typename DstScalar, typename Spec>
 void CreateBinaryTrMulParams(const Matrix<LhsScalar>& lhs,
                              const Matrix<RhsScalar>& rhs, const Spec& spec,

@@ -28,7 +28,7 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
   const int dilation_width_factor = params.dilation_width_factor;
   const int dilation_height_factor = params.dilation_height_factor;
 
-  const uint8 zero_byte = 0x00;
+  const std::uint8_t zero_byte = 0x00;
   const int filter_height = filter_shape.Dims(1);
   const int filter_width = filter_shape.Dims(2);
 

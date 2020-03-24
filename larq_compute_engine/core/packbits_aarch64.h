@@ -12,7 +12,7 @@ namespace core {
 
 // This will bitpack exactly 64 floats.
 // It will be packed in a weird order which is described in the comments
-void packbits_aarch64_64(const float* input, uint64_t* output) {
+void packbits_aarch64_64(const float* input, std::uint64_t* output) {
   asm volatile(
       "ld1    {v0.4s, v1.4s, v2.4s, v3.4s}, [%0], #64    \n"
       "sri    v0.4s, v2.4s, #1    \n"
@@ -70,8 +70,8 @@ void packbits_aarch64_64(const float* input, uint64_t* output) {
 }
 
 // For packing an entire array
-void packbits_aarch64_64(const float* input, size_t num_blocks,
-                         uint64_t* output) {
+void packbits_aarch64_64(const float* input, std::size_t num_blocks,
+                         std::uint64_t* output) {
   while (num_blocks--) {
     packbits_aarch64_64(input, output++);
     input += 64;

@@ -51,26 +51,26 @@ void test_bgemm() {
 }
 
 TEST(BGemmTests, BinaryInnerProdUInt8) {
-  using TIn = uint8_t;
-  using TOut = int32_t;
+  using TIn = std::uint8_t;
+  using TOut = std::int32_t;
   test_binary_inner_prod<TIn, TOut>();
 }
 
 TEST(BGemmTests, BinaryInnerProdUInt32) {
-  using TIn = uint32_t;
-  using TOut = int32_t;
+  using TIn = std::uint32_t;
+  using TOut = std::int32_t;
   test_binary_inner_prod<TIn, TOut>();
 }
 
 TEST(BGemmTests, BinaryInnerProdUInt64) {
-  using TIn = uint64_t;
-  using TOut = int32_t;
+  using TIn = std::uint64_t;
+  using TOut = std::int32_t;
   test_binary_inner_prod<TIn, TOut>();
 }
 
 TEST(BGemmTests, BGemmTestUInt8) {
-  using TIn = uint8_t;
-  using TOut = int32_t;
+  using TIn = std::uint8_t;
+  using TOut = std::int32_t;
   using BGemmFunctor =
       ce::core::ReferenceBGemmFunctor<TIn, Layout::RowMajor, TIn,
                                       Layout::RowMajor, TOut>;
@@ -81,8 +81,8 @@ TEST(BGemmTests, BGemmTestUInt8) {
 }
 
 TEST(BGemmTests, BGemmTestUInt32) {
-  using TIn = uint32_t;
-  using TOut = int32_t;
+  using TIn = std::uint32_t;
+  using TOut = std::int32_t;
   using BGemmFunctor =
       ce::core::ReferenceBGemmFunctor<TIn, Layout::RowMajor, TIn,
                                       Layout::RowMajor, TOut>;
@@ -93,8 +93,8 @@ TEST(BGemmTests, BGemmTestUInt32) {
 }
 
 TEST(BGemmTests, BGemmTestUInt64) {
-  using TIn = uint64_t;
-  using TOut = int32_t;
+  using TIn = std::uint64_t;
+  using TOut = std::int32_t;
   using BGemmFunctor =
       ce::core::ReferenceBGemmFunctor<TIn, Layout::RowMajor, TIn,
                                       Layout::RowMajor, TOut>;
@@ -105,8 +105,8 @@ TEST(BGemmTests, BGemmTestUInt64) {
 }
 
 TEST(BGemmTests, BGemmTestUInt64ColMajor) {
-  using TIn = uint64_t;
-  using TOut = int32_t;
+  using TIn = std::uint64_t;
+  using TOut = std::int32_t;
   using BGemmFunctor =
       ce::core::ReferenceBGemmFunctor<TIn, Layout::RowMajor, TIn,
                                       Layout::ColMajor, TOut>;

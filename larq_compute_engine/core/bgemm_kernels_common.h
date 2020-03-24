@@ -24,7 +24,7 @@ template <typename AccumScalar, typename DstScalar,
 struct BGemmParams {
   AccumScalar multiplier_fixedpoint = 0;
   int multiplier_exponent = 0;
-  int32_t backtransform_add = 0;
+  std::int32_t backtransform_add = 0;
   // post_mutiply and post_activation_bias are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
@@ -48,7 +48,7 @@ struct BinaryBasicSpec {
   using DstScalar = tDstScalar;
   AccumScalar multiplier_fixedpoint = 0;
   int multiplier_exponent = 0;
-  int32_t backtransform_add = 0;
+  std::int32_t backtransform_add = 0;
   // post_mutiply and post_activation_bias are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts

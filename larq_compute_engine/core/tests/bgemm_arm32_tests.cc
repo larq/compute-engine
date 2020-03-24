@@ -12,8 +12,8 @@ namespace ce = compute_engine;
 using ce::core::Layout;
 
 TEST(BGemmTests, BGemmArm32) {
-  ce::core::ReferenceBGemmFunctor<uint64_t, Layout::RowMajor, uint64_t,
-                                  Layout::ColMajor, int32_t>
+  ce::core::ReferenceBGemmFunctor<uint64_t, Layout::RowMajor, std::uint64_t,
+                                  Layout::ColMajor, std::int32_t>
       bgemm_functor;
 
   const int m = 10;

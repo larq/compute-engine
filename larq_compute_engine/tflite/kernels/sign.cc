@@ -51,7 +51,7 @@ TfLiteStatus BsignEval(TfLiteContext* context, TfLiteNode* node) {
   float* input_data = input->data.f;
   float* output_data = output->data.f;
 
-  size_t count = 1;
+  std::size_t count = 1;
   int num_dims = NumDimensions(input);
   for (int i = 0; i < num_dims; ++i) {
     count *= input->dims->data[i];
