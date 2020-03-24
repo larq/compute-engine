@@ -30,8 +30,6 @@ struct BGemmImplUsingRuy {
     static_assert(std::is_unsigned<LhsScalar>::value &&
                       std::is_integral<LhsScalar>::value,
                   "Input to BGEMM should be of type unsigned integral.");
-    static_assert(std::is_signed<DstScalar>::value,
-                  "Output of BGEMM should be of a signed type.");
 
     using TSpec = BinaryBasicSpec<AccumScalar, DstScalar>;
 
