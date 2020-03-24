@@ -366,7 +366,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
   return kTfLiteOk;
 }
 
-template <KernelType kernel_type, const int default_bitpacking_bitwidth>
+template <KernelType kernel_type, int default_bitpacking_bitwidth>
 TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   return Prepare(kernel_type, default_bitpacking_bitwidth, context, node);
 }
