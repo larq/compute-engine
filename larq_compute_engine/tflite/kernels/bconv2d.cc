@@ -552,6 +552,7 @@ TfLiteRegistration* Register_BCONV_2D64_OPT() {
   return &r;
 }
 
+// Use this registration wrapper to decide which impl. to use.
 TfLiteRegistration* Register_BCONV_2D() {
 #if defined TFLITE_WITH_RUY
 #if RUY_PLATFORM(ARM_32)
