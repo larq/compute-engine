@@ -37,21 +37,21 @@ const int kTensorNotAllocated = -1;
 
 typedef struct {
   // input tensor dimensions
-  std::int32_t batch{0};
-  std::int32_t input_width{0};
-  std::int32_t input_height{0};
+  std::int64_t batch{0};
+  std::int64_t input_width{0};
+  std::int64_t input_height{0};
 
   // filters tensor dimensions
-  std::int32_t filter_width{0};
-  std::int32_t filter_height{0};
-  std::int32_t channels_in{0};
-  std::int32_t channels_out{0};
+  std::int64_t filter_width{0};
+  std::int64_t filter_height{0};
+  std::int64_t channels_in{0};
+  std::int64_t channels_out{0};
 
   // strides
-  std::int32_t strides[4] = {};
+  std::int64_t strides[4] = {};
 
   // dilations
-  std::int32_t dilations[4] = {};
+  std::int64_t dilations[4] = {};
 
   // padding
   TfLitePadding padding_type{};
@@ -59,8 +59,8 @@ typedef struct {
   int pad_value = 0;  // Must be 0 or 1
 
   // output tensor dimensions
-  std::int32_t out_width{0};
-  std::int32_t out_height{0};
+  std::int64_t out_width{0};
+  std::int64_t out_height{0};
 
   ce::core::FilterFormat filter_format{ce::core::FilterFormat::Unknown};
 
