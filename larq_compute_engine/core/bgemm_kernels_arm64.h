@@ -552,12 +552,12 @@ void CheckOffsetsInKernelParams64BP(const Params&) {
 // During accumulation, v0 -- v3 are used to load data from LHS and
 // v4 -- v7 from RHS:
 //
-//                                      int32 RHS 2x4 block
+//                                    int64 RHS 2x4 block
 //                          /--------------------------------------\
 //                          |v4.d[0]         ...          v7.d[0]  |
 //                          |v4.d[1]         ...          v7.d[1]  |
 //                          \--------------------------------------/
-//    int32 LHS 4x2 block
+//     int64 LHS 4x2 block
 //      /----------------\  /--------------------------------------\
 //      |v0.d[0] v0.d[1] |  |v24.s[0]        ...         v27.s[0]  |
 //      |v1.d[0] v1.d[1] |  |v24.s[1]        ...         v27.s[1]  |
