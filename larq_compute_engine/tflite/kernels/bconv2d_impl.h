@@ -20,18 +20,35 @@ namespace ce = compute_engine;
 
 namespace tflite {
 
+template <typename DstScalar>
+void PaddingCorrection(
+    const ConvParams& params, const int pad_value,
+    const RuntimeShape& input_shape, const RuntimeShape& filter_shape,
+    const RuntimeShape& output_shape, DstScalar* output_data,
+    const OutputTransform<std::int32_t, DstScalar>& output_transform,
+    const float* padding_buffer) {}
+
+template <>
+void PaddingCorrection(
+    const ConvParams& params, const int pad_value,
+    const RuntimeShape& input_shape, const RuntimeShape& filter_shape,
+    const RuntimeShape& output_shape, float* output_data,
+    const OutputTransform<std::int32_t, float>& output_transform,
+    const float* padding_buffer);
+
 template <class T>
 inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
                    const T* input_data, const RuntimeShape& filter_shape,
                    const RuntimeShape& output_shape,
                    const RuntimeShape& im2col_shape, T* im2col_data,
-                   RuntimeShape& result_shape, const T** result_data) {
+                   RuntimeShape& result_shape, const T** result_data,
+                   const std::int32_t zero_point) {
   const int stride_width = params.stride_width;
   const int stride_height = params.stride_height;
   const int dilation_width_factor = params.dilation_width_factor;
   const int dilation_height_factor = params.dilation_height_factor;
 
-  const std::uint8_t zero_byte = 0x00;
+  const std::uint8_t zero_byte = (std::uint8_t)zero_point;
   const int filter_height = filter_shape.Dims(1);
   const int filter_width = filter_shape.Dims(2);
 
@@ -67,17 +84,16 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
 // Later this might be changed to the int8 system of multipliers+shifts
 template <typename SrcScalar, typename TBitpacked, typename AccumScalar,
           typename DstScalar>
-inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
-                    const SrcScalar* input_data,
-                    const RuntimeShape& filter_shape,
-                    const TBitpacked* packed_filter_data,
-                    const float* post_activation_multiplier_data,
-                    const float* post_activation_bias_data,
-                    const RuntimeShape& output_shape, DstScalar* output_data,
-                    const RuntimeShape& im2col_shape, SrcScalar* im2col_data,
-                    bool bitpack_before_im2col, DstScalar* padding_buffer,
-                    const int pad_value, const bool read_bitpacked_input,
-                    CpuBackendContext* cpu_backend_context) {
+inline void BConv2D(
+    const ConvParams& params, const RuntimeShape& input_shape,
+    const SrcScalar* input_data, const RuntimeShape& filter_shape,
+    const TBitpacked* packed_filter_data,
+    const OutputTransform<AccumScalar, DstScalar>& output_transform,
+    const RuntimeShape& output_shape, DstScalar* output_data,
+    const RuntimeShape& im2col_shape, SrcScalar* im2col_data,
+    bool bitpack_before_im2col, const float* padding_buffer,
+    const int pad_value, const bool read_bitpacked_input,
+    CpuBackendContext* cpu_backend_context) {
   TF_LITE_ASSERT_EQ(input_shape.DimensionsCount(), 4);
   TF_LITE_ASSERT_EQ(filter_shape.DimensionsCount(), 4);
   TF_LITE_ASSERT_EQ(output_shape.DimensionsCount(), 4);
@@ -125,6 +141,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
     // Get the im2col data buffer.
     TBitpacked* packed_im2col_data = reinterpret_cast<TBitpacked*>(im2col_data);
 
+    // We're already bitpacked, so im2col `zero_byte` is 0
     RuntimeShape result_shape;
 
     RuntimeShape packed_input_shape = input_shape;
@@ -136,13 +153,13 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
       static std::vector<TBitpacked> input_data_bp_buffer;
       // The input tensor has this shape which we bitpack along the channels
       // dimension [batch, input height, input width, channels].
-      ce::core::packbits_tensor(input_shape, input_data, packed_input_shape,
-                                input_data_bp_buffer);
+      ce::core::packbits_tensor(input_shape, input_data, params.input_offset,
+                                packed_input_shape, input_data_bp_buffer);
       input_data_bp = input_data_bp_buffer.data();
     }
     im2col<TBitpacked>(params, packed_input_shape, input_data_bp,
                        packed_filter_shape, output_shape, im2col_shape,
-                       packed_im2col_data, result_shape, &rhs_data);
+                       packed_im2col_data, result_shape, &rhs_data, 0);
 
     k = result_shape.Dims(3);
     m = FlatSizeSkipDim(result_shape, 3);
@@ -150,17 +167,18 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
     // Buffer for bitpacked input data.
     static std::vector<TBitpacked> input_data_bp;
 
+    // We need to pad with the correct zero_byte
     RuntimeShape result_shape;
     const SrcScalar* result_data;
     im2col<SrcScalar>(params, input_shape, input_data, filter_shape,
                       output_shape, im2col_shape, im2col_data, result_shape,
-                      &result_data);
+                      &result_data, params.input_offset);
 
     // The RHS tensor has this shape which we bitpack along the last dimension
     //  [batch, output_height, output_width, k * bitwidth]
     RuntimeShape packed_input_shape;
-    ce::core::packbits_tensor(result_shape, result_data, packed_input_shape,
-                              input_data_bp);
+    ce::core::packbits_tensor(result_shape, result_data, params.input_offset,
+                              packed_input_shape, input_data_bp);
     rhs_data = input_data_bp.data();
 
     k = packed_input_shape.Dims(3);
@@ -185,15 +203,6 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   dst_params.rows = n;
   dst_params.cols = m;
 
-  // Accumulation type, destination type
-  BGemmParams<AccumScalar, DstScalar> gemm_params;
-  gemm_params.backtransform_add =
-      filter_shape.Dims(1) * filter_shape.Dims(2) * filter_shape.Dims(3);
-  gemm_params.post_activation_multiplier = post_activation_multiplier_data;
-  gemm_params.post_activation_bias = post_activation_bias_data;
-  gemm_params.clamp_min = params.quantized_activation_min;
-  gemm_params.clamp_max = params.quantized_activation_max;
-
   // #if defined(TF_LITE_USE_CBLAS) && defined(__APPLE__)
 
   // TODO: TF lite, on devices which provide optimized BLAS library,
@@ -204,11 +213,22 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   // #endif  //  defined(TF_LITE_USE_CBLAS) && defined(__APPLE__)
 
   BGemm(lhs_params, lhs_data, rhs_params, rhs_data, dst_params, output_data,
-        gemm_params, cpu_backend_context);
+        output_transform, cpu_backend_context);
 
+  PaddingCorrection(params, pad_value, input_shape, filter_shape, output_shape,
+                    output_data, output_transform, padding_buffer);
+}
+
+template <>
+void PaddingCorrection(
+    const ConvParams& params, const int pad_value,
+    const RuntimeShape& input_shape, const RuntimeShape& filter_shape,
+    const RuntimeShape& output_shape, float* output_data,
+    const OutputTransform<std::int32_t, float>& output_transform,
+    const float* padding_buffer) {
   if (params.padding_type == PaddingType::kSame && pad_value == 0) {
     using PaddingFunctor =
-        ce::core::PaddingFunctor<DstScalar, SrcScalar,
+        ce::core::PaddingFunctor<float, float, float,
                                  ce::core::FilterFormat::OHWI>;
 
     const int stride_width = params.stride_width;
@@ -232,7 +252,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                       filter_height, filter_width, output_depth, stride_height,
                       stride_width, dilation_height_factor,
                       dilation_width_factor, output_data, output_height,
-                      output_width, post_activation_multiplier_data,
+                      output_width, output_transform.post_activation_multiplier,
                       padding_buffer);
     }
   }

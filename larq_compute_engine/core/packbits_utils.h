@@ -15,6 +15,7 @@ namespace core {
 // and updating the tensor shape
 template <class T, class TBitpacked>
 inline void packbits_tensor(const RuntimeShape& in_shape, const T* in_data,
+                            const std::int32_t zero_point,
                             RuntimeShape& out_shape,
                             std::vector<TBitpacked>& out_data) {
   const int dims = in_shape.DimensionsCount();
@@ -28,7 +29,7 @@ inline void packbits_tensor(const RuntimeShape& in_shape, const T* in_data,
     gemmlowp::ScopedProfilingLabel label("Packbits");
     ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
         in_data, rows, cols, out_data, rows_bp, cols_bp, bitpadding,
-        ce::core::Axis::RowWise);
+        ce::core::Axis::RowWise, zero_point);
   }
 
   out_shape.ReplaceWith(dims, in_shape.DimsData());

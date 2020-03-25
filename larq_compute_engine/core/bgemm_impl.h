@@ -36,7 +36,7 @@ void BGemm(
     const MatrixParams<LhsScalar>& lhs_params, const LhsScalar* lhs_data,
     const MatrixParams<RhsScalar>& rhs_params, const RhsScalar* rhs_data,
     const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
-    const BGemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
+    const OutputTransform<AccumScalar, DstScalar, quantization_flavor>& params,
     CpuBackendContext* context) {
   gemmlowp::ScopedProfilingLabel label("BGemm");
   // TODO: special fast bgemm impl. for matrix-vector multiplication

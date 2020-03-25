@@ -23,10 +23,22 @@ namespace core {
 
 template <class TIn, class TOut>
 inline void pack_canonical(const TIn* fptr, TOut* buf) {
-  const std::size_t bitwidth = std::numeric_limits<TOut>::digits;
+  constexpr std::size_t bitwidth = std::numeric_limits<TOut>::digits;
   *buf = 0;
   for (size_t i = 0; i < bitwidth; ++i) {
-    if (fptr[i] < 0) *buf |= (1ULL << i);
+    if (fptr[i] < 0) *buf |= (TOut(1) << i);
+  }
+}
+
+template <class TIn, class TOut>
+inline void pack_canonical(const TIn* in, TOut* out,
+                           const std::int32_t zero_point) {
+  constexpr std::size_t bitwidth = std::numeric_limits<TOut>::digits;
+  *out = 0;
+  for (size_t i = 0; i < bitwidth; ++i) {
+    // Note: uint8 to int32 will set the top 24 bits to 0
+    //        int8 to int32 will set the top 24 bits to the int8 sign bit
+    if (static_cast<std::int32_t>(in[i]) < zero_point) *out |= (TOut(1) << i);
   }
 }
 
@@ -291,6 +303,14 @@ inline void pack_optimized(const TIn* in, TOut* out) {
   return pack_canonical(in, out);
 }
 
+template <class TIn, class TOut>
+inline void pack_optimized(const TIn* in, TOut* out,
+                           const std::int32_t zero_point) {
+  // In case there is no optimized code available, this default implementation
+  // falls back to the canonical ordering
+  return pack_canonical(in, out, zero_point);
+}
+
 #ifdef __aarch64__
 // Template specialization for the float -> uint64 case
 template <>
@@ -301,16 +321,28 @@ inline void pack_optimized(const float* in, std::uint64_t* out) {
 
 // Helper function
 template <BitpackOrder bitpack_order, class TIn, class TOut>
-inline void pack_bitfield(const TIn* in, TOut* out) {
-  if (bitpack_order == BitpackOrder::Canonical)
-    pack_canonical(in, out);
-  else
-    pack_optimized(in, out);
+inline void pack_bitfield(const TIn* in, TOut* out,
+                          const std::int32_t zero_point) {
+  // Note: The expressions in these if-statements are known at compile-time so
+  // they are all optimied away
+  constexpr bool UseZeroPoint = !std::is_floating_point<TIn>::value;
+  if (bitpack_order == BitpackOrder::Canonical) {
+    if (UseZeroPoint)
+      pack_canonical(in, out, zero_point);
+    else
+      pack_canonical(in, out);
+  } else {
+    if (UseZeroPoint)
+      pack_optimized(in, out, zero_point);
+    else
+      pack_optimized(in, out);
+  }
 }
 
 template <BitpackOrder bitpack_order, class TIn, class TOut>
 inline void packbits_array(const TIn* input_array, const std::size_t n,
-                           TOut* bitpacked_array) {
+                           TOut* bitpacked_array,
+                           const std::int32_t zero_point) {
   constexpr std::size_t bitwidth = std::numeric_limits<TOut>::digits;
 
   int num_packed_elems = n / bitwidth;
@@ -320,7 +352,7 @@ inline void packbits_array(const TIn* input_array, const std::size_t n,
   TOut* out = bitpacked_array;
 
   while (num_packed_elems--) {
-    pack_bitfield<bitpack_order>(in, out++);
+    pack_bitfield<bitpack_order>(in, out++, zero_point);
     in += bitwidth;
   }
 
@@ -330,7 +362,9 @@ inline void packbits_array(const TIn* input_array, const std::size_t n,
   if (elements_left != 0) {
     std::array<TIn, bitwidth> padding_buffer = {0};
     memcpy(padding_buffer.data(), in, elements_left * sizeof(TIn));
-    pack_bitfield<bitpack_order>(padding_buffer.data(), out);
+    for (size_t i = elements_left; i < bitwidth; ++i)
+      padding_buffer[i] = zero_point;
+    pack_bitfield<bitpack_order>(padding_buffer.data(), out, zero_point);
   }
 }
 
@@ -346,7 +380,8 @@ inline void packbits_matrix(const TIn* input_data,
                             TOutContainer& output, std::size_t& output_num_rows,
                             std::size_t& output_num_cols,
                             std::size_t& output_bitpadding,
-                            const Axis bitpacking_axis) {
+                            const Axis bitpacking_axis,
+                            const std::int32_t zero_point = 0) {
   // Force the types to be unsigned so that the function can be called on signed
   // types as well
   using TOut =
@@ -374,7 +409,8 @@ inline void packbits_matrix(const TIn* input_data,
       packbits_array<bitpack_order>(
           GET_POINTER_TO_ROW(input_data, input_row_size, row_index),
           input_row_size,
-          GET_POINTER_TO_ROW(output_data, output_row_size, row_index));
+          GET_POINTER_TO_ROW(output_data, output_row_size, row_index),
+          zero_point);
     return;
   }
 
@@ -406,7 +442,7 @@ inline void packbits_matrix(const TIn* input_data,
 
       // bitpack the buffer and store it in the the output matrix
       packbits_array<bitpack_order>(input_buffer.data(), input_buffer.size(),
-                                    output_buffer.data());
+                                    output_buffer.data(), zero_point);
 
       // store the bitpacked values of the current column in the output matrix
       for (size_t row_index = 0; row_index < output_num_rows; ++row_index)
@@ -421,7 +457,7 @@ template <typename TBitpacked, typename TUnpacked>
 void unpack_bitfield(const TBitpacked in, TUnpacked*& out,
                      std::size_t num_elements) {
   for (size_t i = 0; i < num_elements; ++i) {
-    *out++ = (in & (1ULL << i)) ? TUnpacked(-1.0f) : TUnpacked(1.0f);
+    *out++ = (in & (1ULL << i)) ? TUnpacked(-1) : TUnpacked(1);
   }
 }
 
