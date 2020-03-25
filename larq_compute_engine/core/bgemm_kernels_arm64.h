@@ -9,7 +9,7 @@ using namespace ruy;
 
 // clang-format off
 
-// temporery NEON registers: v28,v29,v30,v31
+// temporary NEON registers: v28,v29,v30,v31
 #define LCE_BMLA(Vd, Vr, Vl1, Vl2, Vl3, Vl4) \
   "eor v28.16b, " #Vr".16b, " #Vl1".16b\n"    \
   "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"    \
@@ -28,7 +28,7 @@ using namespace ruy;
   "ins v28.s[3], v31.s[0]\n"                  \
   "add " #Vd".4s, " #Vd".4s, v28.4s\n"
 
-// temporery NEON registers: v28,v29,v30,v31
+// temporary NEON registers: v28,v29,v30,v31
 #define LCE_BMLA_LD_RHS(Vd, Vr, Vl1, Vl2, Vl3, Vl4)      \
   "eor v28.16b, " #Vr".16b, " #Vl1".16b\n"              \
   "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"              \
@@ -48,7 +48,7 @@ using namespace ruy;
   "ins v28.s[3], v31.s[0]\n"                            \
   "add " #Vd".4s, " #Vd".4s, v28.4s\n"
 
-// temporery NEON registers: v28,v29,v30,v31
+// temporary NEON registers: v28,v29,v30,v31
 #define LCE_BMLA_LD_ALL(Vd, Vr, Vl1, Vl2, Vl3, Vl4)      \
   "eor v28.16b, " #Vr".16b, " #Vl1".16b\n"              \
   "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"              \
@@ -132,7 +132,7 @@ void CheckOffsetsInKernelParams32BP(const Params&) {
 
 // The asm kernel below has the following NEON register allocation:
 //
-// v16 -- v31 are int32 accumulators.
+// v16, v18, v20, v22 are int32 accumulators.
 // During accumulation, v0 -- v3 are used to load data from LHS and
 // v4 -- v7 from RHS:
 //
@@ -552,12 +552,12 @@ void CheckOffsetsInKernelParams64BP(const Params&) {
 // During accumulation, v0 -- v3 are used to load data from LHS and
 // v4 -- v7 from RHS:
 //
-//                                      int32 RHS 2x4 block
+//                                    int64 RHS 2x4 block
 //                          /--------------------------------------\
 //                          |v4.d[0]         ...          v7.d[0]  |
 //                          |v4.d[1]         ...          v7.d[1]  |
 //                          \--------------------------------------/
-//    int32 LHS 4x2 block
+//     int64 LHS 4x2 block
 //      /----------------\  /--------------------------------------\
 //      |v0.d[0] v0.d[1] |  |v24.s[0]        ...         v27.s[0]  |
 //      |v1.d[0] v1.d[1] |  |v24.s[1]        ...         v27.s[1]  |
