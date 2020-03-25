@@ -150,6 +150,7 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
     conv_params->padding_type = kTfLitePaddingSame;
   } else {
     context->ReportError(context, "Invalid padding attribute.");
+    return conv_params;
   }
 
   // Read fused activation
@@ -199,6 +200,7 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
     context->ReportError(context,
                          "Cannot read bitpacked input unless the `channels_in` "
                          "attribute is set in the converter.");
+    return conv_params;
   }
 
   if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame &&
@@ -419,7 +421,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
   conv_params->is_filter_repacked = false;
 
   return kTfLiteOk;
-}  // namespace bconv2d
+}
 
 template <KernelType kernel_type, int default_bitpacking_bitwidth>
 TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
