@@ -132,7 +132,7 @@ void CheckOffsetsInKernelParams32BP(const Params&) {
 
 // The asm kernel below has the following NEON register allocation:
 //
-// v16 -- v31 are int32 accumulators.
+// v16, v18, v20, v22 are int32 accumulators.
 // During accumulation, v0 -- v3 are used to load data from LHS and
 // v4 -- v7 from RHS:
 //
