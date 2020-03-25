@@ -43,30 +43,8 @@ cc_library(
 )
 
 cc_library(
-    name = "fused_bgemm_functor",
-    hdrs = [
-        "fused_bgemm_functor.h",
-    ],
-    deps = [
-        ":bgemm_functor",
-        ":packbits",
-    ],
-)
-
-cc_library(
     name = "padding_functor",
     hdrs = ["padding_functor.h"],
-)
-
-cc_library(
-    name = "bconv2d_functor",
-    hdrs = [
-        "bconv2d_functor.h",
-    ],
-    deps = [
-        ":fused_bgemm_functor",
-        ":padding_functor",
-    ],
 )
 
 cc_library(
