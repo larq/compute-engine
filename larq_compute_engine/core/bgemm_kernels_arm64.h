@@ -9,7 +9,7 @@ using namespace ruy;
 
 // clang-format off
 
-// temporery NEON registers: v28,v29,v30,v31
+// temporary NEON registers: v28,v29,v30,v31
 #define LCE_BMLA(Vd, Vr, Vl1, Vl2, Vl3, Vl4) \
   "eor v28.16b, " #Vr".16b, " #Vl1".16b\n"    \
   "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"    \
@@ -28,7 +28,7 @@ using namespace ruy;
   "ins v28.s[3], v31.s[0]\n"                  \
   "add " #Vd".4s, " #Vd".4s, v28.4s\n"
 
-// temporery NEON registers: v28,v29,v30,v31
+// temporary NEON registers: v28,v29,v30,v31
 #define LCE_BMLA_LD_RHS(Vd, Vr, Vl1, Vl2, Vl3, Vl4)      \
   "eor v28.16b, " #Vr".16b, " #Vl1".16b\n"              \
   "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"              \
@@ -48,7 +48,7 @@ using namespace ruy;
   "ins v28.s[3], v31.s[0]\n"                            \
   "add " #Vd".4s, " #Vd".4s, v28.4s\n"
 
-// temporery NEON registers: v28,v29,v30,v31
+// temporary NEON registers: v28,v29,v30,v31
 #define LCE_BMLA_LD_ALL(Vd, Vr, Vl1, Vl2, Vl3, Vl4)      \
   "eor v28.16b, " #Vr".16b, " #Vl1".16b\n"              \
   "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"              \
