@@ -34,7 +34,7 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
   const auto& dense_elements_iter =
       x.cast<DenseElementsAttr>().getValues<float>();
 
-  using PackedType = uint32_t;
+  using PackedType = std::uint32_t;
   constexpr int bitwidth = std::numeric_limits<PackedType>::digits;
 
   auto shape = x.getType().cast<ShapedType>().getShape();
@@ -45,7 +45,7 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
   std::vector<PackedType> new_values(num_rows * packed_channels);
 
   const float* in_ptr = &(*dense_elements_iter.begin());
-  size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
+  std::size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
   using namespace compute_engine::core;
   packbits_matrix<BitpackOrder::Canonical>(
       in_ptr, num_rows, unpacked_channels, new_values, filter_rows_bp,

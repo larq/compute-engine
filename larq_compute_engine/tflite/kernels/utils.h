@@ -21,8 +21,8 @@ inline void packbits_tensor(const RuntimeShape& in_shape, const T* in_data,
   const int rows = FlatSizeSkipDim(in_shape, dims - 1);
   const int cols = in_shape.Dims(dims - 1);
 
-  size_t rows_bp = 0, cols_bp = 0;
-  size_t bitpadding = 0;
+  std::size_t rows_bp = 0, cols_bp = 0;
+  std::size_t bitpadding = 0;
   {
     gemmlowp::ScopedProfilingLabel label("Packbits");
     ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(

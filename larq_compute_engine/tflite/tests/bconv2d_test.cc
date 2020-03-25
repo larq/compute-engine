@@ -40,8 +40,8 @@ namespace tflite {
 // Use the same bitwidth as the MLIR converter
 // Since tflite does not have an unsigned 32-bit int type
 // we have to use the signed type here or it will throw errors.
-using PackedFilterType = int32_t;
-constexpr size_t packed_bitwidth = 32;
+using PackedFilterType = std::int32_t;
+constexpr std::size_t packed_bitwidth = 32;
 
 constexpr int Padding_ONE = Padding_MAX + 1;
 
@@ -447,7 +447,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
                 std::end(post_activation_bias_data), float_generator);
 
   // Bitpack filters
-  size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
+  std::size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
   using namespace compute_engine::core;
   packbits_matrix<BitpackOrder::Canonical>(
       filters_data.data(), filter_count * filter_height * filter_width,
@@ -542,7 +542,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   auto expected_array = m_builtin.GetOutput();
 
   // Apply the post multiply and add to the tflite model
-  // We can not fuse it into the tflite bias because it should happen *after*
+  // We cannot fuse it into the tflite bias because it should happen *after*
   // the activation function
   T* out_ptr = expected_array.data();
   for (int batch = 0; batch < input_batch_count; ++batch) {

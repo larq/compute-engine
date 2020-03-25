@@ -101,7 +101,8 @@ struct BgemmKernel<ruy::Path::kNeonDotprod, LhsScalar, RhsScalar, DstScalar,
   ruy::Tuning tuning = Tuning::kAuto;
   using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
   using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
-  using Base = BgemmKernel<Path::kNeon, LhsLayout, RhsLayout, DstScalar, Spec>;
+  using Base =
+      BgemmKernel<ruy::Path::kNeon, LhsLayout, RhsLayout, DstScalar, Spec>;
   explicit BgemmKernel(ruy::Tuning tuning_) : tuning(tuning_) {}
   void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
            const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,

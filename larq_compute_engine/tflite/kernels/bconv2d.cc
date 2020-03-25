@@ -37,21 +37,21 @@ const int kTensorNotAllocated = -1;
 
 typedef struct {
   // input tensor dimensions
-  int64_t batch{0};
-  int64_t input_width{0};
-  int64_t input_height{0};
+  std::int64_t batch{0};
+  std::int64_t input_width{0};
+  std::int64_t input_height{0};
 
   // filters tensor dimensions
-  int64_t filter_width{0};
-  int64_t filter_height{0};
-  int64_t channels_in{0};
-  int64_t channels_out{0};
+  std::int64_t filter_width{0};
+  std::int64_t filter_height{0};
+  std::int64_t channels_in{0};
+  std::int64_t channels_out{0};
 
   // strides
-  int64_t strides[4] = {};
+  std::int64_t strides[4] = {};
 
   // dilations
-  int64_t dilations[4] = {};
+  std::int64_t dilations[4] = {};
 
   // padding
   TfLitePadding padding_type{};
@@ -59,8 +59,8 @@ typedef struct {
   int pad_value = 0;  // Must be 0 or 1
 
   // output tensor dimensions
-  int64_t out_width{0};
-  int64_t out_height{0};
+  std::int64_t out_width{0};
+  std::int64_t out_height{0};
 
   ce::core::FilterFormat filter_format{ce::core::FilterFormat::Unknown};
 
@@ -78,7 +78,7 @@ typedef struct {
   // In node->temporaries there is a list of tensor id's that are part
   // of this node in particular. The indices below are offsets into this array.
   // So in pseudo-code: `node->temporaries[index] = id;`
-  int32_t im2col_index;
+  std::int32_t im2col_index;
 
   std::vector<float> padding_buffer;
   bool is_padding_correction_cached = false;
@@ -101,10 +101,10 @@ inline void decide_bitpack_before_im2col(TfLiteBConv2DParams* conv_params) {
   }
 }
 
-void* Init(TfLiteContext* context, const char* buffer, size_t length) {
+void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
   auto* conv_params = new TfLiteBConv2DParams{};
 
-  const uint8_t* buffer_t = reinterpret_cast<const uint8_t*>(buffer);
+  const std::uint8_t* buffer_t = reinterpret_cast<const std::uint8_t*>(buffer);
   const flexbuffers::Map& m = flexbuffers::GetRoot(buffer_t, length).AsMap();
 
   // Later we can change this so that we only allow "OHWI_PACKED" (prepacked)
@@ -181,7 +181,7 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
     return conv_params;
   }
 
-  // We can not return an error code here, so we set this flag and return an
+  // We cannot return an error code here, so we set this flag and return an
   // error code in Prepare
   conv_params->conv_params_initialized = true;
   return conv_params;
@@ -417,7 +417,8 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
                              : nullptr;
 
   if (!params->is_filter_repacked || !params->is_padding_correction_cached) {
-    const uint32_t* filter_flatbuffer = GetTensorData<uint32_t>(filter);
+    const std::uint32_t* filter_flatbuffer =
+        GetTensorData<std::uint32_t>(filter);
     const T* filter_unpacked = nullptr;
 
     if (params->filter_format == ce::core::FilterFormat::OHWI_PACKED) {
@@ -479,12 +480,12 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
     }
 
     std::vector<TBitpacked> filter_data_bp;
-    size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
+    std::size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
     ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
         filter_unpacked, rows, cols, filter_data_bp, filter_rows_bp,
         filter_cols_bp, filter_bitpadding, ce::core::Axis::RowWise);
 
-    size_t num_bytes = filter_data_bp.size() * sizeof(TBitpacked);
+    std::size_t num_bytes = filter_data_bp.size() * sizeof(TBitpacked);
 
     params->filter_packed.resize(num_bytes);
     memcpy(params->filter_packed.data(), filter_data_bp.data(), num_bytes);

@@ -13,8 +13,8 @@ namespace testing {
 namespace ce = compute_engine;
 
 TEST(BitpackingTests, BitpackingARM32) {
-  constexpr size_t n = 128;
-  constexpr size_t n_packed = (n + 63) / 64;
+  constexpr std::size_t n = 128;
+  constexpr std::size_t n_packed = (n + 63) / 64;
 
   std::array<float, n> input;
 
@@ -34,9 +34,9 @@ TEST(BitpackingTests, BitpackingARM32) {
 
   // The test assembly that I put in will compute input[0] ^ input[1]
   // So we check that here
-  uint32_t* ptr_in = reinterpret_cast<uint32_t*>(input.data());
-  uint32_t* ptr_out = reinterpret_cast<uint32_t*>(output.data());
-  uint32_t expected_output = ptr_in[0] ^ ptr_in[1];
+  std::uint32_t* ptr_in = reinterpret_cast<uint32_t*>(input.data());
+  std::uint32_t* ptr_out = reinterpret_cast<uint32_t*>(output.data());
+  std::uint32_t expected_output = ptr_in[0] ^ ptr_in[1];
   EXPECT_THAT(ptr_out[0], expected_output);
 }
 

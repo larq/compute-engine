@@ -12,14 +12,14 @@ namespace testing {
 
 using namespace compute_engine::core;
 
-template <void (*packing_func)(const float*, size_t, uint64_t*),
-          size_t blocksize>
+template <void (*packing_func)(const float*, std::size_t, std::uint64_t*),
+          std::size_t blocksize>
 void test_bitpacking() {
-  constexpr size_t n = 512;
+  constexpr std::size_t n = 512;
 
   // We will simply check if every input gets mapped uniquely to one bit
   float input[n];
-  uint64_t output[n / 64];
+  std::uint64_t output[n / 64];
   int mapping_in2out[n];
   int mapping_out2in[n];
   for (auto i = 0; i < n; ++i) {

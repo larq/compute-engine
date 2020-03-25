@@ -9,7 +9,8 @@ namespace core {
 
 // Output should be allocated by caller
 // It should have size equal to (n+63)/64
-void packbits_arm32(const float* input, const size_t n, uint64_t* output) {
+void packbits_arm32(const float* input, const std::size_t n,
+                    std::uint64_t* output) {
   //
   // This is *not* yet valid bitpacking code.
   //
@@ -20,7 +21,7 @@ void packbits_arm32(const float* input, const size_t n, uint64_t* output) {
   // Interpreted as if output and input are both uint32_t
   //
 
-  size_t packed_elements = (n + 63) / 64;
+  std::size_t packed_elements = (n + 63) / 64;
   asm volatile(
       // Prefetch memory. %0 is input pointer
       "pld [%0] \n"

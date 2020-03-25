@@ -20,12 +20,12 @@ void test_bitpacking_nonuniform_input_rowwise() {
   const auto bitpacking_axis = ce::core::Axis::RowWise;
 
   // input matrix (row-major memory laytout)
-  const size_t num_rows = 2, num_cols = 8;
+  const std::size_t num_rows = 2, num_cols = 8;
   std::array<TIn, 16> input{1, 1,  -1, 1,  -1, -1, -1, 1,
                             1, -1, 1,  -1, -1, -1, 1,  1};
 
   // expected output matrix after bitpacking
-  const size_t expected_num_rows = 2, expected_num_cols = 1;
+  const std::size_t expected_num_rows = 2, expected_num_cols = 1;
   std::vector<std::uint8_t> expected;
   if (CE_IS_BIG_ENDIAN)
     expected = {0b00101110, 0b01011100};
@@ -33,7 +33,7 @@ void test_bitpacking_nonuniform_input_rowwise() {
     expected = {0b01110100, 0b00111010};
 
   std::vector<std::uint8_t> output;
-  size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
+  std::size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
   ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
       input.data(), num_rows, num_cols, output, num_rows_bp, num_cols_bp,
       bitpadding, bitpacking_axis);
@@ -49,12 +49,12 @@ void test_bitpacking_nonuniform_input_colwise() {
   const auto bitpacking_axis = ce::core::Axis::ColWise;
 
   // input matrix (row-major memory laytout)
-  const size_t num_rows = 8, num_cols = 2;
+  const std::size_t num_rows = 8, num_cols = 2;
   std::array<TIn, 16> input{1,  1,  1,  -1, -1, 1, 1, -1,
                             -1, -1, -1, -1, -1, 1, 1, 1};
 
   // expected output matrix after bitpacking
-  const size_t expected_num_rows = 1, expected_num_cols = 2;
+  const std::size_t expected_num_rows = 1, expected_num_cols = 2;
   std::vector<std::uint8_t> expected;
   if (CE_IS_BIG_ENDIAN)
     expected = {0b00101110, 0b01011100};
@@ -62,7 +62,7 @@ void test_bitpacking_nonuniform_input_colwise() {
     expected = {0b01110100, 0b00111010};
 
   std::vector<std::uint8_t> output;
-  size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
+  std::size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
   ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
       input.data(), num_rows, num_cols, output, num_rows_bp, num_cols_bp,
       bitpadding, bitpacking_axis);
@@ -73,24 +73,24 @@ void test_bitpacking_nonuniform_input_colwise() {
   EXPECT_THAT(output, ::testing::ElementsAreArray(expected));
 }
 
-template <class TIn, class TOut, size_t num_rows, size_t num_cols>
+template <class TIn, class TOut, std::size_t num_rows, std::size_t num_cols>
 void test_bitpacking(const ce::core::Axis bitpacking_axis,
-                     const size_t expected_num_rows,
-                     const size_t expected_num_cols) {
-  const size_t bitwidth = std::numeric_limits<TOut>::digits;
+                     const std::size_t expected_num_rows,
+                     const std::size_t expected_num_cols) {
+  const std::size_t bitwidth = std::numeric_limits<TOut>::digits;
 
-  const size_t num_elems = num_rows * num_cols;
+  const std::size_t num_elems = num_rows * num_cols;
   std::array<TIn, num_elems> input;
   input.fill(-1);
 
   std::vector<TOut> output;
-  size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
+  std::size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
   ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
       input.data(), num_rows, num_cols, output, num_rows_bp, num_cols_bp,
       bitpadding, bitpacking_axis);
 
   TOut expected_value = std::numeric_limits<TOut>::max();
-  const size_t num_elems_bp = num_elems / bitwidth;
+  const std::size_t num_elems_bp = num_elems / bitwidth;
   std::array<TOut, num_elems_bp> expected;
   expected.fill(expected_value);
 
@@ -142,8 +142,8 @@ TEST(BitpackingWithBitPaddingTests, RowMajorPadding) {
                            -1, 1,  -1, 1,  1, 1, -1, -1, 1};
 
   // expected output matrix after bitpacking
-  const size_t expected_num_rows = 2;
-  const size_t expected_num_cols = 2;
+  const std::size_t expected_num_rows = 2;
+  const std::size_t expected_num_cols = 2;
   std::vector<std::uint8_t> expected;
   if (CE_IS_BIG_ENDIAN)
     expected = {0b11010001, 0b10000000, 0b10100011, 0b00000000};
@@ -151,7 +151,7 @@ TEST(BitpackingWithBitPaddingTests, RowMajorPadding) {
     expected = {0b10001011, 0b00000001, 0b11000101, 0b00000000};
 
   std::vector<std::uint8_t> output;
-  size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
+  std::size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
   ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
       input.data(), num_rows, num_cols, output, num_rows_bp, num_cols_bp,
       bitpadding, bitpacking_axis);
@@ -172,8 +172,8 @@ TEST(BitpackingWithBitPaddingTests, ColMajorPadding) {
                            1,  1,  1,  1, -1, -1, -1, -1, 1};
 
   // expected output matrix after bitpacking
-  const size_t expected_num_rows = 2;
-  const size_t expected_num_cols = 2;
+  const std::size_t expected_num_rows = 2;
+  const std::size_t expected_num_cols = 2;
   std::vector<std::uint8_t> expected;
   if (CE_IS_BIG_ENDIAN)
     expected = {0b11010001, 0b10100011, 0b10000000, 0b00000000};
@@ -181,7 +181,7 @@ TEST(BitpackingWithBitPaddingTests, ColMajorPadding) {
     expected = {0b10001011, 0b11000101, 0b00000001, 0b00000000};
 
   std::vector<std::uint8_t> output;
-  size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
+  std::size_t num_rows_bp = 0, num_cols_bp = 0, bitpadding = 0;
   ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
       input.data(), num_rows, num_cols, output, num_rows_bp, num_cols_bp,
       bitpadding, bitpacking_axis);

@@ -28,7 +28,7 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
   const int dilation_width_factor = params.dilation_width_factor;
   const int dilation_height_factor = params.dilation_height_factor;
 
-  const uint8 zero_byte = 0x00;
+  const std::uint8_t zero_byte = 0x00;
   const int filter_height = filter_shape.Dims(1);
   const int filter_width = filter_shape.Dims(2);
 
@@ -39,6 +39,7 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
 
   const RuntimeShape* shape = nullptr;
   if (need_dilated_im2col) {
+    TF_LITE_ASSERT(im2col_data);
     optimized_ops::DilatedIm2col<T>(params, zero_byte, input_shape, input_data,
                                     filter_shape, output_shape, im2col_data);
     *result_data = im2col_data;
