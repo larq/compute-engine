@@ -70,6 +70,23 @@ The following optional parameters can be used to modify the inference runtime:
 
 ## Running the binary
 
+### Preparation
+
+(1) Download and extract the ImageNet validation images, as JPEGs, into a
+    folder.
+
+(2) Download the ground truth labels `.txt` file:
+
+    ```bash
+    wget https://raw.githubusercontent.com/tensorflow/datasets/master/tensorflow_datasets/image/imagenet2012_validation_labels.txt -O ground_truth_labels.txt
+    ````
+
+(3) Download the model output labels `.txt` file:
+
+    ```bash
+    wget https://raw.githubusercontent.com/tensorflow/datasets/master/tensorflow_datasets/image/imagenet2012_labels.txt -O model_output_labels.txt
+    ```
+
 ### On Android
 
 (0) Refer to https://docs.larq.dev/compute-engine/quickstart_android/ for configuring NDK and SDK.
@@ -111,7 +128,7 @@ adb push ${IMAGES_DIR} /data/local/tmp/ilsvrc_images
 (6) Push the generated validation ground labels to device.
 
 ```
-adb push ${GROUND_TRUTH_LABELS_TXT} /data/local/tmp/ilsvrc_validation_labels.txt
+adb push ${GROUND_TRUTH_LABELS_TXT} /data/local/tmp/ground_truth_labels.txt
 ```
 
 (7) Push the model labels text file to device.
@@ -126,7 +143,7 @@ adb push ${MODEL_LABELS_TXT} /data/local/tmp/model_output_labels.txt
 adb shell /data/local/tmp/imagenet_accuracy_eval \
   --model_file=/data/local/tmp/quicknet.tflite \
   --ground_truth_images_path=/data/local/tmp/ilsvrc_images \
-  --ground_truth_labels=/data/local/tmp/ilsvrc_validation_labels.txt \
+  --ground_truth_labels=/data/local/tmp/ground_truth_labels.txt \
   --model_output_labels=/data/local/tmp/model_output_labels.txt \
   --output_file_path=/data/local/tmp/accuracy_output.txt \
   --num_images=0 # Run on all images.
