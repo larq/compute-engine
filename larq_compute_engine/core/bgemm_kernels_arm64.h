@@ -188,15 +188,8 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "ldr w12, [%[params], #" RUY_STR(RUY_OFFSET_DEPTH) "]\n"
 
       // Load the first 64 bytes of LHS and RHS data.
-      "ld1 {v0.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v1.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v2.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v3.4s}, [%[lhs_ptr]], #16\n"
-
-      "ld1 {v4.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v5.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v6.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v7.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[lhs_ptr]], #64\n"
+      "ld1 {v4.4s, v5.4s, v6.4s, v7.4s}, [%[rhs_ptr]], #64\n"
 
       // Clear accumulators.
       RUY_MAKE_ZERO(v16)
@@ -223,15 +216,8 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "beq 79f\n"
 
       "2:\n"
-      "ld1 {v0.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v1.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v2.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v3.4s}, [%[lhs_ptr]], #16\n"
-
-      "ld1 {v4.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v5.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v6.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v7.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[lhs_ptr]], #64\n"
+      "ld1 {v4.4s, v5.4s, v6.4s, v7.4s}, [%[rhs_ptr]], #64\n"
 
       "add w1, w1, #4\n"
       "cmp w1, w12\n"
@@ -310,15 +296,8 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       // main loop will need to load, we start loading the first 64 bytes of
       // each of LHS and RHS, into v0 -- v3 and v4 -- v7 as we don't need
       // them anymore in the rest of the work on the current block.
-      "ld1 {v0.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v1.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v2.4s}, [%[lhs_ptr]], #16\n"
-      "ld1 {v3.4s}, [%[lhs_ptr]], #16\n"
-
-      "ld1 {v4.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v5.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v6.4s}, [%[rhs_ptr]], #16\n"
-      "ld1 {v7.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[lhs_ptr]], #64\n"
+      "ld1 {v4.4s, v5.4s, v6.4s, v7.4s}, [%[rhs_ptr]], #64\n"
 
       // Perform the backtransformation (in int32)
       "shl v16.4s, v16.4s, #1\n"
@@ -607,15 +586,8 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       RUY_MAKE_ZERO(v27)
 
       // Load the first 64 bytes of LHS and RHS data.
-      "ld1 {v0.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v1.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v2.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v3.2d}, [%[lhs_ptr]], #16\n"
-
-      "ld1 {v4.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v5.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v6.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v7.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v0.2d, v1.2d, v2.2d, v3.2d}, [%[lhs_ptr]], #64\n"
+      "ld1 {v4.2d, v5.2d, v6.2d, v7.2d}, [%[rhs_ptr]], #64\n"
 
       // w1 is the number of levels of depth that we have already loaded
       // LHS and RHS data for.
@@ -635,15 +607,9 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       "and w2, w12, #-4\n"
 
       // Load the next 64 bytes of LHS and RHS data.
-      "ld1 {v8.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v9.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v10.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v11.2d}, [%[lhs_ptr]], #16\n"
+      "ld1 {v8.2d, v9.2d, v10.2d, v11.2d}, [%[lhs_ptr]], #64\n"
+      "ld1 {v12.2d, v13.2d, v14.2d, v15.2d}, [%[rhs_ptr]], #64\n"
 
-      "ld1 {v12.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v13.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v14.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v15.2d}, [%[rhs_ptr]], #16\n"
       "mov w1, #4\n"
 
       "80:\n"
@@ -764,15 +730,8 @@ void BinaryKernelNeonOutOfOrder64BP4x4(
       // main loop will need to load, we start loading the first 64 bytes of
       // each of LHS and RHS, into v0 -- v3 and v4 -- v7 as we don't need
       // them anymore in the rest of the work on the current block.
-      "ld1 {v0.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v1.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v2.2d}, [%[lhs_ptr]], #16\n"
-      "ld1 {v3.2d}, [%[lhs_ptr]], #16\n"
-
-      "ld1 {v4.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v5.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v6.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v7.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v0.2d, v1.2d, v2.2d, v3.2d}, [%[lhs_ptr]], #64\n"
+      "ld1 {v4.2d, v5.2d, v6.2d, v7.2d}, [%[rhs_ptr]], #64\n"
 
       // Perform the backtransformation (in int32)
       "shl v24.4s, v24.4s, #1\n"
