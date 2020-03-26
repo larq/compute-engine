@@ -79,7 +79,7 @@ The following optional parameters can be used to modify the inference runtime:
 
     ```bash
     wget https://raw.githubusercontent.com/tensorflow/datasets/master/tensorflow_datasets/image/imagenet2012_validation_labels.txt -O ground_truth_labels.txt
-    ````
+    ```
 
 (3) Download the model output labels `.txt` file:
 
