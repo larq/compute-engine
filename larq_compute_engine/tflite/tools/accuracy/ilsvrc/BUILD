@@ -21,14 +21,13 @@ cc_library(
     hdrs = ["imagenet_model_evaluator.h"],
     copts = tflite_copts(),
     deps = [
+        "//larq_compute_engine/tflite/tools/evaluation/stages:image_classification_stage",
         "@org_tensorflow//tensorflow/core:tflite_portable_logging",
         "@org_tensorflow//tensorflow/lite/c:c_api_internal",
         "@org_tensorflow//tensorflow/lite/tools:command_line_flags",
-        "@org_tensorflow//tensorflow/lite/tools/accuracy/ilsvrc/default:custom_delegates",
         "@org_tensorflow//tensorflow/lite/tools/evaluation:utils",
         "@org_tensorflow//tensorflow/lite/tools/evaluation/proto:evaluation_config_cc_proto",
         "@org_tensorflow//tensorflow/lite/tools/evaluation/proto:evaluation_stages_cc_proto",
-        "@org_tensorflow//tensorflow/lite/tools/evaluation/stages:image_classification_stage",
         "@com_google_absl//absl/memory",
     ],
 )

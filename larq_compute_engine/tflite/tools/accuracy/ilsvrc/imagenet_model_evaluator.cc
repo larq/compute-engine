@@ -1,4 +1,5 @@
 /* Copyright 2018 The TensorFlow Authors. All Rights Reserved.
+Modifications copyright (C) 2020 Larq Contributors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,13 +24,12 @@ limitations under the License.
 #include <vector>
 
 #include "absl/memory/memory.h"
+#include "larq_compute_engine/tflite/tools/evaluation/stages/image_classification_stage.h"
 #include "tensorflow/core/platform/logging.h"
 #include "tensorflow/lite/c/c_api_internal.h"
-#include "tensorflow/lite/tools/accuracy/ilsvrc/default/custom_delegates.h"
 #include "tensorflow/lite/tools/command_line_flags.h"
 #include "tensorflow/lite/tools/evaluation/proto/evaluation_config.pb.h"
 #include "tensorflow/lite/tools/evaluation/proto/evaluation_stages.pb.h"
-#include "tensorflow/lite/tools/evaluation/stages/image_classification_stage.h"
 #include "tensorflow/lite/tools/evaluation/utils.h"
 
 namespace {
@@ -183,8 +183,12 @@ TfLiteStatus EvaluateModelForShard(const uint64_t shard_id,
   eval.SetAllLabels(model_labels);
   TF_LITE_ENSURE_STATUS(eval.Init());
 
+  /* This call is disabled here because we aren't using this feature, and
+     keeping it enabled would require copying further code from TFLite into
+     this repo for no gain.
   TF_LITE_ENSURE_STATUS(tflite::evaluation::ApplyCustomDelegates(
       params.delegate, params.num_interpreter_threads, &eval));
+  */
 
   for (const auto& image_label : image_labels) {
     eval.SetInputs(image_label.image, image_label.label);
@@ -240,7 +244,7 @@ TfLiteStatus ImagenetModelEvaluator::EvaluateModel() const {
     LOG(ERROR) << "Could not read: " << params_.model_output_labels_path;
     return kTfLiteError;
   }
-  if (model_labels.size() != 1001) {
+  if (model_labels.size() != 1000) {
     LOG(ERROR) << "Invalid number of labels: " << model_labels.size();
     return kTfLiteError;
   }
