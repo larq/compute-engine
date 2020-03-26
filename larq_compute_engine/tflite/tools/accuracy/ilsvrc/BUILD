@@ -34,7 +34,7 @@ cc_library(
 
 cc_binary(
     name = "imagenet_accuracy_eval",
-    srcs = ["imagenet_accuracy_eval.cc"],
+    srcs = ["@org_tensorflow//tensorflow/lite/tools/accuracy/ilsvrc:imagenet_accuracy_eval.cc"],
     copts = tflite_copts(),
     linkopts = common_linkopts,
     deps = [
