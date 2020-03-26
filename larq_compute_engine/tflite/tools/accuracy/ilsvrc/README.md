@@ -77,15 +77,15 @@ The following optional parameters can be used to modify the inference runtime:
 
 (2) Download the ground truth labels `.txt` file:
 
-    ```bash
-    wget https://raw.githubusercontent.com/tensorflow/datasets/master/tensorflow_datasets/image/imagenet2012_validation_labels.txt -O ground_truth_labels.txt
-    ```
+```bash
+wget https://raw.githubusercontent.com/tensorflow/datasets/master/tensorflow_datasets/image/imagenet2012_validation_labels.txt -O ground_truth_labels.txt
+```
 
 (3) Download the model output labels `.txt` file:
 
-    ```bash
-    wget https://raw.githubusercontent.com/tensorflow/datasets/master/tensorflow_datasets/image/imagenet2012_labels.txt -O model_output_labels.txt
-    ```
+```bash
+wget https://raw.githubusercontent.com/tensorflow/datasets/master/tensorflow_datasets/image/imagenet2012_labels.txt -O model_output_labels.txt
+```
 
 ### On Android
 
