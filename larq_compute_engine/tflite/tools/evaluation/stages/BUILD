@@ -84,13 +84,13 @@ cc_library(
     hdrs = ["image_classification_stage.h"],
     copts = tflite_copts(),
     deps = [
-        ":tflite_inference_stage",
         ":image_preprocessing_stage",
-        "@org_tensorflow//tensorflow/lite/tools/evaluation/stages:topk_accuracy_eval_stage",
+        ":tflite_inference_stage",
         "@org_tensorflow//tensorflow/core:tflite_portable_logging",
         "@org_tensorflow//tensorflow/lite/tools/evaluation:evaluation_stage",
         "@org_tensorflow//tensorflow/lite/tools/evaluation:utils",
         "@org_tensorflow//tensorflow/lite/tools/evaluation/proto:evaluation_config_cc_proto",
         "@org_tensorflow//tensorflow/lite/tools/evaluation/proto:evaluation_stages_cc_proto",
+        "@org_tensorflow//tensorflow/lite/tools/evaluation/stages:topk_accuracy_eval_stage",
     ],
 )
