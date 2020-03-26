@@ -2,6 +2,7 @@
 
 #include "bconv2d_impl.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
+#include "larq_compute_engine/core/bconv2d_impl_ref.h"
 #include "larq_compute_engine/core/padding_functor.h"
 #include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
@@ -23,6 +24,9 @@ namespace bconv2d {
 using ::compute_engine::core::Layout;
 
 enum class KernelType {
+  // kGenericRef: the impl. path using reference implementation without im2col
+  kGenericRef,
+
   // kGenericOptimized: the impl. path using reference BGEMM kernels in RUY.
   // TODO(arashb): the generic optimized needs to be redirected to the
   // reference impl. of RUY kernels.
@@ -519,6 +523,35 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
       CpuBackendContext::GetFromContext(context));
 }
 
+template <class T, class TBitpacked>
+void EvalRef(TfLiteContext* context, TfLiteNode* node,
+             TfLiteBConv2DParams* params) {
+  const auto* input = GetInput(context, node, 0);
+  const auto* filter = GetInput(context, node, 1);
+  const auto* post_activation_multiplier = GetInput(context, node, 2);
+  const auto* post_activation_bias = GetInput(context, node, 3);
+  auto* output = GetOutput(context, node, 0);
+
+  // Using the standard TF Lite ConvParams struct.
+  // This requires extra step of converting the TfLiteBConv2DParams
+  // but unifies the interface with the default TF lite API for CONV params
+  // which is used in internal TF lite im2col functions.
+  ConvParams op_params;
+  GetConvParamsType(*params, op_params);
+
+  TfLiteTensor* im2col = nullptr;
+  ce::ref::BConv2D<T, TBitpacked>(
+      op_params, GetTensorShape(input), GetTensorData<T>(input),
+      GetTensorShape(filter),
+      reinterpret_cast<TBitpacked*>(params->filter_packed.data()),
+      GetTensorData<float>(post_activation_multiplier),
+      GetTensorData<float>(post_activation_bias), GetTensorShape(output),
+      GetTensorData<T>(output), GetTensorShape(im2col),
+      GetTensorData<T>(im2col), false /*bitpack before im2col*/,
+      nullptr /*padding buffer*/, params->pad_value,
+      nullptr /*cpu backend context*/);
+}
+
 template <KernelType kernel_type>
 TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   auto* conv_params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
@@ -532,10 +565,36 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
         EvalOpt<float, std::uint64_t>(context, node, conv_params);
         return kTfLiteOk;
     }
+  } else if (kernel_type == KernelType::kGenericRef) {
+    switch (conv_params->bitpacking_bitwidth) {
+      case 32:
+        EvalRef<float, std::uint32_t>(context, node, conv_params);
+        return kTfLiteOk;
+      case 64:
+        EvalRef<float, std::uint64_t>(context, node, conv_params);
+        return kTfLiteOk;
+    }
   }
+
   return kTfLiteError;
 }
 }  // namespace bconv2d
+
+TfLiteRegistration* Register_BCONV_2D32_REF() {
+  static TfLiteRegistration r = {
+      bconv2d::Init, bconv2d::Free,
+      bconv2d::Prepare<bconv2d::KernelType::kGenericRef, 32>,
+      bconv2d::Eval<bconv2d::KernelType::kGenericRef>};
+  return &r;
+}
+
+TfLiteRegistration* Register_BCONV_2D64_REF() {
+  static TfLiteRegistration r = {
+      bconv2d::Init, bconv2d::Free,
+      bconv2d::Prepare<bconv2d::KernelType::kGenericRef, 64>,
+      bconv2d::Eval<bconv2d::KernelType::kGenericRef>};
+  return &r;
+}
 
 TfLiteRegistration* Register_BCONV_2D32_OPT() {
   static TfLiteRegistration r = {
@@ -556,13 +615,21 @@ TfLiteRegistration* Register_BCONV_2D64_OPT() {
 // Use this registration wrapper to decide which impl. to use.
 TfLiteRegistration* Register_BCONV_2D() {
 #if defined TFLITE_WITH_RUY
+
 #if RUY_PLATFORM(ARM_32)
   return Register_BCONV_2D32_OPT();
 #else  // ARM 64 and x86
   return Register_BCONV_2D64_OPT();
 #endif
+
 #else  // disabled TFLITE_WITH_RUY
-  static_assert(false, "LCE needs to be compiled with TFLite RUY activated.");
+
+#if RUY_PLATFORM(ARM_32)
+  return Register_BCONV_2D32_REF();
+#else  // ARM 64 and x86
+  return Register_BCONV_2D64_REF();
+#endif
+
 #endif
 }
 
