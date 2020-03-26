@@ -12,6 +12,7 @@
 #include "tensorflow/compiler/mlir/lite/flatbuffer_translate.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/import_model.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/mlir_roundtrip_flags.h"
+#include "tensorflow/compiler/mlir/tensorflow/utils/error_util.h"
 #include "tensorflow/compiler/mlir/tensorflow/utils/import_utils.h"
 #include "tensorflow/core/framework/graph.pb.h"
 #include "tensorflow/core/protobuf/graph_debug_info.pb.h"
@@ -47,6 +48,8 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
 
   mlir::MLIRContext context;
   GraphDebugInfo debug_info;
+  mlir::StatusScopedDiagnosticHandler statusHandler(&context,
+                                                    /*propagate=*/true);
   auto module = ConvertGraphdefToMlir(graphdef, debug_info, specs, &context);
 
   if (!module.ok()) {
