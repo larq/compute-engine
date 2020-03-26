@@ -3,6 +3,7 @@
 
 #include "larq_compute_engine/core/bgemm_impl.h"
 #include "larq_compute_engine/core/packbits.h"
+#include "larq_compute_engine/core/packbits_utils.h"
 #include "larq_compute_engine/core/padding_functor.h"
 #include "profiling/instrumentation.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
@@ -10,7 +11,6 @@
 #include "tensorflow/lite/kernels/internal/optimized/im2col_utils.h"
 #include "tensorflow/lite/kernels/internal/types.h"
 #include "tensorflow/lite/kernels/padding.h"
-#include "utils.h"
 
 using namespace tflite;
 

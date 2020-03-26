@@ -43,6 +43,14 @@ cc_library(
 )
 
 cc_library(
+    name = "packbits_utils",
+    hdrs = ["packbits_utils.h"],
+    deps = [
+        ":packbits",
+    ],
+)
+
+cc_library(
     name = "padding_functor",
     hdrs = ["padding_functor.h"],
 )
