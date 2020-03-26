@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "larq_compute_engine/tflite/tools/accuracy/ilsvrc/imagenet_model_evaluator.h"
+#include "tensorflow/lite/tools/accuracy/ilsvrc/imagenet_model_evaluator.h"
 
 #include <fstream>
 #include <iomanip>
@@ -24,12 +24,12 @@ limitations under the License.
 #include <vector>
 
 #include "absl/memory/memory.h"
-#include "larq_compute_engine/tflite/tools/evaluation/stages/image_classification_stage.h"
 #include "tensorflow/core/platform/logging.h"
 #include "tensorflow/lite/c/c_api_internal.h"
 #include "tensorflow/lite/tools/command_line_flags.h"
 #include "tensorflow/lite/tools/evaluation/proto/evaluation_config.pb.h"
 #include "tensorflow/lite/tools/evaluation/proto/evaluation_stages.pb.h"
+#include "tensorflow/lite/tools/evaluation/stages/image_classification_stage.h"
 #include "tensorflow/lite/tools/evaluation/utils.h"
 
 namespace {

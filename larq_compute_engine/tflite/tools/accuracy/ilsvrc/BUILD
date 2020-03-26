@@ -18,7 +18,7 @@ common_linkopts = tflite_linkopts() + select({
 cc_library(
     name = "imagenet_model_evaluator",
     srcs = ["imagenet_model_evaluator.cc"],
-    hdrs = ["imagenet_model_evaluator.h"],
+    hdrs = ["@org_tensorflow//tensorflow/lite/tools/accuracy/ilsvrc:imagenet_model_evaluator.h"],
     copts = tflite_copts(),
     deps = [
         "//larq_compute_engine/tflite/tools/evaluation/stages:image_classification_stage",

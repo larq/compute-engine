@@ -17,7 +17,7 @@ limitations under the License.
 // This file has been modified to hard-code Larq image normalisation
 // (mean-centred, scaled by the inverse standard deviation).
 
-#include "larq_compute_engine/tflite/tools/evaluation/stages/image_preprocessing_stage.h"
+#include "tensorflow/lite/tools/evaluation/stages/image_preprocessing_stage.h"
 
 #include <cmath>
 #include <cstdint>

@@ -16,7 +16,7 @@ limitations under the License.
 
 // This file has been modified to register the LCE custom ops.
 
-#include "larq_compute_engine/tflite/tools/evaluation/stages/tflite_inference_stage.h"
+#include "tensorflow/lite/tools/evaluation/stages/tflite_inference_stage.h"
 
 #include <cstring>
 #include <fstream>

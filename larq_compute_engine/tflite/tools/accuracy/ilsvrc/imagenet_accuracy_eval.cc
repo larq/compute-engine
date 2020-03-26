@@ -21,11 +21,11 @@ limitations under the License.
 #include <string>
 
 #include "absl/memory/memory.h"
-#include "larq_compute_engine/tflite/tools/accuracy/ilsvrc/imagenet_model_evaluator.h"
 #include "tensorflow/core/platform/logging.h"
 #include "tensorflow/lite/c/c_api_internal.h"
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/accuracy/csv_writer.h"
+#include "tensorflow/lite/tools/accuracy/ilsvrc/imagenet_model_evaluator.h"
 #include "tensorflow/lite/tools/command_line_flags.h"
 #include "tensorflow/lite/tools/evaluation/proto/evaluation_stages.pb.h"
 

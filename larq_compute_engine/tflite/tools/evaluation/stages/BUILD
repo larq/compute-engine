@@ -36,7 +36,7 @@ exports_files(glob([
 cc_library(
     name = "image_preprocessing_stage",
     srcs = ["image_preprocessing_stage.cc"],
-    hdrs = ["image_preprocessing_stage.h"],
+    hdrs = ["@org_tensorflow//tensorflow/lite/tools/evaluation/stages:image_preprocessing_stage.h"],
     copts = tflite_copts(),
     deps = [
         "@com_google_absl//absl/base",
@@ -61,7 +61,7 @@ cc_library(
 cc_library(
     name = "tflite_inference_stage",
     srcs = ["tflite_inference_stage.cc"],
-    hdrs = ["tflite_inference_stage.h"],
+    hdrs = ["@org_tensorflow//tensorflow/lite/tools/evaluation/stages:tflite_inference_stage.h"],
     copts = tflite_copts(),
     deps = [
         "//larq_compute_engine/tflite/kernels:lce_op_kernels",
@@ -80,8 +80,8 @@ cc_library(
 
 cc_library(
     name = "image_classification_stage",
-    srcs = ["image_classification_stage.cc"],
-    hdrs = ["image_classification_stage.h"],
+    srcs = ["@org_tensorflow//tensorflow/lite/tools/evaluation/stages:image_classification_stage.cc"],
+    hdrs = ["@org_tensorflow//tensorflow/lite/tools/evaluation/stages:image_classification_stage.h"],
     copts = tflite_copts(),
     deps = [
         ":image_preprocessing_stage",
