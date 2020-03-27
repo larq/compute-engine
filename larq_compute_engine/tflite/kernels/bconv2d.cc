@@ -163,7 +163,7 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
     conv_params->activation = kTfLiteActNone;
   } else if (m["activation"].ToString() == "RELU") {
     conv_params->activation = kTfLiteActRelu;
-  } else if (m["activation"].ToString() == "RELU1") {
+  } else if (m["activation"].ToString() == "RELU_N1_TO_1") {
     conv_params->activation = kTfLiteActRelu1;
   } else if (m["activation"].ToString() == "RELU6") {
     conv_params->activation = kTfLiteActRelu6;
