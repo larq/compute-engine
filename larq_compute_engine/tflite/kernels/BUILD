@@ -15,6 +15,7 @@ cc_library(
     deps = [
         "//larq_compute_engine/core:bgemm_impl",
         "//larq_compute_engine/core:packbits",
+        "//larq_compute_engine/core:packbits_utils",
         "//larq_compute_engine/core:padding_functor",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
@@ -31,7 +32,6 @@ cc_library(
     ],
     hdrs = [
         "lce_ops_register.h",
-        "utils.h",
     ],
     copts = tflite_copts() + tf_opts_nortti_if_android(),
     deps = [

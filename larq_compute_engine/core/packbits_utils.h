@@ -1,3 +1,6 @@
+#ifndef COMPUTE_ENGINE_CORE_PACKBITS_UTILS_H_
+#define COMPUTE_ENGINE_CORE_PACKBITS_UTILS_H_
+
 #include "larq_compute_engine/core/packbits.h"
 #include "profiling/instrumentation.h"
 #include "tensorflow/lite/kernels/internal/types.h"
@@ -47,3 +50,5 @@ RuntimeShape packed_shape(const RuntimeShape& in_shape) {
 
 }  // namespace tflite
 }  // namespace compute_engine
+
+#endif  // COMPUTE_ENGINE_CORE_PACKBITS_UTILS_H_
