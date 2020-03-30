@@ -14,7 +14,7 @@ trap "rm -rf $TMPDIR" EXIT
 AAR_NAME=lce-lite
 VERSION=$(git describe --tags)
 
-BUILDER="${BUILDER:-bazelisk}"
+BUILDER="${BUILDER:-bazel}"
 BASEDIR=larq_compute_engine/tflite
 CROSSTOOL="//external:android/crosstool"
 HOST_CROSSTOOL="@bazel_tools//tools/cpp:toolchain"
