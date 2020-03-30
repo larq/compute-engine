@@ -64,9 +64,9 @@ board:
 
 | Model                                                                                                                 | Top-1 Accuracy | RPi 4 B, ms (4 threads) | Pixel 1, ms (4 threads) |
 | ------------------------------------------------------------------------------------------------                      | :------------: | :---------------------: | :---------------------: |
-| [QuickNet](https://docs.larq.dev/zoo/api/sota/#quicknet) ([.h5](https://github.com/larq/zoo/releases/download/quicknet-v0.2.0/quicknet_weights.h5))                   | 58.7 %         | 21.7                    | 11.6                    |
-| [QuickNet-Large](https://docs.larq.dev/zoo/api/sota/#quicknetlarge) ([.h5](https://github.com/larq/zoo/releases/download/quicknet_large-v0.2.0/quicknet_large_weights.h5)) | 62.8 %         | 31.8                    | 16.9                    |
-| [QuickNet-XL](https://docs.larq.dev/zoo/api/sota/#quicknetxl) ([.h5](https://github.com/larq/zoo/releases/download/quicknet_xl-v0.1.0/quicknet_xl_weights.h5))                                                                                         | 67.1 %         | 52.4                    | 29.7                    |
+| [QuickNet](https://docs.larq.dev/zoo/api/sota/#quicknet) ([.h5](https://github.com/larq/zoo/releases/download/quicknet-v0.2.0/quicknet_weights.h5))                   | 58.6 %         | 21.7                    | 11.6                    |
+| [QuickNet-Large](https://docs.larq.dev/zoo/api/sota/#quicknetlarge) ([.h5](https://github.com/larq/zoo/releases/download/quicknet_large-v0.2.0/quicknet_large_weights.h5)) | 62.7 %         | 31.8                    | 16.9                    |
+| [QuickNet-XL](https://docs.larq.dev/zoo/api/sota/#quicknetxl) ([.h5](https://github.com/larq/zoo/releases/download/quicknet_xl-v0.1.0/quicknet_xl_weights.h5))                                                                                         | 67.0 %         | 52.4                    | 29.7                    |
 
 
 Benchmarked on March 20th, 2020 with LCE custom
