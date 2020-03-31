@@ -293,7 +293,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
 
   if (kernel_type == KernelType::kGenericRef) {
     // We require 32-bit bitpacking in the reference implementation
-    TF_LITE_ENSURE_EQ(conv_params->bitpacking_bitwidth, 32);
+    TF_LITE_ENSURE_EQ(context, conv_params->bitpacking_bitwidth, 32);
     // We only support one-padding or valid-padding in the reference
     // implementation
     TF_LITE_ENSURE(context, !(conv_params->pad_value == 0 &&
