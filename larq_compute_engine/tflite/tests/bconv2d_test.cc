@@ -167,7 +167,6 @@ namespace compute_engine {
 namespace tflite {
 
 TfLiteRegistration* Register_BCONV_2D32_REF();
-TfLiteRegistration* Register_BCONV_2D64_REF();
 TfLiteRegistration* Register_BCONV_2D32_OPT();
 TfLiteRegistration* Register_BCONV_2D64_OPT();
 
@@ -335,8 +334,7 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
 };
 
 const auto kKernelMap = new std::map<string, register_function>({
-    // {"BConv2D32REF", compute_engine::tflite::Register_BCONV_2D32_REF},
-    // {"BConv2D64REF", compute_engine::tflite::Register_BCONV_2D64_REF},
+    {"BConv2D32REF", compute_engine::tflite::Register_BCONV_2D32_REF},
     {"BConv2D32OPT", compute_engine::tflite::Register_BCONV_2D32_OPT},
     {"BConv2D64OPT", compute_engine::tflite::Register_BCONV_2D64_OPT},
 });
@@ -421,6 +419,16 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   const int packed_num_elem =
       filter_count * filter_height * filter_width * packed_channels;
 
+  // the reference implementation only support one-padding
+  const auto is_reference_registration =
+      (registration == compute_engine::tflite::Register_BCONV_2D32_REF);
+
+  if ((padding == Padding_SAME && pad_values == 0) &&
+      is_reference_registration) {
+    GTEST_SKIP();
+    return;
+  }
+
   using T = float;
   std::vector<T> input_data, padded_input_data, filters_data;
   std::vector<T> post_activation_multiplier_data, post_activation_bias_data,
@@ -430,7 +438,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   filters_data.resize(filters_num_elem);
   packed_filters_data.resize(packed_num_elem);
   bias_data.resize(filter_count, 0);
-  post_activation_multiplier_data.resize(filter_count, 0);
+  post_activation_multiplier_data.resize(filter_count, 1);
   post_activation_bias_data.resize(filter_count, 0);
 
   std::random_device rd;

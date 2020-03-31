@@ -41,7 +41,6 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                     const RuntimeShape& im2col_shape, T* im2col_data,
                     bool bitpack_before_im2col, T* padding_buffer,
                     const int pad_value, void* cpu_backend_context) {
-  // TODO: generalize this
   using AccumScalar = std::int32_t;
   using DstScalar = T;
 
@@ -51,12 +50,14 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   const int dilation_height_factor = params.dilation_height_factor;
   const int pad_width = params.padding_values.width;
   const int pad_height = params.padding_values.height;
+  // TODO(tom): for the backtransform we need the raw filter shape before
+  // bitpacking currently this is already passed as input argument. In the
+  // future, we will change this and this line needs to adapt.
   // TODO: should the type be AccumScalar?
-  // packed_filter_shape.Dims(3) is bitpacked
-  // therefore we need to use the input_shape.Dims(3)
   const std::int32_t backtransform_add = packed_filter_shape.Dims(1) *
                                          packed_filter_shape.Dims(2) *
                                          input_shape.Dims(3);
+
   const auto* post_activation_multiplier = post_activation_multiplier_data;
   const auto* post_activation_bias = post_activation_bias_data;
   AccumScalar clamp_min = params.quantized_activation_min;
@@ -66,7 +67,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   TFLITE_DCHECK_EQ(packed_filter_shape.DimensionsCount(), 4);
   TFLITE_DCHECK_EQ(output_shape.DimensionsCount(), 4);
 
-  // Buffer for bitpacked input data
+  // bitpack input data
   static std::vector<TBitpacked> packed_input_data;
   RuntimeShape packed_input_shape;
   ce::core::packbits_tensor(input_shape, input_data, packed_input_shape,
@@ -84,7 +85,6 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   const int filter_width = packed_filter_shape.Dims(2);
   const int output_height = output_shape.Dims(1);
   const int output_width = output_shape.Dims(2);
-
   for (int batch = 0; batch < batches; ++batch) {
     for (int out_y = 0; out_y < output_height; ++out_y) {
       for (int out_x = 0; out_x < output_width; ++out_x) {
@@ -98,15 +98,14 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                 const int in_x = in_x_origin + dilation_width_factor * filter_x;
                 const int in_y =
                     in_y_origin + dilation_height_factor * filter_y;
-                // If the location is outside the bounds of the input image,
-                // use pad_value as default value.
-                float input_value = pad_value;
+                // pad_value is 0
+                TBitpacked input_value = 0;
                 if ((in_x >= 0) && (in_x < input_width) && (in_y >= 0) &&
                     (in_y < input_height)) {
-                  input_value = input_data[Offset(input_shape, batch, in_y,
-                                                  in_x, in_channel)];
+                  input_value = packed_input_data[Offset(
+                      packed_input_shape, batch, in_y, in_x, in_channel)];
                 }
-                float filter_value =
+                TBitpacked filter_value =
                     packed_filter_data[Offset(packed_filter_shape, out_channel,
                                               filter_y, filter_x, in_channel)];
                 accum += ce::core::xor_popcount<TBitpacked, AccumScalar>(

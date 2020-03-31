@@ -291,6 +291,13 @@ TfLiteStatus Prepare(KernelType kernel_type,
   // Decide if we do bitpacking before or after im2col
   decide_bitpack_before_im2col(conv_params);
 
+  if (kernel_type == KernelType::kGenericRef) {
+    // we only support one-padding in reference implementation
+    TF_LITE_ENSURE(context, !(conv_params->pad_value == 0 &&
+                              conv_params->padding_type ==
+                                  TfLitePadding::kTfLitePaddingSame));
+  }
+
   // pre-allocate temporary tensors for optimized version
   if (kernel_type == KernelType::kRuyOptimized) {
     conv_params->need_im2col =
@@ -542,8 +549,7 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   TfLiteTensor* im2col = nullptr;
   ce::ref::BConv2D<T, TBitpacked>(
       op_params, GetTensorShape(input), GetTensorData<T>(input),
-      GetTensorShape(filter),
-      reinterpret_cast<TBitpacked*>(params->filter_packed.data()),
+      GetTensorShape(filter), GetTensorData<TBitpacked>(filter),
       GetTensorData<float>(post_activation_multiplier),
       GetTensorData<float>(post_activation_bias), GetTensorShape(output),
       GetTensorData<T>(output), GetTensorShape(im2col),
@@ -588,14 +594,6 @@ TfLiteRegistration* Register_BCONV_2D32_REF() {
   return &r;
 }
 
-TfLiteRegistration* Register_BCONV_2D64_REF() {
-  static TfLiteRegistration r = {
-      bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kGenericRef, 64>,
-      bconv2d::Eval<bconv2d::KernelType::kGenericRef>};
-  return &r;
-}
-
 TfLiteRegistration* Register_BCONV_2D32_OPT() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
@@ -627,7 +625,9 @@ TfLiteRegistration* Register_BCONV_2D() {
 #if RUY_PLATFORM(ARM_32)
   return Register_BCONV_2D32_REF();
 #else  // ARM 64 and x86
-  return Register_BCONV_2D64_REF();
+  static_assert(false,
+                "LCE do not support 64-bit binary convolution kernel "
+                "implementation without TFLite RUY activated.");
 #endif
 
 #endif
