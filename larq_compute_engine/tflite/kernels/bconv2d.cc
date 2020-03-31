@@ -293,8 +293,9 @@ TfLiteStatus Prepare(KernelType kernel_type,
 
   if (kernel_type == KernelType::kGenericRef) {
     // We require 32-bit bitpacking in the reference implementation
-    TFLITE_ENSURE_EQ(conv_params->bitpacking_bitwidth, 32);
-    // We only support one-padding or valid-padding in the reference implementation
+    TF_LITE_ENSURE_EQ(conv_params->bitpacking_bitwidth, 32);
+    // We only support one-padding or valid-padding in the reference
+    // implementation
     TF_LITE_ENSURE(context, !(conv_params->pad_value == 0 &&
                               conv_params->padding_type ==
                                   TfLitePadding::kTfLitePaddingSame));
@@ -620,15 +621,11 @@ TfLiteRegistration* Register_BCONV_2D() {
 
 #else  // disabled TFLITE_WITH_RUY
 
-#if RUY_PLATFORM(ARM_32)
+  // When the RUY is disabled, we run the 32-bit reference implementation
+  // on both 32-bit and 64-bit architectures.
   return Register_BCONV_2D32_REF();
-#else  // ARM 64 and x86
-  static_assert(false,
-                "LCE does not support 64-bit binary convolution kernel "
-                "implementation without TFLite RUY activated.");
-#endif
 
-#endif
+#endif  // defined TFLITE_WITH_RUY
 }
 
 }  // namespace tflite
