@@ -31,8 +31,9 @@ namespace ce = compute_engine;
 namespace ref {
 
 template <class T, class TBitpacked>
-inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
-                    const T* input_data,
+inline void BConv2D(const ConvParams& params,
+                    const RuntimeShape& packed_input_shape,
+                    const TBitpacked* packed_input_data,
                     const RuntimeShape& packed_filter_shape,
                     const TBitpacked* packed_filter_data,
                     const float* post_activation_multiplier_data,
@@ -40,7 +41,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                     const RuntimeShape& output_shape, T* output_data,
                     const RuntimeShape& im2col_shape, T* im2col_data,
                     bool bitpack_before_im2col, T* padding_buffer,
-                    const int pad_value, void* cpu_backend_context) {
+                    const int pad_value, void* cpu_backend_context,
+                    const std::int32_t backtransform_add) {
   using AccumScalar = std::int32_t;
   using DstScalar = T;
 
@@ -50,28 +52,15 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   const int dilation_height_factor = params.dilation_height_factor;
   const int pad_width = params.padding_values.width;
   const int pad_height = params.padding_values.height;
-  // TODO(tom): for the backtransform we need the raw filter shape before
-  // bitpacking currently this is already passed as input argument. In the
-  // future, we will change this and this line needs to adapt.
-  // TODO: should the type be AccumScalar?
-  const std::int32_t backtransform_add = packed_filter_shape.Dims(1) *
-                                         packed_filter_shape.Dims(2) *
-                                         input_shape.Dims(3);
 
   const auto* post_activation_multiplier = post_activation_multiplier_data;
   const auto* post_activation_bias = post_activation_bias_data;
   AccumScalar clamp_min = params.quantized_activation_min;
   AccumScalar clamp_max = params.quantized_activation_max;
 
-  TFLITE_DCHECK_EQ(input_shape.DimensionsCount(), 4);
+  TFLITE_DCHECK_EQ(packed_input_shape.DimensionsCount(), 4);
   TFLITE_DCHECK_EQ(packed_filter_shape.DimensionsCount(), 4);
   TFLITE_DCHECK_EQ(output_shape.DimensionsCount(), 4);
-
-  // bitpack input data
-  static std::vector<TBitpacked> packed_input_data;
-  RuntimeShape packed_input_shape;
-  ce::core::packbits_tensor(input_shape, input_data, packed_input_shape,
-                            packed_input_data);
 
   (void)im2col_data;   // only used in optimized code.
   (void)im2col_shape;  // only used in optimized code.
