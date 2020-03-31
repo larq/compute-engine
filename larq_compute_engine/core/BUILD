@@ -135,3 +135,13 @@ cc_library(
         ":bgemm_ruy",
     ],
 )
+
+cc_library(
+    name = "bconv2d_impl_ref",
+    hdrs = [
+        "bconv2d_impl_ref.h",
+    ],
+    deps = [
+        ":bgemm_functor",
+    ],
+)

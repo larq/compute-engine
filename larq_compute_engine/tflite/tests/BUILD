@@ -5,7 +5,7 @@ package(
 
 cc_test(
     name = "bconv2d_test",
-    size = "small",
+    size = "medium",
     srcs = ["bconv2d_test.cc"],
     deps = [
         "//larq_compute_engine/tflite/kernels:lce_ops",

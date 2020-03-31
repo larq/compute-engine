@@ -36,6 +36,7 @@ cc_library(
     copts = tflite_copts() + tf_opts_nortti_if_android(),
     deps = [
         ":bconv2d_impl",
+        "//larq_compute_engine/core:bconv2d_impl_ref",
         "@flatbuffers",
         "@gemmlowp//:profiler",
         "@org_tensorflow//tensorflow/lite:framework",
