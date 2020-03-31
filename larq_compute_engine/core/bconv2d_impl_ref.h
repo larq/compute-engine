@@ -98,7 +98,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                 const int in_x = in_x_origin + dilation_width_factor * filter_x;
                 const int in_y =
                     in_y_origin + dilation_height_factor * filter_y;
-                // pad_value is 0
+                // `pad_value=1`, which means the bitpacked value is 0, so we set `input_value=0`
                 TBitpacked input_value = 0;
                 if ((in_x >= 0) && (in_x < input_width) && (in_y >= 0) &&
                     (in_y < input_height)) {
