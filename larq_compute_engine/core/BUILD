@@ -143,5 +143,6 @@ cc_library(
     ],
     deps = [
         ":bgemm_functor",
+        ":packbits_utils",
     ],
 )
