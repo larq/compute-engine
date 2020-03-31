@@ -572,13 +572,9 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
         return kTfLiteOk;
     }
   } else if (kernel_type == KernelType::kGenericRef) {
-    switch (conv_params->bitpacking_bitwidth) {
-      case 32:
-        EvalRef<float, std::uint32_t>(context, node, conv_params);
-        return kTfLiteOk;
-      case 64:
-        EvalRef<float, std::uint64_t>(context, node, conv_params);
-        return kTfLiteOk;
+    if (conv_params->bitpacking_bitwidth == 32) {
+      EvalRef<float, std::uint32_t>(context, node, conv_params);
+      return kTfLiteOk;
     }
   }
 
