@@ -30,7 +30,7 @@ namespace compute_engine {
 namespace ce = compute_engine;
 namespace ref {
 
-template <typename T, typename TBitpacked, typename AccumScalar,
+template <typename SrcScalar, typename TBitpacked, typename AccumScalar,
           typename DstScalar>
 inline void BConv2D(const ConvParams& params,
                     const RuntimeShape& packed_input_shape,
@@ -40,8 +40,8 @@ inline void BConv2D(const ConvParams& params,
                     const float* post_activation_multiplier_data,
                     const float* post_activation_bias_data,
                     const RuntimeShape& output_shape, DstScalar* output_data,
-                    const RuntimeShape& im2col_shape, T* im2col_data,
-                    bool bitpack_before_im2col, T* padding_buffer,
+                    const RuntimeShape& im2col_shape, SrcScalar* im2col_data,
+                    bool bitpack_before_im2col, SrcScalar* padding_buffer,
                     const int pad_value, void* cpu_backend_context,
                     const std::int32_t backtransform_add) {
   static_assert(std::is_same<DstScalar, float>::value ||

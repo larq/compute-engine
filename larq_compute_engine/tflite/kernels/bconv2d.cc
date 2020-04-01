@@ -488,7 +488,7 @@ inline void GetConvParamsType(const TfLiteBConv2DParams& conv_params,
   op_params.quantized_activation_max = conv_params.output_activation_max;
 }
 
-template <typename T, typename TBitpacked, typename DstScalar>
+template <typename SrcScalar, typename TBitpacked, typename DstScalar>
 void EvalOpt(TfLiteContext* context, TfLiteNode* node,
              TfLiteBConv2DParams* params) {
   const auto* input = GetInput(context, node, 0);
@@ -504,7 +504,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   if (!params->is_filter_repacked || !params->is_padding_correction_cached) {
     const std::uint32_t* filter_flatbuffer =
         GetTensorData<std::uint32_t>(filter);
-    const T* filter_unpacked = nullptr;
+    const SrcScalar* filter_unpacked = nullptr;
 
     if (params->filter_format == ce::core::FilterFormat::OHWI_PACKED) {
       // First unpack the filter to float
@@ -513,7 +513,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
           params->channels_out * params->filter_height * params->filter_width;
 
       // This vector is declared static, so that it will be shared by all nodes.
-      static std::vector<T> unpacked_weights;
+      static std::vector<SrcScalar> unpacked_weights;
       unpacked_weights.resize(rows * cols);
 
       ce::core::unpack_matrix(filter_flatbuffer, rows, cols,
@@ -522,7 +522,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
       filter_unpacked = unpacked_weights.data();
     } else {
       // Filter was already unpacked
-      filter_unpacked = GetTensorData<T>(filter);
+      filter_unpacked = GetTensorData<SrcScalar>(filter);
     }
 
     // Fill the zero-padding cache
@@ -530,7 +530,8 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
         (params->padding_type == TfLitePadding::kTfLitePaddingSame &&
          params->pad_value == 0)) {
       using PaddingFunctor =
-          ce::core::PaddingFunctor<T, T, ce::core::FilterFormat::OHWI>;
+          ce::core::PaddingFunctor<SrcScalar, SrcScalar,
+                                   ce::core::FilterFormat::OHWI>;
       PaddingFunctor padding_functor;
 
       std::size_t padding_cache_size = padding_functor.get_cache_size(
@@ -542,7 +543,8 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
       padding_functor.cache_correction_values(
           filter_unpacked, params->filter_height, params->filter_width,
           params->channels_out, params->channels_in, params->dilations[1],
-          params->dilations[2], GetTensorData<T>(post_activation_multiplier),
+          params->dilations[2],
+          GetTensorData<SrcScalar>(post_activation_multiplier),
           params->padding_buffer.data());
     }
     params->is_padding_correction_cached = true;
@@ -596,20 +598,20 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   // weights data.
   //     Likewise, we pass the original output shape even if we are going to
   // write bitpacked output directly.
-  BConv2D<T, TBitpacked, std::int32_t, DstScalar>(
-      op_params, GetTensorShape(input), GetTensorData<T>(input),
+  BConv2D<SrcScalar, TBitpacked, std::int32_t, DstScalar>(
+      op_params, GetTensorShape(input), GetTensorData<SrcScalar>(input),
       unpacked_filter_shape,
       reinterpret_cast<TBitpacked*>(params->filter_packed.data()),
       GetTensorData<float>(post_activation_multiplier),
       GetTensorData<float>(post_activation_bias), unpacked_output_shape,
       GetTensorData<DstScalar>(output), GetTensorShape(im2col),
-      GetTensorData<T>(im2col), params->bitpack_before_im2col,
+      GetTensorData<SrcScalar>(im2col), params->bitpack_before_im2col,
       reinterpret_cast<DstScalar*>(params->padding_buffer.data()),
       params->pad_value, params->read_bitpacked_input,
       CpuBackendContext::GetFromContext(context));
 }
 
-template <typename T, typename TBitpacked, typename DstScalar>
+template <typename SrcScalar, typename TBitpacked, typename DstScalar>
 void EvalRef(TfLiteContext* context, TfLiteNode* node,
              TfLiteBConv2DParams* params) {
   const auto* input = GetInput(context, node, 0);
@@ -629,7 +631,7 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
                                          params->channels_in;
 
   // Bitpack the input data, unless we're reading bitpacked input.
-  auto input_data = GetTensorData<T>(input);
+  auto input_data = GetTensorData<SrcScalar>(input);
   const TBitpacked* packed_input_data;
   RuntimeShape packed_input_shape;
   if (params->read_bitpacked_input) {
@@ -650,13 +652,13 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   GetConvParamsType(*params, op_params);
 
   TfLiteTensor* im2col = nullptr;
-  ce::ref::BConv2D<T, TBitpacked, std::int32_t, DstScalar>(
+  ce::ref::BConv2D<SrcScalar, TBitpacked, std::int32_t, DstScalar>(
       op_params, packed_input_shape, packed_input_data, packed_filter_shape,
       GetTensorData<TBitpacked>(packed_filter),
       GetTensorData<float>(post_activation_multiplier),
       GetTensorData<float>(post_activation_bias), GetTensorShape(output),
       GetTensorData<DstScalar>(output), GetTensorShape(im2col),
-      GetTensorData<T>(im2col), false /*bitpack before im2col*/,
+      GetTensorData<SrcScalar>(im2col), false /*bitpack before im2col*/,
       nullptr /*padding buffer*/, params->pad_value,
       nullptr /*cpu backend context*/, backtransform_add);
 }

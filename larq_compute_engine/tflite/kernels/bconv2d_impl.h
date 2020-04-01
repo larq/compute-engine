@@ -65,15 +65,16 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
 // The inputs post_mutiply and post_activation_bias are currently float
 // in order to accomodate for batchnorm scales
 // Later this might be changed to the int8 system of multipliers+shifts
-template <typename T, typename TBitpacked, typename AccumScalar,
+template <typename SrcScalar, typename TBitpacked, typename AccumScalar,
           typename DstScalar>
 inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
-                    const T* input_data, const RuntimeShape& filter_shape,
+                    const SrcScalar* input_data,
+                    const RuntimeShape& filter_shape,
                     const TBitpacked* packed_filter_data,
                     const float* post_activation_multiplier_data,
                     const float* post_activation_bias_data,
                     const RuntimeShape& output_shape, DstScalar* output_data,
-                    const RuntimeShape& im2col_shape, T* im2col_data,
+                    const RuntimeShape& im2col_shape, SrcScalar* im2col_data,
                     bool bitpack_before_im2col, DstScalar* padding_buffer,
                     const int pad_value, const bool read_bitpacked_input,
                     CpuBackendContext* cpu_backend_context) {
@@ -158,9 +159,10 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
     static std::vector<TBitpacked> input_data_bp;
 
     RuntimeShape result_shape;
-    const T* result_data;
-    im2col<T>(params, input_shape, input_data, filter_shape, output_shape,
-              im2col_shape, im2col_data, result_shape, &result_data);
+    const SrcScalar* result_data;
+    im2col<SrcScalar>(params, input_shape, input_data, filter_shape,
+                      output_shape, im2col_shape, im2col_data, result_shape,
+                      &result_data);
 
     // The RHS tensor has this shape which we bitpack along the last dimension
     //  [batch, output_height, output_width, k * bitwidth]
@@ -214,7 +216,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
 
   if (params.padding_type == PaddingType::kSame && pad_value == 0) {
     using PaddingFunctor =
-        ce::core::PaddingFunctor<DstScalar, T, ce::core::FilterFormat::OHWI>;
+        ce::core::PaddingFunctor<DstScalar, SrcScalar,
+                                 ce::core::FilterFormat::OHWI>;
 
     const int stride_width = params.stride_width;
     const int stride_height = params.stride_height;
