@@ -51,6 +51,10 @@ jobs:
         run: ./bazelisk run larq_compute_engine/tests:cc_tests_arm32_qemu --config=rpi3 --compilation_mode=fastbuild
       - name: "TF Lite Aarch64: Cross-compile and run unit tests in qemu"
         run: ./bazelisk run larq_compute_engine/tests:cc_tests_aarch64_qemu --config=aarch64 --compilation_mode=fastbuild
+      - name: "Benchmark utility: check it builds successfully"
+        run: ./bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=aarch64 --compilation_mode=fastbuild
+      - name: "ImageNet evaluation utility: check it builds successfully"
+        run: ./bazelisk build //larq_compute_engine/tflite/tools/accuracy/ilsvrc:imagenet_accuracy_eval --config=aarch64 --compilation_mode=fastbuild
 
   MLIR:
     runs-on: ubuntu-latest
