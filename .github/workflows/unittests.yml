@@ -103,10 +103,16 @@ jobs:
         run: |
           curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-linux-amd64 > bazelisk
           chmod +x bazelisk
+      - uses: actions/cache@v1
+        id: cache
+        with:
+          path: /tmp/lce_android
+          key: ${{ runner.os }}-${{ hashFiles('**/third_party/install_android.sh') }}
       - name: "Setup: Configure Bazel"
         run: ./configure.sh <<< $'n\n'
         shell: bash
       - name: "Download and install Android NDK/SDK"
+        if: steps.cache.outputs.cache-hit != 'true'
         run: ./third_party/install_android.sh
       - name: "Build LCE AAR"
         run: BUILDER=./bazelisk ./larq_compute_engine/tflite/java/build_lce_aar.sh
