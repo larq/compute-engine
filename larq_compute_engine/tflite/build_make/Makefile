@@ -1,7 +1,7 @@
 #
 # This is based on
 # tensorflow/tensorflow/lite/tools/make/Makefile
-# 
+#
 # The makefile will always be run from the root of the compute engine repository
 
 # Make uses /bin/sh by default, which is incompatible with the bashisms seen

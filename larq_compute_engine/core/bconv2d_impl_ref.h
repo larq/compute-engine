@@ -44,6 +44,11 @@ inline void BConv2D(const ConvParams& params,
                     bool bitpack_before_im2col, T* padding_buffer,
                     const int pad_value, void* cpu_backend_context,
                     const std::int32_t backtransform_add) {
+  static_assert(std::is_same<DstScalar, float>::value ||
+                    std::is_same<DstScalar, std::int32_t>::value,
+                "The reference implementation supports either float "
+                "output or 32-bit bitpacked output.");
+
   const int stride_width = params.stride_width;
   const int stride_height = params.stride_height;
   const int dilation_width_factor = params.dilation_width_factor;
@@ -118,7 +123,7 @@ inline void BConv2D(const ConvParams& params,
           }
 
           // If the destination scalar is int32, we're writing bitpacked output.
-          if constexpr (std::is_same<DstScalar, std::int32_t>::value) {
+          if (std::is_same<DstScalar, std::int32_t>::value) {
             // In our bitpacking we map strictly negative values to 1, and
             // non-negative values to 0.
             if (dst_val < 0) bitpacked_column += 1 << (out_channel % 32);
@@ -135,9 +140,6 @@ inline void BConv2D(const ConvParams& params,
 
           // Otherwise, we're not writing bitpacked output; it must be float.
           else {
-            static_assert(std::is_same<DstScalar, float>::value,
-                          "The reference implementation supports either float "
-                          "output or 32-bit bitpacked output.");
             output_data[Offset(output_shape, batch, out_y, out_x,
                                out_channel)] = dst_val;
           }

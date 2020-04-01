@@ -15,8 +15,8 @@
    ==============================================================================*/
 
 #include <gtest/gtest.h>
-#include <stdint.h>
 
+#include <cstdint>
 #include <ctime>
 #include <functional>
 #include <memory>
@@ -409,6 +409,54 @@ MATCHER_P(FloatNearPointwise, tol, "Out of range") {
 }
 
 template <typename TInput, typename TOutput>
+inline void set_lce_op_input(const RuntimeShape& input_shape,
+                             std::vector<float> input_data,
+                             BConv2DOpModel<TInput, TOutput>& m_lce) {
+  std::vector<TInput> input_data_bp;
+  std::size_t input_rows_bp, input_cols_bp, input_bitpadding;
+  core::packbits_matrix<core::BitpackOrder::Canonical>(
+      input_data.data(), FlatSizeSkipDim(input_shape, 3), input_shape.Dims(3),
+      input_data_bp, input_rows_bp, input_cols_bp, input_bitpadding,
+      core::Axis::RowWise);
+  m_lce.SetInput(input_data_bp);
+}
+
+// A specialisation for float input  (i.e., not reading bitpacked input).
+template <typename TOutput>
+inline void set_lce_op_input(const RuntimeShape& input_shape,
+                             std::vector<float> input_data,
+                             BConv2DOpModel<float, TOutput>& m_lce) {
+  m_lce.SetInput(input_data);
+}
+
+template <typename TOutput>
+inline void test_lce_op_output(const std::vector<TOutput>& lce_output_data,
+                               const std::vector<int>& builtin_output_shape,
+                               const std::vector<float>& builtin_output_data) {
+  // Apply bitpacking to the builtin output.
+  std::vector<TOutput> builtin_output_data_bp;
+  std::size_t output_rows_bp, output_cols_bp, output_bitpadding;
+  core::packbits_matrix<core::BitpackOrder::Canonical>(
+      builtin_output_data.data(),
+      builtin_output_shape.at(0) * builtin_output_shape.at(1) *
+          builtin_output_shape.at(2),
+      builtin_output_shape.at(3), builtin_output_data_bp, output_rows_bp,
+      output_cols_bp, output_bitpadding, core::Axis::RowWise);
+
+  // We need the outputs here to be bit-exact, so don't allow for floating
+  // point imprecision.
+  EXPECT_EQ(lce_output_data, builtin_output_data_bp);
+}
+
+// A specialisation for float output (i.e., not writing bitpacked output).
+inline void test_lce_op_output(const std::vector<float>& lce_output_data,
+                               const std::vector<int>& builtin_output_shape,
+                               const std::vector<float>& builtin_output_data) {
+  EXPECT_THAT(lce_output_data, ::testing::Pointwise(FloatNearPointwise(1e-4),
+                                                    builtin_output_data));
+}
+
+template <typename TInput, typename TOutput>
 void test_lce_op(const register_function registration,
                  const RuntimeShape& input_shape,
                  const RuntimeShape& filter_shape,
@@ -460,8 +508,6 @@ void test_lce_op(const register_function registration,
     const auto bitwidth = sizeof(TInput) * CHAR_BIT;
     input_depth = (input_depth + bitwidth - 1) / bitwidth;
   }
-  std::cout << "\nInput depth (op creation): " << input_shape.Dims(3) << " "
-            << input_depth;
 
   BConv2DOpModel<TInput, TOutput> m_lce(
       registration,
@@ -476,52 +522,18 @@ void test_lce_op(const register_function registration,
       dilation_width_factor, dilation_height_factor, read_bitpacked_input,
       write_bitpacked_output, num_threads);
 
-  // Set the correct input.
+  // Set op parameters.
 
-  if constexpr (read_bitpacked_input) {
-    // The op expects pre-bitpacked input data.
-    std::vector<TInput> input_data_bp;
-    std::size_t input_rows_bp, input_cols_bp, input_bitpadding;
-    core::packbits_matrix<core::BitpackOrder::Canonical>(
-        input_data.data(), FlatSizeSkipDim(input_shape, 3), input_shape.Dims(3),
-        input_data_bp, input_rows_bp, input_cols_bp, input_bitpadding,
-        core::Axis::RowWise);
-    m_lce.SetInput(input_data_bp);
-  } else {
-    m_lce.SetInput(input_data);
-  }
-
-  // Set remaining op parameters.
-
+  set_lce_op_input(input_shape, input_data, m_lce);
   m_lce.SetFilter(packed_filters_data);
   m_lce.SetPostActivationMultiplier(post_activation_multiplier_data);
   m_lce.SetPostActivationBias(post_activation_bias_data);
 
-  // Invoke the op and get the lce output.
+  // Invoke the op and test that the output is correct.
 
   m_lce.Invoke();
-  std::vector<TOutput> lce_output_data = m_lce.GetOutput();
-
-  // Test that the output matches the built-in output.
-
-  if constexpr (write_bitpacked_output) {
-    // Apply bitpacking to the builtin output.
-    std::vector<TOutput> builtin_output_data_bp;
-    std::size_t output_rows_bp, output_cols_bp, output_bitpadding;
-    core::packbits_matrix<core::BitpackOrder::Canonical>(
-        builtin_output_data.data(),
-        builtin_output_shape.at(0) * builtin_output_shape.at(1) *
-            builtin_output_shape.at(2),
-        builtin_output_shape.at(3), builtin_output_data_bp, output_rows_bp,
-        output_cols_bp, output_bitpadding, core::Axis::RowWise);
-
-    // We need the outputs here to be bit-exact, so don't allow for floating
-    // point imprecision.
-    EXPECT_EQ(lce_output_data, builtin_output_data_bp);
-  } else {
-    EXPECT_THAT(lce_output_data, ::testing::Pointwise(FloatNearPointwise(1e-4),
-                                                      builtin_output_data));
-  }
+  test_lce_op_output(m_lce.GetOutput(), builtin_output_shape,
+                     builtin_output_data);
 }
 
 TEST_P(BConv2DOpTest, SimpleTest) {
