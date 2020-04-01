@@ -15,7 +15,7 @@ limitations under the License.
 ==============================================================================*/
 
 // The only modification to this file is the check `model_labels.size() != 1000`
-// (the comparison was previously with 1001).
+// on line 250 (the comparison was previously with 1001).
 
 #include "tensorflow/lite/tools/accuracy/ilsvrc/imagenet_model_evaluator.h"
 

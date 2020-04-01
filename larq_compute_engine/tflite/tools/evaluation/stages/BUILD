@@ -14,24 +14,17 @@
 # limitations under the License.
 # ==============================================================================
 
+# Forked from tensorflow/lite/tools/evaluation/stages/BUILD.
+#
+# Modified to strip out most build targets, and to inject the correct
+# dependencies for those that remain.
+
 load("@org_tensorflow//tensorflow/lite:build_def.bzl", "tflite_copts", "tflite_linkopts")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],  # Apache 2.0
 )
-
-common_linkopts = tflite_linkopts() + select({
-    "//conditions:default": [],
-    "@org_tensorflow//tensorflow:android": [
-        "-pie",
-        "-llog",
-    ],
-})
-
-exports_files(glob([
-    "testdata/*.jpg",
-]))
 
 cc_library(
     name = "image_preprocessing_stage",

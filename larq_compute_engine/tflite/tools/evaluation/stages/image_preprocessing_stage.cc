@@ -15,7 +15,7 @@ limitations under the License.
 ==============================================================================*/
 
 // This file has been modified to hard-code Larq image normalisation
-// (mean-centred, scaled by the inverse standard deviation).
+// (mean-centred, scaled by the inverse standard deviation) on lines 205:212.
 
 #include "tensorflow/lite/tools/evaluation/stages/image_preprocessing_stage.h"
 

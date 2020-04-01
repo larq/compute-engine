@@ -1,3 +1,8 @@
+# Forked from tensorflow/lite/tools/accuracy/ilsvrc/BUILD.
+#
+# Modified to remove the `imagenet_accuracy_eval_lib` target and update the
+# dependencies (tf -> lce on line 29, and added "@org_tensorflow//" everywhere).
+
 load("@org_tensorflow//tensorflow/lite:build_def.bzl", "tflite_copts", "tflite_linkopts")
 
 package(

@@ -14,7 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-// This file has been modified to register the LCE custom ops.
+// This file has been modified to import the LCE ops register on line 25, and
+// register the LCE custom ops on line 97.
 
 #include "tensorflow/lite/tools/evaluation/stages/tflite_inference_stage.h"
 
