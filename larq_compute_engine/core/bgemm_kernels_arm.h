@@ -85,6 +85,8 @@ struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar, Spec> {
         // std::is_unsigned<LhsScalar>::value &&
         std::is_integral<LhsScalar>::value,
         "Input to binary kernel should be of type unsigned integral.");
+    static_assert(std::is_signed<DstScalar>::value,
+                  "Output of binary kernel should be of a signed type.");
     // TODO: not implemented -> fallback to standard cpp
   }
 };
@@ -111,6 +113,8 @@ struct BgemmKernel<ruy::Path::kNeonDotprod, LhsScalar, RhsScalar, DstScalar,
         /* std::is_unsigned<LhsScalar>::value && */
         std::is_integral<LhsScalar>::value,
         "Input to binary kernel should be of type unsigned integral.");
+    static_assert(std::is_signed<DstScalar>::value,
+                  "Output of binary kernel should be of a signed type.");
     // TODO: not implemented
   }
 };
