@@ -409,53 +409,119 @@ MATCHER_P(FloatNearPointwise, tol, "Out of range") {
 }
 
 template <typename TInput, typename TOutput>
-std::vector<TOutput> run_lce_op(
-    const register_function registration, const RuntimeShape& input_shape,
-    const RuntimeShape& filter_shape, const int unpacked_input_channels,
-    const int stride_width, const int stride_height,
-    const enum Padding bconv_padding, const int pad_values,
-    const int dilation_width_factor, const int dilation_height_factor,
-    const enum ActivationFunctionType activation, const int num_threads,
-    std::vector<TInput> input_data,
-    std::vector<PackedFilterType> packed_filters_data,
-    std::vector<float> post_activation_multiplier_data,
-    std::vector<float> post_activation_bias_data) {
+void test_lce_op(const register_function registration,
+                 const RuntimeShape& input_shape,
+                 const RuntimeShape& filter_shape,
+                 const int unpacked_input_channels, const int stride_width,
+                 const int stride_height, const enum Padding bconv_padding,
+                 const int pad_values, const int dilation_width_factor,
+                 const int dilation_height_factor,
+                 const enum ActivationFunctionType activation,
+                 const int num_threads, std::vector<float> input_data,
+                 std::vector<PackedFilterType> packed_filters_data,
+                 std::vector<float> post_activation_multiplier_data,
+                 std::vector<float> post_activation_bias_data,
+                 const std::vector<int>& builtin_output_shape,
+                 std::vector<float>& builtin_output_data) {
   static_assert(std::is_same<TInput, float>::value ||
-                    std::is_same<TInput, std::uint8_t>::value,
-                "The LCE op input type must be float or uint8.");
+                    std::is_same<TInput, std::int8_t>::value ||
+                    std::is_same<TInput, std::int32_t>::value,
+                "The LCE op input type must be float or uint8 or uint32.");
   static_assert(std::is_same<TOutput, float>::value ||
-                    std::is_same<TOutput, std::uint8_t>::value,
-                "The LCE op output type must be float or uint8.");
+                    std::is_same<TOutput, std::int8_t>::value ||
+                    std::is_same<TOutput, std::int32_t>::value,
+                "The LCE op output type must be float or uint8 or uint32.");
+
+  const bool read_bitpacked_input = !std::is_same<TInput, float>::value;
+  const bool write_bitpacked_output = !std::is_same<TOutput, float>::value;
 
   // Create LCE op.
-  TensorType input_tensor_type = std::is_same<TInput, float>::value
-                                     ? TensorType_FLOAT32
-                                     : TensorType_UINT8;
-  TensorType output_tensor_type = std::is_same<TOutput, float>::value
-                                      ? TensorType_FLOAT32
-                                      : TensorType_UINT8;
+
+  TensorType input_tensor_type;
+  if (std::is_same<TInput, float>::value)
+    input_tensor_type = TensorType_FLOAT32;
+  else if (std::is_same<TInput, std::int8_t>::value)
+    input_tensor_type = TensorType_INT8;
+  else
+    input_tensor_type = TensorType_INT32;
+
+  TensorType output_tensor_type;
+  if (std::is_same<TOutput, float>::value)
+    output_tensor_type = TensorType_FLOAT32;
+  else if (std::is_same<TOutput, std::int8_t>::value)
+    output_tensor_type = TensorType_INT8;
+  else
+    output_tensor_type = TensorType_INT32;
+
+  int input_depth = input_shape.Dims(3);
+  if (read_bitpacked_input) {
+    // We can't use `std::numeric_limits<TInput>` here because we bitpack into
+    // *signed* integers, and the bitwidth will be one less than expected.
+    const auto bitwidth = sizeof(TInput) * CHAR_BIT;
+    input_depth = (input_depth + bitwidth - 1) / bitwidth;
+  }
+  std::cout << "\nInput depth (op creation): " << input_shape.Dims(3) << " "
+            << input_depth;
+
   BConv2DOpModel<TInput, TOutput> m_lce(
       registration,
       {input_tensor_type,
        {input_shape.Dims(0), input_shape.Dims(1), input_shape.Dims(2),
-        input_shape.Dims(3)}},
+        input_depth}},
       {TensorType_INT32,
        {filter_shape.Dims(0), filter_shape.Dims(1), filter_shape.Dims(2),
         filter_shape.Dims(3)}},
       {output_tensor_type, {}}, unpacked_input_channels, stride_width,
       stride_height, bconv_padding, pad_values, activation,
-      dilation_width_factor, dilation_height_factor,
-      /*read_bitpacked_input=*/std::is_same<TInput, std::uint8_t>::value,
-      /*write_bitpacked_output=*/std::is_same<TOutput, std::uint8_t>::value,
-      num_threads);
+      dilation_width_factor, dilation_height_factor, read_bitpacked_input,
+      write_bitpacked_output, num_threads);
 
-  // Invoke op and return output.
-  m_lce.SetInput(input_data);
+  // Set the correct input.
+
+  if constexpr (read_bitpacked_input) {
+    // The op expects pre-bitpacked input data.
+    std::vector<TInput> input_data_bp;
+    std::size_t input_rows_bp, input_cols_bp, input_bitpadding;
+    core::packbits_matrix<core::BitpackOrder::Canonical>(
+        input_data.data(), FlatSizeSkipDim(input_shape, 3), input_shape.Dims(3),
+        input_data_bp, input_rows_bp, input_cols_bp, input_bitpadding,
+        core::Axis::RowWise);
+    m_lce.SetInput(input_data_bp);
+  } else {
+    m_lce.SetInput(input_data);
+  }
+
+  // Set remaining op parameters.
+
   m_lce.SetFilter(packed_filters_data);
   m_lce.SetPostActivationMultiplier(post_activation_multiplier_data);
   m_lce.SetPostActivationBias(post_activation_bias_data);
+
+  // Invoke the op and get the lce output.
+
   m_lce.Invoke();
-  return m_lce.GetOutput();
+  std::vector<TOutput> lce_output_data = m_lce.GetOutput();
+
+  // Test that the output matches the built-in output.
+
+  if constexpr (write_bitpacked_output) {
+    // Apply bitpacking to the builtin output.
+    std::vector<TOutput> builtin_output_data_bp;
+    std::size_t output_rows_bp, output_cols_bp, output_bitpadding;
+    core::packbits_matrix<core::BitpackOrder::Canonical>(
+        builtin_output_data.data(),
+        builtin_output_shape.at(0) * builtin_output_shape.at(1) *
+            builtin_output_shape.at(2),
+        builtin_output_shape.at(3), builtin_output_data_bp, output_rows_bp,
+        output_cols_bp, output_bitpadding, core::Axis::RowWise);
+
+    // We need the outputs here to be bit-exact, so don't allow for floating
+    // point imprecision.
+    EXPECT_EQ(lce_output_data, builtin_output_data_bp);
+  } else {
+    EXPECT_THAT(lce_output_data, ::testing::Pointwise(FloatNearPointwise(1e-4),
+                                                      builtin_output_data));
+  }
 }
 
 TEST_P(BConv2DOpTest, SimpleTest) {
@@ -636,83 +702,81 @@ TEST_P(BConv2DOpTest, SimpleTest) {
     }
   }
 
-  /*------------
-    Run LCE op.
-   ------------*/
+  /*-------------
+    Test LCE op.
+   -------------*/
 
   RuntimeShape input_shape{input_batch_count, input_height, input_width,
                            input_depth};
   RuntimeShape packed_filter_shape{filter_count, filter_height, filter_width,
                                    packed_channels};
 
-  // If necessary, bitpack the input data.
-  std::vector<std::uint8_t> input_data_bp;
-  if (read_bitpacked_input) {
-    std::size_t input_rows_bp, input_cols_bp, input_bitpadding;
-    packbits_matrix<BitpackOrder::Canonical>(
-        input_data.data(), input_batch_count * input_height * input_width,
-        input_depth, input_data_bp, input_rows_bp, input_cols_bp,
-        input_bitpadding, Axis::RowWise);
-    input_shape.SetDim(3, input_cols_bp);
-  }
-
   if (write_bitpacked_output) {
-    using TOutput = std::uint8_t;
-    const int bitwidth = std::numeric_limits<TOutput>::digits;
-    std::vector<TOutput> lce_output, builtin_output_bp;
-
     if (read_bitpacked_input) {
-      lce_output = run_lce_op<std::uint8_t, TOutput>(
-          registration, input_shape, packed_filter_shape, input_depth,
-          stride_width, stride_height, bconv_padding, pad_values,
-          dilation_width_factor, dilation_height_factor, activation,
-          num_threads, input_data_bp, packed_filters_data,
-          post_activation_multiplier_data, post_activation_bias_data);
-    } else {
-      lce_output = run_lce_op<T, TOutput>(
+      if (is_reference_registration) {
+        test_lce_op<std::int32_t, std::int32_t>(
+            registration, input_shape, packed_filter_shape, input_depth,
+            stride_width, stride_height, bconv_padding, pad_values,
+            dilation_width_factor, dilation_height_factor, activation,
+            num_threads, input_data, packed_filters_data,
+            post_activation_multiplier_data, post_activation_bias_data,
+            m_builtin.GetOutputShape(), builtin_output);
+      } else {  // Not the reference op.
+        test_lce_op<std::int8_t, std::int8_t>(
+            registration, input_shape, packed_filter_shape, input_depth,
+            stride_width, stride_height, bconv_padding, pad_values,
+            dilation_width_factor, dilation_height_factor, activation,
+            num_threads, input_data, packed_filters_data,
+            post_activation_multiplier_data, post_activation_bias_data,
+            m_builtin.GetOutputShape(), builtin_output);
+      }
+    } else {  // Not reading bitpacked input.
+      if (is_reference_registration) {
+        test_lce_op<T, std::int32_t>(
+            registration, input_shape, packed_filter_shape, input_depth,
+            stride_width, stride_height, bconv_padding, pad_values,
+            dilation_width_factor, dilation_height_factor, activation,
+            num_threads, input_data, packed_filters_data,
+            post_activation_multiplier_data, post_activation_bias_data,
+            m_builtin.GetOutputShape(), builtin_output);
+      } else {  // Not the reference op.
+        test_lce_op<T, std::int8_t>(
+            registration, input_shape, packed_filter_shape, input_depth,
+            stride_width, stride_height, bconv_padding, pad_values,
+            dilation_width_factor, dilation_height_factor, activation,
+            num_threads, input_data, packed_filters_data,
+            post_activation_multiplier_data, post_activation_bias_data,
+            m_builtin.GetOutputShape(), builtin_output);
+      }
+    }
+  } else {  // Not writing bitpacked output.
+    if (read_bitpacked_input) {
+      if (is_reference_registration) {
+        test_lce_op<std::int32_t, T>(
+            registration, input_shape, packed_filter_shape, input_depth,
+            stride_width, stride_height, bconv_padding, pad_values,
+            dilation_width_factor, dilation_height_factor, activation,
+            num_threads, input_data, packed_filters_data,
+            post_activation_multiplier_data, post_activation_bias_data,
+            m_builtin.GetOutputShape(), builtin_output);
+      } else {  // Not the reference op.
+        test_lce_op<std::int8_t, T>(
+            registration, input_shape, packed_filter_shape, input_depth,
+            stride_width, stride_height, bconv_padding, pad_values,
+            dilation_width_factor, dilation_height_factor, activation,
+            num_threads, input_data, packed_filters_data,
+            post_activation_multiplier_data, post_activation_bias_data,
+            m_builtin.GetOutputShape(), builtin_output);
+      }
+    } else {  // Not reading bitpacked input.
+      test_lce_op<T, T>(
           registration, input_shape, packed_filter_shape, input_depth,
           stride_width, stride_height, bconv_padding, pad_values,
           dilation_width_factor, dilation_height_factor, activation,
           num_threads, input_data, packed_filters_data,
-          post_activation_multiplier_data, post_activation_bias_data);
+          post_activation_multiplier_data, post_activation_bias_data,
+          m_builtin.GetOutputShape(), builtin_output);
     }
-
-    // Apply bitpacking to builtin output.
-    auto builtin_output_shape = m_builtin.GetOutputShape();
-    std::size_t output_rows_bp, output_cols_bp, output_bitpadding;
-    packbits_matrix<BitpackOrder::Canonical>(
-        builtin_output.data(),
-        builtin_output_shape.at(0) * builtin_output_shape.at(1) *
-            builtin_output_shape.at(2),
-        builtin_output_shape.at(3), builtin_output_bp, output_rows_bp,
-        output_cols_bp, output_bitpadding, Axis::RowWise);
-
-    // We need the outputs here to be bit-exact, so don't allow for floating
-    // point imprecision.
-    EXPECT_EQ(lce_output, builtin_output_bp);
-
-  } else {
-    using TOutput = T;
-    std::vector<TOutput> lce_output;
-
-    if (read_bitpacked_input) {
-      lce_output = run_lce_op<std::uint8_t, TOutput>(
-          registration, input_shape, packed_filter_shape, input_depth,
-          stride_width, stride_height, bconv_padding, pad_values,
-          dilation_width_factor, dilation_height_factor, activation,
-          num_threads, input_data_bp, packed_filters_data,
-          post_activation_multiplier_data, post_activation_bias_data);
-    } else {
-      lce_output = run_lce_op<T, TOutput>(
-          registration, input_shape, packed_filter_shape, input_depth,
-          stride_width, stride_height, bconv_padding, pad_values,
-          dilation_width_factor, dilation_height_factor, activation,
-          num_threads, input_data, packed_filters_data,
-          post_activation_multiplier_data, post_activation_bias_data);
-    }
-
-    EXPECT_THAT(lce_output,
-                ::testing::Pointwise(FloatNearPointwise(1e-4), builtin_output));
   }
 }
 
@@ -757,7 +821,7 @@ TEST(BConv2DTests, BConvErrorTest) {
   // We have to use typedefs or else the template invocation in the type
   // confuses the pre-processor (EXPECT_DEATH is a macro).
   typedef BConv2DOpModel<float, float> FP_BConv2DOpModel;
-  typedef BConv2DOpModel<float, std::uint8_t> Bitpacked_BConv2DOpModel;
+  typedef BConv2DOpModel<float, std::int8_t> Bitpacked_BConv2DOpModel;
 
   // Test if fused ReLu throws an error in combination with zero-padding.
   EXPECT_DEATH(

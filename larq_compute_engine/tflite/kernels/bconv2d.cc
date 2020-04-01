@@ -261,8 +261,15 @@ TfLiteStatus Prepare(KernelType kernel_type,
   TF_LITE_ENSURE_EQ(context, post_activation_multiplier->type, kTfLiteFloat32);
   TF_LITE_ENSURE_EQ(context, post_activation_bias->type, kTfLiteFloat32);
   if (conv_params->read_bitpacked_input) {
-    TF_LITE_ENSURE_EQ(context, input->type, kTfLiteUInt8);
-    conv_params->bitpacking_bitwidth = 8;
+    if (kernel_type == KernelType::kGenericRef) {
+      // The reference kernel only supports 32-bit bitpacked input.
+      TF_LITE_ENSURE_EQ(context, input->type, kTfLiteInt32);
+      conv_params->bitpacking_bitwidth = 32;
+    } else {
+      // The optimised kernel 8-bit bitpacking when reading bitpacked input.
+      TF_LITE_ENSURE_EQ(context, input->type, kTfLiteInt8);
+      conv_params->bitpacking_bitwidth = 8;
+    }
   } else {
     TF_LITE_ENSURE_EQ(context, input->type, kTfLiteFloat32);
     TF_LITE_ENSURE_EQ(context, conv_params->channels_in, input->dims->data[3]);
@@ -272,7 +279,10 @@ TfLiteStatus Prepare(KernelType kernel_type,
     conv_params->bitpacking_bitwidth = default_bitpacking_bitwidth;
   }
   if (conv_params->write_bitpacked_output) {
-    TF_LITE_ENSURE_EQ(context, output->type, kTfLiteUInt8);
+    if (kernel_type == KernelType::kGenericRef)
+      TF_LITE_ENSURE_EQ(context, output->type, kTfLiteInt32);
+    else
+      TF_LITE_ENSURE_EQ(context, output->type, kTfLiteInt8);
   } else {
     TF_LITE_ENSURE_EQ(context, output->type, kTfLiteFloat32);
   }
@@ -332,8 +342,12 @@ TfLiteStatus Prepare(KernelType kernel_type,
   output_shape->data[1] = conv_params->out_height;
   output_shape->data[2] = conv_params->out_width;
   if (conv_params->write_bitpacked_output) {
-    // If we write bitpacked output, we use 8-bit bitpacking into bytes.
-    output_shape->data[3] = (conv_params->channels_out + 7) / 8;
+    // If we write bitpacked output, we use either 32-bit or 8-bit bitpacking
+    // depending on the kernel.
+    if (kernel_type == KernelType::kGenericRef)
+      output_shape->data[3] = (conv_params->channels_out + 31) / 32;
+    else
+      output_shape->data[3] = (conv_params->channels_out + 7) / 8;
   } else {
     output_shape->data[3] = conv_params->channels_out;
   }
@@ -349,7 +363,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
     // We require 32-bit bitpacking in the reference implementation
     TF_LITE_ENSURE_EQ(context, conv_params->bitpacking_bitwidth, 32);
     // We only support one-padding or valid-padding in the reference
-    // implementation
+    // implementation.
     TF_LITE_ENSURE(context, !(conv_params->pad_value == 0 &&
                               conv_params->padding_type ==
                                   TfLitePadding::kTfLitePaddingSame));
@@ -408,7 +422,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
     if (conv_params->bitpack_before_im2col) {
       switch (conv_params->bitpacking_bitwidth) {
         case 8:
-          im2col->type = kTfLiteUInt8;
+          im2col->type = kTfLiteInt8;
           break;
         case 32:
           im2col->type = kTfLiteInt32;
@@ -595,7 +609,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
       CpuBackendContext::GetFromContext(context));
 }
 
-template <class T, class TBitpacked>
+template <typename T, typename TBitpacked, typename DstScalar>
 void EvalRef(TfLiteContext* context, TfLiteNode* node,
              TfLiteBConv2DParams* params) {
   const auto* input = GetInput(context, node, 0);
@@ -612,14 +626,21 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   const auto packed_filter_shape = GetTensorShape(packed_filter);
   const std::int32_t backtransform_add = packed_filter_shape.Dims(1) *
                                          packed_filter_shape.Dims(2) *
-                                         input_shape.Dims(3);
+                                         params->channels_in;
 
-  // bitpack input data
+  // Bitpack the input data, unless we're reading bitpacked input.
   auto input_data = GetTensorData<T>(input);
-  static std::vector<TBitpacked> packed_input_data;
+  const TBitpacked* packed_input_data;
   RuntimeShape packed_input_shape;
-  ce::core::packbits_tensor(input_shape, input_data, packed_input_shape,
-                            packed_input_data);
+  if (params->read_bitpacked_input) {
+    packed_input_shape.ReplaceWith(4, input_shape.DimsData());
+    packed_input_data = reinterpret_cast<const TBitpacked*>(input_data);
+  } else {
+    static std::vector<TBitpacked> packed_input_data_vector;
+    ce::core::packbits_tensor(input_shape, input_data, packed_input_shape,
+                              packed_input_data_vector);
+    packed_input_data = packed_input_data_vector.data();
+  }
 
   // Using the standard TF Lite ConvParams struct.
   // This requires extra step of converting the TfLiteBConv2DParams
@@ -629,12 +650,12 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   GetConvParamsType(*params, op_params);
 
   TfLiteTensor* im2col = nullptr;
-  ce::ref::BConv2D<T, TBitpacked>(
-      op_params, packed_input_shape, packed_input_data.data(),
-      packed_filter_shape, GetTensorData<TBitpacked>(packed_filter),
+  ce::ref::BConv2D<T, TBitpacked, std::int32_t, DstScalar>(
+      op_params, packed_input_shape, packed_input_data, packed_filter_shape,
+      GetTensorData<TBitpacked>(packed_filter),
       GetTensorData<float>(post_activation_multiplier),
       GetTensorData<float>(post_activation_bias), GetTensorShape(output),
-      GetTensorData<T>(output), GetTensorShape(im2col),
+      GetTensorData<DstScalar>(output), GetTensorShape(im2col),
       GetTensorData<T>(im2col), false /*bitpack before im2col*/,
       nullptr /*padding buffer*/, params->pad_value,
       nullptr /*cpu backend context*/, backtransform_add);
@@ -665,22 +686,21 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
 #else
       case 8:
         if (conv_params->write_bitpacked_output)
-          EvalOpt<float, std::uint8_t, std::uint8_t>(context, node,
-                                                     conv_params);
+          EvalOpt<float, std::uint8_t, std::int8_t>(context, node, conv_params);
         else
           EvalOpt<float, std::uint8_t, float>(context, node, conv_params);
         return kTfLiteOk;
       case 32:
         if (conv_params->write_bitpacked_output)
-          EvalOpt<float, std::uint32_t, std::uint8_t>(context, node,
-                                                      conv_params);
+          EvalOpt<float, std::uint32_t, std::int8_t>(context, node,
+                                                     conv_params);
         else
           EvalOpt<float, std::uint32_t, float>(context, node, conv_params);
         return kTfLiteOk;
       case 64:
         if (conv_params->write_bitpacked_output)
-          EvalOpt<float, std::uint64_t, std::uint8_t>(context, node,
-                                                      conv_params);
+          EvalOpt<float, std::uint64_t, std::int8_t>(context, node,
+                                                     conv_params);
         else
           EvalOpt<float, std::uint64_t, float>(context, node, conv_params);
         return kTfLiteOk;
@@ -688,7 +708,10 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
     }
   } else if (kernel_type == KernelType::kGenericRef) {
     if (conv_params->bitpacking_bitwidth == 32) {
-      EvalRef<float, std::uint32_t>(context, node, conv_params);
+      if (conv_params->write_bitpacked_output)
+        EvalRef<float, std::uint32_t, std::int32_t>(context, node, conv_params);
+      else
+        EvalRef<float, std::uint32_t, float>(context, node, conv_params);
       return kTfLiteOk;
     }
   }

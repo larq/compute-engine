@@ -90,7 +90,7 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
 
 // A template specialisation for writing 8-bit bitpacked output.
 template <typename LhsScalar, typename RhsScalar, typename Spec>
-struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::uint8_t,
+struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int8_t,
                    Spec> {
   using AccumScalar = typename Spec::AccumScalar;
   using LhsLayout = typename Spec::StandardCppKernelLhsLayout;
@@ -99,7 +99,7 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::uint8_t,
   void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
            const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
            int start_row, int start_col, int end_row, int end_col,
-           ruy::Matrix<std::uint8_t>* dst) const {
+           ruy::Matrix<std::int8_t>* dst) const {
     static_assert(std::is_same<LhsScalar, RhsScalar>::value,
                   "Inputs to binary kernel should have the same type.");
     static_assert(

@@ -30,7 +30,8 @@ namespace compute_engine {
 namespace ce = compute_engine;
 namespace ref {
 
-template <class T, class TBitpacked>
+template <typename T, typename TBitpacked, typename AccumScalar,
+          typename DstScalar>
 inline void BConv2D(const ConvParams& params,
                     const RuntimeShape& packed_input_shape,
                     const TBitpacked* packed_input_data,
@@ -38,14 +39,11 @@ inline void BConv2D(const ConvParams& params,
                     const TBitpacked* packed_filter_data,
                     const float* post_activation_multiplier_data,
                     const float* post_activation_bias_data,
-                    const RuntimeShape& output_shape, T* output_data,
+                    const RuntimeShape& output_shape, DstScalar* output_data,
                     const RuntimeShape& im2col_shape, T* im2col_data,
                     bool bitpack_before_im2col, T* padding_buffer,
                     const int pad_value, void* cpu_backend_context,
                     const std::int32_t backtransform_add) {
-  using AccumScalar = std::int32_t;
-  using DstScalar = T;
-
   const int stride_width = params.stride_width;
   const int stride_height = params.stride_height;
   const int dilation_width_factor = params.dilation_width_factor;
@@ -67,7 +65,7 @@ inline void BConv2D(const ConvParams& params,
   const int batches = MatchingDim(packed_input_shape, 0, output_shape, 0);
   const int input_depth =
       MatchingDim(packed_input_shape, 3, packed_filter_shape, 3);
-  const int output_depth = MatchingDim(packed_filter_shape, 0, output_shape, 3);
+  const int output_depth = packed_filter_shape.Dims(0);
   const int input_height = packed_input_shape.Dims(1);
   const int input_width = packed_input_shape.Dims(2);
   const int filter_height = packed_filter_shape.Dims(1);
@@ -77,6 +75,8 @@ inline void BConv2D(const ConvParams& params,
   for (int batch = 0; batch < batches; ++batch) {
     for (int out_y = 0; out_y < output_height; ++out_y) {
       for (int out_x = 0; out_x < output_width; ++out_x) {
+        // This variable is only used if we are writing bitpacked output.
+        std::uint32_t bitpacked_column = 0;
         for (int out_channel = 0; out_channel < output_depth; ++out_channel) {
           const int in_x_origin = (out_x * stride_width) - pad_width;
           const int in_y_origin = (out_y * stride_height) - pad_height;
@@ -109,15 +109,38 @@ inline void BConv2D(const ConvParams& params,
           accum = std::min<AccumScalar>(accum, clamp_max);
           accum = std::max<AccumScalar>(accum, clamp_min);
           // Post multiply and add are done in float
-          DstScalar dst_val = static_cast<DstScalar>(accum);
+          float dst_val = static_cast<float>(accum);
           if (post_activation_multiplier) {
             dst_val *= post_activation_multiplier[out_channel];
           }
           if (post_activation_bias) {
             dst_val += post_activation_bias[out_channel];
           }
-          output_data[Offset(output_shape, batch, out_y, out_x, out_channel)] =
-              dst_val;
+
+          // If the destination scalar is int32, we're writing bitpacked output.
+          if constexpr (std::is_same<DstScalar, std::int32_t>::value) {
+            // In our bitpacking we map strictly negative values to 1, and
+            // non-negative values to 0.
+            if (dst_val < 0) bitpacked_column += 1 << (out_channel % 32);
+
+            // After we've 'filled' the `bitpacked_column` with 32 values, or
+            // reached the end of the channels, we write it to memory.
+            if ((out_channel + 1) % 32 == 0 ||
+                (out_channel + 1 == output_depth)) {
+              output_data[Offset(output_shape, batch, out_y, out_x,
+                                 out_channel / 32)] = bitpacked_column;
+              bitpacked_column = 0;
+            }
+          }
+
+          // Otherwise, we're not writing bitpacked output; it must be float.
+          else {
+            static_assert(std::is_same<DstScalar, float>::value,
+                          "The reference implementation supports either float "
+                          "output or 32-bit bitpacked output.");
+            output_data[Offset(output_shape, batch, out_y, out_x,
+                               out_channel)] = dst_val;
+          }
         }
       }
     }
