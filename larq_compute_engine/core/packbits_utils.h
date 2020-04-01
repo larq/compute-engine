@@ -8,10 +8,8 @@
 using namespace tflite;
 
 namespace compute_engine {
-
 namespace ce = compute_engine;
-
-namespace tflite {
+namespace core {
 
 // Convenience function for bitpacking a tensor along its last dimension
 // and updating the tensor shape
@@ -48,7 +46,7 @@ RuntimeShape packed_shape(const RuntimeShape& in_shape) {
   return out_shape;
 }
 
-}  // namespace tflite
+}  // namespace core
 }  // namespace compute_engine
 
 #endif  // COMPUTE_ENGINE_CORE_PACKBITS_UTILS_H_

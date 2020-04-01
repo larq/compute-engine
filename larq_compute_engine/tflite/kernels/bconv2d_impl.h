@@ -118,7 +118,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
 
   if (bitpack_before_im2col) {
     // The filter tensor was already bitpacked. Only get the new shape.
-    RuntimeShape packed_filter_shape = packed_shape<TBitpacked>(filter_shape);
+    RuntimeShape packed_filter_shape =
+        ce::core::packed_shape<TBitpacked>(filter_shape);
 
     // Get the im2col data buffer.
     TBitpacked* packed_im2col_data = reinterpret_cast<TBitpacked*>(im2col_data);
@@ -142,8 +143,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
       // dimension [batch, input height, input width, channels].
       RuntimeShape packed_input_shape;
 
-      packbits_tensor(input_shape, input_data, packed_input_shape,
-                      input_data_bp);
+      ce::core::packbits_tensor(input_shape, input_data, packed_input_shape,
+                                input_data_bp);
 
       im2col<TBitpacked>(params, packed_input_shape, input_data_bp.data(),
                          packed_filter_shape, output_shape, im2col_shape,
@@ -164,8 +165,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
     // The RHS tensor has this shape which we bitpack along the last dimension
     //  [batch, output_height, output_width, k * bitwidth]
     RuntimeShape packed_input_shape;
-    packbits_tensor(result_shape, result_data, packed_input_shape,
-                    input_data_bp);
+    ce::core::packbits_tensor(result_shape, result_data, packed_input_shape,
+                              input_data_bp);
     rhs_data = input_data_bp.data();
 
     k = packed_input_shape.Dims(3);

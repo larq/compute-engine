@@ -91,7 +91,6 @@ struct BinaryKernelParams {
   std::int32_t clamp_max;
   std::int32_t backtransform_add;
   std::uint8_t flags;
-  const T zero_data[LhsCols] = {0};
   T dst_tmp_buf[LhsCols * RhsCols];
 };
 

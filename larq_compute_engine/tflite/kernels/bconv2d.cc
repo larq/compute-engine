@@ -2,6 +2,7 @@
 
 #include "bconv2d_impl.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
+#include "larq_compute_engine/core/bconv2d_impl_ref.h"
 #include "larq_compute_engine/core/padding_functor.h"
 #include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
@@ -23,6 +24,9 @@ namespace bconv2d {
 using ::compute_engine::core::Layout;
 
 enum class KernelType {
+  // kGenericRef: the impl. path using reference implementation without im2col
+  kGenericRef,
+
   // kGenericOptimized: the impl. path using reference BGEMM kernels in RUY.
   // TODO(arashb): the generic optimized needs to be redirected to the
   // reference impl. of RUY kernels.
@@ -341,6 +345,16 @@ TfLiteStatus Prepare(KernelType kernel_type,
   // Decide if we do bitpacking before or after im2col
   decide_bitpack_before_im2col(conv_params);
 
+  if (kernel_type == KernelType::kGenericRef) {
+    // We require 32-bit bitpacking in the reference implementation
+    TF_LITE_ENSURE_EQ(context, conv_params->bitpacking_bitwidth, 32);
+    // We only support one-padding or valid-padding in the reference
+    // implementation
+    TF_LITE_ENSURE(context, !(conv_params->pad_value == 0 &&
+                              conv_params->padding_type ==
+                                  TfLitePadding::kTfLitePaddingSame));
+  }
+
   // pre-allocate temporary tensors for optimized version
   if (kernel_type == KernelType::kRuyOptimized) {
     conv_params->need_im2col =
@@ -581,6 +595,51 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
       CpuBackendContext::GetFromContext(context));
 }
 
+template <class T, class TBitpacked>
+void EvalRef(TfLiteContext* context, TfLiteNode* node,
+             TfLiteBConv2DParams* params) {
+  const auto* input = GetInput(context, node, 0);
+  const auto* packed_filter = GetInput(context, node, 1);
+  const auto* post_activation_multiplier = GetInput(context, node, 2);
+  const auto* post_activation_bias = GetInput(context, node, 3);
+  auto* output = GetOutput(context, node, 0);
+
+  // TODO(tom): for the backtransform we need the raw filter shape before
+  // bitpacking currently this is already passed as input argument. In the
+  // future, we will change this and this line needs to adapt.
+  // TODO: should the type be AccumScalar?
+  auto input_shape = GetTensorShape(input);
+  const auto packed_filter_shape = GetTensorShape(packed_filter);
+  const std::int32_t backtransform_add = packed_filter_shape.Dims(1) *
+                                         packed_filter_shape.Dims(2) *
+                                         input_shape.Dims(3);
+
+  // bitpack input data
+  auto input_data = GetTensorData<T>(input);
+  static std::vector<TBitpacked> packed_input_data;
+  RuntimeShape packed_input_shape;
+  ce::core::packbits_tensor(input_shape, input_data, packed_input_shape,
+                            packed_input_data);
+
+  // Using the standard TF Lite ConvParams struct.
+  // This requires extra step of converting the TfLiteBConv2DParams
+  // but unifies the interface with the default TF lite API for CONV params
+  // which is used in internal TF lite im2col functions.
+  ConvParams op_params;
+  GetConvParamsType(*params, op_params);
+
+  TfLiteTensor* im2col = nullptr;
+  ce::ref::BConv2D<T, TBitpacked>(
+      op_params, packed_input_shape, packed_input_data.data(),
+      packed_filter_shape, GetTensorData<TBitpacked>(packed_filter),
+      GetTensorData<float>(post_activation_multiplier),
+      GetTensorData<float>(post_activation_bias), GetTensorShape(output),
+      GetTensorData<T>(output), GetTensorShape(im2col),
+      GetTensorData<T>(im2col), false /*bitpack before im2col*/,
+      nullptr /*padding buffer*/, params->pad_value,
+      nullptr /*cpu backend context*/, backtransform_add);
+}
+
 template <KernelType kernel_type>
 TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   auto* conv_params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
@@ -627,10 +686,24 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
         return kTfLiteOk;
 #endif
     }
+  } else if (kernel_type == KernelType::kGenericRef) {
+    if (conv_params->bitpacking_bitwidth == 32) {
+      EvalRef<float, std::uint32_t>(context, node, conv_params);
+      return kTfLiteOk;
+    }
   }
+
   return kTfLiteError;
 }
 }  // namespace bconv2d
+
+TfLiteRegistration* Register_BCONV_2D32_REF() {
+  static TfLiteRegistration r = {
+      bconv2d::Init, bconv2d::Free,
+      bconv2d::Prepare<bconv2d::KernelType::kGenericRef, 32>,
+      bconv2d::Eval<bconv2d::KernelType::kGenericRef>};
+  return &r;
+}
 
 TfLiteRegistration* Register_BCONV_2D32_OPT() {
   static TfLiteRegistration r = {
@@ -651,14 +724,20 @@ TfLiteRegistration* Register_BCONV_2D64_OPT() {
 // Use this registration wrapper to decide which impl. to use.
 TfLiteRegistration* Register_BCONV_2D() {
 #if defined TFLITE_WITH_RUY
+
 #if RUY_PLATFORM(ARM_32)
   return Register_BCONV_2D32_OPT();
 #else  // ARM 64 and x86
   return Register_BCONV_2D64_OPT();
 #endif
+
 #else  // disabled TFLITE_WITH_RUY
-  static_assert(false, "LCE needs to be compiled with TFLite RUY activated.");
-#endif
+
+  // When the RUY is disabled, we run the 32-bit reference implementation
+  // on both 32-bit and 64-bit architectures.
+  return Register_BCONV_2D32_REF();
+
+#endif  // defined TFLITE_WITH_RUY
 }
 
 }  // namespace tflite
