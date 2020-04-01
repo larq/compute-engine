@@ -96,8 +96,6 @@ jobs:
   Android_AAR:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
-    container:
-      image: tensorflow/tensorflow:custom-op-ubuntu16
 
     steps:
       - uses: actions/checkout@v1
@@ -106,7 +104,7 @@ jobs:
           curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-linux-amd64 > bazelisk
           chmod +x bazelisk
       - name: "Setup: Configure Bazel"
-        run: ./configure.sh <<< $'yes\n' #yes for manylinux2010
+        run: ./configure.sh <<< $'n\n'
         shell: bash
       - name: "Download and install Android NDK/SDK"
         run: ./third_party/install_android.sh
