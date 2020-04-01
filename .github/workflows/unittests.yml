@@ -45,7 +45,7 @@ jobs:
           curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-linux-amd64 > bazelisk
           chmod +x bazelisk
       - name: Configure Bazel
-        run: ./configure.sh <<< $'yes\n' #yes for manylinux2010
+        run: ./configure.sh <<< $'n\n'
         shell: bash
       - name: "TF Lite Arm32: Cross-compile and run unit tests in qemu"
         run: ./bazelisk run larq_compute_engine/tests:cc_tests_arm32_qemu --config=rpi3 --compilation_mode=fastbuild
