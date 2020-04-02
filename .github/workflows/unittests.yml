@@ -14,7 +14,7 @@ jobs:
       image: tensorflow/tensorflow:custom-op-ubuntu16
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
         with:
           submodules: true
       - name: Install Bazelisk
@@ -103,7 +103,7 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Install Bazelisk
         run: |
           curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-linux-amd64 > bazelisk
