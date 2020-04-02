@@ -190,7 +190,7 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
     conv_params->write_bitpacked_output = false;
   }
 
-  // If we are reading bitpacked input then the both input tensor and the
+  // If we are reading bitpacked input then both the input tensor and the
   // filters are bitpacked along the (input) channels axis. This means that we
   // cannot infer the 'true' input shape, and so we have to add an explicit
   // integer attribute to the op in the converter.
