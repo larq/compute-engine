@@ -25,12 +25,13 @@ class I32VectorElementsAttr<int len> : ElementsAttrBase<
 
 class GetConstantVector<string val> : NativeCodeCall<"GetConstantVector($0, " # val # ")">;
 def BinaryFilter : Constraint<CPred<"IsBinaryFilter($0)">>;
+def GetScaleVector : NativeCodeCall<"GetScaleVector($0)">;
 
 def : Pat<(TF_Conv2DOp (TF_LceBsignOp $input), (ConstantOp $filter), $strides, $use_cudnn,
                        $padding, $explicit_padding, IsDataFormatNHWC: $data_format, $dilations),
           (TF_LceBconv2dOp $input,
-            (TF_TransposeOp (ConstantOp $filter), (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
-            (ConstantOp (GetConstantVector<"1.0f"> $filter)),
+            (TF_TransposeOp (TF_DivOp (ConstantOp $filter), (ConstantOp (GetScaleVector $filter))), (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
+            (ConstantOp (GetScaleVector $filter)),
             (ConstantOp (GetConstantVector<"0.0f"> $filter)),
             $strides, $padding, ConstantAttr<I32Attr, "0">, $data_format,
             $dilations, ConstantAttr<StrAttr, "OHWI">, TFL_AF_None),
@@ -48,8 +49,8 @@ def : Pat<(TF_Conv2DOp: $output
             (ConstantOp $filter), $strides, $use_cudnn, ConstantAttr<StrAttr, "VALID">,
             $explicit_padding, IsDataFormatNHWC: $data_format, $dilations),
           (TF_LceBconv2dOp $input,
-            (TF_TransposeOp (ConstantOp $filter), (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
-            (ConstantOp (GetConstantVector<"1.0f"> $filter)),
+            (TF_TransposeOp (TF_DivOp (ConstantOp $filter), (ConstantOp (GetScaleVector $filter))), (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
+            (ConstantOp (GetScaleVector $filter)),
             (ConstantOp (GetConstantVector<"0.0f"> $filter)),
             $strides,
             ConstantAttr<StrAttr, "SAME">,
