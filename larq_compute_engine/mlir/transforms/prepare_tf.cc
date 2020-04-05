@@ -48,11 +48,10 @@ bool IsBinaryFilter(Attribute filter_attr) {
   auto shape = filter_attr.getType().cast<ShapedType>().getShape();
   if (shape.size() != 4) return false;
 
-  std::size_t h, w, i, o;
-  for (h = 0; h < shape[0]; ++h) {
-    for (w = 0; w < shape[1]; ++w) {
-      for (i = 0; i < shape[2]; ++i) {
-        for (o = 0; o < shape[3]; ++o) {
+  for (std::size_t h = 0; h < shape[0]; ++h) {
+    for (std::size_t w = 0; w < shape[1]; ++w) {
+      for (std::size_t i = 0; i < shape[2]; ++i) {
+        for (std::size_t o = 0; o < shape[3]; ++o) {
           auto scale = filter.getValue<float>({0, 0, 0, o});
           if (scale == 0.0f) return false;
           auto value = filter.getValue<float>({h, w, i, o});
