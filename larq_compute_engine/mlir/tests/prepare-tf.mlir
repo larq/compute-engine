@@ -22,14 +22,42 @@ func @fuse_bconv2d(%arg0: tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32> {
   // CHECK: %cst = constant
   // CHECK: %[[post_activation_multiplier:.*]] = constant dense<1.000000e+00> : tensor<2xf32>
   // CHECK: %[[post_activation_bias:.*]] = constant dense<0.000000e+00> : tensor<2xf32>
-  // CHECK-NEXT: %[[transpose:.*]] = "tf.Transpose"(%cst
+  // CHECK: %[[transpose:.*]] = "tf.Transpose"
+  // CHECK-NEXT: %[[conv:.*]] = "tf.LceBconv2d"(%arg0, %[[transpose]], %[[post_activation_multiplier]], %[[post_activation_bias]]) {activation = "NONE", data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<2x1x2x2xf32>, tensor<2xf32>, tensor<2xf32>) -> tensor<1x112x112x2xf32>
+  // CHECK-NEXT: return %[[conv]]
+}
+
+// CHECK-LABEL: @fuse_scaled_bconv2d
+func @fuse_scaled_bconv2d(%arg0: tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32> {
+  %cst = constant dense<[[[[0.3, -0.1], [0.3, 0.1]], [[-0.3, 0.1], [-0.3, 0.1]]]]> : tensor<1x2x2x2xf32>
+  %0 = "tf.LceBsign"(%arg0) : (tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32>
+  %1 = "tf.Conv2D"(%0, %cst) {padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<1x2x2x2xf32>) -> tensor<1x112x112x2xf32>
+  return %1 : tensor<1x112x112x2xf32>
+
+  // CHECK: %cst = constant
+  // CHECK: %[[post_activation_multiplier:.*]] = constant dense<[3.000000e-01, 1.000000e-01]> : tensor<2xf32>
+  // CHECK: %[[post_activation_bias:.*]] = constant dense<0.000000e+00> : tensor<2xf32>
+  // CHECK: %[[transpose:.*]] = "tf.Transpose"
   // CHECK-NEXT: %[[conv:.*]] = "tf.LceBconv2d"(%arg0, %[[transpose]], %[[post_activation_multiplier]], %[[post_activation_bias]]) {activation = "NONE", data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<2x1x2x2xf32>, tensor<2xf32>, tensor<2xf32>) -> tensor<1x112x112x2xf32>
   // CHECK-NEXT: return %[[conv]]
 }
 
 // CHECK-LABEL: @do_not_fuse_bconv2d
 func @do_not_fuse_bconv2d(%arg0: tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32> {
-  %cst = constant dense<0.5> : tensor<1x2x2x2xf32>
+  %cst = constant dense<[[[[3.0, -1.0], [0.1, 1.0]], [[-1.0, 1.0], [-1.0, 1.0]]]]> : tensor<1x2x2x2xf32>
+  %0 = "tf.LceBsign"(%arg0) : (tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32>
+  %1 = "tf.Conv2D"(%0, %cst) {padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<1x2x2x2xf32>) -> tensor<1x112x112x2xf32>
+  return %1 : tensor<1x112x112x2xf32>
+
+  // CHECK-NEXT: %cst = constant
+  // CHECK-NEXT: %0 = "tf.LceBsign"(%arg0)
+  // CHECK-NEXT: %1 = "tf.Conv2D"(%0, %cst)
+  // CHECK-NEXT: return %1
+}
+
+// CHECK-LABEL: @do_not_fuse_bconv2d_zero_weight
+func @do_not_fuse_bconv2d_zero_weight(%arg0: tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32> {
+  %cst = constant dense<0.0> : tensor<1x2x2x2xf32>
   %0 = "tf.LceBsign"(%arg0) : (tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32>
   %1 = "tf.Conv2D"(%0, %cst) {padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<1x2x2x2xf32>) -> tensor<1x112x112x2xf32>
   return %1 : tensor<1x112x112x2xf32>

@@ -25,11 +25,41 @@ DenseElementsAttr GetConstantVector(Attribute filter, float val) {
   return DenseElementsAttr::get(type, val);
 }
 
-bool IsBinaryFilter(Attribute filter) {
-  if (!filter.isa<DenseElementsAttr>()) return false;
+DenseElementsAttr GetScaleVector(Attribute filter_attr) {
+  auto filter = filter_attr.cast<DenseElementsAttr>();
+  auto filter_type = filter_attr.getType().cast<ShapedType>();
+  auto channels = filter_type.getShape()[3];
+  auto element_type = filter_type.getElementType();
 
-  for (auto value : filter.cast<DenseElementsAttr>().getValues<float>()) {
-    if (std::abs((std::abs(value) - 1.0f)) > 0.005f) return false;
+  std::vector<Attribute> scales(channels);
+  for (std::size_t i = 0; i < channels; ++i) {
+    auto scale = std::abs(filter.getValue<float>({0, 0, 0, i}));
+    scales[i] = FloatAttr::get(element_type, scale);
+  }
+
+  RankedTensorType type = RankedTensorType::get({channels}, element_type);
+  return DenseElementsAttr::get(type, scales);
+}
+
+bool IsBinaryFilter(Attribute filter_attr) {
+  if (!filter_attr.isa<DenseElementsAttr>()) return false;
+  auto filter = filter_attr.cast<DenseElementsAttr>();
+
+  auto shape = filter_attr.getType().cast<ShapedType>().getShape();
+  if (shape.size() != 4) return false;
+
+  for (std::size_t h = 0; h < shape[0]; ++h) {
+    for (std::size_t w = 0; w < shape[1]; ++w) {
+      for (std::size_t i = 0; i < shape[2]; ++i) {
+        for (std::size_t o = 0; o < shape[3]; ++o) {
+          auto scale = filter.getValue<float>({0, 0, 0, o});
+          if (std::abs(scale) <= std::numeric_limits<float>::epsilon())
+            return false;
+          auto value = filter.getValue<float>({h, w, i, o});
+          if (std::abs(std::abs(value / scale) - 1.0f) > 0.005f) return false;
+        }
+      }
+    }
   }
   return true;
 }
