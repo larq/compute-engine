@@ -53,7 +53,8 @@ bool IsBinaryFilter(Attribute filter_attr) {
       for (std::size_t i = 0; i < shape[2]; ++i) {
         for (std::size_t o = 0; o < shape[3]; ++o) {
           auto scale = filter.getValue<float>({0, 0, 0, o});
-          if (scale == 0.0f) return false;
+          if (std::abs(scale) <= std::numeric_limits<float>::epsilon())
+            return false;
           auto value = filter.getValue<float>({h, w, i, o});
           if (std::abs(std::abs(value / scale) - 1.0f) > 0.005f) return false;
         }
