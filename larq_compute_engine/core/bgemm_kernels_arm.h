@@ -16,7 +16,7 @@
 
 using namespace ruy;
 
-#if RUY_PLATFORM(NEON) && RUY_OPT_ENABLED(RUY_OPT_ASM)
+#if RUY_PLATFORM(NEON)
 
 // Generic kNeon template when no types are specified
 template <typename LhsScalar, typename RhsScalar, typename DstScalar,
@@ -30,16 +30,28 @@ struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar, Spec> {
            const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
            int start_row, int start_col, int end_row, int end_col,
            ruy::Matrix<DstScalar>* dst) const {
-    static_assert(std::is_same<LhsScalar, RhsScalar>::value,
-                  "Inputs to binary kernel should have the same type.");
-    static_assert(
-        /* std::is_unsigned<LhsScalar>::value && */
-        std::is_integral<LhsScalar>::value,
-        "Input to binary kernel should be of type unsigned integral.");
+    TFLITE_DCHECK(false);
   }
 };
 
-#if RUY_PLATFORM(NEON_64)
+// Generic kNeonDotprod template
+template <typename LhsScalar, typename RhsScalar, typename DstScalar,
+          typename Spec>
+struct BgemmKernel<ruy::Path::kNeonDotprod, LhsScalar, RhsScalar, DstScalar,
+                   Spec> {
+  ruy::Tuning tuning = Tuning::kAuto;
+  using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
+  using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
+  explicit BgemmKernel(ruy::Tuning tuning_) : tuning(tuning_) {}
+  void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
+           const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
+           int start_row, int start_col, int end_row, int end_col,
+           ruy::Matrix<DstScalar>* dst) const {
+    TFLITE_DCHECK(false);
+  }
+};
+
+#if RUY_PLATFORM(NEON) && RUY_OPT_ENABLED(RUY_OPT_ASM) && RUY_PLATFORM(NEON_64)
 // A BGEMM kernel for ARM64 Neon.
 #include "bgemm_kernels_arm64.h"
 
@@ -85,61 +97,8 @@ struct BgemmKernel<ruy::Path::kNeon, std::uint64_t, std::uint64_t, float,
   }
 };
 
-#endif
+#endif  // RUY_OPT_ENABLED(RUY_OPT_ASM) && RUY_PLATFORM(NEON_64)
 
-#if RUY_PLATFORM(NEON_32)
-
-template <typename LhsScalar, typename RhsScalar, typename DstScalar,
-          typename Spec>
-struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar, Spec> {
-  Tuning tuning = Tuning::kAuto;
-  using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
-  using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 4>;
-  explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
-  void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
-           const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
-           int start_row, int start_col, int end_row, int end_col,
-           ruy::Matrix<DstScalar>* dst) const {
-    static_assert(std::is_same<LhsScalar, RhsScalar>::value,
-                  "Inputs to binary kernel should have the same type.");
-    static_assert(
-        // std::is_unsigned<LhsScalar>::value &&
-        std::is_integral<LhsScalar>::value,
-        "Input to binary kernel should be of type unsigned integral.");
-    static_assert(std::is_signed<DstScalar>::value,
-                  "Output of binary kernel should be of a signed type.");
-    // TODO: not implemented -> fallback to standard cpp
-  }
-};
-
-#endif
-
-template <typename LhsScalar, typename RhsScalar, typename DstScalar,
-          typename Spec>
-struct BgemmKernel<ruy::Path::kNeonDotprod, LhsScalar, RhsScalar, DstScalar,
-                   Spec> {
-  ruy::Tuning tuning = Tuning::kAuto;
-  using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
-  using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
-  using Base =
-      BgemmKernel<ruy::Path::kNeon, LhsLayout, RhsLayout, DstScalar, Spec>;
-  explicit BgemmKernel(ruy::Tuning tuning_) : tuning(tuning_) {}
-  void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
-           const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
-           int start_row, int start_col, int end_row, int end_col,
-           ruy::Matrix<DstScalar>* dst) const {
-    static_assert(std::is_same<LhsScalar, RhsScalar>::value,
-                  "Inputs to binary kernel should have the same type.");
-    static_assert(
-        /* std::is_unsigned<LhsScalar>::value && */
-        std::is_integral<LhsScalar>::value,
-        "Input to binary kernel should be of type unsigned integral.");
-    static_assert(std::is_signed<DstScalar>::value,
-                  "Output of binary kernel should be of a signed type.");
-    // TODO: not implemented
-  }
-};
-
-#endif  // RUY_PLATFORM(NEON) && RUY_OPT_ENABLED(RUY_OPT_ASM)
+#endif  // RUY_PLATFORM(NEON)
 
 #endif  // COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_ARM_H_
