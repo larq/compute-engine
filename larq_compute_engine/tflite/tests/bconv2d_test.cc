@@ -817,15 +817,9 @@ INSTANTIATE_TEST_SUITE_P(
         ::testing::Values(Padding_VALID, Padding_SAME, Padding_ONE),  // padding
         ::testing::Values(ActivationFunctionType_NONE,
                           ActivationFunctionType_RELU),  // activation function
-#if RUY_PLATFORM(ARM_64)
-        // There's not yet Arm64 kernel support for bitpacked activations.
-        ::testing::Values(false),  // read bitpacked input
-        ::testing::Values(false),  // write bitpcked output
-#else
-        ::testing::Values(false, true),  // read bitpacked input
+        ::testing::Values(false, true),                  // read bitpacked input
         ::testing::Values(false, true),  // write bitpacked output
-#endif
-        ::testing::Values(1, 2),  // number of threads
+        ::testing::Values(1, 2),         // number of threads
         ::testing::ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
     TestParam::TestNameSuffix);
 

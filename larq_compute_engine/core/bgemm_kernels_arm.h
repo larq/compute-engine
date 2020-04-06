@@ -18,6 +18,27 @@ using namespace ruy;
 
 #if RUY_PLATFORM(NEON) && RUY_OPT_ENABLED(RUY_OPT_ASM)
 
+// Generic kNeon template when no types are specified
+template <typename LhsScalar, typename RhsScalar, typename DstScalar,
+          typename Spec>
+struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar, Spec> {
+  ruy::Tuning tuning = Tuning::kAuto;
+  using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
+  using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
+  explicit BgemmKernel(ruy::Tuning tuning_) : tuning(tuning_) {}
+  void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
+           const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
+           int start_row, int start_col, int end_row, int end_col,
+           ruy::Matrix<DstScalar>* dst) const {
+    static_assert(std::is_same<LhsScalar, RhsScalar>::value,
+                  "Inputs to binary kernel should have the same type.");
+    static_assert(
+        /* std::is_unsigned<LhsScalar>::value && */
+        std::is_integral<LhsScalar>::value,
+        "Input to binary kernel should be of type unsigned integral.");
+  }
+};
+
 #if RUY_PLATFORM(NEON_64)
 // A BGEMM kernel for ARM64 Neon.
 #include "bgemm_kernels_arm64.h"

@@ -669,23 +669,6 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
 
   if (kernel_type == KernelType::kRuyOptimized) {
     switch (conv_params->bitpacking_bitwidth) {
-// On Arm64, we don't yet support 8-bit bitpacked input or writing bitpacked
-// output.
-#if RUY_PLATFORM(ARM_64)
-      case 32:
-        if (conv_params->write_bitpacked_output)
-          return kTfLiteError;
-        else
-          EvalOpt<float, std::uint32_t, float>(context, node, conv_params);
-        return kTfLiteOk;
-      case 64:
-        if (conv_params->write_bitpacked_output)
-          return kTfLiteError;
-        else
-          EvalOpt<float, std::uint64_t, float>(context, node, conv_params);
-        return kTfLiteOk;
-// But we support both in our C++ kernels for Arm32 and x86.
-#else
       case 8:
         if (conv_params->write_bitpacked_output)
           EvalOpt<float, std::uint8_t, std::int8_t>(context, node, conv_params);
@@ -706,7 +689,6 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
         else
           EvalOpt<float, std::uint64_t, float>(context, node, conv_params);
         return kTfLiteOk;
-#endif
     }
   } else if (kernel_type == KernelType::kGenericRef) {
     if (conv_params->bitpacking_bitwidth == 32) {
