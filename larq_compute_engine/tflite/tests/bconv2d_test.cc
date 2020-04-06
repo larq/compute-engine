@@ -184,8 +184,6 @@ typedef std::tuple<std::array<int, 4>,           // input shape [BHWI]
                    std::array<int, 2>,           // dilations [HW]
                    Padding,                      // paddding
                    enum ActivationFunctionType,  // activation function
-                   bool,                         // read bitpacked input flag
-                   bool,                         // write bitpacked output flag
                    int,                          // number of threads
                    std::pair<std::string, register_function>>  // registration
     TestParamTuple;
@@ -207,11 +205,9 @@ struct TestParam {
         dilation_width_factor(::testing::get<3>(param_tuple)[1]),
         padding(::testing::get<4>(param_tuple)),
         activation(::testing::get<5>(param_tuple)),
-        read_bitpacked_input(::testing::get<6>(param_tuple)),
-        write_bitpacked_output(::testing::get<7>(param_tuple)),
-        num_threads(::testing::get<8>(param_tuple)),
-        kernel_name(::testing::get<9>(param_tuple).first),
-        registration(::testing::get<9>(param_tuple).second) {}
+        num_threads(::testing::get<6>(param_tuple)),
+        kernel_name(::testing::get<7>(param_tuple).first),
+        registration(::testing::get<7>(param_tuple).second) {}
 
   static std::string TestNameSuffix(
       const ::testing::TestParamInfo<TestParamTuple>& info) {
@@ -228,22 +224,16 @@ struct TestParam {
     param_dilation_oss << param.dilation_height_factor << "x"
                        << param.dilation_width_factor;
 
-    string param_bitpacked_input_output =
-        param.read_bitpacked_input ? "read_bitpacked_" : "read_fp_";
-    param_bitpacked_input_output.append(
-        param.write_bitpacked_output ? "write_bitpacked" : "write_fp");
-
     const int pad_values = (param.padding == Padding_ONE ? 1 : 0);
     const Padding padding =
         (param.padding == Padding_ONE ? Padding_SAME : param.padding);
 
     // WARNING: substitute accepts only 11 arguments
     return absl::Substitute(
-        "Op$0_I$1_K$2_P$3_PV$4_S$5_D$6_Act$7_$8_T$9", param.kernel_name,
+        "Op$0_I$1_K$2_P$3_PV$4_S$5_D$6_Act$7_T$8", param.kernel_name,
         param_input_oss.str(), param_filter_oss.str(), GetPaddingName(padding),
         pad_values, param_strides_oss.str(), param_dilation_oss.str(),
-        getActivationString(param.activation), param_bitpacked_input_output,
-        param.num_threads);
+        getActivationString(param.activation), param.num_threads);
   }
 
   int input_batch_count = 1;
@@ -264,9 +254,6 @@ struct TestParam {
   Padding padding = Padding_VALID;
 
   ::tflite::ActivationFunctionType activation = ActivationFunctionType_NONE;
-
-  bool read_bitpacked_input = false;
-  bool write_bitpacked_output = false;
 
   int num_threads = 1;
 
@@ -445,6 +432,9 @@ inline void test_lce_op_output(const std::vector<TOutput>& lce_output_data,
 
   // We need the outputs here to be bit-exact, so don't allow for floating
   // point imprecision.
+  // It might happen that the builtin float was -0.0001 but in our op it was
+  // +0.0001 in which case we get a mismatch here. If it turns out that happens,
+  // we can simply add a loop here that checks the elements manually.
   EXPECT_EQ(lce_output_data, builtin_output_data_bp);
 }
 
@@ -457,20 +447,7 @@ inline void test_lce_op_output(const std::vector<float>& lce_output_data,
 }
 
 template <typename TInput, typename TOutput>
-void test_lce_op(const register_function registration,
-                 const RuntimeShape& input_shape,
-                 const RuntimeShape& filter_shape,
-                 const int unpacked_input_channels, const int stride_width,
-                 const int stride_height, const enum Padding bconv_padding,
-                 const int pad_values, const int dilation_width_factor,
-                 const int dilation_height_factor,
-                 const enum ActivationFunctionType activation,
-                 const int num_threads, std::vector<float> input_data,
-                 std::vector<PackedFilterType> packed_filters_data,
-                 std::vector<float> post_activation_multiplier_data,
-                 std::vector<float> post_activation_bias_data,
-                 const std::vector<int>& builtin_output_shape,
-                 std::vector<float>& builtin_output_data) {
+void runTest(const TestParam& param) {
   static_assert(std::is_same<TInput, float>::value ||
                     std::is_same<TInput, std::int8_t>::value ||
                     std::is_same<TInput, std::int32_t>::value,
@@ -479,65 +456,6 @@ void test_lce_op(const register_function registration,
                     std::is_same<TOutput, std::int8_t>::value ||
                     std::is_same<TOutput, std::int32_t>::value,
                 "The LCE op output type must be float or uint8 or uint32.");
-
-  const bool read_bitpacked_input = !std::is_same<TInput, float>::value;
-  const bool write_bitpacked_output = !std::is_same<TOutput, float>::value;
-
-  // Create LCE op.
-
-  TensorType input_tensor_type;
-  if (std::is_same<TInput, float>::value)
-    input_tensor_type = TensorType_FLOAT32;
-  else if (std::is_same<TInput, std::int8_t>::value)
-    input_tensor_type = TensorType_INT8;
-  else
-    input_tensor_type = TensorType_INT32;
-
-  TensorType output_tensor_type;
-  if (std::is_same<TOutput, float>::value)
-    output_tensor_type = TensorType_FLOAT32;
-  else if (std::is_same<TOutput, std::int8_t>::value)
-    output_tensor_type = TensorType_INT8;
-  else
-    output_tensor_type = TensorType_INT32;
-
-  int input_depth = input_shape.Dims(3);
-  if (read_bitpacked_input) {
-    // We can't use `std::numeric_limits<TInput>` here because we bitpack into
-    // *signed* integers, and the bitwidth will be one less than expected.
-    const auto bitwidth = sizeof(TInput) * CHAR_BIT;
-    input_depth = (input_depth + bitwidth - 1) / bitwidth;
-  }
-
-  BConv2DOpModel<TInput, TOutput> m_lce(
-      registration,
-      {input_tensor_type,
-       {input_shape.Dims(0), input_shape.Dims(1), input_shape.Dims(2),
-        input_depth}},
-      {TensorType_INT32,
-       {filter_shape.Dims(0), filter_shape.Dims(1), filter_shape.Dims(2),
-        filter_shape.Dims(3)}},
-      {output_tensor_type, {}}, unpacked_input_channels, stride_width,
-      stride_height, bconv_padding, pad_values, activation,
-      dilation_width_factor, dilation_height_factor, read_bitpacked_input,
-      write_bitpacked_output, num_threads);
-
-  // Set op parameters.
-
-  set_lce_op_input(input_shape, input_data, m_lce);
-  m_lce.SetFilter(packed_filters_data);
-  m_lce.SetPostActivationMultiplier(post_activation_multiplier_data);
-  m_lce.SetPostActivationBias(post_activation_bias_data);
-
-  // Invoke the op and test that the output is correct.
-
-  m_lce.Invoke();
-  test_lce_op_output(m_lce.GetOutput(), builtin_output_shape,
-                     builtin_output_data);
-}
-
-TEST_P(BConv2DOpTest, SimpleTest) {
-  const TestParam param(GetParam());
 
   const register_function registration = param.registration;
   const int input_batch_count = param.input_batch_count;
@@ -551,11 +469,11 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   const int stride_width = param.stride_width;
   const int dilation_height_factor = param.dilation_height_factor;
   const int dilation_width_factor = param.dilation_width_factor;
-  const bool read_bitpacked_input = param.read_bitpacked_input;
-  const bool write_bitpacked_output = param.write_bitpacked_output;
   const Padding padding = param.padding;
   const ActivationFunctionType activation = param.activation;
   const int num_threads = param.num_threads;
+  const bool read_bitpacked_input = !std::is_same<TInput, float>::value;
+  const bool write_bitpacked_output = !std::is_same<TOutput, float>::value;
 
   const Padding builtin_padding =
       (padding == Padding_ONE ? Padding_VALID : padding);
@@ -585,8 +503,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   }
 
   using T = float;
-  std::vector<T> input_data, builtin_input_data, builtin_output_data,
-      filters_data;
+  std::vector<T> input_data, builtin_input_data, filters_data;
   std::vector<T> post_activation_multiplier_data, post_activation_bias_data,
       bias_data;
   std::vector<PackedFilterType> packed_filters_data;
@@ -718,77 +635,91 @@ TEST_P(BConv2DOpTest, SimpleTest) {
     Test LCE op.
    -------------*/
 
-  RuntimeShape input_shape{input_batch_count, input_height, input_width,
-                           input_depth};
-  RuntimeShape packed_filter_shape{filter_count, filter_height, filter_width,
-                                   packed_channels};
+  // Create LCE op.
 
-  if (write_bitpacked_output) {
-    if (read_bitpacked_input) {
-      if (is_reference_registration) {
-        test_lce_op<std::int32_t, std::int32_t>(
-            registration, input_shape, packed_filter_shape, input_depth,
-            stride_width, stride_height, bconv_padding, pad_values,
-            dilation_width_factor, dilation_height_factor, activation,
-            num_threads, input_data, packed_filters_data,
-            post_activation_multiplier_data, post_activation_bias_data,
-            m_builtin.GetOutputShape(), builtin_output);
-      } else {  // Not the reference op.
-        test_lce_op<std::int8_t, std::int8_t>(
-            registration, input_shape, packed_filter_shape, input_depth,
-            stride_width, stride_height, bconv_padding, pad_values,
-            dilation_width_factor, dilation_height_factor, activation,
-            num_threads, input_data, packed_filters_data,
-            post_activation_multiplier_data, post_activation_bias_data,
-            m_builtin.GetOutputShape(), builtin_output);
-      }
-    } else {  // Not reading bitpacked input.
-      if (is_reference_registration) {
-        test_lce_op<T, std::int32_t>(
-            registration, input_shape, packed_filter_shape, input_depth,
-            stride_width, stride_height, bconv_padding, pad_values,
-            dilation_width_factor, dilation_height_factor, activation,
-            num_threads, input_data, packed_filters_data,
-            post_activation_multiplier_data, post_activation_bias_data,
-            m_builtin.GetOutputShape(), builtin_output);
-      } else {  // Not the reference op.
-        test_lce_op<T, std::int8_t>(
-            registration, input_shape, packed_filter_shape, input_depth,
-            stride_width, stride_height, bconv_padding, pad_values,
-            dilation_width_factor, dilation_height_factor, activation,
-            num_threads, input_data, packed_filters_data,
-            post_activation_multiplier_data, post_activation_bias_data,
-            m_builtin.GetOutputShape(), builtin_output);
-      }
-    }
-  } else {  // Not writing bitpacked output.
-    if (read_bitpacked_input) {
-      if (is_reference_registration) {
-        test_lce_op<std::int32_t, T>(
-            registration, input_shape, packed_filter_shape, input_depth,
-            stride_width, stride_height, bconv_padding, pad_values,
-            dilation_width_factor, dilation_height_factor, activation,
-            num_threads, input_data, packed_filters_data,
-            post_activation_multiplier_data, post_activation_bias_data,
-            m_builtin.GetOutputShape(), builtin_output);
-      } else {  // Not the reference op.
-        test_lce_op<std::int8_t, T>(
-            registration, input_shape, packed_filter_shape, input_depth,
-            stride_width, stride_height, bconv_padding, pad_values,
-            dilation_width_factor, dilation_height_factor, activation,
-            num_threads, input_data, packed_filters_data,
-            post_activation_multiplier_data, post_activation_bias_data,
-            m_builtin.GetOutputShape(), builtin_output);
-      }
-    } else {  // Not reading bitpacked input.
-      test_lce_op<T, T>(
-          registration, input_shape, packed_filter_shape, input_depth,
-          stride_width, stride_height, bconv_padding, pad_values,
-          dilation_width_factor, dilation_height_factor, activation,
-          num_threads, input_data, packed_filters_data,
-          post_activation_multiplier_data, post_activation_bias_data,
-          m_builtin.GetOutputShape(), builtin_output);
-    }
+  TensorType input_tensor_type;
+  if (std::is_same<TInput, float>::value)
+    input_tensor_type = TensorType_FLOAT32;
+  else if (std::is_same<TInput, std::int8_t>::value)
+    input_tensor_type = TensorType_INT8;
+  else
+    input_tensor_type = TensorType_INT32;
+
+  TensorType output_tensor_type;
+  if (std::is_same<TOutput, float>::value)
+    output_tensor_type = TensorType_FLOAT32;
+  else if (std::is_same<TOutput, std::int8_t>::value)
+    output_tensor_type = TensorType_INT8;
+  else
+    output_tensor_type = TensorType_INT32;
+
+  // input_depth is always unpacked
+  // For reading bitpacked input, the input tensor can be packed
+  int input_tensor_channels = input_depth;
+  if (read_bitpacked_input) {
+    // We can't use `std::numeric_limits<TInput>` here because we bitpack into
+    // *signed* integers, and the bitwidth will be one less than expected.
+    const auto bitwidth = sizeof(TInput) * CHAR_BIT;
+    input_tensor_channels = (input_depth + bitwidth - 1) / bitwidth;
+  }
+
+  BConv2DOpModel<TInput, TOutput> m_lce(
+      registration,
+      {input_tensor_type,
+       {input_batch_count, input_height, input_width, input_tensor_channels}},
+      {TensorType_INT32,
+       {filter_count, filter_height, filter_width, packed_channels}},
+      {output_tensor_type, {}}, input_depth, stride_width, stride_height,
+      bconv_padding, pad_values, activation, dilation_width_factor,
+      dilation_height_factor, read_bitpacked_input, write_bitpacked_output,
+      num_threads);
+
+  // Set op parameters.
+
+  set_lce_op_input({input_batch_count, input_height, input_width, input_depth},
+                   input_data, m_lce);
+  m_lce.SetFilter(packed_filters_data);
+  m_lce.SetPostActivationMultiplier(post_activation_multiplier_data);
+  m_lce.SetPostActivationBias(post_activation_bias_data);
+
+  // Invoke the op and test that the output is correct.
+
+  m_lce.Invoke();
+  test_lce_op_output(m_lce.GetOutput(), m_builtin.GetOutputShape(),
+                     builtin_output);
+}
+
+TEST_P(BConv2DOpTest, ReadFPWriteFP) {
+  runTest<float, float>(TestParam(GetParam()));
+}
+
+TEST_P(BConv2DOpTest, ReadBPWriteBP) {
+  if (TestParam(GetParam()).registration ==
+      compute_engine::tflite::Register_BCONV_2D32_REF) {
+    // Reference op uses 32-bit bitpacking
+    runTest<std::int32_t, std::int32_t>(TestParam(GetParam()));
+  } else {
+    runTest<std::int8_t, std::int8_t>(TestParam(GetParam()));
+  }
+}
+
+TEST_P(BConv2DOpTest, ReadFPWriteBP) {
+  if (TestParam(GetParam()).registration ==
+      compute_engine::tflite::Register_BCONV_2D32_REF) {
+    // Reference op uses 32-bit bitpacking
+    runTest<float, std::int32_t>(TestParam(GetParam()));
+  } else {
+    runTest<float, std::int8_t>(TestParam(GetParam()));
+  }
+}
+
+TEST_P(BConv2DOpTest, ReadBPWriteFP) {
+  if (TestParam(GetParam()).registration ==
+      compute_engine::tflite::Register_BCONV_2D32_REF) {
+    // Reference op uses 32-bit bitpacking
+    runTest<std::int32_t, float>(TestParam(GetParam()));
+  } else {
+    runTest<std::int8_t, float>(TestParam(GetParam()));
   }
 }
 
@@ -817,9 +748,7 @@ INSTANTIATE_TEST_SUITE_P(
         ::testing::Values(Padding_VALID, Padding_SAME, Padding_ONE),  // padding
         ::testing::Values(ActivationFunctionType_NONE,
                           ActivationFunctionType_RELU),  // activation function
-        ::testing::Values(false, true),                  // read bitpacked input
-        ::testing::Values(false, true),  // write bitpacked output
-        ::testing::Values(1, 2),         // number of threads
+        ::testing::Values(1, 2),                         // number of threads
         ::testing::ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
     TestParam::TestNameSuffix);
 
