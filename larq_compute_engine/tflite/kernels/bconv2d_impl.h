@@ -127,30 +127,22 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
 
     RuntimeShape result_shape;
 
+    RuntimeShape packed_input_shape = input_shape;
+    const TBitpacked* input_data_bp;
     if (read_bitpacked_input) {
-      RuntimeShape packed_input_shape = input_shape;
-
-      const TBitpacked* input_data_bp =
-          reinterpret_cast<const TBitpacked*>(input_data);
-
-      im2col<TBitpacked>(params, packed_input_shape, input_data_bp,
-                         packed_filter_shape, output_shape, im2col_shape,
-                         packed_im2col_data, result_shape, &rhs_data);
+      input_data_bp = reinterpret_cast<const TBitpacked*>(input_data);
     } else {
       // Buffer for bitpacked input data.
-      static std::vector<TBitpacked> input_data_bp;
-
+      static std::vector<TBitpacked> input_data_bp_buffer;
       // The input tensor has this shape which we bitpack along the channels
       // dimension [batch, input height, input width, channels].
-      RuntimeShape packed_input_shape;
-
       ce::core::packbits_tensor(input_shape, input_data, packed_input_shape,
-                                input_data_bp);
-
-      im2col<TBitpacked>(params, packed_input_shape, input_data_bp.data(),
-                         packed_filter_shape, output_shape, im2col_shape,
-                         packed_im2col_data, result_shape, &rhs_data);
+                                input_data_bp_buffer);
+      input_data_bp = input_data_bp_buffer.data();
     }
+    im2col<TBitpacked>(params, packed_input_shape, input_data_bp,
+                       packed_filter_shape, output_shape, im2col_shape,
+                       packed_im2col_data, result_shape, &rhs_data);
 
     k = result_shape.Dims(3);
     m = FlatSizeSkipDim(result_shape, 3);
