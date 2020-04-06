@@ -694,33 +694,15 @@ TEST_P(BConv2DOpTest, ReadFPWriteFP) {
 }
 
 TEST_P(BConv2DOpTest, ReadBPWriteBP) {
-  if (TestParam(GetParam()).registration ==
-      compute_engine::tflite::Register_BCONV_2D32_REF) {
-    // Reference op uses 32-bit bitpacking
-    runTest<std::int32_t, std::int32_t>(TestParam(GetParam()));
-  } else {
-    runTest<std::int8_t, std::int8_t>(TestParam(GetParam()));
-  }
+  runTest<std::int32_t, std::int32_t>(TestParam(GetParam()));
 }
 
 TEST_P(BConv2DOpTest, ReadFPWriteBP) {
-  if (TestParam(GetParam()).registration ==
-      compute_engine::tflite::Register_BCONV_2D32_REF) {
-    // Reference op uses 32-bit bitpacking
-    runTest<float, std::int32_t>(TestParam(GetParam()));
-  } else {
-    runTest<float, std::int8_t>(TestParam(GetParam()));
-  }
+  runTest<float, std::int32_t>(TestParam(GetParam()));
 }
 
 TEST_P(BConv2DOpTest, ReadBPWriteFP) {
-  if (TestParam(GetParam()).registration ==
-      compute_engine::tflite::Register_BCONV_2D32_REF) {
-    // Reference op uses 32-bit bitpacking
-    runTest<std::int32_t, float>(TestParam(GetParam()));
-  } else {
-    runTest<std::int8_t, float>(TestParam(GetParam()));
-  }
+  runTest<std::int32_t, float>(TestParam(GetParam()));
 }
 
 INSTANTIATE_TEST_SUITE_P(

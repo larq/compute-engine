@@ -93,7 +93,7 @@ struct BGemmImplUsingRuy {
 #endif
 
     // For writing bitpacked output, fallback to the standard C++ kernel.
-    if (std::is_same<DstScalar, std::int8_t>::value) {
+    if (std::is_same<DstScalar, std::int32_t>::value) {
       bgemm_runtime_path = ruy::Path::kStandardCpp;
     }
 

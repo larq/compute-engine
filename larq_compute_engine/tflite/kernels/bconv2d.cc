@@ -261,15 +261,9 @@ TfLiteStatus Prepare(KernelType kernel_type,
   TF_LITE_ENSURE_EQ(context, post_activation_multiplier->type, kTfLiteFloat32);
   TF_LITE_ENSURE_EQ(context, post_activation_bias->type, kTfLiteFloat32);
   if (conv_params->read_bitpacked_input) {
-    if (kernel_type == KernelType::kGenericRef) {
-      // The reference kernel only supports 32-bit bitpacked input.
-      TF_LITE_ENSURE_EQ(context, input->type, kTfLiteInt32);
-      conv_params->bitpacking_bitwidth = 32;
-    } else {
-      // The optimised kernel 8-bit bitpacking when reading bitpacked input.
-      TF_LITE_ENSURE_EQ(context, input->type, kTfLiteInt8);
-      conv_params->bitpacking_bitwidth = 8;
-    }
+    // The kernels support only 32-bit bitpacking when reading bitpacked input.
+    TF_LITE_ENSURE_EQ(context, input->type, kTfLiteInt32);
+    conv_params->bitpacking_bitwidth = 32;
   } else {
     TF_LITE_ENSURE_EQ(context, input->type, kTfLiteFloat32);
     TF_LITE_ENSURE_EQ(context, conv_params->channels_in, input->dims->data[3]);
@@ -279,10 +273,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
     conv_params->bitpacking_bitwidth = default_bitpacking_bitwidth;
   }
   if (conv_params->write_bitpacked_output) {
-    if (kernel_type == KernelType::kGenericRef)
-      TF_LITE_ENSURE_EQ(context, output->type, kTfLiteInt32);
-    else
-      TF_LITE_ENSURE_EQ(context, output->type, kTfLiteInt8);
+    TF_LITE_ENSURE_EQ(context, output->type, kTfLiteInt32);
   } else {
     TF_LITE_ENSURE_EQ(context, output->type, kTfLiteFloat32);
   }
@@ -342,12 +333,8 @@ TfLiteStatus Prepare(KernelType kernel_type,
   output_shape->data[1] = conv_params->out_height;
   output_shape->data[2] = conv_params->out_width;
   if (conv_params->write_bitpacked_output) {
-    // If we write bitpacked output, we use either 32-bit or 8-bit bitpacking
-    // depending on the kernel.
-    if (kernel_type == KernelType::kGenericRef)
-      output_shape->data[3] = (conv_params->channels_out + 31) / 32;
-    else
-      output_shape->data[3] = (conv_params->channels_out + 7) / 8;
+    // If we write bitpacked output, we use 32-bit bitpacking
+    output_shape->data[3] = (conv_params->channels_out + 31) / 32;
   } else {
     output_shape->data[3] = conv_params->channels_out;
   }
@@ -671,21 +658,22 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
     switch (conv_params->bitpacking_bitwidth) {
       case 8:
         if (conv_params->write_bitpacked_output)
-          EvalOpt<float, std::uint8_t, std::int8_t>(context, node, conv_params);
+          EvalOpt<float, std::uint8_t, std::int32_t>(context, node,
+                                                     conv_params);
         else
           EvalOpt<float, std::uint8_t, float>(context, node, conv_params);
         return kTfLiteOk;
       case 32:
         if (conv_params->write_bitpacked_output)
-          EvalOpt<float, std::uint32_t, std::int8_t>(context, node,
-                                                     conv_params);
+          EvalOpt<float, std::uint32_t, std::int32_t>(context, node,
+                                                      conv_params);
         else
           EvalOpt<float, std::uint32_t, float>(context, node, conv_params);
         return kTfLiteOk;
       case 64:
         if (conv_params->write_bitpacked_output)
-          EvalOpt<float, std::uint64_t, std::int8_t>(context, node,
-                                                     conv_params);
+          EvalOpt<float, std::uint64_t, std::int32_t>(context, node,
+                                                      conv_params);
         else
           EvalOpt<float, std::uint64_t, float>(context, node, conv_params);
         return kTfLiteOk;

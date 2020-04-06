@@ -90,7 +90,7 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
 
 // A template specialisation for writing 8-bit bitpacked output.
 template <typename LhsScalar, typename RhsScalar, typename Spec>
-struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int8_t,
+struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int32_t,
                    Spec> {
   using AccumScalar = typename Spec::AccumScalar;
   using LhsLayout = typename Spec::StandardCppKernelLhsLayout;
@@ -99,7 +99,7 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int8_t,
   void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
            const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
            int start_row, int start_col, int end_row, int end_col,
-           ruy::Matrix<std::int8_t>* dst) const {
+           ruy::Matrix<std::int32_t>* dst) const {
     static_assert(std::is_same<LhsScalar, RhsScalar>::value,
                   "Inputs to binary kernel should have the same type.");
     static_assert(
@@ -109,18 +109,21 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int8_t,
 
     using TBitpacked = LhsScalar;
 
-    // We are writing 8-bit bitpacked output (where we bitpack along the channel
-    // axis) and so we need to operate on blocks of 8 channels at a time. As the
-    // destination is column major, this means blocks of 8 rows at a time. The
-    // blocks Ruy uses are always a power of two and are almost always >> 8.
-    // However, when running with multiple threads and a very large input size,
-    // Ruy may use blocks of 4 rows.
+    // We are writing 32-bit bitpacked output (where we bitpack along the
+    // channel axis) and so we need to operate on blocks of 32 channels at a
+    // time. As the destination is column major, this means blocks of 32 rows at
+    // a time. The blocks Ruy uses are always a power of two and are almost
+    // always >> 8. However, when running with multiple threads and a very large
+    // input size, Ruy may use blocks of 4 rows.
     //     In this scenario, we round the start and end row down and up to the
-    // nearest multiple of 8 respectively. This is a thread-safe way to ensure
+    // nearest multiple of 32 respectively. This is a thread-safe way to ensure
     // that the result is correct, at the cost of some rare repeated
     // computation, which is acceptable for this non-optimised kernel.
-    start_row = 8 * (start_row / 8);
-    end_row = 8 * ((end_row + 7) / 8);
+    //
+    // Note that the rows in all these calculations are the *unpacked* rows.
+
+    start_row = 32 * (start_row / 32);
+    end_row = 32 * ((end_row + 31) / 32);
 
     int clamped_end_row = std::min(end_row, dst->layout.rows);
     int clamped_end_col = std::min(end_col, dst->layout.cols);
@@ -140,12 +143,12 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int8_t,
         "Binary Kernel (Standard Cpp) Bitpacked Output.");
 
     const int depth = lhs.layout.rows;
-    const int dst_stride_bitpacked = (dst->layout.stride + 7) / 8;
+    const int dst_stride_bitpacked = (dst->layout.stride + 31) / 32;
 
     // The destination is column major and we need to bitpack along the row
     // (channels) axis so we need to loop over column index then row index.
     for (int j = start_col; j < clamped_end_col; j++) {
-      std::uint8_t bitpacked_column = 0;
+      std::uint32_t bitpacked_column = 0;
       for (int i = start_row; i < clamped_end_row; i++) {
         using AccumScalar = typename Spec::AccumScalar;
         AccumScalar accum = 0;
@@ -169,10 +172,10 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int8_t,
           dst_val += spec.post_activation_bias[i];
         }
         if (dst_val < 0) {
-          bitpacked_column += 1 << ((i - start_row) % 8);
+          bitpacked_column |= 1ULL << ((i - start_row) % 32);
         }
-        if (((i - start_row + 1) % 8 == 0) || (i + 1 == clamped_end_row)) {
-          *(dst->data.get() + i / 8 + j * dst_stride_bitpacked) =
+        if (((i - start_row + 1) % 32 == 0) || (i + 1 == clamped_end_row)) {
+          *(dst->data.get() + i / 32 + j * dst_stride_bitpacked) =
               bitpacked_column;
           bitpacked_column = 0;
         }
