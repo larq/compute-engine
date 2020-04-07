@@ -5,7 +5,7 @@ package(
 
 cc_test(
     name = "bconv2d_test",
-    size = "medium",
+    size = "large",
     srcs = ["bconv2d_test.cc"],
     deps = [
         "//larq_compute_engine/core:packbits",
