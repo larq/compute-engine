@@ -451,11 +451,11 @@ void runTest(const TestParam& param) {
   static_assert(std::is_same<TInput, float>::value ||
                     std::is_same<TInput, std::int8_t>::value ||
                     std::is_same<TInput, std::int32_t>::value,
-                "The LCE op input type must be float or uint8 or uint32.");
+                "The LCE op input type must be float or int8 or int32.");
   static_assert(std::is_same<TOutput, float>::value ||
                     std::is_same<TOutput, std::int8_t>::value ||
                     std::is_same<TOutput, std::int32_t>::value,
-                "The LCE op output type must be float or uint8 or uint32.");
+                "The LCE op output type must be float or int8 or int32.");
 
   const register_function registration = param.registration;
   const int input_batch_count = param.input_batch_count;

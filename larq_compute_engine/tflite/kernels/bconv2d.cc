@@ -408,9 +408,6 @@ TfLiteStatus Prepare(KernelType kernel_type,
     // Determine the type
     if (conv_params->bitpack_before_im2col) {
       switch (conv_params->bitpacking_bitwidth) {
-        case 8:
-          im2col->type = kTfLiteInt8;
-          break;
         case 32:
           im2col->type = kTfLiteInt32;
           break;
@@ -656,13 +653,6 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
 
   if (kernel_type == KernelType::kRuyOptimized) {
     switch (conv_params->bitpacking_bitwidth) {
-      case 8:
-        if (conv_params->write_bitpacked_output)
-          EvalOpt<float, std::uint8_t, std::int32_t>(context, node,
-                                                     conv_params);
-        else
-          EvalOpt<float, std::uint8_t, float>(context, node, conv_params);
-        return kTfLiteOk;
       case 32:
         if (conv_params->write_bitpacked_output)
           EvalOpt<float, std::uint32_t, std::int32_t>(context, node,
