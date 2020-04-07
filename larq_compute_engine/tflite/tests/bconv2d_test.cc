@@ -338,12 +338,12 @@ template <typename TData, typename PostType, typename TOutput>
 void set_lce_op_input(const RuntimeShape& input_shape,
                       std::vector<TData> input_data, std::int32_t zero_point,
                       BConv2DOpModel<std::int32_t, PostType, TOutput>& m_lce) {
-  std::vector<std::int32_t> input_data_bp;
-  std::size_t input_rows_bp, input_cols_bp, input_bitpadding;
-  core::packbits_matrix<core::BitpackOrder::Canonical>(
-      input_data.data(), FlatSizeSkipDim(input_shape, 3), input_shape.Dims(3),
-      input_data_bp, input_rows_bp, input_cols_bp, input_bitpadding,
-      core::Axis::RowWise, zero_point);
+  std::vector<std::int32_t> input_data_bp(
+      core::GetPackedTensorElements<std::int32_t>(input_shape));
+  RuntimeShape output_shape;
+  core::packbits_tensor<core::BitpackOrder::Canonical>(
+      input_shape, input_data.data(), zero_point, output_shape,
+      input_data_bp.data());
   m_lce.SetInput(input_data_bp);
 }
 
@@ -354,14 +354,14 @@ void test_lce_op_output(const std::vector<std::int32_t>& lce_output_data,
                         const std::vector<BuiltinType>& builtin_output_data,
                         std::int32_t zero_point) {
   // Apply bitpacking to the builtin output.
-  std::vector<std::int32_t> builtin_output_data_bp;
-  std::size_t output_rows_bp, output_cols_bp, output_bitpadding;
-  core::packbits_matrix<core::BitpackOrder::Canonical>(
-      builtin_output_data.data(),
-      builtin_output_shape.at(0) * builtin_output_shape.at(1) *
-          builtin_output_shape.at(2),
-      builtin_output_shape.at(3), builtin_output_data_bp, output_rows_bp,
-      output_cols_bp, output_bitpadding, core::Axis::RowWise, zero_point);
+  RuntimeShape out_shape;
+  out_shape.BuildFrom(builtin_output_shape);
+  std::vector<std::int32_t> builtin_output_data_bp(
+      core::GetPackedTensorElements<std::int32_t>(out_shape));
+  RuntimeShape packed_shape;
+  core::packbits_tensor<core::BitpackOrder::Canonical>(
+      out_shape, builtin_output_data.data(), zero_point, packed_shape,
+      builtin_output_data_bp.data());
 
   // We need the outputs here to be bit-exact, so don't allow for floating
   // point imprecision.
@@ -435,7 +435,7 @@ void runTest(const TestParam& param) {
       filter_height * filter_width * input_depth * filter_count;
 
   const int packed_channels =
-      (input_depth + packed_bitwidth - 1) / packed_bitwidth;
+      core::GetPackedElements<PackedFilterType>(input_depth);
   const int packed_num_elem =
       filter_count * filter_height * filter_width * packed_channels;
 
@@ -540,12 +540,10 @@ void runTest(const TestParam& param) {
   }
 
   // Bitpack filters
-  std::size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
   using namespace compute_engine::core;
   packbits_matrix<BitpackOrder::Canonical>(
       filters_data.data(), filter_count * filter_height * filter_width,
-      input_depth, packed_filters_data, filter_rows_bp, filter_cols_bp,
-      filter_bitpadding, Axis::RowWise);
+      input_depth, packed_filters_data.data());
 
   int output_height, output_width;
   TfLitePaddingValues padding_values = ComputePaddingHeightWidth(

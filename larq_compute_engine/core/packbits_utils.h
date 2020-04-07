@@ -11,29 +11,37 @@ namespace compute_engine {
 namespace ce = compute_engine;
 namespace core {
 
+template <typename TBitpacked>
+int GetPackedTensorElements(const RuntimeShape& shape) {
+  constexpr auto bitwidth = std::numeric_limits<
+      typename std::make_unsigned<TBitpacked>::type>::digits;
+  const int dims = shape.DimensionsCount();
+  // Pack the tensor along the last dimension
+  const int rows = FlatSizeSkipDim(shape, dims - 1);
+  const int cols = shape.Dims(dims - 1);
+  return ce::core::GetPackedMatrixElements(rows, cols, bitwidth);
+}
+
 // Convenience function for bitpacking a tensor along its last dimension
 // and updating the tensor shape
-template <class T, class TBitpacked>
+template <BitpackOrder bitpack_order = ce::core::BitpackOrder::Canonical,
+          class T, class TBitpacked>
 inline void packbits_tensor(const RuntimeShape& in_shape, const T* in_data,
                             const std::int32_t zero_point,
-                            RuntimeShape& out_shape,
-                            std::vector<TBitpacked>& out_data) {
+                            RuntimeShape& out_shape, TBitpacked* out_data) {
   const int dims = in_shape.DimensionsCount();
   // Pack the tensor along the last dimension
   const int rows = FlatSizeSkipDim(in_shape, dims - 1);
   const int cols = in_shape.Dims(dims - 1);
 
-  std::size_t rows_bp = 0, cols_bp = 0;
-  std::size_t bitpadding = 0;
   {
     gemmlowp::ScopedProfilingLabel label("Packbits");
     ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
-        in_data, rows, cols, out_data, rows_bp, cols_bp, bitpadding,
-        ce::core::Axis::RowWise, zero_point);
+        in_data, rows, cols, out_data, zero_point);
   }
 
   out_shape.ReplaceWith(dims, in_shape.DimsData());
-  out_shape.SetDim(dims - 1, cols_bp);
+  out_shape.SetDim(dims - 1, GetPackedElements<TBitpacked>(cols));
 }
 
 // Convenience function for going from a shape to the packed shape

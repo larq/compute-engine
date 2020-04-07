@@ -73,6 +73,9 @@ typedef struct {
   // So in pseudo-code: `node->temporaries[index] = id;`
   std::int32_t im2col_index;
 
+  int packed_input_id = kTensorNotAllocated;
+  std::int32_t packed_input_index;
+
   std::vector<float> padding_buffer;
   bool is_padding_correction_cached = false;
 

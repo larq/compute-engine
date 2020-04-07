@@ -80,8 +80,8 @@ template <typename SrcScalar, typename TBitpacked, typename AccumScalar,
           typename DstScalar>
 inline void BConv2D(
     const ConvParams& params, const RuntimeShape& input_shape,
-    const SrcScalar* input_data, const RuntimeShape& filter_shape,
-    const TBitpacked* packed_filter_data,
+    const SrcScalar* input_data, TBitpacked* packed_input_data,
+    const RuntimeShape& filter_shape, const TBitpacked* packed_filter_data,
     const OutputTransform<AccumScalar, DstScalar>& output_transform,
     const RuntimeShape& output_shape, DstScalar* output_data,
     const RuntimeShape& im2col_shape, SrcScalar* im2col_data,
@@ -139,28 +139,23 @@ inline void BConv2D(
     RuntimeShape result_shape;
 
     RuntimeShape packed_input_shape = input_shape;
-    const TBitpacked* input_data_bp;
+    const TBitpacked* im2col_input_data;
     if (read_bitpacked_input) {
-      input_data_bp = reinterpret_cast<const TBitpacked*>(input_data);
+      im2col_input_data = reinterpret_cast<const TBitpacked*>(input_data);
     } else {
-      // Buffer for bitpacked input data.
-      static std::vector<TBitpacked> input_data_bp_buffer;
       // The input tensor has this shape which we bitpack along the channels
       // dimension [batch, input height, input width, channels].
       ce::core::packbits_tensor(input_shape, input_data, params.input_offset,
-                                packed_input_shape, input_data_bp_buffer);
-      input_data_bp = input_data_bp_buffer.data();
+                                packed_input_shape, packed_input_data);
+      im2col_input_data = packed_input_data;
     }
-    im2col<TBitpacked>(params, packed_input_shape, input_data_bp,
+    im2col<TBitpacked>(params, packed_input_shape, im2col_input_data,
                        packed_filter_shape, output_shape, im2col_shape,
                        packed_im2col_data, result_shape, &rhs_data, 0);
 
     k = result_shape.Dims(3);
     m = FlatSizeSkipDim(result_shape, 3);
   } else {  // Bitpack after im2col.
-    // Buffer for bitpacked input data.
-    static std::vector<TBitpacked> input_data_bp;
-
     // We need to pad with the correct zero_byte
     RuntimeShape result_shape;
     const SrcScalar* result_data;
@@ -172,8 +167,8 @@ inline void BConv2D(
     //  [batch, output_height, output_width, k * bitwidth]
     RuntimeShape packed_input_shape;
     ce::core::packbits_tensor(result_shape, result_data, params.input_offset,
-                              packed_input_shape, input_data_bp);
-    rhs_data = input_data_bp.data();
+                              packed_input_shape, packed_input_data);
+    rhs_data = packed_input_data;
 
     k = packed_input_shape.Dims(3);
     m = FlatSizeSkipDim(packed_input_shape, 3);
