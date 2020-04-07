@@ -16,6 +16,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <ctime>
 #include <functional>
 #include <memory>
@@ -27,7 +28,9 @@
 #include "absl/strings/substitute.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
 #include "larq_compute_engine/core/packbits.h"
+#include "larq_compute_engine/core/packbits_utils.h"
 #include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/kernels/internal/types.h"
 #include "tensorflow/lite/kernels/padding.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/kernels/test_util.h"
@@ -121,6 +124,7 @@ class ConvolutionOpModel : public BaseConvolutionOpModel {
   void SetBias(std::vector<float>& f) { PopulateTensor(bias_, f); }
 
   std::vector<float> GetOutput() { return ExtractVector<float>(output_); }
+  std::vector<int> GetOutputShape() { return GetTensorShape(output_); }
 };
 
 // From lite/kernels/pad_test.cc
@@ -181,8 +185,7 @@ typedef std::tuple<std::array<int, 4>,           // input shape [BHWI]
                    Padding,                      // paddding
                    enum ActivationFunctionType,  // activation function
                    int,                          // number of threads
-                   std::pair<std::string, register_function>  // registration
-                   >
+                   std::pair<std::string, register_function>>  // registration
     TestParamTuple;
 
 struct TestParam {
@@ -225,12 +228,12 @@ struct TestParam {
     const Padding padding =
         (param.padding == Padding_ONE ? Padding_SAME : param.padding);
 
-    // WARNING: substitute accests only 11 arguments
+    // WARNING: substitute accepts only 11 arguments
     return absl::Substitute(
-        "Op$0_I$1_K$2_P$3_PV$4_S$5_D$6_T$7_Act$8", param.kernel_name,
+        "Op$0_I$1_K$2_P$3_PV$4_S$5_D$6_Act$7_T$8", param.kernel_name,
         param_input_oss.str(), param_filter_oss.str(), GetPaddingName(padding),
         pad_values, param_strides_oss.str(), param_dilation_oss.str(),
-        param.num_threads, getActivationString(param.activation));
+        getActivationString(param.activation), param.num_threads);
   }
 
   int input_batch_count = 1;
@@ -263,11 +266,12 @@ class BaseBConv2DOpModel : public SingleOpModel {
  public:
   BaseBConv2DOpModel(
       register_function registration, const TensorData& input,
-      const TensorData& filter, const TensorData& output, int stride_width = 1,
-      int stride_height = 1, enum Padding padding = Padding_VALID,
-      int pad_values = 0,
+      const TensorData& filter, const TensorData& output, int channels_in,
+      int stride_width = 1, int stride_height = 1,
+      enum Padding padding = Padding_VALID, int pad_values = 0,
       enum ActivationFunctionType activation = ActivationFunctionType_NONE,
       int dilation_width_factor = 1, int dilation_height_factor = 1,
+      bool read_bitpacked_input = false, bool write_bitpacked_output = false,
       int num_threads = -1) {
     input_ = AddInput(input);
     filter_ = AddInput(filter);
@@ -280,6 +284,10 @@ class BaseBConv2DOpModel : public SingleOpModel {
 
     flexbuffers::Builder fbb;
     fbb.Map([&]() {
+      // This attribute is necessary because if the filters are bitpacked and
+      // we're reading bitpacked input then we don't have access to the original
+      // 'true' number of input channels.
+      fbb.Int("channels_in", channels_in);
       fbb.TypedVector("strides", [&]() {
         fbb.Int(1);
         fbb.Int(stride_height);
@@ -295,6 +303,8 @@ class BaseBConv2DOpModel : public SingleOpModel {
       fbb.String("filter_format", "OHWI_PACKED");
       fbb.String("padding", GetPaddingName(padding));
       fbb.Int("pad_values", pad_values);
+      fbb.Bool("read_bitpacked_input", read_bitpacked_input);
+      fbb.Bool("write_bitpacked_output", write_bitpacked_output);
       fbb.String("activation", getActivationString(activation));
     });
     fbb.Finish();
@@ -310,6 +320,7 @@ class BaseBConv2DOpModel : public SingleOpModel {
   int post_activation_bias_;
 };
 
+template <typename TInput, typename TOutput>
 class BConv2DOpModel : public BaseBConv2DOpModel {
  public:
   using BaseBConv2DOpModel::BaseBConv2DOpModel;
@@ -318,7 +329,7 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
     PopulateTensor(filter_, f);
   }
 
-  void SetInput(const std::vector<float>& data) {
+  void SetInput(const std::vector<TInput>& data) {
     PopulateTensor(input_, data);
   }
 
@@ -330,7 +341,8 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
     PopulateTensor(post_activation_bias_, f);
   }
 
-  std::vector<float> GetOutput() { return ExtractVector<float>(output_); }
+  std::vector<TOutput> GetOutput() { return ExtractVector<TOutput>(output_); }
+  std::vector<int> GetOutputShape() { return GetTensorShape(output_); }
 };
 
 const auto kKernelMap = new std::map<string, register_function>({
@@ -383,8 +395,67 @@ MATCHER_P(FloatNearPointwise, tol, "Out of range") {
           std::get<0>(arg) < std::get<1>(arg) + tol);
 }
 
-TEST_P(BConv2DOpTest, SimpleTest) {
-  const TestParam param(GetParam());
+template <typename TInput, typename TOutput>
+inline void set_lce_op_input(const RuntimeShape& input_shape,
+                             std::vector<float> input_data,
+                             BConv2DOpModel<TInput, TOutput>& m_lce) {
+  std::vector<TInput> input_data_bp;
+  std::size_t input_rows_bp, input_cols_bp, input_bitpadding;
+  core::packbits_matrix<core::BitpackOrder::Canonical>(
+      input_data.data(), FlatSizeSkipDim(input_shape, 3), input_shape.Dims(3),
+      input_data_bp, input_rows_bp, input_cols_bp, input_bitpadding,
+      core::Axis::RowWise);
+  m_lce.SetInput(input_data_bp);
+}
+
+// A specialisation for float input  (i.e., not reading bitpacked input).
+template <typename TOutput>
+inline void set_lce_op_input(const RuntimeShape& input_shape,
+                             std::vector<float> input_data,
+                             BConv2DOpModel<float, TOutput>& m_lce) {
+  m_lce.SetInput(input_data);
+}
+
+template <typename TOutput>
+inline void test_lce_op_output(const std::vector<TOutput>& lce_output_data,
+                               const std::vector<int>& builtin_output_shape,
+                               const std::vector<float>& builtin_output_data) {
+  // Apply bitpacking to the builtin output.
+  std::vector<TOutput> builtin_output_data_bp;
+  std::size_t output_rows_bp, output_cols_bp, output_bitpadding;
+  core::packbits_matrix<core::BitpackOrder::Canonical>(
+      builtin_output_data.data(),
+      builtin_output_shape.at(0) * builtin_output_shape.at(1) *
+          builtin_output_shape.at(2),
+      builtin_output_shape.at(3), builtin_output_data_bp, output_rows_bp,
+      output_cols_bp, output_bitpadding, core::Axis::RowWise);
+
+  // We need the outputs here to be bit-exact, so don't allow for floating
+  // point imprecision.
+  // It might happen that the builtin float was -0.0001 but in our op it was
+  // +0.0001 in which case we get a mismatch here. If it turns out that happens,
+  // we can simply add a loop here that checks the elements manually.
+  EXPECT_EQ(lce_output_data, builtin_output_data_bp);
+}
+
+// A specialisation for float output (i.e., not writing bitpacked output).
+inline void test_lce_op_output(const std::vector<float>& lce_output_data,
+                               const std::vector<int>& builtin_output_shape,
+                               const std::vector<float>& builtin_output_data) {
+  EXPECT_THAT(lce_output_data, ::testing::Pointwise(FloatNearPointwise(1e-4),
+                                                    builtin_output_data));
+}
+
+template <typename TInput, typename TOutput>
+void runTest(const TestParam& param) {
+  static_assert(std::is_same<TInput, float>::value ||
+                    std::is_same<TInput, std::int8_t>::value ||
+                    std::is_same<TInput, std::int32_t>::value,
+                "The LCE op input type must be float or int8 or int32.");
+  static_assert(std::is_same<TOutput, float>::value ||
+                    std::is_same<TOutput, std::int8_t>::value ||
+                    std::is_same<TOutput, std::int32_t>::value,
+                "The LCE op output type must be float or int8 or int32.");
 
   const register_function registration = param.registration;
   const int input_batch_count = param.input_batch_count;
@@ -401,6 +472,8 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   const Padding padding = param.padding;
   const ActivationFunctionType activation = param.activation;
   const int num_threads = param.num_threads;
+  const bool read_bitpacked_input = !std::is_same<TInput, float>::value;
+  const bool write_bitpacked_output = !std::is_same<TOutput, float>::value;
 
   const Padding builtin_padding =
       (padding == Padding_ONE ? Padding_VALID : padding);
@@ -430,7 +503,7 @@ TEST_P(BConv2DOpTest, SimpleTest) {
   }
 
   using T = float;
-  std::vector<T> input_data, padded_input_data, filters_data;
+  std::vector<T> input_data, builtin_input_data, filters_data;
   std::vector<T> post_activation_multiplier_data, post_activation_bias_data,
       bias_data;
   std::vector<PackedFilterType> packed_filters_data;
@@ -507,33 +580,22 @@ TEST_P(BConv2DOpTest, SimpleTest) {
                 ElementsAreArray({input_batch_count, padded_input_height,
                                   padded_input_width, input_depth}));
 
-    padded_input_data = padop.GetOutput();
+    builtin_input_data = padop.GetOutput();
   } else {
-    padded_input_data = input_data;
+    builtin_input_data = input_data;
   }
 
-  if (padding == Padding_SAME && activation == ActivationFunctionType_RELU) {
-    // Fused ReLu is not supported for zero-padding.
-    // We could use `EXPECT_DEATH` here but it is extremely slow.
+  if (padding == Padding_SAME &&
+      (activation == ActivationFunctionType_RELU || write_bitpacked_output)) {
+    // Neither fused ReLu nor writing bitpacked output is supported with
+    // zero-padding. We could use `EXPECT_DEATH` here but it is extremely slow.
     // Therefore we have a separate test below, and here we just return.
     return;
   }
 
-  BConv2DOpModel m_lce(
-      registration,
-      {TensorType_FLOAT32,
-       {input_batch_count, input_height, input_width, input_depth}},
-      {TensorType_INT32,
-       {filter_count, filter_height, filter_width, packed_channels}},
-      {TensorType_FLOAT32, {}}, stride_width, stride_height, bconv_padding,
-      pad_values, activation, dilation_width_factor, dilation_height_factor,
-      num_threads);
-
-  m_lce.SetInput(input_data);
-  m_lce.SetFilter(packed_filters_data);
-  m_lce.SetPostActivationMultiplier(post_activation_multiplier_data);
-  m_lce.SetPostActivationBias(post_activation_bias_data);
-  m_lce.Invoke();
+  /*-----------------
+    Run built-in op.
+   -----------------*/
 
   ConvolutionOpModel m_builtin(
       ::tflite::ops::builtin::
@@ -547,16 +609,16 @@ TEST_P(BConv2DOpTest, SimpleTest) {
       stride_width, stride_height, builtin_padding, activation,
       dilation_width_factor, dilation_height_factor, num_threads);
 
-  m_builtin.SetInput(padded_input_data);
+  m_builtin.SetInput(builtin_input_data);
   m_builtin.SetFilter(filters_data);
   m_builtin.SetBias(bias_data);
   m_builtin.Invoke();
-  auto expected_array = m_builtin.GetOutput();
+  auto builtin_output = m_builtin.GetOutput();
 
-  // Apply the post multiply and add to the tflite model
+  // Apply the post multiply and add to the TFLite model.
   // We cannot fuse it into the tflite bias because it should happen *after*
-  // the activation function
-  T* out_ptr = expected_array.data();
+  // the activation function.
+  T* out_ptr = builtin_output.data();
   for (int batch = 0; batch < input_batch_count; ++batch) {
     for (int out_y = 0; out_y < output_width; ++out_y) {
       for (int out_x = 0; out_x < output_height; ++out_x) {
@@ -569,8 +631,78 @@ TEST_P(BConv2DOpTest, SimpleTest) {
     }
   }
 
-  EXPECT_THAT(m_lce.GetOutput(),
-              ::testing::Pointwise(FloatNearPointwise(1e-4), expected_array));
+  /*-------------
+    Test LCE op.
+   -------------*/
+
+  // Create LCE op.
+
+  TensorType input_tensor_type;
+  if (std::is_same<TInput, float>::value)
+    input_tensor_type = TensorType_FLOAT32;
+  else if (std::is_same<TInput, std::int8_t>::value)
+    input_tensor_type = TensorType_INT8;
+  else
+    input_tensor_type = TensorType_INT32;
+
+  TensorType output_tensor_type;
+  if (std::is_same<TOutput, float>::value)
+    output_tensor_type = TensorType_FLOAT32;
+  else if (std::is_same<TOutput, std::int8_t>::value)
+    output_tensor_type = TensorType_INT8;
+  else
+    output_tensor_type = TensorType_INT32;
+
+  // input_depth is always unpacked
+  // For reading bitpacked input, the input tensor can be packed
+  int input_tensor_channels = input_depth;
+  if (read_bitpacked_input) {
+    // We can't use `std::numeric_limits<TInput>` here because we bitpack into
+    // *signed* integers, and the bitwidth will be one less than expected.
+    const auto bitwidth = sizeof(TInput) * CHAR_BIT;
+    input_tensor_channels = (input_depth + bitwidth - 1) / bitwidth;
+  }
+
+  BConv2DOpModel<TInput, TOutput> m_lce(
+      registration,
+      {input_tensor_type,
+       {input_batch_count, input_height, input_width, input_tensor_channels}},
+      {TensorType_INT32,
+       {filter_count, filter_height, filter_width, packed_channels}},
+      {output_tensor_type, {}}, input_depth, stride_width, stride_height,
+      bconv_padding, pad_values, activation, dilation_width_factor,
+      dilation_height_factor, read_bitpacked_input, write_bitpacked_output,
+      num_threads);
+
+  // Set op parameters.
+
+  set_lce_op_input({input_batch_count, input_height, input_width, input_depth},
+                   input_data, m_lce);
+  m_lce.SetFilter(packed_filters_data);
+  m_lce.SetPostActivationMultiplier(post_activation_multiplier_data);
+  m_lce.SetPostActivationBias(post_activation_bias_data);
+
+  // Invoke the op and test that the output is correct.
+
+  m_lce.Invoke();
+  test_lce_op_output(m_lce.GetOutput(), m_builtin.GetOutputShape(),
+                     builtin_output);
+}
+
+TEST_P(BConv2DOpTest, ReadFPWriteFP) {
+  runTest<float, float>(TestParam(GetParam()));
+}
+
+TEST_P(BConv2DOpTest, ReadBPWriteBP) {
+  runTest<std::int32_t, std::int32_t>(TestParam(GetParam()));
+}
+
+TEST_P(BConv2DOpTest, ReadFPWriteBP) {
+  runTest<float, std::int32_t>(TestParam(GetParam()));
+}
+
+TEST_P(BConv2DOpTest, ReadBPWriteFP) {
+  runTest<std::int32_t, float>(TestParam(GetParam()));
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -603,16 +735,35 @@ INSTANTIATE_TEST_SUITE_P(
     TestParam::TestNameSuffix);
 
 TEST(BConv2DTests, BConvErrorTest) {
-  // Test if fused ReLu throws an error in combination with zero-padding
+  // We have to use typedefs or else the template invocation in the type
+  // confuses the pre-processor (EXPECT_DEATH is a macro).
+  typedef BConv2DOpModel<float, float> FP_BConv2DOpModel;
+  typedef BConv2DOpModel<float, std::int8_t> Bitpacked_BConv2DOpModel;
+
+  // Test if fused ReLu throws an error in combination with zero-padding.
   EXPECT_DEATH(
       {
-        BConv2DOpModel m_lce(compute_engine::tflite::Register_BCONV_2D64_OPT,
-                             {TensorType_FLOAT32, {1, 16, 16, 64}},
-                             {TensorType_FLOAT32, {128, 3, 3, 64}},
-                             {TensorType_FLOAT32, {}}, 1, 1, Padding_SAME, 0,
-                             ActivationFunctionType_RELU, 1, 1, 1);
+        FP_BConv2DOpModel m_lce(compute_engine::tflite::Register_BCONV_2D64_OPT,
+                                {TensorType_FLOAT32, {1, 16, 16, 64}},
+                                {TensorType_FLOAT32, {128, 3, 3, 64}},
+                                {TensorType_FLOAT32, {}}, 64, 1, 1,
+                                Padding_SAME, 0, ActivationFunctionType_RELU, 1,
+                                1, false, false, 1);
       },
       "Fused activations are only supported with valid or one-padding.");
+
+  // Test if writing bitpacked output throws an error in combination with
+  // zero-padding.
+  EXPECT_DEATH(
+      {
+        Bitpacked_BConv2DOpModel m_lce(
+            compute_engine::tflite::Register_BCONV_2D64_OPT,
+            {TensorType_FLOAT32, {1, 16, 16, 64}},
+            {TensorType_FLOAT32, {128, 3, 3, 64}}, {TensorType_UINT8, {}}, 64,
+            1, 1, Padding_SAME, 0, ActivationFunctionType_NONE, 1, 1, false,
+            true, 1);
+      },
+      "Writing bitpacked output is only supported with valid or one-padding.");
 }
 
 }  // namespace testing

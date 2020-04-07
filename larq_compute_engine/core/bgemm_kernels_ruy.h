@@ -88,6 +88,102 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
   }
 };
 
+// A template specialisation for writing 32-bit bitpacked output.
+template <typename LhsScalar, typename RhsScalar, typename Spec>
+struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int32_t,
+                   Spec> {
+  using AccumScalar = typename Spec::AccumScalar;
+  using LhsLayout = typename Spec::StandardCppKernelLhsLayout;
+  using RhsLayout = typename Spec::StandardCppKernelRhsLayout;
+  explicit BgemmKernel(ruy::Tuning) {}
+  void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
+           const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
+           int start_row, int start_col, int end_row, int end_col,
+           ruy::Matrix<std::int32_t>* dst) const {
+    static_assert(std::is_same<LhsScalar, RhsScalar>::value,
+                  "Inputs to binary kernel should have the same type.");
+    static_assert(
+        std::is_unsigned<LhsScalar>::value &&
+            std::is_integral<LhsScalar>::value,
+        "Input to binary kernel should be of type unsigned integral.");
+
+    using TBitpacked = LhsScalar;
+
+    // We are writing 32-bit bitpacked output (where we bitpack along the
+    // channel axis) and so we need to operate on blocks of 32 channels at a
+    // time. As the destination is column major, this means blocks of 32 rows at
+    // a time. The blocks Ruy uses are always a power of two and are usually
+    // greater than 32. However, when running with multiple threads and a very
+    // large input size, Ruy may use blocks of fewer rows.
+    //     In this scenario, we round the start and end row down and up to the
+    // nearest multiple of 32 respectively. This is a thread-safe way to ensure
+    // that the result is correct, at the cost of some rare repeated
+    // computation, which is acceptable for this non-optimised kernel.
+    //
+    // Note that the rows in all these calculations are the *unpacked* rows.
+
+    start_row = 32 * (start_row / 32);
+    end_row = 32 * ((end_row + 31) / 32);
+
+    int clamped_end_row = std::min(end_row, dst->layout.rows);
+    int clamped_end_col = std::min(end_col, dst->layout.cols);
+    RUY_DCHECK_LE(0, start_row);
+    RUY_DCHECK_LE(start_row, clamped_end_row);
+    RUY_DCHECK_LE(clamped_end_row, dst->layout.rows);
+    RUY_DCHECK_LE(clamped_end_row, end_row);
+    RUY_DCHECK_LE(0, start_col);
+    RUY_DCHECK_LE(start_col, clamped_end_col);
+    RUY_DCHECK_LE(clamped_end_col, dst->layout.cols);
+    RUY_DCHECK_LE(clamped_end_col, end_col);
+    RUY_DCHECK_LE(end_col - clamped_end_col, RhsLayout::kCols);
+
+    RUY_DCHECK_EQ(dst->layout.order, Order::kColMajor);
+
+    gemmlowp::ScopedProfilingLabel label(
+        "Binary Kernel (Standard Cpp) Bitpacked Output.");
+
+    const int depth = lhs.layout.rows;
+    const int dst_stride_bitpacked = (dst->layout.stride + 31) / 32;
+
+    // The destination is column major and we need to bitpack along the row
+    // (channels) axis so we need to loop over column index then row index.
+    for (int j = start_col; j < clamped_end_col; j++) {
+      std::uint32_t bitpacked_column = 0;
+      for (int i = start_row; i < clamped_end_row; i++) {
+        using AccumScalar = typename Spec::AccumScalar;
+        AccumScalar accum = 0;
+        for (int k = 0; k < depth; k++) {
+          TBitpacked lhs_val = Element(lhs, k, i);
+          TBitpacked rhs_val = Element(rhs, k, j);
+          accum +=
+              ce::core::xor_popcount<TBitpacked, AccumScalar>(lhs_val, rhs_val);
+        }
+        // Backtransform can still be done in int32
+        accum = spec.backtransform_add - 2 * accum;
+        // Activation function can also be done in int32
+        accum = std::min<AccumScalar>(accum, spec.clamp_max);
+        accum = std::max<AccumScalar>(accum, spec.clamp_min);
+        // Post multiply and add are done in float
+        auto dst_val = static_cast<float>(accum);
+        if (spec.post_activation_multiplier) {
+          dst_val *= spec.post_activation_multiplier[i];
+        }
+        if (spec.post_activation_bias) {
+          dst_val += spec.post_activation_bias[i];
+        }
+        if (dst_val < 0) {
+          bitpacked_column |= 1ULL << ((i - start_row) % 32);
+        }
+        if (((i - start_row + 1) % 32 == 0) || (i + 1 == clamped_end_row)) {
+          *(dst->data.get() + i / 32 + j * dst_stride_bitpacked) =
+              bitpacked_column;
+          bitpacked_column = 0;
+        }
+      }
+    }
+  }
+};
+
 template <ruy::Path ThePath, typename LhsScalar, typename RhsScalar,
           typename DstScalar, typename Spec>
 void RunBgemmKernelTyped(ruy::Tuning tuning,

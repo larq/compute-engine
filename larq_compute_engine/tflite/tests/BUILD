@@ -8,6 +8,8 @@ cc_test(
     size = "medium",
     srcs = ["bconv2d_test.cc"],
     deps = [
+        "//larq_compute_engine/core:packbits",
+        "//larq_compute_engine/core:packbits_utils",
         "//larq_compute_engine/tflite/kernels:lce_ops",
         "@com_google_googletest//:gtest",
         "@flatbuffers",

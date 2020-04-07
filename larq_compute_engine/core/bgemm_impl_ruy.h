@@ -82,11 +82,20 @@ struct BGemmImplUsingRuy {
     // 32-bit NEON optimized code is not available yet
     bgemm_runtime_path = ruy::Path::kStandardCpp;
 #endif
+    // Currently we only have 32-bit and 64-bit optimized kernels.
+    // For 8-bit, fall back to the standard cpp kernel.
+    if (std::is_same<LhsScalar, std::uint8_t>::value)
+      bgemm_runtime_path = ruy::Path::kStandardCpp;
 #elif RUY_PLATFORM(X86)
     if (bgemm_runtime_path == ruy::Path::kAvx2 ||
         bgemm_runtime_path == ruy::Path::kAvx512)
       bgemm_runtime_path = ruy::Path::kStandardCpp;
 #endif
+
+    // For writing bitpacked output, fallback to the standard C++ kernel.
+    if (std::is_same<DstScalar, std::int32_t>::value) {
+      bgemm_runtime_path = ruy::Path::kStandardCpp;
+    }
 
     ruy::Matrix<LhsScalar> transposed_lhs(lhs);
     Transpose(&transposed_lhs);

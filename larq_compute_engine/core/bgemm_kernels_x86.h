@@ -34,7 +34,7 @@ struct BgemmKernel<ruy::Path::kAvx2, LhsScalar, RhsScalar, DstScalar, Spec> {
         "Input to binary kernel should be of type unsigned integral.");
     static_assert(std::is_signed<DstScalar>::value,
                   "Output of binary kernel should be of a signed type.");
-    // TODO: not implemented -> fallback to standard cpp
+    TFLITE_DCHECK(false);
   }
 };
 
@@ -57,7 +57,7 @@ struct BgemmKernel<ruy::Path::kAvx512, LhsScalar, RhsScalar, DstScalar, Spec> {
         "Input to binary kernel should be of type unsigned integral.");
     static_assert(std::is_signed<DstScalar>::value,
                   "Output of binary kernel should be of a signed type.");
-    // TODO: not implemented -> fallback to standard cpp
+    TFLITE_DCHECK(false);
   }
 };
 
