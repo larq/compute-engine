@@ -88,7 +88,7 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
   }
 };
 
-// A template specialisation for writing 8-bit bitpacked output.
+// A template specialisation for writing 32-bit bitpacked output.
 template <typename LhsScalar, typename RhsScalar, typename Spec>
 struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int32_t,
                    Spec> {
@@ -112,9 +112,9 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int32_t,
     // We are writing 32-bit bitpacked output (where we bitpack along the
     // channel axis) and so we need to operate on blocks of 32 channels at a
     // time. As the destination is column major, this means blocks of 32 rows at
-    // a time. The blocks Ruy uses are always a power of two and are almost
-    // always >> 8. However, when running with multiple threads and a very large
-    // input size, Ruy may use blocks of 4 rows.
+    // a time. The blocks Ruy uses are always a power of two and are usually
+    // greater than 32. However, when running with multiple threads and a very
+    // large input size, Ruy may use blocks of fewer rows.
     //     In this scenario, we round the start and end row down and up to the
     // nearest multiple of 32 respectively. This is a thread-safe way to ensure
     // that the result is correct, at the cost of some rare repeated
