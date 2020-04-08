@@ -64,7 +64,8 @@ struct BinaryBasicSpec {
       ZeroPointSupport::kGeneral;
   using StandardCppKernelLhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
   using StandardCppKernelRhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
-  static int cache_friendly_traversal_threshold() { return 32 * 1024; }
+  static int local_data_cache_size() { return LocalDataCacheSize(); }
+  static int shared_data_cache_size() { return SharedDataCacheSize(); }
 };
 
 template <int LhsCols, int RhsCols, class T>

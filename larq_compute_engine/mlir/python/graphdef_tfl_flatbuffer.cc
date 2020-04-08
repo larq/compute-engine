@@ -34,15 +34,12 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
   GraphImportConfig specs;
   specs.convert_legacy_fed_inputs = true;
   specs.upgrade_legacy = true;
-  specs.add_pseudo_input_nodes = false;
   if (!ParseInputArrayInfo(input_arrays, input_dtypes, input_shapes,
                            &specs.inputs)
            .ok()) {
     throw std::runtime_error("Could not parse input arrays.");
   }
-  if (!ParseOutputArrayInfo(output_arrays, &specs.output_arrays,
-                            &specs.output_arrays_order)
-           .ok()) {
+  if (!ParseOutputArrayInfo(output_arrays, &specs.outputs).ok()) {
     throw std::runtime_error("Could not parse output arrays.");
   }
 
@@ -67,8 +64,7 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
   std::string result;
   if (tflite::MlirToFlatBufferTranslateFunction(
           *module.ValueOrDie(), &result, /*emit_builtin_tflite_ops=*/true,
-          /*emit_select_tf_ops=*/false, /*emit_custom_ops=*/true,
-          /*add_pseudo_input_nodes=*/false)) {
+          /*emit_select_tf_ops=*/false, /*emit_custom_ops=*/true)) {
     throw std::runtime_error("Could not translate to flatbuffer.");
   }
 
