@@ -5,6 +5,7 @@
 #include "bgemm_trmul_params.h"
 #include "tensorflow/lite/experimental/ruy/matrix.h"
 #include "tensorflow/lite/experimental/ruy/platform.h"
+#include "tensorflow/lite/experimental/ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 
@@ -23,7 +24,7 @@ struct BGemmImplUsingRuy {
       const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
       const OutputTransform<AccumScalar, DstScalar>& output_transform,
       CpuBackendContext* context) {
-    gemmlowp::ScopedProfilingLabel label("BGemmRuy");
+    ruy::profiler::ScopeLabel label("BGemmRuy");
 
     static_assert(std::is_same<LhsScalar, RhsScalar>::value,
                   "Inputs to BGEMM should have the same type.");
