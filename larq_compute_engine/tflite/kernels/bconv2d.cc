@@ -255,6 +255,15 @@ TfLiteStatus Prepare(KernelType kernel_type,
   TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_multiplier), 1);
   TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_bias), 1);
 
+  // Read the input dimensions. TF Lite has the same input format as TensorFlow:
+  // (B, H, W, Ci).
+  conv_params->batch = input->dims->data[0];
+  conv_params->input_height = input->dims->data[1];
+  conv_params->input_width = input->dims->data[2];
+  if (!conv_params->read_bitpacked_input)
+    conv_params->channels_in = input->dims->data[3];
+
+
   // The inputs post_mutiply and post_activation_bias are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
@@ -277,14 +286,6 @@ TfLiteStatus Prepare(KernelType kernel_type,
   } else {
     TF_LITE_ENSURE_EQ(context, output->type, kTfLiteFloat32);
   }
-
-  // reading the input dimensions
-  // TF and TF lite have the same input format [B, H, W, Ci]
-  conv_params->batch = input->dims->data[0];
-  conv_params->input_height = input->dims->data[1];
-  conv_params->input_width = input->dims->data[2];
-  if (!conv_params->read_bitpacked_input)
-    conv_params->channels_in = input->dims->data[3];
 
   // reading the filter dimensions
   // only OHWI layout is supported for filters
