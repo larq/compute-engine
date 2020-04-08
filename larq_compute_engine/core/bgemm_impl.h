@@ -2,6 +2,7 @@
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_IMPL_H_
 
 #include "bgemm_kernels_common.h"
+#include "tensorflow/lite/experimental/ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 
@@ -38,7 +39,7 @@ void BGemm(
     const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
     const BGemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
     CpuBackendContext* context) {
-  gemmlowp::ScopedProfilingLabel label("BGemm");
+  ruy::profiler::ScopeLabel label("BGemm");
   // TODO: special fast bgemm impl. for matrix-vector multiplication
   // if (dst_params.cols == 1) {
   //   // GEMV case: try a custom fast GEMV path.
@@ -47,7 +48,7 @@ void BGemm(
   //     return;
   //   }
   // }
-  gemmlowp::ScopedProfilingLabel label2("BGemm/GeneralBGEMM");
+  ruy::profiler::ScopeLabel label2("BGemm/GeneralBGEMM");
   BGemmImpl<LhsScalar, RhsScalar, AccumScalar, DstScalar,
             quantization_flavor>::Run(lhs_params, lhs_data, rhs_params,
                                       rhs_data, dst_params, dst_data, params,

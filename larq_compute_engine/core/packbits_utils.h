@@ -2,7 +2,7 @@
 #define COMPUTE_ENGINE_CORE_PACKBITS_UTILS_H_
 
 #include "larq_compute_engine/core/packbits.h"
-#include "profiling/instrumentation.h"
+#include "tensorflow/lite/experimental/ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/kernels/internal/types.h"
 
 using namespace tflite;
@@ -25,7 +25,7 @@ inline void packbits_tensor(const RuntimeShape& in_shape, const T* in_data,
   std::size_t rows_bp = 0, cols_bp = 0;
   std::size_t bitpadding = 0;
   {
-    gemmlowp::ScopedProfilingLabel label("Packbits");
+    ruy::profiler::ScopeLabel label("Packbits");
     ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
         in_data, rows, cols, out_data, rows_bp, cols_bp, bitpadding,
         ce::core::Axis::RowWise);
