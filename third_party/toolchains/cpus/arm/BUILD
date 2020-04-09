@@ -35,7 +35,7 @@ filegroup(
 filegroup(
     name = "aarch64_linux_all_files",
     srcs = [
-        "@aarch64_compiler//:compiler_pieces",
+        "@aarch64_compiler//:aarch64_compiler_pieces",
     ],
 )
 
