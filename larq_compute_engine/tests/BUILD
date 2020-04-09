@@ -66,6 +66,6 @@ sh_test(
     srcs = ["cc_tests_aarch64_qemu.sh"],
     data = [
         ":cc_tests_aarch64",
-        "@aarch64_compiler//:compiler_pieces",
+        "@aarch64_compiler//:aarch64_compiler_pieces",
     ],
 )
