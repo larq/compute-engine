@@ -48,9 +48,9 @@ jobs:
         run: ./configure.sh <<< $'n\n'
         shell: bash
       - name: "TF Lite Arm32: Cross-compile and run unit tests in qemu"
-        run: ./bazelisk test larq_compute_engine/tests:cc_tests_arm32_qemu --config=rpi3 --compilation_mode=fastbuild --test_output=all
+        run: ./bazelisk test larq_compute_engine/tests:cc_tests_arm32_qemu --config=rpi3 --test_output=all
       - name: "TF Lite Aarch64: Cross-compile and run unit tests in qemu"
-        run: ./bazelisk test larq_compute_engine/tests:cc_tests_aarch64_qemu --config=aarch64 --compilation_mode=fastbuild --test_output=all
+        run: ./bazelisk test larq_compute_engine/tests:cc_tests_aarch64_qemu --config=aarch64 --test_output=all
       - name: "Benchmark utility: check it builds successfully"
         run: ./bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=aarch64 --compilation_mode=fastbuild
       - name: "ImageNet evaluation utility: check it builds successfully"
