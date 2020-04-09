@@ -1,7 +1,7 @@
 #include <cstdint>
 
 #include "bgemm_kernels_common.h"
-#include "profiling/instrumentation.h"
+#include "tensorflow/lite/experimental/ruy/profiler/instrumentation.h"
 
 using namespace ruy;
 
@@ -159,7 +159,7 @@ void CheckOffsetsInKernelParams32BP(const Params&) {
 void BinaryKernelNeonOutOfOrder32BP4x4(
     const BinaryKernelParams<4, 4, std::uint32_t>& params) {
   CheckOffsetsInKernelParams32BP(params);
-  gemmlowp::ScopedProfilingLabel label(
+  ruy::profiler::ScopeLabel label(
       "Binary Kernel (4x4) 32BP (kNeon, optimized for out-of-order cores)");
 
   std::uint32_t* lhs_col_ptr = const_cast<std::uint32_t*>(params.lhs_base_ptr);
@@ -553,7 +553,7 @@ void CheckOffsetsInKernelParams64BP(const Params&) {
 void BinaryKernelNeonOutOfOrder64BP4x4(
     const BinaryKernelParams<4, 4, std::uint64_t>& params) {
   CheckOffsetsInKernelParams64BP(params);
-  gemmlowp::ScopedProfilingLabel label(
+  ruy::profiler::ScopeLabel label(
       "Binary Kernel (4x4) 64BP (kNeon, optimized for out-of-order cores)");
 
   std::uint64_t* lhs_col_ptr = const_cast<std::uint64_t*>(params.lhs_base_ptr);

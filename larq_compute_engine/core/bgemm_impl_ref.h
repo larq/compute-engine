@@ -2,6 +2,7 @@
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_REF_H_
 
 #include "larq_compute_engine/core/bgemm_functor.h"
+#include "tensorflow/lite/experimental/ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 
@@ -23,7 +24,7 @@ struct BGemmImplRef {
       const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
       const GemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
       CpuBackendContext* context) {
-    gemmlowp::ScopedProfilingLabel label("BGemmRef");
+    ruy::profiler::ScopeLabel label("BGemmRef");
 
     // these checkes will be also done in BGEMM functor but we do it here as
     // well to be on the safe side.

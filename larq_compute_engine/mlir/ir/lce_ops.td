@@ -8,11 +8,12 @@ include "tensorflow/compiler/mlir/tensorflow/ir/tf_op_base.td"
 #ifndef TFL_OPS
 def TFL_AF_None  : StrEnumAttrCase<"NONE">;
 def TFL_AF_Relu  : StrEnumAttrCase<"RELU">;
+def TFL_AF_Relu1 : StrEnumAttrCase<"RELU_N1_TO_1">;
 def TFL_AF_Relu6 : StrEnumAttrCase<"RELU6">;
 
 def TFL_AFAttr : StrEnumAttr<
     "ActivationFunctionType", "fused activation enum", [
-      TFL_AF_None,  TFL_AF_Relu, TFL_AF_Relu6
+      TFL_AF_None,  TFL_AF_Relu, TFL_AF_Relu1, TFL_AF_Relu6
     ]>;
 #endif
 

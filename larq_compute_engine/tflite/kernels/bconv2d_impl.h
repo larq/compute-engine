@@ -5,7 +5,7 @@
 #include "larq_compute_engine/core/packbits.h"
 #include "larq_compute_engine/core/packbits_utils.h"
 #include "larq_compute_engine/core/padding_functor.h"
-#include "profiling/instrumentation.h"
+#include "tensorflow/lite/experimental/ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 #include "tensorflow/lite/kernels/internal/optimized/im2col_utils.h"
@@ -85,7 +85,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
                  input_shape.Dims(3) == filter_shape.Dims(3));
   TF_LITE_ASSERT(!read_bitpacked_input || bitpack_before_im2col);
 
-  gemmlowp::ScopedProfilingLabel label("BConv2D");
+  ruy::profiler::ScopeLabel label("BConv2D");
 
   //                   m
   //              ___________
@@ -227,7 +227,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
 
     PaddingFunctor padding_functor;
     {
-      gemmlowp::ScopedProfilingLabel label3("ZeroPaddingCorrection");
+      ruy::profiler::ScopeLabel label3("ZeroPaddingCorrection");
       padding_functor(batches, input_height, input_width, input_depth, nullptr,
                       filter_height, filter_width, output_depth, stride_height,
                       stride_width, dilation_height_factor,
