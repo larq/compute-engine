@@ -46,6 +46,7 @@ test_suite(
 
 sh_test(
     name = "cc_tests_arm32_qemu",
+    size = "large",
     srcs = ["cc_tests_arm32_qemu.sh"],
     data = [
         ":cc_tests_arm32",
@@ -63,6 +64,7 @@ test_suite(
 
 sh_test(
     name = "cc_tests_aarch64_qemu",
+    size = "large",
     srcs = ["cc_tests_aarch64_qemu.sh"],
     data = [
         ":cc_tests_aarch64",
