@@ -597,7 +597,7 @@ float GetTensorValue(const TfLiteTensor* tensor, int index) {
   if (tensor->type == kTfLiteFloat32) {
     return GetTensorData<float>(tensor)[index];
   }
-  // Now the tensor type must be int8
+  TF_LITE_ASSERT_EQ(tensor->type, kTfLiteInt8);
   return tensor->params.scale *
          (static_cast<int32_t>(GetTensorData<std::int8_t>(tensor)[index]) -
           tensor->params.zero_point);
@@ -913,8 +913,8 @@ TfLiteStatus Eval_stage2(TfLiteContext* context, TfLiteNode* node,
 }
 
 template <KernelType kernel_type>
-TfLiteStatus Eval_stage1(TfLiteContext* context, TfLiteNode* node,
-                         TfLiteBConv2DParams* params) {
+TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
+  auto* params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
   const TfLiteType input_type = GetInput(context, node, 0)->type;
   if (input_type == kTfLiteFloat32) {
     return Eval_stage2<kernel_type, float>(context, node, params);
@@ -924,12 +924,6 @@ TfLiteStatus Eval_stage1(TfLiteContext* context, TfLiteNode* node,
     return Eval_stage2<kernel_type, std::int32_t>(context, node, params);
   }
   return kTfLiteError;
-}
-
-template <KernelType kernel_type>
-TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
-  auto* conv_params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
-  return Eval_stage1<kernel_type>(context, node, conv_params);
 }
 
 }  // namespace bconv2d

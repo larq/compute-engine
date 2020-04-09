@@ -388,12 +388,9 @@ class BaseBConv2DOpModel : public SingleOpModel {
       int num_threads = -1) {
     input_ = AddInput(input);
     filter_ = AddInput(filter);
-    output_ = AddOutput(output);
-
-    // int channels_out = GetShape(filter_)[0];
-    // AddInput({TensorType_FLOAT32, {channels_out}});
     post_activation_multiplier_ = AddInput(post_activation_multiplier);
     post_activation_bias_ = AddInput(post_activation_bias);
+    output_ = AddOutput(output);
 
     flexbuffers::Builder fbb;
     fbb.Map([&]() {
@@ -1038,6 +1035,8 @@ TEST(BConv2DTests, ReluErrorTest) {
   LceTensor<float> output_tensor;
   LceTensor<std::int32_t> packed_output_tensor;
 
+  // We have to use typedefs or else the template invocation in the type
+  // confuses the pre-processor (EXPECT_DEATH is a macro).
   typedef BConv2DOpModel<float, float, float> FP_BConv2DOpModel;
   typedef BConv2DOpModel<float, float, std::int32_t> Bitpacked_BConv2DOpModel;
 
