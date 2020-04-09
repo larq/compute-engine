@@ -266,11 +266,11 @@ TfLiteStatus Prepare(KernelType kernel_type,
     conv_params->bitpacking_bitwidth = 32;
   } else {
     TF_LITE_ENSURE_EQ(context, input->type, kTfLiteFloat32);
-    TF_LITE_ENSURE_EQ(context, conv_params->channels_in, input->dims->data[3]);
     // TODO: more intelligent selection of the parameters `bitpacking_bitwidth`
     //       and `bitpack_before_im2col` based on benchmarking results
     //       (as in https://github.com/larq/compute-engine/issues/290).
     conv_params->bitpacking_bitwidth = default_bitpacking_bitwidth;
+    conv_params->channels_in = input->dims->data[3];
   }
   if (conv_params->write_bitpacked_output) {
     TF_LITE_ENSURE_EQ(context, output->type, kTfLiteInt32);
@@ -283,8 +283,6 @@ TfLiteStatus Prepare(KernelType kernel_type,
   conv_params->batch = input->dims->data[0];
   conv_params->input_height = input->dims->data[1];
   conv_params->input_width = input->dims->data[2];
-  if (!conv_params->read_bitpacked_input)
-    conv_params->channels_in = input->dims->data[3];
 
   // reading the filter dimensions
   // only OHWI layout is supported for filters
