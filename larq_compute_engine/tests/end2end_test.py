@@ -22,6 +22,20 @@ def toy_model(**kwargs):
                 input_quantizer="ste_sign",
                 kernel_quantizer="ste_sign",
                 use_bias=False,
+                # activation=activation,
+            )(x)
+            # x = tf.keras.layers.BatchNormalization(
+            #     gamma_initializer=tf.keras.initializers.RandomNormal(1.0),
+            #     beta_initializer="uniform",
+            # )(x)
+            x = lq.layers.QuantConv2D(
+                filters=32,
+                kernel_size=3,
+                padding=padding,
+                pad_values=pad_values,
+                input_quantizer="ste_sign",
+                kernel_quantizer="ste_sign",
+                use_bias=False,
                 activation=activation,
             )(x)
             x = tf.keras.layers.BatchNormalization(
