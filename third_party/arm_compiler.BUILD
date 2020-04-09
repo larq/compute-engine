@@ -11,16 +11,6 @@ filegroup(
 )
 
 filegroup(
-    name = "cpp",
-    srcs = glob(["bin/*-cpp"]),
-)
-
-filegroup(
-    name = "gcov",
-    srcs = glob(["bin/*-gcov"]),
-)
-
-filegroup(
     name = "ld",
     srcs = glob(["bin/*-ld"]),
 )
@@ -75,9 +65,7 @@ filegroup(
     srcs = [
         ":ar",
         ":as",
-        ":cpp",
         ":gcc",
-        ":gcov",
         ":ld",
         ":nm",
         ":objcopy",
