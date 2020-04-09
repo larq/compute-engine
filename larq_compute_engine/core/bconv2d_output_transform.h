@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <limits>
 
-#include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 #include "tensorflow/lite/kernels/internal/common.h"
 #include "tensorflow/lite/kernels/internal/round.h"
 
@@ -29,16 +28,7 @@ struct OutputTransformBase {
   }
 };
 
-// Although we don't technically need QuantizationFlavor,
-// we leave it here for now because later we might need to distinguish between
-// 8-bit bitpacked output and int8-quantized output.
-using tflite::cpu_backend_gemm::QuantizationFlavor;
-
-template <typename AccumScalar, typename ActivationScalar,
-          QuantizationFlavor quantization_flavor =
-              std::is_floating_point<ActivationScalar>::value
-                  ? QuantizationFlavor::kFloatingPoint
-                  : QuantizationFlavor::kIntegerWithPerRowMultiplier>
+template <typename AccumScalar, typename ActivationScalar>
 struct OutputTransform {};
 
 // Parameters that are needed only for float kernels

@@ -15,15 +15,16 @@ namespace compute_engine {
 namespace tflite {
 
 template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
-          typename DstScalar, QuantizationFlavor quantization_flavor>
+          typename DstScalar>
 struct BGemmImplUsingRuy {
-  static void Run(
-      const MatrixParams<LhsScalar>& lhs_params, const LhsScalar* lhs_data,
-      const MatrixParams<RhsScalar>& rhs_params, const RhsScalar* rhs_data,
-      const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
-      const OutputTransform<AccumScalar, DstScalar, quantization_flavor>&
-          params,
-      CpuBackendContext* context) {
+  static void Run(const MatrixParams<LhsScalar>& lhs_params,
+                  const LhsScalar* lhs_data,
+                  const MatrixParams<RhsScalar>& rhs_params,
+                  const RhsScalar* rhs_data,
+                  const MatrixParams<DstScalar>& dst_params,
+                  DstScalar* dst_data,
+                  const OutputTransform<AccumScalar, DstScalar>& params,
+                  CpuBackendContext* context) {
     gemmlowp::ScopedProfilingLabel label("BGemmRuy");
 
     static_assert(std::is_same<LhsScalar, RhsScalar>::value,

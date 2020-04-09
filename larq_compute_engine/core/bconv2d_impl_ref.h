@@ -37,7 +37,7 @@ inline void BConv2D(
     const TBitpacked* packed_input_data,
     const RuntimeShape& packed_filter_shape,
     const TBitpacked* packed_filter_data,
-    const OutputTransform<std::int32_t, DstScalar>& output_transform,
+    const ce::core::OutputTransform<std::int32_t, DstScalar>& output_transform,
     const RuntimeShape& output_shape, DstScalar* output_data,
     const RuntimeShape& im2col_shape, SrcScalar* im2col_data,
     bool bitpack_before_im2col, SrcScalar* padding_buffer, const int pad_value,
