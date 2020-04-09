@@ -21,6 +21,7 @@ pybind_extension(
 
 py_test(
     name = "end2end_test",
+    size = "large",
     srcs = ["end2end_test.py"],
     deps = [
         ":_end2end_verify",
@@ -46,6 +47,7 @@ test_suite(
 
 sh_test(
     name = "cc_tests_arm32_qemu",
+    size = "large",
     srcs = ["cc_tests_arm32_qemu.sh"],
     data = [
         ":cc_tests_arm32",
@@ -63,6 +65,7 @@ test_suite(
 
 sh_test(
     name = "cc_tests_aarch64_qemu",
+    size = "large",
     srcs = ["cc_tests_aarch64_qemu.sh"],
     data = [
         ":cc_tests_aarch64",
