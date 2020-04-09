@@ -21,6 +21,7 @@ pybind_extension(
 
 py_test(
     name = "end2end_test",
+    size = "large",
     srcs = ["end2end_test.py"],
     deps = [
         ":_end2end_verify",
