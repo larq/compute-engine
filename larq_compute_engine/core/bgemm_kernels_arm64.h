@@ -19,14 +19,11 @@ using namespace ruy;
   "cnt v29.16b, v29.16b\n"                    \
   "cnt v30.16b, v30.16b\n"                    \
   "cnt v31.16b, v31.16b\n"                    \
-  "addv b28, v28.16b\n"                       \
-  "addv b29, v29.16b\n"                       \
-  "addv b30, v30.16b\n"                       \
-  "addv b31, v31.16b\n"                       \
-  "ins v28.s[1], v29.s[0]\n"                  \
-  "ins v28.s[2], v30.s[0]\n"                  \
-  "ins v28.s[3], v31.s[0]\n"                  \
-  "add " #Vd".4s, " #Vd".4s, v28.4s\n"
+  "addp v28.16b, v28.16b, v29.16b\n"          \
+  "addp v30.16b, v30.16b, v31.16b\n"          \
+  "addp v28.16b, v28.16b, v30.16b\n"          \
+  "uaddlp v28.8h, v28.16b\n"                  \
+  "uadalp " #Vd".4s, v28.8h\n"
 
 // temporary NEON registers: v28,v29,v30,v31
 #define LCE_BMLA_LD_RHS(Vd, Vr, Vl1, Vl2, Vl3, Vl4)      \
@@ -39,14 +36,11 @@ using namespace ruy;
   "cnt v29.16b, v29.16b\n"                              \
   "cnt v30.16b, v30.16b\n"                              \
   "cnt v31.16b, v31.16b\n"                              \
-  "addv b28, v28.16b\n"                                 \
-  "addv b29, v29.16b\n"                                 \
-  "addv b30, v30.16b\n"                                 \
-  "addv b31, v31.16b\n"                                 \
-  "ins v28.s[1], v29.s[0]\n"                            \
-  "ins v28.s[2], v30.s[0]\n"                            \
-  "ins v28.s[3], v31.s[0]\n"                            \
-  "add " #Vd".4s, " #Vd".4s, v28.4s\n"
+  "addp v28.16b, v28.16b, v29.16b\n"                    \
+  "addp v30.16b, v30.16b, v31.16b\n"                    \
+  "addp v28.16b, v28.16b, v30.16b\n"                    \
+  "uaddlp v28.8h, v28.16b\n"                            \
+  "uadalp " #Vd".4s, v28.8h\n"
 
 // temporary NEON registers: v28,v29,v30,v31
 #define LCE_BMLA_LD_ALL(Vd, Vr, Vl1, Vl2, Vl3, Vl4)      \
@@ -61,15 +55,12 @@ using namespace ruy;
   "cnt v30.16b, v30.16b\n"                              \
   "cnt v31.16b, v31.16b\n"                              \
   "ld1 {"#Vl2".2d}, [%[lhs_ptr]], #16\n"                \
-  "addv b28, v28.16b\n"                                 \
-  "addv b29, v29.16b\n"                                 \
+  "addp v28.16b, v28.16b, v29.16b\n"                    \
   "ld1 {"#Vl3".2d}, [%[lhs_ptr]], #16\n"                \
-  "addv b30, v30.16b\n"                                 \
-  "addv b31, v31.16b\n"                                 \
-  "ins v28.s[1], v29.s[0]\n"                            \
-  "ins v28.s[2], v30.s[0]\n"                            \
-  "ins v28.s[3], v31.s[0]\n"                            \
-  "add " #Vd".4s, " #Vd".4s, v28.4s\n"                  \
+  "addp v30.16b, v30.16b, v31.16b\n"                    \
+  "addp v28.16b, v28.16b, v30.16b\n"                    \
+  "uaddlp v28.8h, v28.16b\n"                            \
+  "uadalp " #Vd".4s, v28.8h\n"                          \
   "ld1 {"#Vl4".2d}, [%[lhs_ptr]], #16\n"
 
 // clang-format on
