@@ -9,56 +9,56 @@ using namespace ruy;
 
 // clang-format off
 
-// temporary NEON registers: v28,v29,v30,v31
+// temporary NEON registers: v28,v29,v30
 #define LCE_BMLA(Vd, Vr, Vl1, Vl2, Vl3, Vl4) \
   "eor v28.16b, " #Vr".16b, " #Vl1".16b\n"    \
   "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"    \
-  "eor v30.16b, " #Vr".16b, " #Vl3".16b\n"    \
-  "eor v31.16b, " #Vr".16b, " #Vl4".16b\n"    \
   "cnt v28.16b, v28.16b\n"                    \
   "cnt v29.16b, v29.16b\n"                    \
-  "cnt v30.16b, v30.16b\n"                    \
-  "cnt v31.16b, v31.16b\n"                    \
   "addp v28.16b, v28.16b, v29.16b\n"          \
-  "addp v30.16b, v30.16b, v31.16b\n"          \
-  "addp v28.16b, v28.16b, v30.16b\n"          \
+  "eor v29.16b, " #Vr".16b, " #Vl3".16b\n"    \
+  "eor v30.16b, " #Vr".16b, " #Vl4".16b\n"    \
+  "cnt v29.16b, v29.16b\n"                    \
+  "cnt v30.16b, v30.16b\n"                    \
+  "addp v29.16b, v29.16b, v30.16b\n"          \
+  "addp v28.16b, v28.16b, v29.16b\n"          \
   "uaddlp v28.8h, v28.16b\n"                  \
   "uadalp " #Vd".4s, v28.8h\n"
 
-// temporary NEON registers: v28,v29,v30,v31
+// temporary NEON registers: v28,v29,v30
 #define LCE_BMLA_LD_RHS(Vd, Vr, Vl1, Vl2, Vl3, Vl4)      \
   "eor v28.16b, " #Vr".16b, " #Vl1".16b\n"              \
   "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"              \
-  "eor v30.16b, " #Vr".16b, " #Vl3".16b\n"              \
-  "eor v31.16b, " #Vr".16b, " #Vl4".16b\n"              \
-  "ld1 {"#Vr".2d}, [%[rhs_ptr]], #16\n"                 \
   "cnt v28.16b, v28.16b\n"                              \
   "cnt v29.16b, v29.16b\n"                              \
-  "cnt v30.16b, v30.16b\n"                              \
-  "cnt v31.16b, v31.16b\n"                              \
   "addp v28.16b, v28.16b, v29.16b\n"                    \
-  "addp v30.16b, v30.16b, v31.16b\n"                    \
-  "addp v28.16b, v28.16b, v30.16b\n"                    \
+  "eor v29.16b, " #Vr".16b, " #Vl3".16b\n"              \
+  "eor v30.16b, " #Vr".16b, " #Vl4".16b\n"              \
+  "cnt v29.16b, v29.16b\n"                              \
+  "cnt v30.16b, v30.16b\n"                              \
+  "ld1 {"#Vr".2d}, [%[rhs_ptr]], #16\n"                 \
+  "addp v29.16b, v29.16b, v30.16b\n"                    \
+  "addp v28.16b, v28.16b, v29.16b\n"                    \
   "uaddlp v28.8h, v28.16b\n"                            \
   "uadalp " #Vd".4s, v28.8h\n"
 
-// temporary NEON registers: v28,v29,v30,v31
+// temporary NEON registers: v28,v29,v30
 #define LCE_BMLA_LD_ALL(Vd, Vr, Vl1, Vl2, Vl3, Vl4)      \
   "eor v28.16b, " #Vr".16b, " #Vl1".16b\n"              \
   "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"              \
-  "eor v30.16b, " #Vr".16b, " #Vl3".16b\n"              \
-  "eor v31.16b, " #Vr".16b, " #Vl4".16b\n"              \
-  "ld1 {"#Vr".2d}, [%[rhs_ptr]], #16\n"                 \
   "cnt v28.16b, v28.16b\n"                              \
   "cnt v29.16b, v29.16b\n"                              \
   "ld1 {"#Vl1".2d}, [%[lhs_ptr]], #16\n"                \
-  "cnt v30.16b, v30.16b\n"                              \
-  "cnt v31.16b, v31.16b\n"                              \
+  "addp v28.16b, v28.16b, v29.16b\n"                    \
+  "eor v29.16b, " #Vr".16b, " #Vl3".16b\n"              \
+  "eor v30.16b, " #Vr".16b, " #Vl4".16b\n"              \
   "ld1 {"#Vl2".2d}, [%[lhs_ptr]], #16\n"                \
+  "cnt v29.16b, v29.16b\n"                              \
+  "cnt v30.16b, v30.16b\n"                              \
+  "ld1 {"#Vr".2d}, [%[rhs_ptr]], #16\n"                 \
+  "addp v29.16b, v29.16b, v30.16b\n"                    \
   "addp v28.16b, v28.16b, v29.16b\n"                    \
   "ld1 {"#Vl3".2d}, [%[lhs_ptr]], #16\n"                \
-  "addp v30.16b, v30.16b, v31.16b\n"                    \
-  "addp v28.16b, v28.16b, v30.16b\n"                    \
   "uaddlp v28.8h, v28.16b\n"                            \
   "uadalp " #Vd".4s, v28.8h\n"                          \
   "ld1 {"#Vl4".2d}, [%[lhs_ptr]], #16\n"
