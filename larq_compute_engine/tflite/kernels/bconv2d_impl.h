@@ -76,9 +76,6 @@ const float* GetPostActivationMultiplier(
   return output_transform.post_activation_multiplier;
 }
 
-// The inputs post_mutiply and post_activation_bias are currently float
-// in order to accomodate for batchnorm scales
-// Later this might be changed to the int8 system of multipliers+shifts
 template <typename SrcScalar, typename TBitpacked, typename AccumScalar,
           typename DstScalar>
 inline void BConv2D(
