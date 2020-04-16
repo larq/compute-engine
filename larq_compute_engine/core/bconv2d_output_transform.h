@@ -137,7 +137,7 @@ struct OutputTransform<AccumScalar, std::int8_t>
   std::int8_t Run(const AccumScalar accum, int out_channel) const {
     AccumScalar result = this->RunBase(accum);
     // Multiply by (post_activation_multiplier[channel] / scale)
-    result = tflite::MultiplyByQuantizedMultiplier(
+    result = ::tflite::MultiplyByQuantizedMultiplier(
         result, output_multiplier[out_channel], output_shift[out_channel]);
     // Add post_activation_bias and output_zero_point
     result += output_effective_zero_point[out_channel];

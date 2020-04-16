@@ -2,6 +2,8 @@
 #include <cstdint>
 
 #include "bconv2d_impl.h"
+#include "bconv2d_output_transform_setup.h"
+#include "bconv2d_params.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
 #include "larq_compute_engine/core/bconv2d_impl_ref.h"
 #include "larq_compute_engine/core/padding_functor.h"
@@ -38,83 +40,6 @@ enum class KernelType {
   // BGEMM kernels.
   kRuyOptimized,
 };
-
-const int kTensorNotAllocated = -1;
-
-typedef struct {
-  // input tensor dimensions
-  std::int64_t batch{0};
-  std::int64_t input_width{0};
-  std::int64_t input_height{0};
-
-  // filters tensor dimensions
-  std::int64_t filter_width{0};
-  std::int64_t filter_height{0};
-  std::int64_t channels_in{0};
-  std::int64_t channels_out{0};
-
-  // strides
-  std::int64_t strides[4] = {};
-
-  // dilations
-  std::int64_t dilations[4] = {};
-
-  // padding
-  TfLitePadding padding_type{};
-  TfLitePaddingValues padding_values{};
-  int pad_value = 0;  // Must be 0 or 1
-
-  // output tensor dimensions
-  std::int64_t out_width{0};
-  std::int64_t out_height{0};
-
-  ce::core::FilterFormat filter_format{ce::core::FilterFormat::Unknown};
-
-  TfLiteFusedActivation activation = kTfLiteActNone;
-  // These min,max take care of a Relu.
-  // Later they will *also* do the clamping in order to go from int32 to int8
-  std::int32_t output_activation_min;
-  std::int32_t output_activation_max;
-
-  // This is only for int8 mode, its the post_activation_ values scaled by the
-  // output tensor scale. Until we have optimized code for writing bitpacked
-  // outputs, these are also used there.
-  std::vector<float> scaled_post_activation_multiplier;
-  std::vector<float> scaled_post_activation_bias;
-#ifndef LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
-  // Quantizaion parameters, per output channel.
-  // Because we fuse the post_activation_add with the zero-point we now have
-  // preprocessed zero-points, and they are per-channel instead of per-tensor.
-  std::vector<std::int32_t> output_multiplier;
-  std::vector<std::int32_t> output_shift;
-  std::vector<std::int32_t> output_zero_point;
-#endif
-  bool is_quantization_initialized = false;
-
-  bool bitpack_before_im2col = false;
-  bool need_im2col = false;
-  // IDs are the arbitrary identifiers used by TF Lite to identify and access
-  // memory buffers. They are unique in the entire TF Lite context.
-  int im2col_id = kTensorNotAllocated;
-  // In node->temporaries there is a list of tensor id's that are part
-  // of this node in particular. The indices below are offsets into this array.
-  // So in pseudo-code: `node->temporaries[index] = id;`
-  std::int32_t im2col_index;
-
-  std::vector<float> padding_buffer;
-  bool is_padding_correction_cached = false;
-
-  // Weights in the flatbuffer file are bitpacked in a different
-  // order than what is expected by the kernels, so we repack the weights
-  std::vector<std::uint8_t> filter_packed;
-  bool is_filter_repacked = false;
-
-  int bitpacking_bitwidth;
-  bool read_bitpacked_input = false;
-  bool write_bitpacked_output = false;
-
-  bool conv_params_initialized = false;
-} TfLiteBConv2DParams;
 
 inline void decide_bitpack_before_im2col(TfLiteBConv2DParams* conv_params) {
   if (conv_params->read_bitpacked_input ||
@@ -535,79 +460,6 @@ inline void GetConvParamsType(const TfLiteBConv2DParams& conv_params,
   // Activation function
   op_params.quantized_activation_min = conv_params.output_activation_min;
   op_params.quantized_activation_max = conv_params.output_activation_max;
-}
-
-using compute_engine::core::OutputTransform;
-using compute_engine::core::OutputTransformBase;
-
-// Fill the parts of the OutputTransform struct that are common to each
-// destination type
-void GetBaseParams(TfLiteContext* context, TfLiteNode* node,
-                   TfLiteBConv2DParams* params,
-                   OutputTransformBase<std::int32_t>& output_transform) {
-  auto input_shape = GetTensorShape(GetInput(context, node, 0));
-  auto filter_shape = GetTensorShape(GetInput(context, node, 1));
-  output_transform.backtransform_add =
-      filter_shape.Dims(1) * filter_shape.Dims(2) * params->channels_in;
-  output_transform.clamp_min = params->output_activation_min;
-  output_transform.clamp_max = params->output_activation_max;
-}
-
-// Fill the OutputTransform values for float outputs
-void GetOutputTransform(
-    TfLiteContext* context, TfLiteNode* node, TfLiteBConv2DParams* params,
-    OutputTransform<std::int32_t, float>& output_transform) {
-  GetBaseParams(context, node, params, output_transform);
-  const auto* post_activation_multiplier = GetInput(context, node, 2);
-  const auto* post_activation_bias = GetInput(context, node, 3);
-  TF_LITE_ASSERT_EQ(post_activation_multiplier->type, kTfLiteFloat32);
-  TF_LITE_ASSERT_EQ(post_activation_bias->type, kTfLiteFloat32);
-  output_transform.post_activation_multiplier =
-      GetTensorData<float>(post_activation_multiplier);
-  output_transform.post_activation_bias =
-      GetTensorData<float>(post_activation_bias);
-}
-
-// Fill the OutputTransform values for bitpacked int32 outputs
-void GetOutputTransform(
-    TfLiteContext* context, TfLiteNode* node, TfLiteBConv2DParams* params,
-    OutputTransform<std::int32_t, std::int32_t>& output_transform) {
-  GetBaseParams(context, node, params, output_transform);
-  const auto* post_activation_multiplier = GetInput(context, node, 2);
-  const auto* post_activation_bias = GetInput(context, node, 3);
-  if (post_activation_multiplier->type == kTfLiteFloat32 &&
-      post_activation_bias->type == kTfLiteFloat32) {
-    output_transform.post_activation_multiplier =
-        GetTensorData<float>(post_activation_multiplier);
-    output_transform.post_activation_bias =
-        GetTensorData<float>(post_activation_bias);
-  } else {
-    // When the post data was stored in int8, then SetupQuantization will have
-    // converted it to float
-    output_transform.post_activation_multiplier =
-        params->scaled_post_activation_multiplier.data();
-    output_transform.post_activation_bias =
-        params->scaled_post_activation_bias.data();
-  }
-}
-
-void GetOutputTransform(
-    TfLiteContext* context, TfLiteNode* node, TfLiteBConv2DParams* params,
-    OutputTransform<std::int32_t, std::int8_t>& output_transform) {
-  GetBaseParams(context, node, params, output_transform);
-#ifdef LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
-  output_transform.effective_post_activation_multiplier =
-      params->scaled_post_activation_multiplier.data();
-  output_transform.effective_post_activation_bias =
-      params->scaled_post_activation_bias.data();
-  output_transform.output_zero_point =
-      GetOutput(context, node, 0)->params.zero_point;
-#else
-  output_transform.output_multiplier = params->output_multiplier.data();
-  output_transform.output_shift = params->output_shift.data();
-  output_transform.output_effective_zero_point =
-      params->output_zero_point.data();
-#endif
 }
 
 float GetTensorValue(const TfLiteTensor* tensor, int index) {
