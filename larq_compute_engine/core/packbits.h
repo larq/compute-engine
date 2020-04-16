@@ -325,14 +325,14 @@ inline void pack_bitfield(const TIn* in, TOut* out,
                           const std::int32_t zero_point) {
   // Note: The expressions in these if-statements are known at compile-time so
   // they are all optimied away
-  constexpr bool UseZeroPoint = !std::is_floating_point<TIn>::value;
+  constexpr bool is_quantized = !std::is_floating_point<TIn>::value;
   if (bitpack_order == BitpackOrder::Canonical) {
-    if (UseZeroPoint)
+    if (is_quantized)
       pack_canonical_quantized(in, out, zero_point);
     else
       pack_canonical(in, out);
   } else {
-    if (UseZeroPoint)
+    if (is_quantized)
       pack_optimized_quantized(in, out, zero_point);
     else
       pack_optimized(in, out);

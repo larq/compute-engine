@@ -887,8 +887,8 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
 
 template <KernelType kernel_type, typename SrcScalar, typename DstScalar,
           typename TBitpacked>
-TfLiteStatus Eval_stage4(TfLiteContext* context, TfLiteNode* node,
-                         TfLiteBConv2DParams* params) {
+TfLiteStatus EvalChooseKernelType(TfLiteContext* context, TfLiteNode* node,
+                                  TfLiteBConv2DParams* params) {
   if (kernel_type == KernelType::kRuyOptimized) {
     EvalOpt<SrcScalar, TBitpacked, DstScalar>(context, node, params);
     return kTfLiteOk;
@@ -900,31 +900,48 @@ TfLiteStatus Eval_stage4(TfLiteContext* context, TfLiteNode* node,
 }
 
 template <KernelType kernel_type, typename SrcScalar, typename DstScalar>
-TfLiteStatus Eval_stage3(TfLiteContext* context, TfLiteNode* node,
-                         TfLiteBConv2DParams* params) {
+TfLiteStatus EvalChooseBitpackType(TfLiteContext* context, TfLiteNode* node,
+                                   TfLiteBConv2DParams* params) {
   switch (params->bitpacking_bitwidth) {
     case 32:
-      return Eval_stage4<kernel_type, SrcScalar, DstScalar, std::uint32_t>(
-          context, node, params);
+      return EvalChooseKernelType<kernel_type, SrcScalar, DstScalar,
+                                  std::uint32_t>(context, node, params);
     case 64:
-      return Eval_stage4<kernel_type, SrcScalar, DstScalar, std::uint64_t>(
-          context, node, params);
+      return EvalChooseKernelType<kernel_type, SrcScalar, DstScalar,
+                                  std::uint64_t>(context, node, params);
   };
   return kTfLiteError;
 }
 
 template <KernelType kernel_type, typename SrcScalar>
-TfLiteStatus Eval_stage2(TfLiteContext* context, TfLiteNode* node,
-                         TfLiteBConv2DParams* params) {
+TfLiteStatus EvalChooseOutputType(TfLiteContext* context, TfLiteNode* node,
+                                  TfLiteBConv2DParams* params) {
   const TfLiteType output_type = GetOutput(context, node, 0)->type;
   if (output_type == kTfLiteFloat32) {
-    return Eval_stage3<kernel_type, SrcScalar, float>(context, node, params);
+    return EvalChooseBitpackType<kernel_type, SrcScalar, float>(context, node,
+                                                                params);
   } else if (output_type == kTfLiteInt8) {
-    return Eval_stage3<kernel_type, SrcScalar, std::int8_t>(context, node,
-                                                            params);
+    return EvalChooseBitpackType<kernel_type, SrcScalar, std::int8_t>(
+        context, node, params);
   } else if (params->write_bitpacked_output && output_type == kTfLiteInt32) {
-    return Eval_stage3<kernel_type, SrcScalar, std::int32_t>(context, node,
-                                                             params);
+    return EvalChooseBitpackType<kernel_type, SrcScalar, std::int32_t>(
+        context, node, params);
+  }
+  return kTfLiteError;
+}
+
+template <KernelType kernel_type>
+TfLiteStatus EvalChooseInputType(TfLiteContext* context, TfLiteNode* node,
+                                 TfLiteBConv2DParams* params) {
+  const TfLiteType input_type = GetInput(context, node, 0)->type;
+  if (input_type == kTfLiteFloat32) {
+    return EvalChooseOutputType<kernel_type, float>(context, node, params);
+  } else if (input_type == kTfLiteInt8) {
+    return EvalChooseOutputType<kernel_type, std::int8_t>(context, node,
+                                                          params);
+  } else if (params->read_bitpacked_input && input_type == kTfLiteInt32) {
+    return EvalChooseOutputType<kernel_type, std::int32_t>(context, node,
+                                                           params);
   }
   return kTfLiteError;
 }
@@ -932,15 +949,7 @@ TfLiteStatus Eval_stage2(TfLiteContext* context, TfLiteNode* node,
 template <KernelType kernel_type>
 TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   auto* params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
-  const TfLiteType input_type = GetInput(context, node, 0)->type;
-  if (input_type == kTfLiteFloat32) {
-    return Eval_stage2<kernel_type, float>(context, node, params);
-  } else if (input_type == kTfLiteInt8) {
-    return Eval_stage2<kernel_type, std::int8_t>(context, node, params);
-  } else if (params->read_bitpacked_input && input_type == kTfLiteInt32) {
-    return Eval_stage2<kernel_type, std::int32_t>(context, node, params);
-  }
-  return kTfLiteError;
+  return EvalChooseInputType(context, node, params);
 }
 
 }  // namespace bconv2d
