@@ -545,7 +545,7 @@ void runTest(const TestParam& param) {
   packbits_matrix<BitpackOrder::Canonical>(
       filters_data.data(), filter_count * filter_height * filter_width,
       input_depth, packed_filters_data, filter_rows_bp, filter_cols_bp,
-      filter_bitpadding, Axis::RowWise, 0);
+      filter_bitpadding, Axis::RowWise);
 
   int output_height, output_width;
   TfLitePaddingValues padding_values = ComputePaddingHeightWidth(
