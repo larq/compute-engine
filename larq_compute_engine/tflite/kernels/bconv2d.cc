@@ -949,7 +949,7 @@ TfLiteStatus EvalChooseInputType(TfLiteContext* context, TfLiteNode* node,
 template <KernelType kernel_type>
 TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   auto* params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
-  return EvalChooseInputType(context, node, params);
+  return EvalChooseInputType<kernel_type>(context, node, params);
 }
 
 }  // namespace bconv2d
