@@ -30,7 +30,7 @@ struct OutputTransformBase {
   AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
   AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
 
-  AccumScalar RunBase(const AccumScalar accum) const {
+  inline AccumScalar RunBase(const AccumScalar accum) const {
     // Backtransform can still be done in int32
     AccumScalar x = backtransform_add - 2 * accum;
     // Activation function can also be done in int32
