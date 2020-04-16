@@ -20,22 +20,6 @@ namespace ce = compute_engine;
 
 namespace tflite {
 
-template <typename DstScalar>
-void PaddingCorrection(
-    const ConvParams& params, const int pad_value,
-    const RuntimeShape& input_shape, const RuntimeShape& filter_shape,
-    const RuntimeShape& output_shape, DstScalar* output_data,
-    const OutputTransform<std::int32_t, DstScalar>& output_transform,
-    const float* padding_buffer) {}
-
-template <>
-void PaddingCorrection(
-    const ConvParams& params, const int pad_value,
-    const RuntimeShape& input_shape, const RuntimeShape& filter_shape,
-    const RuntimeShape& output_shape, float* output_data,
-    const OutputTransform<std::int32_t, float>& output_transform,
-    const float* padding_buffer);
-
 template <class T>
 inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
                    const T* input_data, const RuntimeShape& filter_shape,
@@ -77,6 +61,19 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
     shape = &input_shape;
   }
   result_shape.ReplaceWith(shape->DimensionsCount(), shape->DimsData());
+}
+
+// Get the post_activation_multiplier out of the OutputTransform struct
+// Required for the padding functor
+template <typename AccumScalar, typename DstScalar>
+const float* GetPostActivationMultiplier(
+    const OutputTransform<AccumScalar, DstScalar>& output_transform) {
+  return nullptr;
+}
+template <typename AccumScalar>
+const float* GetPostActivationMultiplier(
+    const OutputTransform<AccumScalar, float>& output_transform) {
+  return output_transform.post_activation_multiplier;
 }
 
 // The inputs post_mutiply and post_activation_bias are currently float
@@ -215,20 +212,9 @@ inline void BConv2D(
   BGemm(lhs_params, lhs_data, rhs_params, rhs_data, dst_params, output_data,
         output_transform, cpu_backend_context);
 
-  PaddingCorrection(params, pad_value, input_shape, filter_shape, output_shape,
-                    output_data, output_transform, padding_buffer);
-}
-
-template <>
-void PaddingCorrection(
-    const ConvParams& params, const int pad_value,
-    const RuntimeShape& input_shape, const RuntimeShape& filter_shape,
-    const RuntimeShape& output_shape, float* output_data,
-    const OutputTransform<std::int32_t, float>& output_transform,
-    const float* padding_buffer) {
   if (params.padding_type == PaddingType::kSame && pad_value == 0) {
     using PaddingFunctor =
-        ce::core::PaddingFunctor<float, float, float,
+        ce::core::PaddingFunctor<DstScalar, float, float, float,
                                  ce::core::FilterFormat::OHWI>;
 
     const int stride_width = params.stride_width;
@@ -248,12 +234,12 @@ void PaddingCorrection(
     PaddingFunctor padding_functor;
     {
       gemmlowp::ScopedProfilingLabel label3("ZeroPaddingCorrection");
-      padding_functor(batches, input_height, input_width, input_depth, nullptr,
-                      filter_height, filter_width, output_depth, stride_height,
-                      stride_width, dilation_height_factor,
-                      dilation_width_factor, output_data, output_height,
-                      output_width, output_transform.post_activation_multiplier,
-                      padding_buffer);
+      padding_functor(
+          batches, input_height, input_width, input_depth, nullptr,
+          filter_height, filter_width, output_depth, stride_height,
+          stride_width, dilation_height_factor, dilation_width_factor,
+          output_data, output_height, output_width,
+          GetPostActivationMultiplier(output_transform), padding_buffer);
     }
   }
 }

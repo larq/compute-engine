@@ -31,8 +31,8 @@ inline void pack_canonical(const TIn* fptr, TOut* buf) {
 }
 
 template <class TIn, class TOut>
-inline void pack_canonical(const TIn* in, TOut* out,
-                           const std::int32_t zero_point) {
+inline void pack_canonical_quantized(const TIn* in, TOut* out,
+                                     const std::int32_t zero_point) {
   constexpr std::size_t bitwidth = std::numeric_limits<TOut>::digits;
   *out = 0;
   for (size_t i = 0; i < bitwidth; ++i) {
@@ -304,11 +304,11 @@ inline void pack_optimized(const TIn* in, TOut* out) {
 }
 
 template <class TIn, class TOut>
-inline void pack_optimized(const TIn* in, TOut* out,
-                           const std::int32_t zero_point) {
+inline void pack_optimized_quantized(const TIn* in, TOut* out,
+                                     const std::int32_t zero_point) {
   // In case there is no optimized code available, this default implementation
   // falls back to the canonical ordering
-  return pack_canonical(in, out, zero_point);
+  return pack_canonical_quantized(in, out, zero_point);
 }
 
 #ifdef __aarch64__
@@ -328,12 +328,12 @@ inline void pack_bitfield(const TIn* in, TOut* out,
   constexpr bool UseZeroPoint = !std::is_floating_point<TIn>::value;
   if (bitpack_order == BitpackOrder::Canonical) {
     if (UseZeroPoint)
-      pack_canonical(in, out, zero_point);
+      pack_canonical_quantized(in, out, zero_point);
     else
       pack_canonical(in, out);
   } else {
     if (UseZeroPoint)
-      pack_optimized(in, out, zero_point);
+      pack_optimized_quantized(in, out, zero_point);
     else
       pack_optimized(in, out);
   }

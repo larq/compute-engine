@@ -44,7 +44,8 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
 
     using TBitpacked = LhsScalar;
 
-    const OutputTransform<AccumScalar, DstScalar> output_transform = spec;
+    const OutputTransform<AccumScalar, DstScalar>& output_transform =
+        spec.output_transform;
 
     int clamped_end_row = std::min(end_row, dst->layout.rows);
     int clamped_end_col = std::min(end_col, dst->layout.cols);
@@ -99,7 +100,8 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int32_t,
 
     using TBitpacked = LhsScalar;
 
-    const OutputTransform<AccumScalar, std::int32_t> output_transform = spec;
+    const OutputTransform<AccumScalar, std::int32_t>& output_transform =
+        spec.output_transform;
 
     // We are writing 32-bit bitpacked output (where we bitpack along the
     // channel axis) and so we need to operate on blocks of 32 channels at a

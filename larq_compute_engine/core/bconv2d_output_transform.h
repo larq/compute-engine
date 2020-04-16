@@ -11,14 +11,26 @@
 namespace compute_engine {
 namespace core {
 
-// Parameters that are needed for both float and int8 kernels
+//
+// The `OutputTransform` struct describes what needs to be done to get from the
+// int32 accumulator value to the final result that is written back to memory.
+//
+// This transform depends on the destination type `DstScalar` which can be:
+// - float
+// - int32 (meaning bitpacked output)
+// - int8
+template <typename AccumScalar, typename DstScalar>
+struct OutputTransform {};
+
+// A part of the transformation is common to all output types.
+// This part is described by `OutputTransformBase`.
 template <typename AccumScalar>
 struct OutputTransformBase {
   AccumScalar backtransform_add = 0;
   AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
   AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
 
-  AccumScalar Run(const AccumScalar accum) const {
+  AccumScalar RunBase(const AccumScalar accum) const {
     // Backtransform can still be done in int32
     AccumScalar x = backtransform_add - 2 * accum;
     // Activation function can also be done in int32
@@ -28,20 +40,15 @@ struct OutputTransformBase {
   }
 };
 
-template <typename AccumScalar, typename ActivationScalar>
-struct OutputTransform {};
-
-// Parameters that are needed only for float kernels
+// Output transformation for float kernels
 template <typename AccumScalar>
 struct OutputTransform<AccumScalar, float> : OutputTransformBase<AccumScalar> {
   const float* post_activation_multiplier = nullptr;
   const float* post_activation_bias = nullptr;
 
-  using Base = OutputTransformBase<AccumScalar>;
-
   float Run(const AccumScalar accum, int out_channel) const {
     // Post multiply and add are done in float
-    float x = static_cast<float>(Base::Run(accum));
+    float x = static_cast<float>(this->RunBase(accum));
     if (post_activation_multiplier) {
       x *= post_activation_multiplier[out_channel];
     }
@@ -52,71 +59,97 @@ struct OutputTransform<AccumScalar, float> : OutputTransformBase<AccumScalar> {
   }
 };
 
-// Kernels that write bitpacked output
-// This can happen in both int8 models and float models
-// TODO: For int8 models that have post_activation_ data in int8, this should be
-// changed
+// Output transformation for bitpacked output
+// Currently uses an un-optimized path by using the float transform.
+// TODO: Precompute a per-channel accumulation threshold
+// so that we can simply do a single compare here:
+//     return (accum <= threshold[out_channel]);
+// Note: This would require modifying the converter or Prepare step to always
+// have *positive* post_activation_multipliers, since otherwise we would have
+// `<=` for some channels and `>=` for other channels.
 template <typename AccumScalar>
 struct OutputTransform<AccumScalar, std::int32_t>
     : OutputTransform<AccumScalar, float> {
   bool Run(const AccumScalar accum, int out_channel) const {
-    // Run the float version
+    // Currently we take an un-optimized reference approach by first running the
+    // float kernel and then taking the sign.
     float x = OutputTransform<AccumScalar, float>::Run(accum, out_channel);
     return (x < 0);
   }
 };
 
-// OutputTransform for 8-bit quantization
+// Output transformation for 8-bit quantization
 //
-// For devices that have an FPU, we can gain a lot of accuracy by doing a part
+// We use the following preprocessor flag which can be set in build scripts:
+// LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
+//
+// For devices that have an FPU, we can gain accuracy by doing a part
 // of the output transform in float, and then converting back to 8-bit.
 //
-// On devices without FPU, this flag should be disabled and the kernel will be
+// To not use the FPU, this flag should be disabled and the kernel will be
 // compiled without float ops in the output transform, at the cost of some
 // accuracy.
-#define LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
 
-// Parameters that are needed only for int8 kernels
+#ifdef LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
 template <typename AccumScalar>
 struct OutputTransform<AccumScalar, std::int8_t>
     : OutputTransformBase<AccumScalar> {
-#ifdef LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
-  const float* post_activation_multiplier = nullptr;
-  const float* post_activation_bias = nullptr;
+  // These effective values are the post-activation multipliers and biases
+  // divided by output_scale
+  const float* effective_post_activation_multiplier = nullptr;
+  const float* effective_post_activation_bias = nullptr;
   std::int32_t output_zero_point = 0;
-#else
-  const std::int32_t* output_multiplier = nullptr;
-  const std::int32_t* output_shift = nullptr;
-  const std::int32_t* output_zero_point = nullptr;
-#endif
-
-  using Base = OutputTransformBase<AccumScalar>;
 
   std::int8_t Run(const AccumScalar accum, int out_channel) const {
-    AccumScalar x = Base::Run(accum);
-#ifdef LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
-    float y = static_cast<float>(x);
-    if (post_activation_multiplier) {
-      y *= post_activation_multiplier[out_channel];
+    // First convert to full precision to do the linear transformation
+    float result_fp = static_cast<float>(this->RunBase(accum));
+    if (effective_post_activation_multiplier) {
+      result_fp *= effective_post_activation_multiplier[out_channel];
     }
-    if (post_activation_bias) {
-      y += post_activation_bias[out_channel];
+    if (effective_post_activation_bias) {
+      result_fp += effective_post_activation_bias[out_channel];
     }
-    x = tflite::TfLiteRound(y);
-    x += output_zero_point;
-#else
-    // Divide by 'scale'
-    x = tflite::MultiplyByQuantizedMultiplier(x, output_multiplier[out_channel],
-                                              output_shift[out_channel]);
-    // Add effective zero point
-    x += output_zero_point[out_channel];
-#endif
+    // Now round back to int32
+    AccumScalar result = tflite::TfLiteRound(result_fp);
+    result += output_zero_point;
     // Clamp to int8 range
-    x = std::min<std::int32_t>(x, std::numeric_limits<std::int8_t>::max());
-    x = std::max<std::int32_t>(x, std::numeric_limits<std::int8_t>::lowest());
-    return static_cast<std::int8_t>(x);
+    result =
+        std::min<std::int32_t>(result, std::numeric_limits<std::int8_t>::max());
+    result = std::max<std::int32_t>(result,
+                                    std::numeric_limits<std::int8_t>::lowest());
+    return static_cast<std::int8_t>(result);
   }
 };
+
+#else   // LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
+
+template <typename AccumScalar>
+struct OutputTransform<AccumScalar, std::int8_t>
+    : OutputTransformBase<AccumScalar> {
+  // output_multiplier and output_shift encode multiplication by
+  // (post_activation_multiplier[channel] / scale)
+  const std::int32_t* output_multiplier = nullptr;
+  const std::int32_t* output_shift = nullptr;
+  // output_effective_zero_point is addition by
+  // (output_zero_point + round(post_activation_bias[channel] / scale)
+  const std::int32_t* output_effective_zero_point = nullptr;
+
+  std::int8_t Run(const AccumScalar accum, int out_channel) const {
+    AccumScalar result = this->RunBase(accum);
+    // Multiply by (post_activation_multiplier[channel] / scale)
+    result = tflite::MultiplyByQuantizedMultiplier(
+        result, output_multiplier[out_channel], output_shift[out_channel]);
+    // Add post_activation_bias and output_zero_point
+    result += output_effective_zero_point[out_channel];
+    // Clamp to int8 range
+    result =
+        std::min<std::int32_t>(result, std::numeric_limits<std::int8_t>::max());
+    result = std::max<std::int32_t>(result,
+                                    std::numeric_limits<std::int8_t>::lowest());
+    return static_cast<std::int8_t>(result);
+  }
+};
+#endif  // LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
 
 }  // namespace core
 }  // namespace compute_engine

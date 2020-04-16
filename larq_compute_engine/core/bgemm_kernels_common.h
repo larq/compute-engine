@@ -10,14 +10,13 @@ using compute_engine::core::OutputTransform;
 
 // Our version of `ruy::BasicSpec`
 // Original is in `lite/experimental/ruy/spec.h`
-// We simply subclass our `OutputTransform` struct
+// We simply use our `OutputTransform` struct
 template <typename tAccumScalar, typename tDstScalar>
-struct BinaryBasicSpec : OutputTransform<tAccumScalar, tDstScalar> {
+struct BinaryBasicSpec {
   using AccumScalar = tAccumScalar;
   using DstScalar = tDstScalar;
 
-  BinaryBasicSpec(const OutputTransform<tAccumScalar, tDstScalar>& params)
-      : OutputTransform<tAccumScalar, tDstScalar>(params) {}
+  OutputTransform<AccumScalar, DstScalar> output_transform;
 
   // This is identical to `ruy::BasicSpec`
   static constexpr LoopStructure kLoopStructure = LoopStructure::kAuto;
@@ -74,12 +73,13 @@ inline void MakeBinaryKernelParams(
       dst->data.get() + start_col * dst->layout.stride + start_row;
 
   std::uint8_t flags = 0;
-  params->post_activation_multiplier = spec.post_activation_multiplier;
-  params->post_activation_bias = spec.post_activation_bias;
-  if (spec.post_activation_multiplier && spec.post_activation_bias) {
+  params->post_activation_multiplier =
+      spec.output_transform.post_activation_multiplier;
+  params->post_activation_bias = spec.output_transform.post_activation_bias;
+  if (params->post_activation_multiplier && params->post_activation_bias) {
     flags |= RUY_ASM_FLAG_HAS_BIAS;
   }
-  params->backtransform_add = spec.backtransform_add;
+  params->backtransform_add = spec.output_transform.backtransform_add;
   params->flags = flags;
   params->start_row = start_row;
   params->start_col = start_col;
@@ -89,8 +89,8 @@ inline void MakeBinaryKernelParams(
   params->rhs_stride = sizeof(T) * rhs.layout.stride;
   params->dst_stride = sizeof(float) * dst->layout.stride;
   params->depth = depth;
-  params->clamp_min = spec.clamp_min;
-  params->clamp_max = spec.clamp_max;
+  params->clamp_min = spec.output_transform.clamp_min;
+  params->clamp_max = spec.output_transform.clamp_max;
   params->dst_rows = dst->layout.rows;
   params->dst_cols = dst->layout.cols;
 

@@ -17,14 +17,12 @@ namespace tflite {
 template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
           typename DstScalar>
 struct BGemmImplUsingRuy {
-  static void Run(const MatrixParams<LhsScalar>& lhs_params,
-                  const LhsScalar* lhs_data,
-                  const MatrixParams<RhsScalar>& rhs_params,
-                  const RhsScalar* rhs_data,
-                  const MatrixParams<DstScalar>& dst_params,
-                  DstScalar* dst_data,
-                  const OutputTransform<AccumScalar, DstScalar>& params,
-                  CpuBackendContext* context) {
+  static void Run(
+      const MatrixParams<LhsScalar>& lhs_params, const LhsScalar* lhs_data,
+      const MatrixParams<RhsScalar>& rhs_params, const RhsScalar* rhs_data,
+      const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
+      const OutputTransform<AccumScalar, DstScalar>& output_transform,
+      CpuBackendContext* context) {
     gemmlowp::ScopedProfilingLabel label("BGemmRuy");
 
     static_assert(std::is_same<LhsScalar, RhsScalar>::value,
@@ -52,7 +50,8 @@ struct BGemmImplUsingRuy {
     rhs.data = rhs_data;
     dst.data = dst_data;
 
-    BinaryBasicSpec<AccumScalar, DstScalar> spec(params);
+    BinaryBasicSpec<AccumScalar, DstScalar> spec;
+    spec.output_transform = output_transform;
 
     // The allocator is used to allocate memory for pre-packed matrices
     ruy::Allocator allocator;

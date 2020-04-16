@@ -2,6 +2,7 @@
 #define COMPUTE_ENGINE_KERNELS_PADDING_H_
 
 #include "larq_compute_engine/core/types.h"
+#include "tensorflow/lite/kernels/op_macros.h"
 
 namespace compute_engine {
 namespace core {
@@ -9,7 +10,8 @@ namespace core {
 namespace ce = compute_engine;
 
 // For non-float types, the padding functor does nothing
-template <class Tdata, class Tfilter, class Tpost, FilterFormat filter_format>
+template <class Tdata, class Tfilter, class Tpost, class Tcache,
+          FilterFormat filter_format>
 class PaddingFunctor {
  public:
   static std::size_t get_cache_size(const int filter_height,
@@ -17,13 +19,16 @@ class PaddingFunctor {
                                     const int filter_count,
                                     const int dilation_rows,
                                     const int dilation_cols) {
+    TF_LITE_ASSERT(false);
     return 0;
   }
   static void cache_correction_values(
       const Tfilter* filter_data, const int filter_height,
       const int filter_width, const int filter_count, const int input_channels,
       const int dilation_rows, const int dilation_cols,
-      const Tpost* post_activation_multiplier_data, Tdata* output_cache) {}
+      const Tpost* post_activation_multiplier_data, Tcache* output_cache) {
+    TF_LITE_ASSERT(false);
+  }
 
   void operator()(const int input_batches, const int input_height,
                   const int input_width, const int input_channels,
@@ -34,7 +39,9 @@ class PaddingFunctor {
                   Tdata* output_data, const int output_height,
                   const int output_width,
                   const Tpost* post_activation_multiplier_data = nullptr,
-                  const Tdata* padding_cache = nullptr) {}
+                  const Tcache* padding_cache = nullptr) {
+    TF_LITE_ASSERT(false);
+  }
 };
 
 //
@@ -42,7 +49,7 @@ class PaddingFunctor {
 // Assumes that padding type is 'SAME'.
 //
 template <FilterFormat filter_format>
-class PaddingFunctor<float, float, float, filter_format> {
+class PaddingFunctor<float, float, float, float, filter_format> {
  public:
   static std::size_t get_cache_size(const int filter_height,
                                     const int filter_width,

@@ -76,12 +76,12 @@ typedef struct {
   std::int32_t output_activation_min;
   std::int32_t output_activation_max;
 
-#ifdef LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
   // This is only for int8 mode, its the post_activation_ values scaled by the
-  // output tensor scale
+  // output tensor scale. Until we have optimized code for writing bitpacked
+  // outputs, these are also used there.
   std::vector<float> scaled_post_activation_multiplier;
   std::vector<float> scaled_post_activation_bias;
-#else
+#ifndef LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
   // Quantizaion parameters, per output channel.
   // Because we fuse the post_activation_add with the zero-point we now have
   // preprocessed zero-points, and they are per-channel instead of per-tensor.
@@ -540,6 +540,8 @@ inline void GetConvParamsType(const TfLiteBConv2DParams& conv_params,
 using compute_engine::core::OutputTransform;
 using compute_engine::core::OutputTransformBase;
 
+// Fill the parts of the OutputTransform struct that are common to each
+// destination type
 void GetBaseParams(TfLiteContext* context, TfLiteNode* node,
                    TfLiteBConv2DParams* params,
                    OutputTransformBase<std::int32_t>& output_transform) {
@@ -551,10 +553,25 @@ void GetBaseParams(TfLiteContext* context, TfLiteNode* node,
   output_transform.clamp_max = params->output_activation_max;
 }
 
-template <typename DstScalar>
+// Fill the OutputTransform values for float outputs
 void GetOutputTransform(
     TfLiteContext* context, TfLiteNode* node, TfLiteBConv2DParams* params,
-    OutputTransform<std::int32_t, DstScalar>& output_transform) {
+    OutputTransform<std::int32_t, float>& output_transform) {
+  GetBaseParams(context, node, params, output_transform);
+  const auto* post_activation_multiplier = GetInput(context, node, 2);
+  const auto* post_activation_bias = GetInput(context, node, 3);
+  TF_LITE_ASSERT_EQ(post_activation_multiplier->type, kTfLiteFloat32);
+  TF_LITE_ASSERT_EQ(post_activation_bias->type, kTfLiteFloat32);
+  output_transform.post_activation_multiplier =
+      GetTensorData<float>(post_activation_multiplier);
+  output_transform.post_activation_bias =
+      GetTensorData<float>(post_activation_bias);
+}
+
+// Fill the OutputTransform values for bitpacked int32 outputs
+void GetOutputTransform(
+    TfLiteContext* context, TfLiteNode* node, TfLiteBConv2DParams* params,
+    OutputTransform<std::int32_t, std::int32_t>& output_transform) {
   GetBaseParams(context, node, params, output_transform);
   const auto* post_activation_multiplier = GetInput(context, node, 2);
   const auto* post_activation_bias = GetInput(context, node, 3);
@@ -574,22 +591,22 @@ void GetOutputTransform(
   }
 }
 
-template <>
 void GetOutputTransform(
     TfLiteContext* context, TfLiteNode* node, TfLiteBConv2DParams* params,
     OutputTransform<std::int32_t, std::int8_t>& output_transform) {
   GetBaseParams(context, node, params, output_transform);
 #ifdef LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
-  output_transform.post_activation_multiplier =
+  output_transform.effective_post_activation_multiplier =
       params->scaled_post_activation_multiplier.data();
-  output_transform.post_activation_bias =
+  output_transform.effective_post_activation_bias =
       params->scaled_post_activation_bias.data();
   output_transform.output_zero_point =
       GetOutput(context, node, 0)->params.zero_point;
 #else
   output_transform.output_multiplier = params->output_multiplier.data();
   output_transform.output_shift = params->output_shift.data();
-  output_transform.output_zero_point = params->output_zero_point.data();
+  output_transform.output_effective_zero_point =
+      params->output_zero_point.data();
 #endif
 }
 
@@ -710,7 +727,7 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
         (params->padding_type == TfLitePadding::kTfLitePaddingSame &&
          params->pad_value == 0)) {
       using PaddingFunctor =
-          ce::core::PaddingFunctor<float, UnpackType, float,
+          ce::core::PaddingFunctor<float, UnpackType, float, float,
                                    ce::core::FilterFormat::OHWI>;
       PaddingFunctor padding_functor;
 
@@ -774,8 +791,8 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
 }
 
 template <typename SrcScalar, typename TBitpacked, typename DstScalar>
-TfLiteStatus EvalOpt(TfLiteContext* context, TfLiteNode* node,
-                     TfLiteBConv2DParams* params) {
+void EvalOpt(TfLiteContext* context, TfLiteNode* node,
+             TfLiteBConv2DParams* params) {
   OneTimeSetup<SrcScalar, TBitpacked>(context, node, params);
 
   const auto* input = GetInput(context, node, 0);
@@ -817,12 +834,11 @@ TfLiteStatus EvalOpt(TfLiteContext* context, TfLiteNode* node,
       params->bitpack_before_im2col, params->padding_buffer.data(),
       params->pad_value, params->read_bitpacked_input,
       CpuBackendContext::GetFromContext(context));
-  return kTfLiteOk;
 }
 
 template <typename SrcScalar, typename TBitpacked, typename DstScalar>
-TfLiteStatus EvalRef(TfLiteContext* context, TfLiteNode* node,
-                     TfLiteBConv2DParams* params) {
+void EvalRef(TfLiteContext* context, TfLiteNode* node,
+             TfLiteBConv2DParams* params) {
   const auto* input = GetInput(context, node, 0);
   const auto* packed_filter = GetInput(context, node, 1);
   auto* output = GetOutput(context, node, 0);
@@ -867,7 +883,6 @@ TfLiteStatus EvalRef(TfLiteContext* context, TfLiteNode* node,
       GetTensorShape(im2col), GetTensorData<SrcScalar>(im2col),
       false /*bitpack before im2col*/, nullptr /*padding buffer*/,
       params->pad_value, nullptr /*cpu backend context*/);
-  return kTfLiteOk;
 }
 
 template <KernelType kernel_type, typename SrcScalar, typename DstScalar,
@@ -875,9 +890,11 @@ template <KernelType kernel_type, typename SrcScalar, typename DstScalar,
 TfLiteStatus Eval_stage4(TfLiteContext* context, TfLiteNode* node,
                          TfLiteBConv2DParams* params) {
   if (kernel_type == KernelType::kRuyOptimized) {
-    return EvalOpt<SrcScalar, TBitpacked, DstScalar>(context, node, params);
+    EvalOpt<SrcScalar, TBitpacked, DstScalar>(context, node, params);
+    return kTfLiteOk;
   } else if (kernel_type == KernelType::kGenericRef) {
-    return EvalRef<SrcScalar, TBitpacked, DstScalar>(context, node, params);
+    EvalRef<SrcScalar, TBitpacked, DstScalar>(context, node, params);
+    return kTfLiteOk;
   }
   return kTfLiteError;
 }
