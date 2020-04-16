@@ -13,7 +13,7 @@ such as **tiling** to maximize the number of cache hits, **vectorization** to ma
 the computational throughput, and **multi-threading parallelization** to take
 advantage of multi-core modern desktop and mobile CPUs.
 
-*Larq Compute Engine is part of a family of libraries for BNN development; you can also check out [Larq](https://github.com/larq/larq) for building and training BNNs and and [Larq Zoo](https://github.com/larq/zoo) for pre-trained models.*
+*Larq Compute Engine is part of a family of libraries for BNN development; you can also check out [Larq](https://github.com/larq/larq) for building and training BNNs and [Larq Zoo](https://github.com/larq/zoo) for pre-trained models.*
 
 ## Key Features
 
