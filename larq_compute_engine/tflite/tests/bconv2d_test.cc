@@ -443,8 +443,8 @@ void runTest(const TestParam& param) {
   const auto is_reference_registration =
       (registration == compute_engine::tflite::Register_BCONV_2D32_REF);
 
-  if (is_reference_registration &&
-      (padding == Padding_SAME && pad_values == 0)) {
+  if ((padding == Padding_SAME && pad_values == 0) &&
+      is_reference_registration) {
     GTEST_SKIP();
     return;
   }
