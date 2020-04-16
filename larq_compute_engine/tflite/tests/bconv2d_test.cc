@@ -20,7 +20,6 @@
 #include <ctime>
 #include <functional>
 #include <memory>
-#include <random>
 #include <tuple>
 #include <vector>
 
@@ -29,6 +28,8 @@
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
 #include "larq_compute_engine/core/packbits.h"
 #include "larq_compute_engine/core/packbits_utils.h"
+#include "larq_compute_engine/tflite/tests/bconv2d_op.h"
+#include "larq_compute_engine/tflite/tests/utils.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/internal/types.h"
 #include "tensorflow/lite/kernels/padding.h"
@@ -40,81 +41,6 @@
 
 namespace tflite {
 
-// Use the same bitwidth as the MLIR converter
-// Since tflite does not have an unsigned 32-bit int type
-// we have to use the signed type here or it will throw errors.
-using PackedFilterType = std::int32_t;
-constexpr std::size_t packed_bitwidth = 32;
-
-constexpr int Padding_ONE = Padding_MAX + 1;
-
-const char* GetPaddingName(enum Padding padding) {
-  switch (padding) {
-    case Padding_VALID:
-      return "VALID";
-    case Padding_SAME:
-      return "SAME";
-    default:
-      return "UNKNOWN";
-  };
-}
-
-// Helper for determining the type for the builtin convolution that we are
-// comparing with
-template <typename TInput, typename TOutput>
-struct GetBuiltinType {};
-
-template <>
-struct GetBuiltinType<float, float> {
-  using type = float;
-};
-
-template <>
-struct GetBuiltinType<std::int32_t, float> {
-  using type = float;
-};
-
-template <>
-struct GetBuiltinType<float, std::int32_t> {
-  using type = float;
-};
-
-template <>
-struct GetBuiltinType<std::int32_t, std::int32_t> {
-  using type = float;
-};
-
-template <>
-struct GetBuiltinType<std::int8_t, std::int8_t> {
-  using type = std::int8_t;
-};
-
-template <>
-struct GetBuiltinType<std::int8_t, std::int32_t> {
-  using type = std::int8_t;
-};
-
-template <>
-struct GetBuiltinType<std::int32_t, std::int8_t> {
-  using type = std::int8_t;
-};
-
-// Helper for determining the post_activation_ type
-template <typename BuiltinType>
-struct GetPostType {};
-
-template <>
-struct GetPostType<float> {
-  using type = float;
-};
-
-template <>
-struct GetPostType<std::int8_t> {
-  // We can also choose to have this in float, the kernel supports both.
-  // using type = float;
-  using type = std::int8_t;
-};
-
 namespace ops {
 namespace builtin {
 
@@ -123,15 +49,6 @@ TfLiteRegistration* Register_CONVOLUTION_GENERIC_OPT();
 
 }  // namespace builtin
 }  // namespace ops
-
-std::string getActivationString(const enum ActivationFunctionType activation) {
-  if (activation == ActivationFunctionType_RELU) {
-    return "RELU";
-  } else if (activation == ActivationFunctionType_NONE) {
-    return "NONE";
-  }
-  return "UNKOWN";
-}
 
 namespace {
 
@@ -204,20 +121,6 @@ class BaseConvolutionOpModel : public SingleOpModel {
   int output_;
 };
 
-// Helper for builtin bias type
-template <typename T>
-struct GetBiasType {};
-
-template <>
-struct GetBiasType<float> {
-  using type = float;
-};
-
-template <>
-struct GetBiasType<std::int8_t> {
-  using type = std::int32_t;
-};
-
 template <typename T>
 class ConvolutionOpModel : public BaseConvolutionOpModel {
  public:
@@ -286,8 +189,6 @@ TfLiteRegistration* Register_BCONV_2D32_OPT();
 TfLiteRegistration* Register_BCONV_2D64_OPT();
 
 namespace testing {
-
-typedef TfLiteRegistration* (*register_function)(void);
 
 typedef std::tuple<std::array<int, 4>,           // input shape [BHWI]
                    std::array<int, 3>,           // filter shape [HWO]
@@ -373,88 +274,6 @@ struct TestParam {
       compute_engine::tflite::Register_BCONV_2D32_OPT;
 };
 
-class BaseBConv2DOpModel : public SingleOpModel {
- public:
-  BaseBConv2DOpModel(
-      register_function registration, const TensorData& input,
-      const TensorData& filter, const TensorData& output,
-      const TensorData& post_activation_multiplier,
-      const TensorData& post_activation_bias, int channels_in,
-      int stride_width = 1, int stride_height = 1,
-      enum Padding padding = Padding_VALID, int pad_values = 0,
-      enum ActivationFunctionType activation = ActivationFunctionType_NONE,
-      int dilation_width_factor = 1, int dilation_height_factor = 1,
-      bool read_bitpacked_input = false, bool write_bitpacked_output = false,
-      int num_threads = -1) {
-    input_ = AddInput(input);
-    filter_ = AddInput(filter);
-    post_activation_multiplier_ = AddInput(post_activation_multiplier);
-    post_activation_bias_ = AddInput(post_activation_bias);
-    output_ = AddOutput(output);
-
-    flexbuffers::Builder fbb;
-    fbb.Map([&]() {
-      // This attribute is necessary because if the filters are bitpacked and
-      // we're reading bitpacked input then we don't have access to the original
-      // 'true' number of input channels.
-      fbb.Int("channels_in", channels_in);
-      fbb.TypedVector("strides", [&]() {
-        fbb.Int(1);
-        fbb.Int(stride_height);
-        fbb.Int(stride_width);
-        fbb.Int(1);
-      });
-      fbb.TypedVector("dilations", [&]() {
-        fbb.Int(1);
-        fbb.Int(dilation_height_factor);
-        fbb.Int(dilation_width_factor);
-        fbb.Int(1);
-      });
-      fbb.String("filter_format", "OHWI_PACKED");
-      fbb.String("padding", GetPaddingName(padding));
-      fbb.Int("pad_values", pad_values);
-      fbb.Bool("read_bitpacked_input", read_bitpacked_input);
-      fbb.Bool("write_bitpacked_output", write_bitpacked_output);
-      fbb.String("activation", getActivationString(activation));
-    });
-    fbb.Finish();
-    SetCustomOp("LceBconv2d", fbb.GetBuffer(), registration);
-    BuildInterpreter({GetShape(input_), GetShape(filter_)}, num_threads);
-  }
-
- protected:
-  int input_;
-  int filter_;
-  int output_;
-  int post_activation_multiplier_;
-  int post_activation_bias_;
-};
-
-template <typename TInput, typename PostType, typename TOutput>
-class BConv2DOpModel : public BaseBConv2DOpModel {
- public:
-  using BaseBConv2DOpModel::BaseBConv2DOpModel;
-
-  void SetFilter(const std::vector<PackedFilterType>& f) {
-    PopulateTensor(filter_, f);
-  }
-
-  void SetInput(const std::vector<TInput>& data) {
-    PopulateTensor(input_, data);
-  }
-
-  void SetPostActivationMultiplier(const std::vector<PostType>& f) {
-    PopulateTensor(post_activation_multiplier_, f);
-  }
-
-  void SetPostActivationBias(const std::vector<PostType>& f) {
-    PopulateTensor(post_activation_bias_, f);
-  }
-
-  std::vector<TOutput> GetOutput() { return ExtractVector<TOutput>(output_); }
-  std::vector<int> GetOutputShape() { return GetTensorShape(output_); }
-};
-
 const auto kKernelMap = new std::map<string, register_function>({
     {"BConv2D32REF", compute_engine::tflite::Register_BCONV_2D32_REF},
     {"BConv2D32OPT", compute_engine::tflite::Register_BCONV_2D32_OPT},
@@ -494,88 +313,6 @@ class BConv2DOpTest : public ::testing::TestWithParam<TestParamTuple> {
   const std::map<string, register_function>& GetKernelMap() {
     return *kKernelMap;
   }
-};
-
-// Useful struct for int8 quantization
-template <typename T>
-struct LceTensor : public TensorData {
-  LceTensor(std::vector<int> shape = {})
-      : TensorData(GetTensorType<T>(), shape), reciprocal_scale(1){};
-
-  template <typename TOther>
-  void SetQuantizationParams(const LceTensor<TOther>& rhs) {
-    reciprocal_scale = rhs.reciprocal_scale;
-    scale = rhs.scale;
-    zero_point = rhs.zero_point;
-  }
-
-  // For int8, `int8_value` has range [-128, 127]
-  //     real_value = scale * (int8_value - zero_point)
-  // To represent {-1,+1} without error, we require
-  //     int_value = zero_point + (+-1) / scale
-  // Therefore `scale` must be of the form 1/n
-  // and we require
-  //     abs(zero_point) + abs(1/scale) <= 127
-  // Note that filter.zero_point = 0 for Conv2D,
-  // and BConv2D does not have int8 filters.
-
-  template <typename Gen>
-  void GenerateQuantizationParams(Gen& gen) {
-    reciprocal_scale = std::uniform_int_distribution<>(1, 20)(gen);
-    scale = 1.0f / float(reciprocal_scale);
-    zero_point = std::uniform_int_distribution<>(-20, 20)(gen);
-  }
-
-  // This has zero_point = 0
-  template <typename Gen>
-  void GenerateQuantizationParamsPerChannel(Gen& gen) {
-    reciprocal_scale = std::uniform_int_distribution<>(1, 20)(gen);
-    // Do not set this->scale because TF Lite might expect it to be 0 when
-    // per_channel_quantization is used.
-    float s = 1.0f / float(reciprocal_scale);
-
-    per_channel_quantization = true;
-    std::size_t count = shape[channel_index];
-    per_channel_quantization_scales = std::vector<float>(count, s);
-    per_channel_quantization_offsets = std::vector<std::int64_t>(count, 0);
-  }
-
-  T Quantize(const std::int32_t x) const {
-    if (std::is_floating_point<T>::value) {
-      return x;
-    } else {
-      std::int32_t y = zero_point + reciprocal_scale * x;
-      y = std::min<std::int32_t>(y, std::numeric_limits<T>::max());
-      y = std::max<std::int32_t>(y, std::numeric_limits<T>::lowest());
-      return y;
-    }
-  }
-
-  T Quantize(const float x) const {
-    if (std::is_floating_point<T>::value) {
-      return x;
-    } else {
-      std::int32_t y = zero_point + std::roundl(x / scale);
-      y = std::min<std::int32_t>(y, std::numeric_limits<T>::max());
-      y = std::max<std::int32_t>(y, std::numeric_limits<T>::lowest());
-      return y;
-    }
-  }
-
-  float DeQuantize(const T& x) const { return scale * (x - zero_point); }
-
-  // For floating-point tests, this will also work because
-  // then zero_point = 0 and reciprocal_scale = 1
-  template <typename Gen, typename Iter>
-  void GenerateSigns(Gen& gen, const Iter& begin, const Iter& end) const {
-    auto sign_gen = [&gen, this]() {
-      return std::bernoulli_distribution(0.5)(gen) ? Quantize(1) : Quantize(-1);
-    };
-    std::generate(begin, end, sign_gen);
-  }
-
-  // This is 1/scale
-  std::int32_t reciprocal_scale;
 };
 
 using ::testing::ElementsAre;
@@ -884,6 +621,22 @@ void runTest(const TestParam& param) {
   // Apply the post multiply and add to the TFLite model.
   // We cannot fuse it into the tflite bias because it should happen *after*
   // the activation function.
+  //
+  // The bitpacked-output case does not require such processing.
+  // The 8-bit quantized case:
+  //
+  // BConv: clamp(Scale&Round(post_add) + Scale&Round(post_mul * accumulator))
+  // Conv:  clamp(Scale&Round( accumulator ))
+  //
+  // There are several ways in which we can have a *legitimate* mismatch
+  // between the BConv and Conv outputs:
+  // - conv output got clamped
+  // - bconv output got clamped
+  // - scale&round rounding effect of conv
+  // - scale&round rounding effect of post_add or post_mul etc
+  //
+  // Therefore we simply set the post_mul and post_add to identity in this
+  // test, and we have a separate test below to test a non-identity version
   if (std::is_same<BuiltinType, float>::value) {
     BuiltinType* out_ptr = builtin_output.data();
     for (int batch = 0; batch < input_batch_count; ++batch) {
@@ -897,22 +650,6 @@ void runTest(const TestParam& param) {
         }
       }
     }
-  } else {
-    // The bitpacked-output case does not require other processing.
-    // The 8-bit quantized case:
-    //
-    // BConv: clamp(Scale&Round(post_add) + Scale&Round(post_mul * accumulator))
-    // Conv:  clamp(Scale&Round( accumulator ))
-    //
-    // There are several ways in which we can have a *legitimate* mismatch
-    // between the BConv and Conv outputs:
-    // - conv output got clamped
-    // - bconv output got clamped
-    // - scale&round rounding effect of conv
-    // - scale&round rounding effect of post_add or post_mul etc
-    //
-    // Therefore we simply set the post_mul and post_add to identity in this
-    // test, and we have a separate test below to test a non-identity version
   }
 
   /*-------------
@@ -1062,105 +799,6 @@ TEST(BConv2DTests, ReluErrorTest) {
             true, 1);
       },
       "Writing bitpacked output is only supported with valid or one-padding.");
-}
-
-TEST(BConv2DTests, Int8ErrorTest) {
-  LceTensor<std::int8_t> input_tensor({1, 16, 16, 64});
-  LceTensor<std::int32_t> packed_filter_tensor({128, 3, 3, 64});
-  LceTensor<std::int8_t> post_tensor({128});
-  LceTensor<std::int8_t> output_tensor;
-
-  // Required for the macro
-  typedef BConv2DOpModel<std::int8_t, std::int8_t, std::int8_t>
-      Int8_BConv2DOpModel;
-
-  EXPECT_DEATH(
-      {
-        Int8_BConv2DOpModel m_lce(
-            compute_engine::tflite::Register_BCONV_2D64_OPT, input_tensor,
-            packed_filter_tensor, output_tensor, post_tensor, post_tensor, 64,
-            1, 1, Padding_SAME, 0, ActivationFunctionType_NONE, 1, 1, false,
-            false, 1);
-      },
-      "8-bit quantization is only supported with valid or one-padding.");
-}
-
-TEST(BConv2DTests, Int8PostTest) {
-  using T = std::int8_t;
-  LceTensor<T> input_tensor({1, 2, 2, 2});
-  LceTensor<std::int32_t> packed_filter_tensor({4, 2, 2, 2});
-  LceTensor<T> post_tensor({4});
-  LceTensor<T> output_tensor;
-
-  input_tensor.scale = 1.0f;
-  input_tensor.zero_point = 0;
-
-  // This is the interesting part that we are testing
-  post_tensor.scale = 1.0f / 16.0f;
-  post_tensor.zero_point = 5;
-
-  output_tensor.scale = 1.0f / 32.0f;
-  output_tensor.zero_point = 0;
-
-  BConv2DOpModel<T, T, T> m_lce(
-      compute_engine::tflite::Register_BCONV_2D64_OPT, input_tensor,
-      packed_filter_tensor, output_tensor, post_tensor, post_tensor, 2, 1, 1,
-      Padding_VALID, 0, ActivationFunctionType_NONE, 1, 1, false, false, 1);
-
-  m_lce.SetInput({
-      1, 1,   // batch = 0, y = 0, x = 0
-      1, -1,  // batch = 0, y = 0, x = 1
-      1, 1,   // batch = 0, y = 1, x = 0
-      1, -1   // batch = 0, y = 1, x = 1
-  });
-  // Bitpacked filter. Since we're only testing post_ stuff here, its easiest to
-  // set all filter values to +1, which means bitpacked 0
-  m_lce.SetFilter({
-      0, 0,  // out channel = 0, y = 0, x = 0
-      0, 0,  // out channel = 0, y = 0, x = 1
-      0, 0,  // out channel = 0, y = 1, x = 0
-      0, 0,  // out channel = 0, y = 1, x = 1
-      0, 0,  // out channel = 1, y = 0, x = 0
-      0, 0,  // out channel = 1, y = 0, x = 1
-      0, 0,  // out channel = 1, y = 1, x = 0
-      0, 0,  // out channel = 1, y = 1, x = 1
-      0, 0,  // out channel = 2, y = 0, x = 0
-      0, 0,  // out channel = 2, y = 0, x = 1
-      0, 0,  // out channel = 2, y = 1, x = 0
-      0, 0,  // out channel = 2, y = 1, x = 1
-      0, 0,  // out channel = 3, y = 0, x = 0
-      0, 0,  // out channel = 3, y = 0, x = 1
-      0, 0,  // out channel = 3, y = 1, x = 0
-      0, 0   // out channel = 3, y = 1, x = 1
-  });
-
-  // The real post values will be (x - 5) / 16
-  m_lce.SetPostActivationMultiplier({
-      5,   // out_channel = 0 -> 0
-      21,  // out_channel = 1 -> 1
-      4,   // out_channel = 2 -> -1/16
-      7    // out_channel = 3 ->  1/8
-  });
-  m_lce.SetPostActivationBias({
-      5,  // out_channel = 0 -> 0
-      2,  // out_channel = 1 -> -3/16
-      9,  // out_channel = 2 -> 1/4
-      21  // out_channel = 3 -> 1
-  });
-
-  m_lce.Invoke();
-
-  // There's only a single output pixel, with 4 output channels.
-  // Before the post step the accumulator value is +4, for all output channels.
-  // So we're doing
-  // post_add + 4 * post_mul
-  // Then the output scale is 1/32, so multiply by 32 to get the int8 value
-  //
-  // 0     + 4 * 0       = 0     -> 0
-  // -3/16 + 4 * 1       = 61/16 -> 122
-  // 1/4   + 4 * (-1/16) = 0     -> 0
-  // 1     + 4 * (1/8)   = 3/2   -> 48
-  EXPECT_THAT(m_lce.GetOutput(), ElementsAreArray({0, 122, 0, 48}));
 }
 
 }  // namespace testing
