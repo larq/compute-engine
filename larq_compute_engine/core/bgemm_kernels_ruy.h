@@ -44,6 +44,9 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
 
     using TBitpacked = LhsScalar;
 
+    const OutputTransform<AccumScalar, DstScalar>& output_transform =
+        spec.output_transform;
+
     int clamped_end_row = std::min(end_row, dst->layout.rows);
     int clamped_end_col = std::min(end_col, dst->layout.cols);
     RUY_DCHECK_LE(0, start_row);
@@ -69,20 +72,8 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
           accum +=
               ce::core::xor_popcount<TBitpacked, AccumScalar>(lhs_val, rhs_val);
         }
-        // Backtransform can still be done in int32
-        accum = spec.backtransform_add - 2 * accum;
-        // Activation function can also be done in int32
-        accum = std::min<AccumScalar>(accum, spec.clamp_max);
-        accum = std::max<AccumScalar>(accum, spec.clamp_min);
-        // Post multiply and add are done in float
-        DstScalar dst_val = static_cast<DstScalar>(accum);
-        if (spec.post_activation_multiplier) {
-          dst_val *= spec.post_activation_multiplier[i];
-        }
-        if (spec.post_activation_bias) {
-          dst_val += spec.post_activation_bias[i];
-        }
-        *ElementPtr(dst, i, j) = dst_val;
+        // Post-process the accumulated value and store the result
+        *ElementPtr(dst, i, j) = output_transform.Run(accum, i);
       }
     }
   }
@@ -108,6 +99,9 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int32_t,
         "Input to binary kernel should be of type unsigned integral.");
 
     using TBitpacked = LhsScalar;
+
+    const OutputTransform<AccumScalar, std::int32_t>& output_transform =
+        spec.output_transform;
 
     // We are writing 32-bit bitpacked output (where we bitpack along the
     // channel axis) and so we need to operate on blocks of 32 channels at a
@@ -158,20 +152,8 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int32_t,
           accum +=
               ce::core::xor_popcount<TBitpacked, AccumScalar>(lhs_val, rhs_val);
         }
-        // Backtransform can still be done in int32
-        accum = spec.backtransform_add - 2 * accum;
-        // Activation function can also be done in int32
-        accum = std::min<AccumScalar>(accum, spec.clamp_max);
-        accum = std::max<AccumScalar>(accum, spec.clamp_min);
-        // Post multiply and add are done in float
-        auto dst_val = static_cast<float>(accum);
-        if (spec.post_activation_multiplier) {
-          dst_val *= spec.post_activation_multiplier[i];
-        }
-        if (spec.post_activation_bias) {
-          dst_val += spec.post_activation_bias[i];
-        }
-        if (dst_val < 0) {
+        bool bit = output_transform.Run(accum, i);
+        if (bit) {
           bitpacked_column |= 1ULL << ((i - start_row) % 32);
         }
         if (((i - start_row + 1) % 32 == 0) || (i + 1 == clamped_end_row)) {

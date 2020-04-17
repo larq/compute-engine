@@ -1,61 +1,22 @@
 #ifndef COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_COMMON_H_
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_COMMON_H_
 
-#include <cstdint>
-
+#include "larq_compute_engine/core/bconv2d_output_transform.h"
 #include "tensorflow/lite/experimental/ruy/kernel_common.h"
-#include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 
 using namespace ruy;
 
-using tflite::cpu_backend_gemm::QuantizationFlavor;
+using compute_engine::core::OutputTransform;
 
-// Our version of `cpu_backend_gemm::GemmParams`
-// Original is in `lite/kernels/cpu_backend_gemm_params.h`
-// Modifications:
-// - bias changes to multiply + add
-// - clamp_min, clamp_max type changed from DstScalar to AccumScalar
-// - (later) 8-bit quantization related stuff
-template <typename AccumScalar, typename DstScalar,
-          QuantizationFlavor quantization_flavor =
-              std::is_floating_point<DstScalar>::value
-                  ? QuantizationFlavor::kFloatingPoint
-                  : QuantizationFlavor::kIntegerWithUniformMultiplier>
-struct BGemmParams {
-  AccumScalar multiplier_fixedpoint = 0;
-  int multiplier_exponent = 0;
-  std::int32_t backtransform_add = 0;
-  // post_mutiply and post_activation_bias are currently float
-  // in order to accomodate for batchnorm scales
-  // Later this might be changed to the int8 system of multipliers+shifts
-  const float* post_activation_multiplier = nullptr;
-  const float* post_activation_bias = nullptr;
-  AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
-  AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
-};
-
-//
 // Our version of `ruy::BasicSpec`
 // Original is in `lite/experimental/ruy/spec.h`
-// Modifications:
-// - bias changes to multiply + add
-// - clamp_min, clamp_max types changed from DstScalar to AccumScalar
-// - (later) 8-bit quantization related stuff
-
+// We simply use our `OutputTransform` struct
 template <typename tAccumScalar, typename tDstScalar>
 struct BinaryBasicSpec {
   using AccumScalar = tAccumScalar;
   using DstScalar = tDstScalar;
-  AccumScalar multiplier_fixedpoint = 0;
-  int multiplier_exponent = 0;
-  std::int32_t backtransform_add = 0;
-  // post_mutiply and post_activation_bias are currently float
-  // in order to accomodate for batchnorm scales
-  // Later this might be changed to the int8 system of multipliers+shifts
-  const float* post_activation_multiplier = nullptr;
-  const float* post_activation_bias = nullptr;
-  AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
-  AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
+
+  OutputTransform<AccumScalar, DstScalar> output_transform;
 
   // This is identical to `ruy::BasicSpec`
   static constexpr LoopStructure kLoopStructure = LoopStructure::kAuto;
@@ -112,12 +73,13 @@ inline void MakeBinaryKernelParams(
       dst->data.get() + start_col * dst->layout.stride + start_row;
 
   std::uint8_t flags = 0;
-  params->post_activation_multiplier = spec.post_activation_multiplier;
-  params->post_activation_bias = spec.post_activation_bias;
-  if (spec.post_activation_multiplier && spec.post_activation_bias) {
+  params->post_activation_multiplier =
+      spec.output_transform.post_activation_multiplier;
+  params->post_activation_bias = spec.output_transform.post_activation_bias;
+  if (params->post_activation_multiplier && params->post_activation_bias) {
     flags |= RUY_ASM_FLAG_HAS_BIAS;
   }
-  params->backtransform_add = spec.backtransform_add;
+  params->backtransform_add = spec.output_transform.backtransform_add;
   params->flags = flags;
   params->start_row = start_row;
   params->start_col = start_col;
@@ -127,8 +89,8 @@ inline void MakeBinaryKernelParams(
   params->rhs_stride = sizeof(T) * rhs.layout.stride;
   params->dst_stride = sizeof(float) * dst->layout.stride;
   params->depth = depth;
-  params->clamp_min = spec.clamp_min;
-  params->clamp_max = spec.clamp_max;
+  params->clamp_min = spec.output_transform.clamp_min;
+  params->clamp_max = spec.output_transform.clamp_max;
   params->dst_rows = dst->layout.rows;
   params->dst_cols = dst->layout.cols;
 
