@@ -775,9 +775,9 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   } else {
     TfLiteTensor* packed_input =
         GetTemporary(context, node, params->packed_input_index);
-    ce::core::packbits_tensor(input_shape, input_data, input->params.zero_point,
-                              packed_input_shape,
-                              GetTensorData<TBitpacked>(packed_input));
+    ce::core::packbits_tensor<ce::core::BitpackOrder::Canonical>(
+        input_shape, input_data, input->params.zero_point, packed_input_shape,
+        GetTensorData<TBitpacked>(packed_input));
     packed_input_data = GetTensorData<TBitpacked>(packed_input);
   }
 

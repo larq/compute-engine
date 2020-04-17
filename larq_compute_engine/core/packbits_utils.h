@@ -24,7 +24,7 @@ int GetPackedTensorSize(const RuntimeShape& shape) {
 
 // Convenience function for bitpacking a tensor along its last dimension
 // and updating the tensor shape
-template <class T, class TBitpacked>
+template <BitpackOrder bitpack_order, class T, class TBitpacked>
 inline void packbits_tensor(const RuntimeShape& in_shape, const T* in_data,
                             const std::int32_t zero_point,
                             RuntimeShape& out_shape, TBitpacked* out_data) {
@@ -35,8 +35,8 @@ inline void packbits_tensor(const RuntimeShape& in_shape, const T* in_data,
 
   {
     gemmlowp::ScopedProfilingLabel label("Packbits");
-    ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
-        in_data, rows, cols, out_data, zero_point);
+    ce::core::packbits_matrix<bitpack_order>(in_data, rows, cols, out_data,
+                                             zero_point);
   }
 
   out_shape.ReplaceWith(dims, in_shape.DimsData());

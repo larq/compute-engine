@@ -341,8 +341,9 @@ void set_lce_op_input(const RuntimeShape& input_shape,
   std::vector<std::int32_t> input_data_bp(
       core::GetPackedTensorSize<std::int32_t>(input_shape));
   RuntimeShape output_shape;
-  core::packbits_tensor(input_shape, input_data.data(), zero_point,
-                        output_shape, input_data_bp.data());
+  core::packbits_tensor<ce::core::BitpackOrder::Canonical>(
+      input_shape, input_data.data(), zero_point, output_shape,
+      input_data_bp.data());
   m_lce.SetInput(input_data_bp);
 }
 
@@ -358,8 +359,9 @@ void test_lce_op_output(const std::vector<std::int32_t>& lce_output_data,
   std::vector<std::int32_t> builtin_output_data_bp(
       core::GetPackedTensorSize<std::int32_t>(out_shape));
   RuntimeShape packed_shape;
-  core::packbits_tensor(out_shape, builtin_output_data.data(), zero_point,
-                        packed_shape, builtin_output_data_bp.data());
+  core::packbits_tensor<ce::core::BitpackOrder::Canonical>(
+      out_shape, builtin_output_data.data(), zero_point, packed_shape,
+      builtin_output_data_bp.data());
 
   // We need the outputs here to be bit-exact, so don't allow for floating
   // point imprecision.
