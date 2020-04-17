@@ -41,8 +41,9 @@ enum class KernelType {
   kRuyOptimized,
 };
 
-inline void decide_bitpack_before_im2col(TfLiteBConv2DParams* conv_params) {
-  if (conv_params->read_bitpacked_input ||
+inline void decide_bitpack_before_im2col(KernelType kernel_type,
+                                         TfLiteBConv2DParams* conv_params) {
+  if (kernel_type == kGenericRef || conv_params->read_bitpacked_input ||
       conv_params->channels_in >= conv_params->bitpacking_bitwidth / 4) {
     conv_params->bitpack_before_im2col = true;
   } else {
@@ -333,12 +334,9 @@ TfLiteStatus Prepare(KernelType kernel_type,
                     context->ResizeTensor(context, output, output_shape));
 
   // Decide if we do bitpacking before or after im2col
-  decide_bitpack_before_im2col(conv_params);
+  decide_bitpack_before_im2col(kernel_type, conv_params);
 
   if (kernel_type == KernelType::kGenericRef) {
-    // In this case we always bitpack along the channels since there's no im2col
-    conv_params->bitpack_before_im2col = true;
-
     // We require 32-bit bitpacking in the reference implementation
     TF_LITE_ENSURE_EQ(context, conv_params->bitpacking_bitwidth, 32);
     // We only support one-padding or valid-padding in the reference
