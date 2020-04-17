@@ -41,8 +41,10 @@ enum class KernelType {
   kRuyOptimized,
 };
 
-inline void decide_bitpack_before_im2col(TfLiteBConv2DParams* conv_params) {
-  if (conv_params->read_bitpacked_input ||
+inline void decide_bitpack_before_im2col(KernelType kernel_type,
+                                         TfLiteBConv2DParams* conv_params) {
+  if (kernel_type == KernelType::kGenericRef ||
+      conv_params->read_bitpacked_input ||
       conv_params->channels_in >= conv_params->bitpacking_bitwidth / 4) {
     conv_params->bitpack_before_im2col = true;
   } else {
@@ -333,7 +335,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
                     context->ResizeTensor(context, output, output_shape));
 
   // Decide if we do bitpacking before or after im2col
-  decide_bitpack_before_im2col(conv_params);
+  decide_bitpack_before_im2col(kernel_type, conv_params);
 
   if (kernel_type == KernelType::kGenericRef) {
     // We require 32-bit bitpacking in the reference implementation
@@ -345,6 +347,9 @@ TfLiteStatus Prepare(KernelType kernel_type,
                                   TfLitePadding::kTfLitePaddingSame));
   }
 
+  // Figure out how many temporary buffers we need
+  int temporaries_count = 0;
+
   // pre-allocate temporary tensors for optimized version
   if (kernel_type == KernelType::kRuyOptimized) {
     conv_params->need_im2col =
@@ -354,28 +359,31 @@ TfLiteStatus Prepare(KernelType kernel_type,
          conv_params->dilations[1] /* height */ != 1 ||
          conv_params->filter_width != 1 || conv_params->filter_height != 1);
 
-    // Figure out how many temporary buffers we need
-    int temporaries_count = 0;
     if (conv_params->need_im2col) {
       conv_params->im2col_index = temporaries_count++;
     }
+  }
 
+  // See if we need a temporary buffer for bitpacked activations
+  if (!conv_params->read_bitpacked_input) {
+    conv_params->packed_input_index = temporaries_count++;
+  }
+
+  if (temporaries_count != 0) {
     // Allocate int array of that size
     TfLiteIntArrayFree(node->temporaries);
     node->temporaries = TfLiteIntArrayCreate(temporaries_count);
-
-    // Now allocate the buffers
-    if (conv_params->need_im2col) {
-      if (conv_params->im2col_id == kTensorNotAllocated) {
-        context->AddTensors(context, 1, &conv_params->im2col_id);
-        node->temporaries->data[conv_params->im2col_index] =
-            conv_params->im2col_id;
-      }
-    }
   }
 
-  // Resize the im2col tensor
+  // Now allocate the buffers
   if (conv_params->need_im2col) {
+    if (conv_params->im2col_id == kTensorNotAllocated) {
+      context->AddTensors(context, 1, &conv_params->im2col_id);
+      node->temporaries->data[conv_params->im2col_index] =
+          conv_params->im2col_id;
+    }
+
+    // Resize the im2col tensor
     int channels_in = conv_params->bitpack_before_im2col
                           ? ((conv_params->channels_in +
                               conv_params->bitpacking_bitwidth - 1) /
@@ -414,6 +422,56 @@ TfLiteStatus Prepare(KernelType kernel_type,
     im2col->allocation_type = kTfLiteArenaRw;
     TF_LITE_ENSURE_OK(context,
                       context->ResizeTensor(context, im2col, im2col_size));
+  }
+
+  if (!conv_params->read_bitpacked_input) {
+    if (conv_params->packed_input_id == kTensorNotAllocated) {
+      context->AddTensors(context, 1, &conv_params->packed_input_id);
+      node->temporaries->data[conv_params->packed_input_index] =
+          conv_params->packed_input_id;
+    }
+    // Determine the size
+    int flat_size = 0;
+    if (conv_params->bitpack_before_im2col) {
+      const int packed_channels =
+          ((conv_params->channels_in + conv_params->bitpacking_bitwidth - 1) /
+           conv_params->bitpacking_bitwidth);
+      flat_size = conv_params->batch * conv_params->input_height *
+                  conv_params->input_width * packed_channels;
+    } else {
+      const int packed_depth =
+          (conv_params->channels_in * conv_params->filter_height *
+               conv_params->filter_width +
+           conv_params->bitpacking_bitwidth - 1) /
+          conv_params->bitpacking_bitwidth;
+
+      flat_size = conv_params->batch * conv_params->out_height *
+                  conv_params->out_width * packed_depth;
+    }
+    // We will simply request a flat tensor
+    TfLiteIntArray* packed_input_size = TfLiteIntArrayCreate(1);
+    packed_input_size->data[0] = flat_size;
+
+    // Get the newly created tensor
+    TfLiteTensor* packed_input =
+        GetTemporary(context, node, conv_params->packed_input_index);
+
+    // Set its type
+    switch (conv_params->bitpacking_bitwidth) {
+      case 32:
+        packed_input->type = kTfLiteInt32;
+        break;
+      case 64:
+        packed_input->type = kTfLiteInt64;
+        break;
+      default:
+        TF_LITE_ENSURE(context, false);
+        break;
+    }
+    packed_input->allocation_type = kTfLiteArenaRw;
+    // Request a resize
+    TF_LITE_ENSURE_OK(context, context->ResizeTensor(context, packed_input,
+                                                     packed_input_size));
   }
 
   // Prepare could be called multiple times, when the input tensor is resized,
@@ -615,18 +673,16 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
       rows = params->channels_out;
     }
 
-    std::vector<TBitpacked> filter_data_bp;
-    std::size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
+    std::vector<TBitpacked> filter_data_bp(
+        ce::core::GetPackedMatrixSize<TBitpacked>(rows, cols));
     if (std::is_same<SrcScalar, std::int32_t>::value) {
       // If the input is already bitpacked, we require canonical order
       ce::core::packbits_matrix<ce::core::BitpackOrder::Canonical>(
-          filter_unpacked, rows, cols, filter_data_bp, filter_rows_bp,
-          filter_cols_bp, filter_bitpadding, ce::core::Axis::RowWise);
+          filter_unpacked, rows, cols, filter_data_bp.data());
     } else {
       // Input is int8 or float, use the optimized order
       ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
-          filter_unpacked, rows, cols, filter_data_bp, filter_rows_bp,
-          filter_cols_bp, filter_bitpadding, ce::core::Axis::RowWise);
+          filter_unpacked, rows, cols, filter_data_bp.data());
     }
 
     std::size_t num_bytes = filter_data_bp.size() * sizeof(TBitpacked);
@@ -655,6 +711,12 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
                              ? GetTemporary(context, node, params->im2col_index)
                              : nullptr;
 
+  TBitpacked* packed_input_data =
+      !params->read_bitpacked_input
+          ? GetTensorData<TBitpacked>(
+                GetTemporary(context, node, params->packed_input_index))
+          : nullptr;
+
   // Using the standard TF Lite ConvParams struct.
   // This requires extra step of converting the TfLiteBConv2DParams
   // but unifies the interface with the default TF lite API for CONV params
@@ -679,7 +741,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   // write bitpacked output directly.
   BConv2D<SrcScalar, TBitpacked, std::int32_t, DstScalar>(
       op_params, GetTensorShape(input), GetTensorData<SrcScalar>(input),
-      unpacked_filter_shape,
+      packed_input_data, unpacked_filter_shape,
       reinterpret_cast<TBitpacked*>(params->filter_packed.data()),
       output_transform, unpacked_output_shape, GetTensorData<DstScalar>(output),
       GetTensorShape(im2col), GetTensorData<SrcScalar>(im2col),
@@ -711,10 +773,12 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
     packed_input_shape.ReplaceWith(4, input_shape.DimsData());
     packed_input_data = reinterpret_cast<const TBitpacked*>(input_data);
   } else {
-    static std::vector<TBitpacked> packed_input_data_vector;
+    TfLiteTensor* packed_input =
+        GetTemporary(context, node, params->packed_input_index);
     ce::core::packbits_tensor(input_shape, input_data, input->params.zero_point,
-                              packed_input_shape, packed_input_data_vector);
-    packed_input_data = packed_input_data_vector.data();
+                              packed_input_shape,
+                              GetTensorData<TBitpacked>(packed_input));
+    packed_input_data = GetTensorData<TBitpacked>(packed_input);
   }
 
   // Using the standard TF Lite ConvParams struct.
