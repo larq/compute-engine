@@ -43,7 +43,8 @@ enum class KernelType {
 
 inline void decide_bitpack_before_im2col(KernelType kernel_type,
                                          TfLiteBConv2DParams* conv_params) {
-  if (kernel_type == kGenericRef || conv_params->read_bitpacked_input ||
+  if (kernel_type == KernelType::kGenericRef ||
+      conv_params->read_bitpacked_input ||
       conv_params->channels_in >= conv_params->bitpacking_bitwidth / 4) {
     conv_params->bitpack_before_im2col = true;
   } else {
