@@ -15,25 +15,25 @@ namespace compute_engine {
 namespace core {
 
 // Utility functions
-constexpr int GetPackedElements(int unpacked_elements, int bitwidth) {
+constexpr int GetPackedSize(int unpacked_elements, int bitwidth) {
   return (unpacked_elements + bitwidth - 1) / bitwidth;
 }
 
-constexpr int GetPackedMatrixElements(int rows, int cols, int bitwidth) {
-  return rows * GetPackedElements(cols, bitwidth);
+constexpr int GetPackedMatrixSize(int rows, int cols, int bitwidth) {
+  return rows * GetPackedSize(cols, bitwidth);
 }
 
 template <typename TBitpacked>
-constexpr int GetPackedElements(int unpacked_elements) {
-  return GetPackedElements(
+constexpr int GetPackedSize(int unpacked_elements) {
+  return GetPackedSize(
       unpacked_elements,
       std::numeric_limits<
           typename std::make_unsigned<TBitpacked>::type>::digits);
 }
 
 template <typename TBitpacked>
-constexpr int GetPackedMatrixElements(int rows, int cols) {
-  return GetPackedMatrixElements(
+constexpr int GetPackedMatrixSize(int rows, int cols) {
+  return GetPackedMatrixSize(
       rows, cols,
       std::numeric_limits<
           typename std::make_unsigned<TBitpacked>::type>::digits);
@@ -396,7 +396,7 @@ inline void packbits_matrix(const TIn* input, const std::size_t input_num_rows,
   using TOut = typename std::make_unsigned<TOut_>::type;
 
   // Calculate the size of the bitpacked rows
-  const std::size_t output_num_cols = GetPackedElements<TOut>(input_num_cols);
+  const std::size_t output_num_cols = GetPackedSize<TOut>(input_num_cols);
 
   // Iterate through each row of the input matrix and bitpack the row into the
   // corresponding memory location of the output matrix

@@ -339,11 +339,10 @@ void set_lce_op_input(const RuntimeShape& input_shape,
                       std::vector<TData> input_data, std::int32_t zero_point,
                       BConv2DOpModel<std::int32_t, PostType, TOutput>& m_lce) {
   std::vector<std::int32_t> input_data_bp(
-      core::GetPackedTensorElements<std::int32_t>(input_shape));
+      core::GetPackedTensorSize<std::int32_t>(input_shape));
   RuntimeShape output_shape;
-  core::packbits_tensor<core::BitpackOrder::Canonical>(
-      input_shape, input_data.data(), zero_point, output_shape,
-      input_data_bp.data());
+  core::packbits_tensor(input_shape, input_data.data(), zero_point,
+                        output_shape, input_data_bp.data());
   m_lce.SetInput(input_data_bp);
 }
 
@@ -357,11 +356,10 @@ void test_lce_op_output(const std::vector<std::int32_t>& lce_output_data,
   RuntimeShape out_shape;
   out_shape.BuildFrom(builtin_output_shape);
   std::vector<std::int32_t> builtin_output_data_bp(
-      core::GetPackedTensorElements<std::int32_t>(out_shape));
+      core::GetPackedTensorSize<std::int32_t>(out_shape));
   RuntimeShape packed_shape;
-  core::packbits_tensor<core::BitpackOrder::Canonical>(
-      out_shape, builtin_output_data.data(), zero_point, packed_shape,
-      builtin_output_data_bp.data());
+  core::packbits_tensor(out_shape, builtin_output_data.data(), zero_point,
+                        packed_shape, builtin_output_data_bp.data());
 
   // We need the outputs here to be bit-exact, so don't allow for floating
   // point imprecision.
@@ -435,7 +433,7 @@ void runTest(const TestParam& param) {
       filter_height * filter_width * input_depth * filter_count;
 
   const int packed_channels =
-      core::GetPackedElements<PackedFilterType>(input_depth);
+      core::GetPackedSize<PackedFilterType>(input_depth);
   const int packed_num_elem =
       filter_count * filter_height * filter_width * packed_channels;
 

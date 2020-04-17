@@ -12,20 +12,19 @@ namespace ce = compute_engine;
 namespace core {
 
 template <typename TBitpacked>
-int GetPackedTensorElements(const RuntimeShape& shape) {
+int GetPackedTensorSize(const RuntimeShape& shape) {
   constexpr auto bitwidth = std::numeric_limits<
       typename std::make_unsigned<TBitpacked>::type>::digits;
   const int dims = shape.DimensionsCount();
   // Pack the tensor along the last dimension
   const int rows = FlatSizeSkipDim(shape, dims - 1);
   const int cols = shape.Dims(dims - 1);
-  return ce::core::GetPackedMatrixElements(rows, cols, bitwidth);
+  return ce::core::GetPackedMatrixSize(rows, cols, bitwidth);
 }
 
 // Convenience function for bitpacking a tensor along its last dimension
 // and updating the tensor shape
-template <BitpackOrder bitpack_order = ce::core::BitpackOrder::Canonical,
-          class T, class TBitpacked>
+template <class T, class TBitpacked>
 inline void packbits_tensor(const RuntimeShape& in_shape, const T* in_data,
                             const std::int32_t zero_point,
                             RuntimeShape& out_shape, TBitpacked* out_data) {
@@ -41,7 +40,7 @@ inline void packbits_tensor(const RuntimeShape& in_shape, const T* in_data,
   }
 
   out_shape.ReplaceWith(dims, in_shape.DimsData());
-  out_shape.SetDim(dims - 1, GetPackedElements<TBitpacked>(cols));
+  out_shape.SetDim(dims - 1, GetPackedSize<TBitpacked>(cols));
 }
 
 // Convenience function for going from a shape to the packed shape

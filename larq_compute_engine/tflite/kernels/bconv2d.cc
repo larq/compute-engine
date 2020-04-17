@@ -674,7 +674,7 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
     }
 
     std::vector<TBitpacked> filter_data_bp(
-        ce::core::GetPackedMatrixElements<TBitpacked>(rows, cols));
+        ce::core::GetPackedMatrixSize<TBitpacked>(rows, cols));
     if (std::is_same<SrcScalar, std::int32_t>::value) {
       // If the input is already bitpacked, we require canonical order
       ce::core::packbits_matrix<ce::core::BitpackOrder::Canonical>(

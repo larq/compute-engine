@@ -31,7 +31,7 @@ void test_bitpacking_nonuniform_input() {
     expected = {0b01110100, 0b00111010};
 
   std::vector<std::uint8_t> output(
-      ce::core::GetPackedMatrixElements<std::uint8_t>(num_rows, num_cols));
+      ce::core::GetPackedMatrixSize<std::uint8_t>(num_rows, num_cols));
   ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
       input.data(), num_rows, num_cols, output.data());
 
@@ -48,7 +48,7 @@ void test_bitpacking(const std::size_t expected_num_rows,
   input.fill(-1);
 
   std::vector<TOut> output(
-      ce::core::GetPackedMatrixElements<TOut>(num_rows, num_cols));
+      ce::core::GetPackedMatrixSize<TOut>(num_rows, num_cols));
   ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
       input.data(), num_rows, num_cols, output.data());
 
@@ -91,7 +91,7 @@ TEST(BitpackingWithBitPaddingTests, RowMajorPadding) {
     expected = {0b10001011, 0b00000001, 0b11000101, 0b00000000};
 
   std::vector<std::uint8_t> output(
-      ce::core::GetPackedMatrixElements<std::uint8_t>(num_rows, num_cols));
+      ce::core::GetPackedMatrixSize<std::uint8_t>(num_rows, num_cols));
   ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
       input.data(), num_rows, num_cols, output.data());
 
