@@ -35,9 +35,9 @@ cc_library(
 )
 
 cc_library(
-    name = "bconv2d_output_transform_setup",
+    name = "bconv2d_output_transform_utils",
     hdrs = [
-        "bconv2d_output_transform_setup.h",
+        "bconv2d_output_transform_utils.h",
     ],
     deps = [
         ":bconv2d_params",
@@ -58,7 +58,7 @@ cc_library(
     copts = tflite_copts() + tf_opts_nortti_if_android(),
     deps = [
         ":bconv2d_impl",
-        ":bconv2d_output_transform_setup",
+        ":bconv2d_output_transform_utils",
         ":bconv2d_params",
         "//larq_compute_engine/core:bconv2d_impl_ref",
         "@flatbuffers",

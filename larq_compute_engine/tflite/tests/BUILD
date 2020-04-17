@@ -11,9 +11,9 @@ cc_library(
 )
 
 cc_library(
-    name = "bconv2d_op",
+    name = "bconv2d_op_model",
     hdrs = [
-        "bconv2d_op.h",
+        "bconv2d_op_model.h",
     ],
     deps = [
         ":utils",
@@ -27,7 +27,7 @@ cc_test(
     size = "large",
     srcs = ["bconv2d_test.cc"],
     deps = [
-        ":bconv2d_op",
+        ":bconv2d_op_model",
         ":utils",
         "//larq_compute_engine/core:packbits",
         "//larq_compute_engine/core:packbits_utils",
@@ -40,11 +40,11 @@ cc_test(
 )
 
 cc_test(
-    name = "bconv2d_int8",
+    name = "bconv2d_int8_test",
     size = "large",
-    srcs = ["bconv2d_int8.cc"],
+    srcs = ["bconv2d_int8_test.cc"],
     deps = [
-        ":bconv2d_op",
+        ":bconv2d_op_model",
         ":utils",
         "@com_google_googletest//:gtest",
         "@flatbuffers",
@@ -59,7 +59,7 @@ cc_test(
 test_suite(
     name = "cc_tests",
     tests = [
-        ":bconv2d_int8",
+        ":bconv2d_int8_test",
         ":bconv2d_test",
     ],
 )

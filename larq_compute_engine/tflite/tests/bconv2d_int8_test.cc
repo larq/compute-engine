@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "larq_compute_engine/tflite/tests/bconv2d_op.h"
+#include "larq_compute_engine/tflite/tests/bconv2d_op_model.h"
 #include "larq_compute_engine/tflite/tests/utils.h"
 
 namespace compute_engine {

@@ -28,7 +28,7 @@
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
 #include "larq_compute_engine/core/packbits.h"
 #include "larq_compute_engine/core/packbits_utils.h"
-#include "larq_compute_engine/tflite/tests/bconv2d_op.h"
+#include "larq_compute_engine/tflite/tests/bconv2d_op_model.h"
 #include "larq_compute_engine/tflite/tests/utils.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/internal/types.h"

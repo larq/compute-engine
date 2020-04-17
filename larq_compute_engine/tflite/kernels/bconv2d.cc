@@ -2,7 +2,7 @@
 #include <cstdint>
 
 #include "bconv2d_impl.h"
-#include "bconv2d_output_transform_setup.h"
+#include "bconv2d_output_transform_utils.h"
 #include "bconv2d_params.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
 #include "larq_compute_engine/core/bconv2d_impl_ref.h"
