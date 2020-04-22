@@ -5,11 +5,13 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Module.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/pytypes.h"
 #include "pybind11/stl.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_translate.h"
+#include "tensorflow/compiler/mlir/lite/transforms/passes.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/import_model.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/mlir_roundtrip_flags.h"
 #include "tensorflow/compiler/mlir/tensorflow/utils/error_util.h"
@@ -55,6 +57,9 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
 
   mlir::PassManager pm(&context);
   tensorflow::AddTFToLCETFLConversionPasses(&pm);
+
+  // Convert back to outlined while format for export back to flatbuffer.
+  pm.addPass(mlir::TFL::CreateWhileOutlinePass());
 
   if (failed(pm.run(*module.ValueOrDie()))) {
     throw std::runtime_error("Could not complete conversion passes.");
