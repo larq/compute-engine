@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef COMPUTE_EGNINE_CORE_BCONV2d_IMPL_H_
 #define COMPUTE_EGNINE_CORE_BCONV2d_IMPL_H_
 
+#include "larq_compute_engine/core/bconv2d_output_transform.h"
 #include "larq_compute_engine/core/bgemm_functor.h"
 #include "larq_compute_engine/core/packbits_utils.h"
 #include "tensorflow/lite/kernels/internal/common.h"
@@ -32,22 +33,21 @@ namespace ref {
 
 template <typename SrcScalar, typename TBitpacked, typename AccumScalar,
           typename DstScalar>
-inline void BConv2D(const ConvParams& params,
-                    const RuntimeShape& packed_input_shape,
-                    const TBitpacked* packed_input_data,
-                    const RuntimeShape& packed_filter_shape,
-                    const TBitpacked* packed_filter_data,
-                    const float* post_activation_multiplier_data,
-                    const float* post_activation_bias_data,
-                    const RuntimeShape& output_shape, DstScalar* output_data,
-                    const RuntimeShape& im2col_shape, SrcScalar* im2col_data,
-                    bool bitpack_before_im2col, SrcScalar* padding_buffer,
-                    const int pad_value, void* cpu_backend_context,
-                    const std::int32_t backtransform_add) {
+inline void BConv2D(
+    const ConvParams& params, const RuntimeShape& packed_input_shape,
+    const TBitpacked* packed_input_data,
+    const RuntimeShape& packed_filter_shape,
+    const TBitpacked* packed_filter_data,
+    const ce::core::OutputTransform<std::int32_t, DstScalar>& output_transform,
+    const RuntimeShape& output_shape, DstScalar* output_data,
+    const RuntimeShape& im2col_shape, SrcScalar* im2col_data,
+    bool bitpack_before_im2col, SrcScalar* padding_buffer, const int pad_value,
+    void* cpu_backend_context) {
   static_assert(std::is_same<DstScalar, float>::value ||
-                    std::is_same<DstScalar, std::int32_t>::value,
+                    std::is_same<DstScalar, std::int32_t>::value ||
+                    std::is_same<DstScalar, std::int8_t>::value,
                 "The reference implementation supports either float "
-                "output or 32-bit bitpacked output.");
+                "output, 32-bit bitpacked output or 8-bit quantized output.");
 
   const int stride_width = params.stride_width;
   const int stride_height = params.stride_height;
@@ -55,11 +55,6 @@ inline void BConv2D(const ConvParams& params,
   const int dilation_height_factor = params.dilation_height_factor;
   const int pad_width = params.padding_values.width;
   const int pad_height = params.padding_values.height;
-
-  const auto* post_activation_multiplier = post_activation_multiplier_data;
-  const auto* post_activation_bias = post_activation_bias_data;
-  AccumScalar clamp_min = params.quantized_activation_min;
-  AccumScalar clamp_max = params.quantized_activation_max;
 
   TFLITE_DCHECK_EQ(packed_input_shape.DimensionsCount(), 4);
   TFLITE_DCHECK_EQ(packed_filter_shape.DimensionsCount(), 4);
@@ -108,25 +103,10 @@ inline void BConv2D(const ConvParams& params,
               }
             }
           }
-          // Backtransformation to {-1,1} space
-          accum = backtransform_add - 2 * accum;
-          // Activation
-          accum = std::min<AccumScalar>(accum, clamp_max);
-          accum = std::max<AccumScalar>(accum, clamp_min);
-          // Post multiply and add are done in float
-          float dst_val = static_cast<float>(accum);
-          if (post_activation_multiplier) {
-            dst_val *= post_activation_multiplier[out_channel];
-          }
-          if (post_activation_bias) {
-            dst_val += post_activation_bias[out_channel];
-          }
-
           // If the destination scalar is int32, we're writing bitpacked output.
           if (std::is_same<DstScalar, std::int32_t>::value) {
-            // In our bitpacking we map strictly negative values to 1, and
-            // non-negative values to 0.
-            if (dst_val < 0) bitpacked_column += 1 << (out_channel % 32);
+            bool bit = output_transform.Run(accum, out_channel);
+            if (bit) bitpacked_column |= 1ULL << (out_channel % 32);
 
             // After we've 'filled' the `bitpacked_column` with 32 values, or
             // reached the end of the channels, we write it to memory.
@@ -137,9 +117,10 @@ inline void BConv2D(const ConvParams& params,
               bitpacked_column = 0;
             }
           }
-
-          // Otherwise, we're not writing bitpacked output; it must be float.
+          // Otherwise, we're not writing bitpacked output; it must be int8 or
+          // float.
           else {
+            DstScalar dst_val = output_transform.Run(accum, out_channel);
             output_data[Offset(output_shape, batch, out_y, out_x,
                                out_channel)] = dst_val;
           }

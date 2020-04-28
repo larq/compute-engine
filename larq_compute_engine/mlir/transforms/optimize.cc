@@ -47,11 +47,9 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
   std::vector<PackedType> new_values(num_rows * packed_channels);
 
   const float* in_ptr = &(*dense_elements_iter.begin());
-  std::size_t filter_rows_bp, filter_cols_bp, filter_bitpadding;
   using namespace compute_engine::core;
-  packbits_matrix<BitpackOrder::Canonical>(
-      in_ptr, num_rows, unpacked_channels, new_values, filter_rows_bp,
-      filter_cols_bp, filter_bitpadding, Axis::RowWise);
+  packbits_matrix<BitpackOrder::Canonical>(in_ptr, num_rows, unpacked_channels,
+                                           new_values.data());
 
   RankedTensorType out_tensor_type =
       RankedTensorType::get({shape[0], shape[1], shape[2], packed_channels},

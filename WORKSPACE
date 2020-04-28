@@ -30,7 +30,7 @@ http_archive(
     # Download size: 260 MB compressed, 1.5 GB uncompressed
     # The archive contains GCC version 8.3.0
     name = "aarch64_compiler",
-    build_file = "//third_party:aarch64_compiler.BUILD",
+    build_file = "//third_party:arm_compiler.BUILD",
     sha256 = "8ce3e7688a47d8cd2d8e8323f147104ae1c8139520eca50ccf8a7fa933002731",
     strip_prefix = "gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu/",
     url = "https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu.tar.xz?revision=2e88a73f-d233-4f96-b1f4-d8b36e9bb0b9&la=en&hash=167687FADA00B73D20EED2A67D0939A197504ACD",
@@ -55,10 +55,10 @@ arm_compiler_configure(
 #    reliable downloads.
 http_archive(
     name = "org_tensorflow",
-    sha256 = "902166e31150f341b0f993fd375ef7e6021a1183bdf96beefdbad0a3d80738f6",
-    strip_prefix = "tensorflow-667818621b6ddb439df945e28bb0d21d3d1f019d",
+    sha256 = "aaac6844d57d5bb81dd499ffaab0a79c203af37f066ec020a2a7ac21461dcf2a",
+    strip_prefix = "tensorflow-542c112cfccf102a7633f9f96cddefacfcfca7be",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/667818621b6ddb439df945e28bb0d21d3d1f019d.tar.gz",
+        "https://github.com/lgeiger/tensorflow/archive/542c112cfccf102a7633f9f96cddefacfcfca7be.tar.gz",
     ],
 )
 

@@ -16,13 +16,13 @@ namespace compute_engine {
 namespace tflite {
 
 template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
-          typename DstScalar, QuantizationFlavor quantization_flavor>
+          typename DstScalar>
 struct BGemmImplUsingRuy {
   static void Run(
       const MatrixParams<LhsScalar>& lhs_params, const LhsScalar* lhs_data,
       const MatrixParams<RhsScalar>& rhs_params, const RhsScalar* rhs_data,
       const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
-      const BGemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
+      const OutputTransform<AccumScalar, DstScalar>& output_transform,
       CpuBackendContext* context) {
     ruy::profiler::ScopeLabel label("BGemmRuy");
 
@@ -33,8 +33,6 @@ struct BGemmImplUsingRuy {
                   "Input to BGEMM should be of type unsigned integral.");
     static_assert(std::is_signed<DstScalar>::value,
                   "Output of BGEMM should be of a signed type.");
-
-    using TSpec = BinaryBasicSpec<AccumScalar, DstScalar>;
 
     // getting ruy context
     auto ruy_context = context->ruy_context();
@@ -53,12 +51,8 @@ struct BGemmImplUsingRuy {
     rhs.data = rhs_data;
     dst.data = dst_data;
 
-    TSpec spec;
-    spec.backtransform_add = params.backtransform_add;
-    spec.post_activation_multiplier = params.post_activation_multiplier;
-    spec.post_activation_bias = params.post_activation_bias;
-    spec.clamp_min = params.clamp_min;
-    spec.clamp_max = params.clamp_max;
+    BinaryBasicSpec<AccumScalar, DstScalar> spec;
+    spec.output_transform = output_transform;
 
     // The allocator is used to allocate memory for pre-packed matrices
     ruy::Allocator allocator;
@@ -95,6 +89,11 @@ struct BGemmImplUsingRuy {
 
     // For writing bitpacked output, fallback to the standard C++ kernel.
     if (std::is_same<DstScalar, std::int32_t>::value) {
+      bgemm_runtime_path = ruy::Path::kStandardCpp;
+    }
+
+    // For now, int8 only has a C++ implementation
+    if (std::is_same<DstScalar, std::int8_t>::value) {
       bgemm_runtime_path = ruy::Path::kStandardCpp;
     }
 

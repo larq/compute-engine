@@ -2,19 +2,54 @@
 #define COMPUTE_ENGINE_KERNELS_PADDING_H_
 
 #include "larq_compute_engine/core/types.h"
+#include "tensorflow/lite/kernels/op_macros.h"
 
 namespace compute_engine {
 namespace core {
 
 namespace ce = compute_engine;
 
+// For non-float types, the padding functor does nothing
+template <class Tdata, class Tfilter, class Tpost, class Tcache,
+          FilterFormat filter_format>
+class PaddingFunctor {
+ public:
+  static std::size_t get_cache_size(const int filter_height,
+                                    const int filter_width,
+                                    const int filter_count,
+                                    const int dilation_rows,
+                                    const int dilation_cols) {
+    TF_LITE_ASSERT(false);
+    return 0;
+  }
+  static void cache_correction_values(
+      const Tfilter* filter_data, const int filter_height,
+      const int filter_width, const int filter_count, const int input_channels,
+      const int dilation_rows, const int dilation_cols,
+      const Tpost* post_activation_multiplier_data, Tcache* output_cache) {
+    TF_LITE_ASSERT(false);
+  }
+
+  void operator()(const int input_batches, const int input_height,
+                  const int input_width, const int input_channels,
+                  const Tfilter* filter_data, const int filter_height,
+                  const int filter_width, const int filter_count,
+                  const int stride_rows, const int stride_cols,
+                  const int dilation_rows, const int dilation_cols,
+                  Tdata* output_data, const int output_height,
+                  const int output_width,
+                  const Tpost* post_activation_multiplier_data = nullptr,
+                  const Tcache* padding_cache = nullptr) {
+    TF_LITE_ASSERT(false);
+  }
+};
+
 //
 // Applies (in-place) corrections for zero-padding
 // Assumes that padding type is 'SAME'.
-// Currently assumes filter is not bitpacked.
 //
-template <class Tdata, class Tfilter, FilterFormat filter_format>
-class PaddingFunctor {
+template <FilterFormat filter_format>
+class PaddingFunctor<float, float, float, float, filter_format> {
  public:
   static std::size_t get_cache_size(const int filter_height,
                                     const int filter_width,
@@ -28,10 +63,10 @@ class PaddingFunctor {
   }
 
   static void cache_correction_values(
-      const Tfilter* filter_data, const int filter_height,
-      const int filter_width, const int filter_count, const int input_channels,
-      const int dilation_rows, const int dilation_cols,
-      const Tfilter* post_activation_multiplier_data, Tdata* output_cache) {
+      const float* filter_data, const int filter_height, const int filter_width,
+      const int filter_count, const int input_channels, const int dilation_rows,
+      const int dilation_cols, const float* post_activation_multiplier_data,
+      float* output_cache) {
     const int effective_filter_width = (filter_width - 1) * dilation_cols + 1;
     const int effective_filter_height = (filter_height - 1) * dilation_rows + 1;
 
@@ -103,12 +138,12 @@ class PaddingFunctor {
     for (int y = 0; y < effective_filter_height; ++y) {
       for (int x = 0; x < effective_filter_width; ++x) {
         for (int out_c = 0; out_c < filter_count; ++out_c) {
-          Tdata corrections[4] = {0, 0, 0, 0};
+          float corrections[4] = {0, 0, 0, 0};
 
           for (int filter_y = 0; filter_y < filter_height; ++filter_y) {
             for (int filter_x = 0; filter_x < filter_width; ++filter_x) {
               // Sum over input channels
-              Tdata cur_correction = Tdata(0);
+              float cur_correction = 0;
               for (int in_c = 0; in_c < input_channels; ++in_c) {
                 int filter_idx;
                 if (filter_format == FilterFormat::HWIO) {
@@ -165,7 +200,7 @@ class PaddingFunctor {
                              filter_count) +
                 y * (effective_filter_width * filter_count) + x * filter_count +
                 out_c;
-            const Tfilter mul = -1.0f * post_activation_multiplier_data[out_c];
+            const float mul = -1.0f * post_activation_multiplier_data[out_c];
             output_cache[output_idx] = mul * corrections[direction];
           }
         }
@@ -176,14 +211,14 @@ class PaddingFunctor {
 
   void operator()(const int input_batches, const int input_height,
                   const int input_width, const int input_channels,
-                  const Tfilter* filter_data, const int filter_height,
+                  const float* filter_data, const int filter_height,
                   const int filter_width, const int filter_count,
                   const int stride_rows, const int stride_cols,
                   const int dilation_rows, const int dilation_cols,
-                  Tdata* output_data, const int output_height,
+                  float* output_data, const int output_height,
                   const int output_width,
-                  const Tfilter* post_activation_multiplier_data = nullptr,
-                  const Tdata* padding_cache = nullptr) {
+                  const float* post_activation_multiplier_data = nullptr,
+                  const float* padding_cache = nullptr) {
     const int effective_filter_width = (filter_width - 1) * dilation_cols + 1;
     const int effective_filter_height = (filter_height - 1) * dilation_rows + 1;
 
@@ -194,7 +229,7 @@ class PaddingFunctor {
                                    effective_filter_height - input_height) /
                                   2;
 
-    std::vector<Tdata> temp_cache;
+    std::vector<float> temp_cache;
     if (padding_cache == nullptr) {
       temp_cache.resize(get_cache_size(filter_height, filter_width,
                                        filter_count, dilation_rows,
@@ -290,8 +325,8 @@ class PaddingFunctor {
               batch * output_height * output_width * filter_count +
               out_y * output_width * filter_count + out_x * filter_count;
 
-          const Tdata* cache_ptr = &padding_cache[cache_idx];
-          Tdata* output_ptr = &output_data[out_idx];
+          const float* cache_ptr = &padding_cache[cache_idx];
+          float* output_ptr = &output_data[out_idx];
 
           // Apply pre-computed correction
           // im2col padded the input with 0s which effectively became +1s.

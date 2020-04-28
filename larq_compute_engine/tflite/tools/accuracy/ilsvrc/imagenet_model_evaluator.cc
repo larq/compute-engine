@@ -15,7 +15,7 @@ limitations under the License.
 ==============================================================================*/
 
 // The only modification to this file is the check `model_labels.size() != 1000`
-// on line 250 (the comparison was previously with 1001).
+// on line 251 (the comparison was previously with 1001).
 
 #include "tensorflow/lite/tools/accuracy/ilsvrc/imagenet_model_evaluator.h"
 
@@ -28,7 +28,8 @@ limitations under the License.
 
 #include "absl/memory/memory.h"
 #include "tensorflow/core/platform/logging.h"
-#include "tensorflow/lite/c/c_api_internal.h"
+#include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/tools/accuracy/ilsvrc/default/custom_delegates.h"
 #include "tensorflow/lite/tools/command_line_flags.h"
 #include "tensorflow/lite/tools/evaluation/proto/evaluation_config.pb.h"
 #include "tensorflow/lite/tools/evaluation/proto/evaluation_stages.pb.h"
@@ -109,7 +110,7 @@ class CompositeObserver : public ImagenetModelEvaluator::Observer {
 };
 
 /*static*/ TfLiteStatus ImagenetModelEvaluator::Create(
-    int argc, char* argv[], int num_threads,
+    int* argc, char* argv[], int num_threads,
     std::unique_ptr<ImagenetModelEvaluator>* model_evaluator) {
   Params params;
   params.number_of_images = 100;
@@ -150,7 +151,7 @@ class CompositeObserver : public ImagenetModelEvaluator::Observer {
                                "Generates the top-1 to top-k accuracy values"
                                "where k = num_ranks. Default: 10"),
   };
-  tflite::Flags::Parse(&argc, const_cast<const char**>(argv), flag_list);
+  tflite::Flags::Parse(argc, const_cast<const char**>(argv), flag_list);
 
   if (params.number_of_images < 0) {
     LOG(ERROR) << "Invalid: num_examples";
@@ -186,12 +187,8 @@ TfLiteStatus EvaluateModelForShard(const uint64_t shard_id,
   eval.SetAllLabels(model_labels);
   TF_LITE_ENSURE_STATUS(eval.Init());
 
-  /* This call is disabled here because we aren't using this feature, and
-     keeping it enabled would require copying further code from TFLite into
-     this repo for no gain.
   TF_LITE_ENSURE_STATUS(tflite::evaluation::ApplyCustomDelegates(
       params.delegate, params.num_interpreter_threads, &eval));
-  */
 
   for (const auto& image_label : image_labels) {
     eval.SetInputs(image_label.image, image_label.label);
@@ -217,8 +214,12 @@ TfLiteStatus ImagenetModelEvaluator::EvaluateModel() const {
       tflite::evaluation::GetSortedFileNames(data_path, &image_files));
   std::vector<string> ground_truth_image_labels;
   if (!tflite::evaluation::ReadFileLines(params_.ground_truth_labels_path,
-                                         &ground_truth_image_labels))
+                                         &ground_truth_image_labels)) {
+    LOG(ERROR) << "Unable to read ground truth labels from: "
+               << params_.ground_truth_labels_path
+               << " Perhaps file doesn't exist or is unreadable.";
     return kTfLiteError;
+  }
   if (image_files.size() != ground_truth_image_labels.size()) {
     LOG(ERROR) << "Images and ground truth labels don't match";
     return kTfLiteError;

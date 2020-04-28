@@ -26,6 +26,28 @@ cc_library(
 )
 
 cc_library(
+    name = "bconv2d_params",
+    hdrs = [
+        "bconv2d_params.h",
+    ],
+    deps = [
+        "//larq_compute_engine/core:utils",
+    ],
+)
+
+cc_library(
+    name = "bconv2d_output_transform_utils",
+    hdrs = [
+        "bconv2d_output_transform_utils.h",
+    ],
+    deps = [
+        ":bconv2d_params",
+        "//larq_compute_engine/core:bconv2d_output_transform",
+        "@org_tensorflow//tensorflow/lite/kernels/internal:tensor",
+    ],
+)
+
+cc_library(
     name = "lce_op_kernels",
     srcs = [
         "bconv2d.cc",
@@ -37,6 +59,8 @@ cc_library(
     copts = tflite_copts() + tf_opts_nortti_if_android(),
     deps = [
         ":bconv2d_impl",
+        ":bconv2d_output_transform_utils",
+        ":bconv2d_params",
         "//larq_compute_engine/core:bconv2d_impl_ref",
         "@flatbuffers",
         "@org_tensorflow//tensorflow/lite:framework",
