@@ -60,7 +60,7 @@ def test_simple_model(model_cls):
 
     # Test on the flowers dataset
     dataset = (
-        tfds.load("oxford_flowers102", split="validation")
+        tfds.load("tf_flowers", split="train", try_gcs=True)
         .map(preprocess)
         .shuffle(256)
         .batch(10)
