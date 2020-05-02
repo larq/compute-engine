@@ -53,13 +53,13 @@ struct BinaryKernelParams {
   std::int32_t clamp_max;
   std::int32_t backtransform_add;
   std::uint8_t flags;
-  T dst_tmp_buf[LhsCols * RhsCols];
+  float dst_tmp_buf[LhsCols * RhsCols];
 };
 
-template <int LhsCols, int RhsCols, class T>
+template <int LhsCols, int RhsCols, typename AccumScalar, typename T>
 inline void MakeBinaryKernelParams(
     const PackedMatrix<T>& lhs, const PackedMatrix<T>& rhs,
-    const BinaryBasicSpec<std::int32_t, float>& spec, int start_row,
+    const BinaryBasicSpec<AccumScalar, float>& spec, int start_row,
     int start_col, int end_row, int end_col, Matrix<float>* dst,
     BinaryKernelParams<LhsCols, RhsCols, T>* params) {
   const int depth = lhs.layout.rows;

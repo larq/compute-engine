@@ -17,9 +17,13 @@ using compute_engine::core::OutputTransformBase;
 
 // Fill the parts of the OutputTransform struct that are common to each
 // destination type
+template <typename AccumScalar>
 void GetBaseParams(TfLiteContext* context, TfLiteNode* node,
                    TfLiteBConv2DParams* params,
-                   OutputTransformBase<std::int32_t>& output_transform) {
+                   OutputTransformBase<AccumScalar>& output_transform) {
+  static_assert(std::is_same<AccumScalar, std::int32_t>::value ||
+                    std::is_same<AccumScalar, std::int16_t>::value,
+                "AccumScalar must be int32 or int16");
   auto input_shape = GetTensorShape(GetInput(context, node, 0));
   auto filter_shape = GetTensorShape(GetInput(context, node, 1));
   output_transform.backtransform_add =
@@ -29,9 +33,10 @@ void GetBaseParams(TfLiteContext* context, TfLiteNode* node,
 }
 
 // Fill the OutputTransform values for float outputs
-void GetOutputTransform(
-    TfLiteContext* context, TfLiteNode* node, TfLiteBConv2DParams* params,
-    OutputTransform<std::int32_t, float>& output_transform) {
+template <typename AccumScalar>
+void GetOutputTransform(TfLiteContext* context, TfLiteNode* node,
+                        TfLiteBConv2DParams* params,
+                        OutputTransform<AccumScalar, float>& output_transform) {
   GetBaseParams(context, node, params, output_transform);
   const auto* post_activation_multiplier = GetInput(context, node, 2);
   const auto* post_activation_bias = GetInput(context, node, 3);
@@ -44,9 +49,10 @@ void GetOutputTransform(
 }
 
 // Fill the OutputTransform values for bitpacked int32 outputs
+template <typename AccumScalar>
 void GetOutputTransform(
     TfLiteContext* context, TfLiteNode* node, TfLiteBConv2DParams* params,
-    OutputTransform<std::int32_t, std::int32_t>& output_transform) {
+    OutputTransform<AccumScalar, std::int32_t>& output_transform) {
   GetBaseParams(context, node, params, output_transform);
   const auto* post_activation_multiplier = GetInput(context, node, 2);
   const auto* post_activation_bias = GetInput(context, node, 3);
@@ -67,9 +73,10 @@ void GetOutputTransform(
 }
 
 // Fill the OutputTransform values for int8 outputs
+template <typename AccumScalar>
 void GetOutputTransform(
     TfLiteContext* context, TfLiteNode* node, TfLiteBConv2DParams* params,
-    OutputTransform<std::int32_t, std::int8_t>& output_transform) {
+    OutputTransform<AccumScalar, std::int8_t>& output_transform) {
   GetBaseParams(context, node, params, output_transform);
 #ifdef LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
   output_transform.effective_post_activation_multiplier =

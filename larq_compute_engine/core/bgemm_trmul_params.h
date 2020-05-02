@@ -13,9 +13,8 @@ using namespace ruy;
 namespace compute_engine {
 namespace tflite {
 
-// This file is entirely copied from TF lite RUY codebase.
-// The only difference is that we populate the TrMulParams
-// with our bgemm kernel.
+// This file is entirely copied from TF lite RUY codebase. The only difference
+// is that we populate the TrMulParams with our bgemm kernel.
 
 template <ruy::Path ThePath, typename LhsScalar, typename RhsScalar,
           typename DstScalar, typename Spec>

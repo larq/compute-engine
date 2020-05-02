@@ -27,8 +27,8 @@ struct OutputTransform {};
 template <typename AccumScalar>
 struct OutputTransformBase {
   AccumScalar backtransform_add = 0;
-  AccumScalar clamp_min = std::numeric_limits<AccumScalar>::lowest();
-  AccumScalar clamp_max = std::numeric_limits<AccumScalar>::max();
+  std::int32_t clamp_min = std::numeric_limits<AccumScalar>::lowest();
+  std::int32_t clamp_max = std::numeric_limits<AccumScalar>::max();
 
   inline AccumScalar RunBase(const AccumScalar accum) const {
     // Backtransform can still be done in int32
