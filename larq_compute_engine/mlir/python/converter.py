@@ -6,11 +6,7 @@ from larq_compute_engine.mlir._graphdef_tfl_flatbuffer import (
 )
 
 from tensorflow.core.framework.types_pb2 import DataType
-from tensorflow.lite.python.util import (
-    get_grappler_config,
-    get_tensor_name,
-    run_graph_optimizations,
-)
+from tensorflow.lite.python.util import get_tensor_name
 from tensorflow.python.eager import def_function
 from tensorflow.python.framework.convert_to_constants import (
     convert_variables_to_constants_v2,
@@ -77,15 +73,6 @@ def convert_keras_model(
     output_tensors = frozen_func.outputs
 
     graph_def = frozen_func.graph.as_graph_def()
-    # Run a constant folding using grappler since we currently don't implement
-    # folding for LCE custom ops
-    graph_def = run_graph_optimizations(
-        graph_def,
-        input_tensors,
-        output_tensors,
-        config=get_grappler_config(["constfold"]),
-        graph=frozen_func.graph,
-    )
 
     # Checks dimensions in input tensor.
     for tensor in input_tensors:

@@ -21,6 +21,19 @@ gentbl(
 )
 
 gentbl(
+    name = "op_removal_lce_inc_gen",
+    tbl_outs = [
+        ("-gen-rewriters", "transforms/generated_op_removal.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "transforms/op_removal_patterns.td",
+    td_srcs = [
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@llvm-project//mlir:StdOpsTdFiles",
+    ],
+)
+
+gentbl(
     name = "prepare_lce_inc_gen",
     tbl_outs = [
         ("-gen-rewriters", "transforms/generated_prepare.inc"),
@@ -29,9 +42,9 @@ gentbl(
     td_file = "transforms/prepare_patterns.td",
     td_srcs = [
         "ir/lce_ops.td",
-        # If we remove the dependency on lite:transforms/prepare_patterns.td  we can probably reduce the number of files
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:transforms/prepare_patterns.td",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_optimize_td_files",
+        "transforms/op_removal_patterns.td",
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
@@ -45,6 +58,7 @@ gentbl(
     td_file = "transforms/optimize_patterns.td",
     td_srcs = [
         "ir/lce_ops.td",
+        "transforms/op_removal_patterns.td",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
@@ -69,6 +83,23 @@ cc_library(
 )
 
 cc_library(
+    name = "larq_compute_engine_op_removal",
+    srcs = [
+        "transforms/generated_op_removal.inc",
+        "transforms/op_removal.cc",
+    ],
+    hdrs = [
+        "transforms/passes.h",
+    ],
+    deps = [
+        ":larq_compute_engine",
+        "@llvm-project//mlir:StandardOps",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
+    ],
+    alwayslink = 1,
+)
+
+cc_library(
     name = "larq_compute_engine_prepare",
     srcs = [
         "transforms/generated_prepare.inc",
@@ -76,12 +107,11 @@ cc_library(
     ],
     hdrs = [
         "transforms/passes.h",
-        "transforms/utils.h",
     ],
     deps = [
         ":larq_compute_engine",
+        "@llvm-project//mlir:StandardOps",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_lib",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
     ],
     alwayslink = 1,
@@ -95,35 +125,11 @@ cc_library(
     ],
     hdrs = [
         "transforms/passes.h",
-        "transforms/utils.h",
     ],
     deps = [
         ":larq_compute_engine",
         "//larq_compute_engine/core:packbits",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
-    ],
-    alwayslink = 1,
-)
-
-# This is part of @org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_dialect_passes
-# which includes a lot of unnecessary dependencies. We extract this single
-# target to keep binary size and build time manageable.
-# TODO(lgeiger): Switch to upstream target once
-# https://github.com/tensorflow/tensorflow/commit/d8ee1d31d5618b1ca3313a18141937ec0e3d10e1
-# is released
-cc_library(
-    name = "tf_decode_constant_pass",
-    srcs = [
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:transforms/decode_constant.cc",
-    ],
-    hdrs = [
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:transforms/decode_constant.h",
-    ],
-    deps = [
-        "@llvm-project//mlir:IR",
-        "@llvm-project//mlir:Pass",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_tensor",
     ],
     alwayslink = 1,
 )
@@ -135,11 +141,19 @@ cc_library(
         "tf_tfl_passes.h",
     ],
     deps = [
+        ":larq_compute_engine_op_removal",
         ":larq_compute_engine_optimize",
         ":larq_compute_engine_prepare",
-        ":tf_decode_constant_pass",
+        "@llvm-project//mlir:AllPassesAndDialects",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:Transforms",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_legalize_tf",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_optimize",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:decode_constant_pass",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_dialect_registration",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_passes",
     ],
 )
 
@@ -159,11 +173,12 @@ pybind_extension(
     module_name = "graphdef_tfl_flatbuffer",
     deps = [
         ":lce_tfl_passes",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_translate_lib",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_graphdef",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:import_utils",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:mlir_roundtrip_flags",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_dialect_passes",
         "@org_tensorflow//tensorflow/core:ops",
         "@pybind11",
     ],

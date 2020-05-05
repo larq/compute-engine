@@ -10,7 +10,7 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/pytypes.h"
 #include "pybind11/stl.h"
-#include "tensorflow/compiler/mlir/lite/flatbuffer_translate.h"
+#include "tensorflow/compiler/mlir/lite/flatbuffer_export.h"
 #include "tensorflow/compiler/mlir/lite/transforms/passes.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/import_model.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/mlir_roundtrip_flags.h"
@@ -35,7 +35,9 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
   }
 
   GraphImportConfig specs;
+  specs.prune_unused_nodes = true;
   specs.convert_legacy_fed_inputs = true;
+  specs.graph_as_function = false;
   specs.upgrade_legacy = true;
   if (!ParseInputArrayInfo(input_arrays, input_dtypes, input_shapes,
                            &specs.inputs)
@@ -62,6 +64,7 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
 
   // Convert back to outlined while format for export back to flatbuffer.
   pm.addPass(mlir::TFL::CreateWhileOutlinePass());
+  pm.addPass(mlir::TFL::CreateRuntimeVerifyPass());
 
   if (failed(pm.run(*module.ValueOrDie()))) {
     throw std::runtime_error("Could not complete conversion passes.");

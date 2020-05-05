@@ -1,5 +1,8 @@
-include "tensorflow/compiler/mlir/lite/transforms/prepare_patterns.td"
+include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
+include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
+include "larq_compute_engine/mlir/transforms/op_removal_patterns.td"
 
 
 // This relies on implementation details of larq.math.sign. We should make
@@ -27,6 +30,7 @@ class GetConstantVector<string val> : NativeCodeCall<"GetConstantVector($0, " # 
 def BinaryFilter : Constraint<CPred<"IsBinaryFilter($0)">>;
 def GetScaleVector : NativeCodeCall<"GetScaleVector($0)">;
 def GetNumChannels : NativeCodeCall<"GetNumChannels($_builder, $0)">;
+def IsDataFormatNHWC : ConstantAttr<TF_ConvnetDataFormatAttr, "NHWC">;
 
 def : Pat<(TF_Conv2DOp (TF_LceBsignOp $input), (ConstantOp $filter), $strides, $use_cudnn,
                        $padding, $explicit_padding, IsDataFormatNHWC: $data_format, $dilations),

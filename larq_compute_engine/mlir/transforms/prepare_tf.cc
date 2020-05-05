@@ -1,9 +1,8 @@
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
-#include "larq_compute_engine/mlir/transforms/utils.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
-#include "tensorflow/compiler/mlir/lite/quantization/quantization_utils.h"
-#include "tensorflow/compiler/mlir/lite/utils/validators.h"
 #include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.h"
 
 namespace mlir {
@@ -12,7 +11,7 @@ namespace TFL {
 namespace {
 
 // Prepare LCE operations in functions for subsequent legalization.
-struct PrepareLCE : public FunctionPass<PrepareLCE> {
+struct PrepareLCE : public PassWrapper<PrepareLCE, FunctionPass> {
   void runOnFunction() override;
 };
 
@@ -113,19 +112,13 @@ void PrepareLCE::runOnFunction() {
   auto func = getFunction();
 
   TFL::populateWithGenerated(ctx, &patterns);
-  // Cleanup dead ops manually. LCE ops are not registered to the TF dialect so
-  // op->hasNoSideEffect() will return false. Therefor applyPatternsGreedily
-  // won't automatically remove the dead nodes. See
-  // https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/Operation.h#L457-L462
-  patterns.insert<mlir::CleanupDeadOps<TF::LceBsignOp>,
-                  mlir::CleanupDeadOps<TF::LceBconv2dOp>>(ctx);
-  applyPatternsGreedily(func, patterns);
+  applyPatternsAndFoldGreedily(func, patterns);
 }
 
 }  // namespace
 
 // Creates an instance of the TensorFlow dialect PrepareLCE pass.
-std::unique_ptr<OpPassBase<FuncOp>> CreatePrepareLCEPass() {
+std::unique_ptr<OperationPass<FuncOp>> CreatePrepareLCEPass() {
   return std::make_unique<PrepareLCE>();
 }
 

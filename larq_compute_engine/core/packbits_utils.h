@@ -2,7 +2,7 @@
 #define COMPUTE_ENGINE_CORE_PACKBITS_UTILS_H_
 
 #include "larq_compute_engine/core/packbits.h"
-#include "tensorflow/lite/experimental/ruy/profiler/instrumentation.h"
+#include "ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/kernels/internal/types.h"
 
 using namespace tflite;

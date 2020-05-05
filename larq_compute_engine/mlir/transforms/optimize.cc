@@ -1,7 +1,7 @@
 #include "larq_compute_engine/core/packbits.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
-#include "larq_compute_engine/mlir/transforms/utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
@@ -11,7 +11,7 @@ namespace TFL {
 namespace {
 
 // Optimize LCE operations in functions.
-struct OptimizeLCE : public FunctionPass<OptimizeLCE> {
+struct OptimizeLCE : public PassWrapper<OptimizeLCE, FunctionPass> {
  public:
   // The default value must be true so that we can run with the optimisation in
   // the file-check tests.
@@ -123,18 +123,13 @@ void OptimizeLCE::runOnFunction() {
   if (experimental_enable_bitpacked_activations_) {
     patterns.insert<SetBconvReadWriteBitpacked>(ctx);
   }
-  // Cleanup dead ops manually. LCE ops are not registered to the TF dialect so
-  // op->hasNoSideEffect() will return false. Therefor applyPatternsGreedily
-  // won't automatically remove the dead nodes. See
-  // https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/Operation.h#L457-L462
-  patterns.insert<mlir::CleanupDeadOps<TF::LceBconv2dOp>>(ctx);
-  applyPatternsGreedily(func, patterns);
+  applyPatternsAndFoldGreedily(func, patterns);
 }
 
 }  // namespace
 
 // Creates an instance of the TensorFlow dialect OptimizeLCE pass.
-std::unique_ptr<OpPassBase<FuncOp>> CreateOptimizeLCEPass(
+std::unique_ptr<OperationPass<FuncOp>> CreateOptimizeLCEPass(
     bool experimental_enable_bitpacked_activations) {
   return std::make_unique<OptimizeLCE>(
       experimental_enable_bitpacked_activations);

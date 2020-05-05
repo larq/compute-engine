@@ -3,9 +3,10 @@
 
 #include "bgemm_kernels_common.h"
 #include "bgemm_trmul_params.h"
-#include "tensorflow/lite/experimental/ruy/matrix.h"
-#include "tensorflow/lite/experimental/ruy/platform.h"
-#include "tensorflow/lite/experimental/ruy/profiler/instrumentation.h"
+#include "ruy/context_internal.h"
+#include "ruy/matrix.h"
+#include "ruy/platform.h"
+#include "ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 
@@ -63,7 +64,8 @@ struct BGemmImplUsingRuy {
     constexpr auto BGemmCompiledPaths = ruy::kAllPaths & ~ruy::Path::kReference;
 
     // avoid the reference path for production code
-    ruy::Path bgemm_runtime_path = ruy_context->GetPathToTake<ruy::kAllPaths>();
+    ruy::Path bgemm_runtime_path =
+        ContextInternal::GetPathToTake<ruy::kAllPaths>(ruy_context);
     RUY_CHECK_NE(bgemm_runtime_path, ruy::Path::kReference);
 
     // fallback to standard cpp kernel for all architectures that are not
@@ -116,7 +118,7 @@ struct BGemmImplUsingRuy {
         binary_trmul_params.packed[ruy::Side::kLhs].layout.cols,
         binary_trmul_params.packed[ruy::Side::kRhs].layout.cols};
 
-    ruy::Tuning tuning = ruy_context->GetMainThreadTuning();
+    ruy::Tuning tuning = ContextInternal::GetMainThreadTuning(ruy_context);
     for (ruy::Side side : {ruy::Side::kLhs, ruy::Side::kRhs}) {
       if (prepacked[side]) {
         prepacked[side]->data_size = DataSize(binary_trmul_params.packed[side]);

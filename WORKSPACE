@@ -54,10 +54,10 @@ arm_compiler_configure(
 #    reliable downloads.
 http_archive(
     name = "org_tensorflow",
-    sha256 = "69cd836f87b8c53506c4f706f655d423270f5a563b76dc1cfa60fbc3184185a3",
-    strip_prefix = "tensorflow-2.2.0",
+    sha256 = "8e86547c8238637cdc895ec53f02adedad4dfa2a7fcfee06dbdeb9f0e3be6168",
+    strip_prefix = "tensorflow-a80d96c6634cd005b3841d462030448f9f551a14",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/v2.2.0.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/a80d96c6634cd005b3841d462030448f9f551a14.tar.gz",
     ],
 )
 
@@ -117,3 +117,12 @@ android_configure(name = "local_config_android")
 load("@local_config_android//:android.bzl", "android_workspace")
 
 android_workspace()
+
+# Required for dependency @com_github_grpc_grpc
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+
+grpc_deps()
+
+load("@upb//bazel:repository_defs.bzl", "bazel_version_repository")
+
+bazel_version_repository(name = "bazel_version")

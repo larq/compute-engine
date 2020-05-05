@@ -17,11 +17,11 @@ cc_library(
         "//larq_compute_engine/core:packbits",
         "//larq_compute_engine/core:packbits_utils",
         "//larq_compute_engine/core:padding_functor",
-        "@org_tensorflow//tensorflow/lite/experimental/ruy/profiler:instrumentation",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
         "@org_tensorflow//tensorflow/lite/kernels:padding",
         "@org_tensorflow//tensorflow/lite/kernels/internal:optimized_base",
+        "@ruy//ruy/profiler:instrumentation",
     ],
 )
 

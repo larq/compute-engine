@@ -1,7 +1,7 @@
 #include <cstdint>
 
 #include "bgemm_kernels_common.h"
-#include "tensorflow/lite/experimental/ruy/profiler/instrumentation.h"
+#include "ruy/profiler/instrumentation.h"
 
 using namespace ruy;
 

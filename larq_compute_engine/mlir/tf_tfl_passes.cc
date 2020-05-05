@@ -9,7 +9,7 @@
 
 namespace mlir {
 /// Create a pass to convert from the TFExecutor to the TF control dialect.
-std::unique_ptr<OpPassBase<FuncOp>>
+std::unique_ptr<OperationPass<FuncOp>>
 CreateTFExecutorToControlDialectConversion();
 }  // namespace mlir
 
@@ -22,26 +22,67 @@ void AddTFToLCETFLConversionPasses(
   pass_manager->addPass(mlir::CreateTFExecutorToControlDialectConversion());
   pass_manager->addPass(mlir::TFControlFlow::CreateRaiseTFControlFlowPass());
 
+  // The conversion pipeline has to follow the following orders:
+  // 1) Saved model related optimization like decompose resource ops
+  // 2) Convert composite functions like lstm/rnns, along with proper function
+  // inlining & dce.
+  // 3) Lower static tensor list pass.
+
+  // This decomposes resource ops like ResourceGather into read-variable op
+  // followed by gather. This is used when the saved model import path is used
+  // during which resources dont get frozen in the python layer.
+  pass_manager->addNestedPass<mlir::FuncOp>(
+      mlir::TFDevice::CreateDecomposeResourceOpsPass());
+
   // Enable fusing composite ops that can be lowered to built-in TFLite ops.
   pass_manager->addPass(mlir::TFL::CreatePrepareCompositeFunctionsPass());
+
+  // This pass marks non-exported functions as symbol visibility 'private'
+  // those deemed read-only as immutable.
+  pass_manager->addPass(
+      mlir::tf_saved_model::
+          CreateMarkFunctionVisibilityUsingSavedModelLinkagePass());
+
+  pass_manager->addPass(mlir::createInlinerPass());
+  pass_manager->addPass(mlir::createSymbolDCEPass());
+
+  pass_manager->addPass(mlir::TFL::CreateLowerStaticTensorListPass());
+
+  // This pass does resource analysis of saved model global tensors and marks
+  // those deemed read-only as immutable.
+  pass_manager->addPass(
+      mlir::tf_saved_model::CreateOptimizeGlobalTensorsPass());
+
+  // Add a shape inference pass to optimize away the unnecessary casts.
+  pass_manager->addPass(mlir::TF::CreateTFShapeInferencePass());
 
   // Legalize while early to allow further constant folding.
   // TODO(jpienaar): This may not actually matter as we do canonicalization
   // after the legalize below, for now it needs to be below the above passes
   // that work on TF dialect and before inliner so that the function calls in
   // body and cond are inlined for optimization.
-  pass_manager->addNestedPass<mlir::FuncOp>(
-      mlir::TFL::CreateLegalizeTFWhilePass());
+  pass_manager->addPass(mlir::TFL::CreateLegalizeTFWhilePass());
+
+  // Add function inlining pass. Both TF and TFLite dialects are opted into
+  // function inliner interface.
+  pass_manager->addPass(mlir::createInlinerPass());
 
   // TODO(jpienaar): Revise post dialect constants.
   pass_manager->addPass(mlir::TF::CreateDecodeConstantPass());
+  // Remove passthrough ops early so constant folding can happen before
+  // LCE ops are injected
+  pass_manager->addPass(mlir::TFL::CreateOpRemovalPass());
   // Canonicalization includes const folding, which is utilized here to optimize
   // away ops that can't get constant folded after PrepareTF pass. For example,
   // tf.Conv2D is split into tf.Transpose and tfl.Conv2D.
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCSEPass());
+  // This pass does dead code elimination based on symbol visibility.
+  pass_manager->addPass(mlir::createSymbolDCEPass());
 
-  pass_manager->addPass(mlir::createInlinerPass());
+  // This pass 'freezes' immutable global tensors and inlines them as tf
+  // constant ops.
+  pass_manager->addPass(mlir::tf_saved_model::CreateFreezeGlobalTensorsPass());
 
   // Inject Larq Compute Engine Ops
   pass_manager->addPass(mlir::TFL::CreatePrepareLCEPass());
@@ -49,7 +90,7 @@ void AddTFToLCETFLConversionPasses(
   // the TFLite dialect.
   pass_manager->addPass(mlir::TFL::CreatePrepareTFPass(true));
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
-  pass_manager->addPass(mlir::TFL::CreateLegalizeTFPass());
+  pass_manager->addPass(mlir::TFL::CreateLegalizeTFPass(true));
   pass_manager->addPass(mlir::TFL::CreateOptimizePass());
   pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(
       experimental_enable_bitpacked_activations));

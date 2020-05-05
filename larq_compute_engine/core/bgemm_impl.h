@@ -2,7 +2,7 @@
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_IMPL_H_
 
 #include "bgemm_kernels_common.h"
-#include "tensorflow/lite/experimental/ruy/profiler/instrumentation.h"
+#include "ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 

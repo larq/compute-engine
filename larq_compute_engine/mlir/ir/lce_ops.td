@@ -17,6 +17,9 @@ def TFL_AFAttr : StrEnumAttr<
     ]>;
 #endif
 
+#ifndef LCE_OPS
+#define LCE_OPS
+
 def TF_LceBsignOp : TF_Op<"LceBsign", [NoSideEffect, SameOperandsAndResultType]> {
   let summary = "Returns an element-wise indication of the binary sign of a number.";
 
@@ -66,3 +69,4 @@ TODO
 
   TF_DerivedOperandTypeAttr T = TF_DerivedOperandTypeAttr<0>;
 }
+#endif // LCE_OPS

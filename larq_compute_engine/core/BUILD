@@ -47,7 +47,7 @@ cc_library(
     hdrs = ["packbits_utils.h"],
     deps = [
         ":packbits",
-        "@org_tensorflow//tensorflow/lite/experimental/ruy/profiler:instrumentation",
+        "@ruy//ruy/profiler:instrumentation",
     ],
 )
 
@@ -77,9 +77,9 @@ cc_library(
     ],
     deps = [
         "//larq_compute_engine/core:bgemm_functor",
-        "@org_tensorflow//tensorflow/lite/experimental/ruy/profiler:instrumentation",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
+        "@ruy//ruy/profiler:instrumentation",
     ],
 )
 
@@ -112,7 +112,7 @@ cc_library(
     ],
     deps = [
         ":bgemm_kernels_common",
-        "@org_tensorflow//tensorflow/lite/experimental/ruy/profiler:instrumentation",
+        "@ruy//ruy/profiler:instrumentation",
     ],
 )
 
@@ -126,7 +126,7 @@ cc_library(
     deps = [
         ":bgemm_kernels_arm",
         "//larq_compute_engine/core:bgemm_functor",
-        "@org_tensorflow//tensorflow/lite/experimental/ruy/profiler:instrumentation",
+        "@ruy//ruy/profiler:instrumentation",
     ],
 )
 
@@ -138,9 +138,9 @@ cc_library(
     ],
     deps = [
         ":bgemm_kernels_ruy",
-        "@org_tensorflow//tensorflow/lite/experimental/ruy/profiler:instrumentation",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
+        "@ruy//ruy/profiler:instrumentation",
     ],
 )
 
@@ -152,7 +152,7 @@ cc_library(
     deps = [
         ":bgemm_ref",
         ":bgemm_ruy",
-        "@org_tensorflow//tensorflow/lite/experimental/ruy/profiler:instrumentation",
+        "@ruy//ruy/profiler:instrumentation",
     ],
 )
 
