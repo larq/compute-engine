@@ -11,6 +11,7 @@
 #include "pybind11/pytypes.h"
 #include "pybind11/stl.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_export.h"
+#include "tensorflow/compiler/mlir/lite/quantization/quantization_config.h"
 #include "tensorflow/compiler/mlir/lite/transforms/passes.h"
 #include "tensorflow/compiler/mlir/op_or_arg_name_mapper.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/import_model.h"
@@ -18,6 +19,7 @@
 #include "tensorflow/compiler/mlir/tensorflow/utils/error_util.h"
 #include "tensorflow/compiler/mlir/tensorflow/utils/import_utils.h"
 #include "tensorflow/core/framework/graph.pb.h"
+#include "tensorflow/core/framework/types.pb.h"
 #include "tensorflow/core/protobuf/graph_debug_info.pb.h"
 
 namespace tensorflow {
@@ -38,7 +40,7 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
     const std::vector<string>& input_arrays,
     const std::vector<string>& input_dtypes,
     const std::vector<std::vector<int>>& input_shapes,
-    const std::vector<string>& output_arrays,
+    const std::vector<string>& output_arrays, const bool& should_quantize,
     const bool experimental_enable_bitpacked_activations) {
   GraphDef graphdef;
   if (!tensorflow::LoadProtoFromBuffer(std::string(graphdef_bytes), &graphdef)
@@ -70,9 +72,18 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
     throw std::runtime_error("Could not convert GraphDef.");
   }
 
+  mlir::TFL::QuantizationSpecs quant_specs;
+  if (should_quantize) {
+    quant_specs.inference_type = tensorflow::DT_QINT8;
+    for (auto input_array : input_arrays) {
+      // Input inference type is DT_FLOAT, so set the default input ranges
+      // which default to mean=0.0 and std=1.0.
+      quant_specs.input_ranges.push_back({-128.0, 127.0});
+    }
+  }
   mlir::PassManager pm(&context);
   tensorflow::AddTFToLCETFLConversionPasses(
-      &pm, experimental_enable_bitpacked_activations);
+      quant_specs, &pm, experimental_enable_bitpacked_activations);
 
   // Convert back to outlined while format for export back to flatbuffer.
   pm.addPass(mlir::TFL::CreateWhileOutlinePass());
