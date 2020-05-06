@@ -12,6 +12,7 @@
 #include "pybind11/stl.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_export.h"
 #include "tensorflow/compiler/mlir/lite/transforms/passes.h"
+#include "tensorflow/compiler/mlir/op_or_arg_name_mapper.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/import_model.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/mlir_roundtrip_flags.h"
 #include "tensorflow/compiler/mlir/tensorflow/utils/error_util.h"
@@ -20,6 +21,17 @@
 #include "tensorflow/core/protobuf/graph_debug_info.pb.h"
 
 namespace tensorflow {
+
+// Truncates names to a maximum length of ~50 characters since LCE op location
+// names can be very long otherwise.
+class TruncateOpOrArgLocNameMapper : public OpOrArgLocNameMapper {
+ protected:
+  std::string GetName(OpOrVal op_or_val) override {
+    auto name = OpOrArgLocNameMapper::GetName(op_or_val);
+    if (name.length() > 50) return name.substr(0, 50);
+    return name;
+  }
+};
 
 pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
     const pybind11::bytes& graphdef_bytes,
@@ -70,11 +82,13 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
     throw std::runtime_error("Could not complete conversion passes.");
   }
 
+  TruncateOpOrArgLocNameMapper op_or_arg_name_mapper;
   // Write MLIR TFLite dialect into FlatBuffer
   std::string result;
   if (tflite::MlirToFlatBufferTranslateFunction(
           *module.ValueOrDie(), &result, /*emit_builtin_tflite_ops=*/true,
-          /*emit_select_tf_ops=*/false, /*emit_custom_ops=*/true)) {
+          /*emit_select_tf_ops=*/false, /*emit_custom_ops=*/true,
+          &op_or_arg_name_mapper)) {
     throw std::runtime_error("Could not translate to flatbuffer.");
   }
 

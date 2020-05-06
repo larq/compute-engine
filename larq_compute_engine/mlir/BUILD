@@ -173,6 +173,7 @@ pybind_extension(
     module_name = "graphdef_tfl_flatbuffer",
     deps = [
         ":lce_tfl_passes",
+        "@org_tensorflow//tensorflow/compiler/mlir:op_or_arg_name_mapper",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_graphdef",
