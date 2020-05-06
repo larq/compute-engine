@@ -15,7 +15,7 @@ limitations under the License.
 ==============================================================================*/
 
 // The only modification to this file is the check `model_labels.size() != 1000`
-// on line 251 (the comparison was previously with 1001).
+// on line 241 (the comparison was previously with 1001).
 
 #include "tensorflow/lite/tools/accuracy/ilsvrc/imagenet_model_evaluator.h"
 
@@ -29,7 +29,6 @@ limitations under the License.
 #include "absl/memory/memory.h"
 #include "tensorflow/core/platform/logging.h"
 #include "tensorflow/lite/c/common.h"
-#include "tensorflow/lite/tools/accuracy/ilsvrc/default/custom_delegates.h"
 #include "tensorflow/lite/tools/command_line_flags.h"
 #include "tensorflow/lite/tools/evaluation/proto/evaluation_config.pb.h"
 #include "tensorflow/lite/tools/evaluation/proto/evaluation_stages.pb.h"
@@ -37,9 +36,7 @@ limitations under the License.
 #include "tensorflow/lite/tools/evaluation/utils.h"
 
 namespace {
-
 using tflite::evaluation::ImageLabel;
-using tflite::evaluation::TfliteInferenceParams;
 
 constexpr char kNumImagesFlag[] = "num_images";
 constexpr char kModelOutputLabelsFlag[] = "model_output_labels";
@@ -49,8 +46,6 @@ constexpr char kBlacklistFilePathFlag[] = "blacklist_file_path";
 constexpr char kModelFileFlag[] = "model_file";
 constexpr char kInterpreterThreadsFlag[] = "num_interpreter_threads";
 constexpr char kDelegateFlag[] = "delegate";
-constexpr char kNnapiDelegate[] = "nnapi";
-constexpr char kGpuDelegate[] = "gpu";
 constexpr char kNumRanksFlag[] = "num_ranks";
 
 template <typename T>
@@ -75,7 +70,6 @@ std::vector<std::vector<T>> Split(const std::vector<T>& v, int n) {
   }
   return vecs;
 }
-
 }  // namespace
 
 namespace tensorflow {
@@ -144,9 +138,10 @@ class CompositeObserver : public ImagenetModelEvaluator::Observer {
       tflite::Flag::CreateFlag(
           kInterpreterThreadsFlag, &params.num_interpreter_threads,
           "Number of interpreter threads to use for inference."),
-      tflite::Flag::CreateFlag(kDelegateFlag, &params.delegate,
-                               "Delegate to use for inference, if available. "
-                               "Must be one of {'nnapi', 'gpu'}"),
+      tflite::Flag::CreateFlag(
+          kDelegateFlag, &params.delegate,
+          "Delegate to use for inference, if available. "
+          "Must be one of {'nnapi', 'gpu', 'hexagon', xnnpack'}"),
       tflite::Flag::CreateFlag(kNumRanksFlag, &params.num_ranks,
                                "Generates the top-1 to top-k accuracy values"
                                "where k = num_ranks. Default: 10"),
@@ -163,12 +158,12 @@ class CompositeObserver : public ImagenetModelEvaluator::Observer {
   return kTfLiteOk;
 }
 
-TfLiteStatus EvaluateModelForShard(const uint64_t shard_id,
-                                   const std::vector<ImageLabel>& image_labels,
-                                   const std::vector<std::string>& model_labels,
-                                   const ImagenetModelEvaluator::Params& params,
-                                   ImagenetModelEvaluator::Observer* observer,
-                                   int num_ranks) {
+TfLiteStatus EvaluateModelForShard(
+    const uint64_t shard_id, const std::vector<ImageLabel>& image_labels,
+    const std::vector<std::string>& model_labels,
+    const ImagenetModelEvaluator::Params& params,
+    ImagenetModelEvaluator::Observer* observer, int num_ranks,
+    const tflite::evaluation::DelegateProviders* delegate_providers) {
   tflite::evaluation::EvaluationStageConfig eval_config;
   eval_config.set_name("image_classification");
   auto* classification_params = eval_config.mutable_specification()
@@ -176,19 +171,13 @@ TfLiteStatus EvaluateModelForShard(const uint64_t shard_id,
   auto* inference_params = classification_params->mutable_inference_params();
   inference_params->set_model_file_path(params.model_file_path);
   inference_params->set_num_threads(params.num_interpreter_threads);
-  if (params.delegate == kNnapiDelegate) {
-    inference_params->set_delegate(TfliteInferenceParams::NNAPI);
-  } else if (params.delegate == kGpuDelegate) {
-    inference_params->set_delegate(TfliteInferenceParams::GPU);
-  }
+  inference_params->set_delegate(
+      tflite::evaluation::ParseStringToDelegateType(params.delegate));
   classification_params->mutable_topk_accuracy_eval_params()->set_k(num_ranks);
 
   tflite::evaluation::ImageClassificationStage eval(eval_config);
   eval.SetAllLabels(model_labels);
-  TF_LITE_ENSURE_STATUS(eval.Init());
-
-  TF_LITE_ENSURE_STATUS(tflite::evaluation::ApplyCustomDelegates(
-      params.delegate, params.num_interpreter_threads, &eval));
+  TF_LITE_ENSURE_STATUS(eval.Init(delegate_providers));
 
   for (const auto& image_label : image_labels) {
     eval.SetInputs(image_label.image, image_label.label);
@@ -205,7 +194,8 @@ TfLiteStatus EvaluateModelForShard(const uint64_t shard_id,
   return kTfLiteOk;
 }
 
-TfLiteStatus ImagenetModelEvaluator::EvaluateModel() const {
+TfLiteStatus ImagenetModelEvaluator::EvaluateModel(
+    const tflite::evaluation::DelegateProviders* delegate_providers) const {
   const std::string data_path = tflite::evaluation::StripTrailingSlashes(
                                     params_.ground_truth_images_path) +
                                 "/";
@@ -266,9 +256,10 @@ TfLiteStatus ImagenetModelEvaluator::EvaluateModel() const {
     const uint64_t shard_id = i + 1;
     shard_id_image_count_map[shard_id] = image_label.size();
     auto func = [shard_id, &image_label, &model_labels, this, &observer,
-                 &all_okay]() {
+                 &all_okay, delegate_providers]() {
       if (EvaluateModelForShard(shard_id, image_label, model_labels, params_,
-                                &observer, params_.num_ranks) != kTfLiteOk) {
+                                &observer, params_.num_ranks,
+                                delegate_providers) != kTfLiteOk) {
         all_okay = false;
       }
     };

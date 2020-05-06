@@ -45,7 +45,7 @@ and the following optional parameters:
     The number of images to process, if 0, all images in the directory are
     processed otherwise only num_images will be processed.
 
-*   `num_threads`: `int` (default=4) \
+*   `num_eval_threads`: `int` (default=4) \
     The number of threads to use for evaluation. Note: This does not change the
     number of TFLite Interpreter threads, but shards the dataset to speed up
     evaluation.
