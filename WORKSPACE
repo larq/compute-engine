@@ -55,10 +55,10 @@ arm_compiler_configure(
 #    reliable downloads.
 http_archive(
     name = "org_tensorflow",
-    sha256 = "4fe8b6cc5a863a998e68f38de08348095084bd23bb54276da35ce3fcc7c3ca5a",
-    strip_prefix = "tensorflow-2.2.0-rc4",
+    sha256 = "69cd836f87b8c53506c4f706f655d423270f5a563b76dc1cfa60fbc3184185a3",
+    strip_prefix = "tensorflow-2.2.0",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/v2.2.0-rc4.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/v2.2.0.tar.gz",
     ],
 )
 
