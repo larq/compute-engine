@@ -38,7 +38,7 @@ struct BGemmImplUsingRuy {
     // getting ruy context
     auto ruy_context = context->ruy_context();
 
-    // Set up the matrix layouts and spec.
+    // Set up the matrix layouts and mul_params.
     ruy::Matrix<LhsScalar> lhs;
     ruy::MakeSimpleLayout(lhs_params.rows, lhs_params.cols,
                           ruy::Order::kRowMajor, &lhs.layout);
@@ -52,8 +52,8 @@ struct BGemmImplUsingRuy {
     rhs.data = rhs_data;
     dst.data = dst_data;
 
-    BinaryBasicSpec<AccumScalar, DstScalar> spec;
-    spec.output_transform = output_transform;
+    BinaryMulParams<AccumScalar, DstScalar> mul_params;
+    mul_params.output_transform = output_transform;
 
     // The allocator is used to allocate memory for pre-packed matrices
     ruy::Allocator allocator;
@@ -104,7 +104,7 @@ struct BGemmImplUsingRuy {
 
     ruy::TrMulParams binary_trmul_params;
     CreateBinaryTrMulParams<BGemmCompiledPaths>(
-        transposed_lhs, rhs, spec, ruy_context, &dst, bgemm_runtime_path,
+        transposed_lhs, rhs, mul_params, ruy_context, &dst, bgemm_runtime_path,
         &binary_trmul_params);
 
     // pre-pack the lhs and rhs matrices
