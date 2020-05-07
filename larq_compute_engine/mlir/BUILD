@@ -13,7 +13,7 @@ gentbl(
         ("-gen-op-defs", "ir/lce_ops.cc.inc"),
         ("-gen-op-doc", "g3doc/lce_ops.md"),
     ],
-    tblgen = "@local_config_mlir//:mlir-tblgen",
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "ir/lce_ops.td",
     td_srcs = [
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
@@ -25,7 +25,7 @@ gentbl(
     tbl_outs = [
         ("-gen-rewriters", "transforms/generated_prepare.inc"),
     ],
-    tblgen = "@local_config_mlir//:mlir-tblgen",
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/prepare_patterns.td",
     td_srcs = [
         "ir/lce_ops.td",
@@ -41,13 +41,13 @@ gentbl(
     tbl_outs = [
         ("-gen-rewriters", "transforms/generated_optimize.inc"),
     ],
-    tblgen = "@local_config_mlir//:mlir-tblgen",
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/optimize_patterns.td",
     td_srcs = [
         "ir/lce_ops.td",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
-        "@local_config_mlir//:StdOpsTdFiles",
+        "@llvm-project//mlir:StdOpsTdFiles",
     ],
 )
 
@@ -106,8 +106,11 @@ cc_library(
 )
 
 # This is part of @org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_dialect_passes
-# which includes most of TensorFlow. We extract this single target to keep
-# binary size and build time manageable.
+# which includes a lot of unnecessary dependencies. We extract this single
+# target to keep binary size and build time manageable.
+# TODO(lgeiger): Switch to upstream target once
+# https://github.com/tensorflow/tensorflow/commit/d8ee1d31d5618b1ca3313a18141937ec0e3d10e1
+# is released
 cc_library(
     name = "tf_decode_constant_pass",
     srcs = [
@@ -117,6 +120,9 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:transforms/decode_constant.h",
     ],
     deps = [
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Pass",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_tensor",
     ],
     alwayslink = 1,
@@ -141,8 +147,9 @@ cc_binary(
     name = "lce-tf-opt",
     deps = [
         ":lce_tfl_passes",
-        "@local_config_mlir//:MlirOptMain",
+        "@llvm-project//mlir:MlirOptMain",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_dialect_registration",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_dialect_registration",
     ],
 )
 
@@ -153,6 +160,7 @@ pybind_extension(
     deps = [
         ":lce_tfl_passes",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_translate_lib",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_graphdef",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:import_utils",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:mlir_roundtrip_flags",

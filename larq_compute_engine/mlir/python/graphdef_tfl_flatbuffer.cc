@@ -5,11 +5,13 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Module.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/pytypes.h"
 #include "pybind11/stl.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_translate.h"
+#include "tensorflow/compiler/mlir/lite/transforms/passes.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/import_model.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/mlir_roundtrip_flags.h"
 #include "tensorflow/compiler/mlir/tensorflow/utils/error_util.h"
@@ -34,15 +36,12 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
   GraphImportConfig specs;
   specs.convert_legacy_fed_inputs = true;
   specs.upgrade_legacy = true;
-  specs.add_pseudo_input_nodes = false;
   if (!ParseInputArrayInfo(input_arrays, input_dtypes, input_shapes,
                            &specs.inputs)
            .ok()) {
     throw std::runtime_error("Could not parse input arrays.");
   }
-  if (!ParseOutputArrayInfo(output_arrays, &specs.output_arrays,
-                            &specs.output_arrays_order)
-           .ok()) {
+  if (!ParseOutputArrayInfo(output_arrays, &specs.outputs).ok()) {
     throw std::runtime_error("Could not parse output arrays.");
   }
 
@@ -59,6 +58,9 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
   mlir::PassManager pm(&context);
   tensorflow::AddTFToLCETFLConversionPasses(&pm);
 
+  // Convert back to outlined while format for export back to flatbuffer.
+  pm.addPass(mlir::TFL::CreateWhileOutlinePass());
+
   if (failed(pm.run(*module.ValueOrDie()))) {
     throw std::runtime_error("Could not complete conversion passes.");
   }
@@ -67,8 +69,7 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
   std::string result;
   if (tflite::MlirToFlatBufferTranslateFunction(
           *module.ValueOrDie(), &result, /*emit_builtin_tflite_ops=*/true,
-          /*emit_select_tf_ops=*/false, /*emit_custom_ops=*/true,
-          /*add_pseudo_input_nodes=*/false)) {
+          /*emit_select_tf_ops=*/false, /*emit_custom_ops=*/true)) {
     throw std::runtime_error("Could not translate to flatbuffer.");
   }
 

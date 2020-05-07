@@ -78,6 +78,9 @@ cat << EOM >> .bazelrc
 # Disable visibility checks (works around some private deps in TensorFlow).
 build --nocheck_visibility
 
+# For compatibility with TensorFlow config
+common --experimental_repo_remote_exec
+
 build --copt=-DTFLITE_WITH_RUY
 
 # These can be activated using --config=rpi3 and --config=aarch64
@@ -147,7 +150,7 @@ build:android_x86_64 --fat_apk_cpu=x86_64
 # The default android SDK/NDK paths are hardcoded here and the user needs
 # to change the paths according to the local configuration or
 # the "install_android.sh" script
-build --action_env ANDROID_NDK_HOME="/tmp/lce_android/ndk/17.2.4988734"
+build --action_env ANDROID_NDK_HOME="/tmp/lce_android/ndk/18.1.5063045"
 build --action_env ANDROID_NDK_API_LEVEL="21"
 build --action_env ANDROID_BUILD_TOOLS_VERSION="28.0.3"
 build --action_env ANDROID_SDK_API_LEVEL="29"

@@ -27,41 +27,16 @@ package(
 )
 
 cc_library(
-    name = "image_preprocessing_stage",
-    srcs = ["image_preprocessing_stage.cc"],
-    hdrs = ["@org_tensorflow//tensorflow/lite/tools/evaluation/stages:image_preprocessing_stage.h"],
-    copts = tflite_copts(),
-    deps = [
-        "@com_google_absl//absl/base",
-        "@org_tensorflow//tensorflow/core:tflite_portable_logging",
-        "@org_tensorflow//tensorflow/core:stats_calculator_portable",
-        "@org_tensorflow//tensorflow/lite/profiling:time",
-        "@org_tensorflow//tensorflow/lite/tools/evaluation:evaluation_stage",
-        "@org_tensorflow//tensorflow/lite/kernels/internal:reference_base",
-        "@org_tensorflow//tensorflow/lite/kernels/internal:types",
-        "@org_tensorflow//tensorflow/lite/tools/evaluation/proto:evaluation_config_cc_proto",
-        "@org_tensorflow//tensorflow/lite/tools/evaluation/proto:evaluation_stages_cc_proto",
-    ] + select({
-        "@org_tensorflow//tensorflow:android": [
-            "@org_tensorflow//tensorflow/core:android_jpeg_internal",
-        ],
-        "//conditions:default": [
-            "@org_tensorflow//tensorflow/core:jpeg_internal",
-        ],
-    }),
-)
-
-cc_library(
     name = "tflite_inference_stage",
     srcs = ["tflite_inference_stage.cc"],
     hdrs = ["@org_tensorflow//tensorflow/lite/tools/evaluation/stages:tflite_inference_stage.h"],
     copts = tflite_copts(),
     deps = [
         "//larq_compute_engine/tflite/kernels:lce_op_kernels",
-        "@org_tensorflow//tensorflow/core:stats_calculator_portable",
         "@org_tensorflow//tensorflow/core:tflite_portable_logging",
+        "@org_tensorflow//tensorflow/core/util:stats_calculator_portable",
         "@org_tensorflow//tensorflow/lite:framework",
-        "@org_tensorflow//tensorflow/lite/c:c_api_internal",
+        "@org_tensorflow//tensorflow/lite/c:common",
         "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
         "@org_tensorflow//tensorflow/lite/profiling:time",
         "@org_tensorflow//tensorflow/lite/tools/evaluation:evaluation_stage",
@@ -73,17 +48,17 @@ cc_library(
 
 cc_library(
     name = "image_classification_stage",
-    srcs = ["@org_tensorflow//tensorflow/lite/tools/evaluation/stages:image_classification_stage.cc"],
+    srcs = ["image_classification_stage.cc"],
     hdrs = ["@org_tensorflow//tensorflow/lite/tools/evaluation/stages:image_classification_stage.h"],
     copts = tflite_copts(),
     deps = [
-        ":image_preprocessing_stage",
         ":tflite_inference_stage",
         "@org_tensorflow//tensorflow/core:tflite_portable_logging",
         "@org_tensorflow//tensorflow/lite/tools/evaluation:evaluation_stage",
         "@org_tensorflow//tensorflow/lite/tools/evaluation:utils",
         "@org_tensorflow//tensorflow/lite/tools/evaluation/proto:evaluation_config_cc_proto",
         "@org_tensorflow//tensorflow/lite/tools/evaluation/proto:evaluation_stages_cc_proto",
+        "@org_tensorflow//tensorflow/lite/tools/evaluation/stages:image_preprocessing_stage",
         "@org_tensorflow//tensorflow/lite/tools/evaluation/stages:topk_accuracy_eval_stage",
     ],
 )

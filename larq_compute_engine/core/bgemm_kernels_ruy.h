@@ -3,6 +3,7 @@
 
 #include "larq_compute_engine/core/bgemm_functor.h"
 #include "tensorflow/lite/experimental/ruy/platform.h"
+#include "tensorflow/lite/experimental/ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/experimental/ruy/ruy.h"
 
 namespace compute_engine {
@@ -60,7 +61,7 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
     RUY_DCHECK_LE(clamped_end_col, end_col);
     RUY_DCHECK_LE(end_col - clamped_end_col, RhsLayout::kCols);
 
-    gemmlowp::ScopedProfilingLabel label("Binary Kernel (Standard Cpp)");
+    ruy::profiler::ScopeLabel label("Binary Kernel (Standard Cpp)");
     const int depth = lhs.layout.rows;
     for (int i = start_row; i < clamped_end_row; i++) {
       for (int j = start_col; j < clamped_end_col; j++) {
@@ -133,7 +134,7 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int32_t,
 
     RUY_DCHECK_EQ(dst->layout.order, Order::kColMajor);
 
-    gemmlowp::ScopedProfilingLabel label(
+    ruy::profiler::ScopeLabel label(
         "Binary Kernel (Standard Cpp) Bitpacked Output.");
 
     const int depth = lhs.layout.rows;

@@ -69,6 +69,30 @@ func @fuse_relu_into_bconv2d(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16x3x
   // CHECK-NEXT: return %0
 }
 
+// CHECK-LABEL: @fuse_relu6_into_bconv2d
+func @fuse_relu6_into_bconv2d(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16x3x3x3xf32>) -> tensor<256x30x30x16xf32> {
+  %post_activation_multiplier = constant dense<1.0> : tensor<16xf32>
+  %post_activation_bias = constant dense<0.0> : tensor<16xf32>
+  %0 = "tf.LceBconv2d"(%arg0, %arg1, %post_activation_multiplier, %post_activation_bias) {activation = "NONE", data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x30x30x16xf32>
+  %1 = "tfl.relu6"(%0) : (tensor<256x30x30x16xf32>) -> tensor<256x30x30x16xf32>
+  return %1 : tensor<256x30x30x16xf32>
+
+  // CHECK: %0 = "tf.LceBconv2d"(%arg0, %arg1, %cst, %cst_0) {activation = "RELU6", data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", strides = [1, 1, 1, 1]}
+  // CHECK-NEXT: return %0
+}
+
+// CHECK-LABEL: @fuse_relu1_into_bconv2d
+func @fuse_relu1_into_bconv2d(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16x3x3x3xf32>) -> tensor<256x30x30x16xf32> {
+  %post_activation_multiplier = constant dense<1.0> : tensor<16xf32>
+  %post_activation_bias = constant dense<0.0> : tensor<16xf32>
+  %0 = "tf.LceBconv2d"(%arg0, %arg1, %post_activation_multiplier, %post_activation_bias) {activation = "NONE", data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x30x30x16xf32>
+  %1 = "tfl.relu_n1_to_1"(%0) : (tensor<256x30x30x16xf32>) -> tensor<256x30x30x16xf32>
+  return %1 : tensor<256x30x30x16xf32>
+
+  // CHECK: %0 = "tf.LceBconv2d"(%arg0, %arg1, %cst, %cst_0) {activation = "RELU_N1_TO_1", data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", strides = [1, 1, 1, 1]}
+  // CHECK-NEXT: return %0
+}
+
 // CHECK-LABEL: @fuse_relu_into_bconv2d_padding_same
 func @fuse_relu_into_bconv2d_padding_same(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16x3x3x3xf32>) -> tensor<256x32x32x16xf32> {
   %post_activation_multiplier = constant dense<1.0> : tensor<16xf32>
