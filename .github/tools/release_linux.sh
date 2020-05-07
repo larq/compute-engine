@@ -6,7 +6,8 @@ add-apt-repository -y ppa:deadsnakes/ppa
 
 apt-get -y -qq update
 
-apt-get -y -qq install python${PYTHON_VERSION}-dev python${PYTHON_VERSION}-distutils --no-install-recommends
+apt-get -y -qq install python${PYTHON_VERSION}-dev --no-install-recommends
+apt-get -y -qq install python${PYTHON_VERSION}-distutils --no-install-recommends || true
 ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python
 ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python3
 
