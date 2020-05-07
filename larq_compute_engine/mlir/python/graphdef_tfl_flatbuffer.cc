@@ -41,6 +41,7 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
     const std::vector<string>& input_dtypes,
     const std::vector<std::vector<int>>& input_shapes,
     const std::vector<string>& output_arrays, const bool should_quantize,
+    const pybind11::object& default_ranges,
     const bool experimental_enable_bitpacked_activations) {
   GraphDef graphdef;
   if (!tensorflow::LoadProtoFromBuffer(std::string(graphdef_bytes), &graphdef)
@@ -79,6 +80,11 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
       // Input inference type is DT_FLOAT, so set the default input ranges
       // which default to mean=0.0 and std=1.0.
       quant_specs.input_ranges.push_back({-128.0, 127.0});
+    }
+    if (!default_ranges.is_none()) {
+      quant_specs.inference_input_type = tensorflow::DT_QINT8;
+      quant_specs.default_ranges =
+          default_ranges.cast<std::pair<double, double>>();
     }
   }
   mlir::PassManager pm(&context);

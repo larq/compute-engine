@@ -25,6 +25,7 @@ class TestConverter(unittest.TestCase):
             [[1, 224, 224, 3]],
             ["Identity"],
             False,
+            None,
             False,
         )
 
