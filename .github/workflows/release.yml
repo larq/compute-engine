@@ -5,6 +5,9 @@ on:
     types: [published]
     tags:
       - v*
+  push:
+    branches:
+      - "releases/nightly"
 
 jobs:
   macos-release-wheel:
@@ -73,6 +76,7 @@ jobs:
 
   upload-wheels:
     name: Publish wheels to PyPi
+    if: github.event_name == 'release'
     needs: [manylinux-release-wheel, macos-release-wheel]
     runs-on: ubuntu-latest
     steps:
