@@ -45,9 +45,11 @@ INCLUDES := \
 -I$(TF_MAKEFILE_DIR)/downloads/eigen \
 -I$(TF_MAKEFILE_DIR)/downloads/absl \
 -I$(TF_MAKEFILE_DIR)/downloads/gemmlowp \
+-I$(TF_MAKEFILE_DIR)/downloads/ruy \
 -I$(TF_MAKEFILE_DIR)/downloads/neon_2_sse \
 -I$(TF_MAKEFILE_DIR)/downloads/farmhash/src \
--I$(TF_MAKEFILE_DIR)/downloads/flatbuffers/include
+-I$(TF_MAKEFILE_DIR)/downloads/flatbuffers/include \
+-I$(TF_MAKEFILE_DIR)/downloads/fp16/include
 # This is at the end so any globally-installed frameworks like protobuf don't
 # override local versions in the source tree.
 INCLUDES += -I/usr/local/include
@@ -55,10 +57,8 @@ INCLUDES += -I/usr/local/include
 # There are no rules for compiling objects for the host system (since we don't
 # generate things like the protobuf compiler that require that), so all of
 # these settings are for the target compiler.
-CXXFLAGS := -O3 -DNDEBUG -fPIC
-CXXFLAGS += $(EXTRA_CXXFLAGS)
-CFLAGS := ${CXXFLAGS}
-CXXFLAGS += --std=c++11
+CFLAGS := -O3 -DNDEBUG -fPIC
+CXXFLAGS := $(CFLAGS) --std=c++11 $(EXTRA_CXXFLAGS)
 LDOPTS := -L/usr/local/lib
 ARFLAGS := -r
 TARGET_TOOLCHAIN_PREFIX :=
@@ -90,7 +90,8 @@ LQCE_EXAMPLE_SRCS := \
 include $(wildcard $(TF_MAKEFILE_DIR)/targets/*_makefile.inc)
 
 # Where compiled objects are stored.
-GENDIR := $(TF_MAKEFILE_DIR)/gen/$(TARGET)_$(TARGET_ARCH)/
+TARGET_OUT_DIR ?= $(TARGET)_$(TARGET_ARCH)
+GENDIR := $(TF_MAKEFILE_DIR)/gen/$(TARGET_OUT_DIR)/
 OBJDIR := $(GENDIR)obj/
 LIBDIR := $(GENDIR)lib/
 BINDIR := $(GENDIR)bin/
@@ -110,6 +111,10 @@ LQCE_EXAMPLE_OBJS := $(addprefix $(OBJDIR), \
 $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LQCE_EXAMPLE_SRCS))))
 
 # For normal manually-created TensorFlow Lite C++ source files.
+$(OBJDIR)%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
 $(OBJDIR)%.o: %.cc
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
@@ -130,7 +135,7 @@ $(LIB_PATH): $(LIB_OBJS)
 	$(AR) $(ARFLAGS) $(LIB_PATH) $(LIB_OBJS)
 	# Move the original register.o to the end so that
 	# our version, register_lqce.o, has precedence
-	$(AR) -m $(LIB_PATH) register.o
+	$(AR) -d $(LIB_PATH) register.o
 
 # Make sure benchmark_lib depends on lib_path so that the access-times are correct.
 # If not, the tflite Makefile will rebuild it
@@ -138,7 +143,7 @@ $(BENCHMARK_LIB): $(LIB_PATH) $(LIB_OBJS)
 	@mkdir -p $(dir $@)
 	$(AR) $(ARFLAGS) $(BENCHMARK_LIB) $(LIB_OBJS)
 	# Move the original register.o to the end
-	$(AR) -m $(BENCHMARK_LIB) register.o
+	$(AR) -d $(BENCHMARK_LIB) register.o
 
 $(LQCE_EXAMPLE_BINARY): $(LQCE_EXAMPLE_OBJS) $(LIB_PATH)
 	@mkdir -p $(dir $@)
