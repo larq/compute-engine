@@ -48,10 +48,10 @@ def convert_keras_model(model: tf.keras.Model) -> bytes:
         ```
 
     # Arguments
-    model: A [`tf.keras.Model`](https://www.tensorflow.org/api_docs/python/tf/keras/Model) to convert.
+        model: The model to convert.
 
     # Returns
-    The converted data in serialized format.
+        The converted data in serialized format.
     """
     if not tf.executing_eagerly():
         raise RuntimeError(
