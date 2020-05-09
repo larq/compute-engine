@@ -32,7 +32,7 @@ jobs:
 
           ./configure.sh
 
-          bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13
+          bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13
           bazel-bin/build_pip_pkg artifacts --plat-name macosx_10_13_x86_64
 
           for f in artifacts/*.whl; do
