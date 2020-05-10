@@ -808,17 +808,15 @@ TfLiteStatus EvalChooseKernelType(TfLiteContext* context, TfLiteNode* node,
                                   TfLiteBConv2DParams* params) {
   if (kernel_type == KernelType::kRuyOptimized) {
 #if RUY_PLATFORM(ARM_64)
-    // On 64 bit Arm only there is an optimised kernel for 64-bit bitpacking,
-    // float output, and 16-bit accumulators. It is safe to use this without
-    // risk of overflow as long as the maximum value of the convolution (filter
-    // height * filter width * input channels, plus some overhead to account for
-    // potential padding) is less than 2^16.
-    //     We will almost always take this path: for a 3x3 filter there would
-    // need to be > 7000 input channels to present an overflow risk.
+    // On 64 bit Arm only there is an optimised kernel for 16-bit accumulators
+    // and float output. It is safe to use this without risk of overflow as long
+    // as the maximum value of the convolution (filter height * filter width *
+    // input channels, plus some overhead to account for potential padding) is
+    // less than 2^16. We will almost always take this path: for a 3x3 filter
+    // there would need to be > 7000 input channels to present an overflow risk.
     const int depth =
         params->filter_height * params->filter_width * params->channels_in;
-    if (std::is_same<TBitpacked, std::uint64_t>::value &&
-        std::is_same<DstScalar, float>::value && depth + 512 < 1 << 16) {
+    if (std::is_same<DstScalar, float>::value && depth + 512 < 1 << 16) {
       EvalOpt<SrcScalar, TBitpacked, std::int16_t, DstScalar>(context, node,
                                                               params);
       return kTfLiteOk;

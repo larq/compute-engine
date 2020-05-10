@@ -739,7 +739,7 @@ INSTANTIATE_TEST_SUITE_P(
     TestParam::TestNameSuffix);
 
 // Separately, for 64-bit optimised kernels only, test a very large input
-// channels and filter size that would overflow 16-bit accumulators (to check
+// channel and filter size that would overflow 16-bit accumulators (to check
 // that we successfully fall back to the 32-bit accumulator kernels).
 INSTANTIATE_TEST_SUITE_P(
     OptimizedKernel16BitOverflowTest, BConv2DOpTest,
