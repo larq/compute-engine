@@ -33,8 +33,10 @@ def : Pat<(TF_Conv2DOp (TF_LceBsignOp $input), (ConstantOp $filter), $strides, $
             (TF_TransposeOp (TF_DivOp (ConstantOp $filter), (ConstantOp (GetScaleVector $filter))), (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
             (ConstantOp (GetScaleVector $filter)),
             (ConstantOp (GetConstantVector<"0.0f"> $filter)),
-            $strides, $padding, ConstantAttr<I32Attr, "0">, $data_format,
-            $dilations, ConstantAttr<StrAttr, "OHWI">, TFL_AF_None),
+            ConstantAttr<I32Attr, "-1">, $strides, $padding,
+            ConstantAttr<I32Attr, "0">, $data_format, $dilations,
+            ConstantAttr<StrAttr, "OHWI">, ConstantAttr<BoolAttr, "false">,
+            ConstantAttr<BoolAttr, "false">, TFL_AF_None),
           [(BinaryFilter $filter)], (addBenefit 90)>;
 
 def ConstFloatValueIsOne : Constraint<
@@ -52,12 +54,15 @@ def : Pat<(TF_Conv2DOp: $output
             (TF_TransposeOp (TF_DivOp (ConstantOp $filter), (ConstantOp (GetScaleVector $filter))), (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
             (ConstantOp (GetScaleVector $filter)),
             (ConstantOp (GetConstantVector<"0.0f"> $filter)),
+            ConstantAttr<I32Attr, "-1">,
             $strides,
             ConstantAttr<StrAttr, "SAME">,
             ConstantAttr<I32Attr, "1">,
             $data_format,
             $dilations,
             ConstantAttr<StrAttr, "OHWI">,
+            ConstantAttr<BoolAttr, "false">,
+            ConstantAttr<BoolAttr, "false">,
             TFL_AF_None),
           [(BinaryFilter $filter),
            (ConstFloatValueIsOne $pad_values),

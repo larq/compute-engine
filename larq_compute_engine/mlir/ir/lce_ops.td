@@ -50,12 +50,15 @@ TODO
     TensorOf<[F32]>:$post_activation_multiplier,
     TensorOf<[F32]>:$post_activation_bias,
 
+    DefaultValuedAttr<I32Attr, "-1">:$channels_in,
     I64ArrayAttr:$strides,
     TF_AnyStrAttrOf<["SAME", "VALID"]>:$padding,
     DefaultValuedAttr<I32Attr, "0">:$pad_values,
     DefaultValuedAttr<TF_ConvnetDataFormatAttr, "NHWC">:$data_format,
     DefaultValuedAttr<I64ArrayAttr, "{1, 1, 1, 1}">:$dilations,
     DefaultValuedAttr<TF_AnyStrAttrOf<["OHWI", "OHWI_PACKED"]>, "OHWI">:$filter_format,
+    DefaultValuedAttr<BoolAttr, "false">:$read_bitpacked_input,
+    DefaultValuedAttr<BoolAttr, "false">:$write_bitpacked_output,
     TFL_AFAttr:$activation
   );
 
