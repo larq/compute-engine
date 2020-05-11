@@ -84,7 +84,7 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
         bconv_op.read_bitpacked_input())
       return matchFailure();
 
-    if (bconv_input_op.padding() == "SAME" && bconv_input_op.pad_values() == 0)
+    if (bconv_input_op.padding() == "SAME" && bconv_input_op.pad_values() != 1)
       return matchFailure();
 
     const auto inner_tensor_shape =
