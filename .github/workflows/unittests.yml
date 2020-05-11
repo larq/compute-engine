@@ -40,21 +40,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends qemu-user
-      - name: Install Bazelisk
-        run: |
-          curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-linux-amd64 > bazelisk
-          chmod +x bazelisk
       - name: Configure Bazel
         run: ./configure.sh <<< $'n\n'
         shell: bash
       - name: "TF Lite Arm32: Cross-compile and run unit tests in qemu"
-        run: ./bazelisk test larq_compute_engine/tests:cc_tests_arm32_qemu --config=rpi3 --test_output=all --action_env=GTEST_FILTER="-*BigTest*"
+        run: bazelisk test larq_compute_engine/tests:cc_tests_arm32_qemu --config=rpi3 --test_output=all --action_env=GTEST_FILTER="-*BigTest*"
       - name: "TF Lite Aarch64: Cross-compile and run unit tests in qemu"
-        run: ./bazelisk test larq_compute_engine/tests:cc_tests_aarch64_qemu --config=aarch64 --test_output=all --action_env=GTEST_FILTER="-*BigTest*"
+        run: bazelisk test larq_compute_engine/tests:cc_tests_aarch64_qemu --config=aarch64 --test_output=all --action_env=GTEST_FILTER="-*BigTest*"
       - name: "Benchmark utility: check it builds successfully"
-        run: ./bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=aarch64 --compilation_mode=fastbuild
+        run: bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=aarch64 --compilation_mode=fastbuild
       - name: "ImageNet evaluation utility: check it builds successfully"
-        run: ./bazelisk build //larq_compute_engine/tflite/tools/accuracy/ilsvrc:imagenet_accuracy_eval --config=aarch64 --compilation_mode=fastbuild
+        run: bazelisk build //larq_compute_engine/tflite/tools/accuracy/ilsvrc:imagenet_accuracy_eval --config=aarch64 --compilation_mode=fastbuild
 
   MLIR:
     runs-on: ubuntu-latest
@@ -65,10 +61,6 @@ jobs:
         with:
           service_account_key: ${{ secrets.gcs_bazel_cache }}
           export_default_credentials: true
-      - name: Install Bazelisk
-        run: |
-          curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-linux-amd64 > bazelisk
-          chmod +x bazelisk
       - uses: actions/setup-python@v1
         with:
           python-version: 3.7
@@ -78,9 +70,9 @@ jobs:
       - name: Install pip dependencies
         run: pip install tensorflow==2.1.0 larq~=0.9.4 larq_zoo==1.0.0 pytest tensorflow_datasets==3.1.0 --no-cache-dir
       - name: Run FileCheck tests
-        run: ./bazelisk test larq_compute_engine/mlir/tests:all --test_output=all --distinct_host_configuration=false $([ -z "$GOOGLE_APPLICATION_CREDENTIALS" ] || echo "--remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu --google_default_credentials")
+        run: bazelisk test larq_compute_engine/mlir/tests:all --test_output=all --distinct_host_configuration=false $([ -z "$GOOGLE_APPLICATION_CREDENTIALS" ] || echo "--remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu --google_default_credentials")
       - name: Run End2End tests
-        run: ./bazelisk test larq_compute_engine/tests:end2end_test --test_output=all --distinct_host_configuration=false $([ -z "$GOOGLE_APPLICATION_CREDENTIALS" ] || echo "--remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu --google_default_credentials")
+        run: bazelisk test larq_compute_engine/tests:end2end_test --test_output=all --distinct_host_configuration=false $([ -z "$GOOGLE_APPLICATION_CREDENTIALS" ] || echo "--remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu --google_default_credentials")
 
   ConverterPython:
     runs-on: ubuntu-latest
@@ -104,10 +96,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-      - name: Install Bazelisk
-        run: |
-          curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-linux-amd64 > bazelisk
-          chmod +x bazelisk
       - uses: actions/cache@v1
         id: cache
         with:
@@ -120,4 +108,4 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./third_party/install_android.sh
       - name: Build LCE AAR
-        run: BUILDER=./bazelisk ./larq_compute_engine/tflite/java/build_lce_aar.sh
+        run: BUILDER=bazelisk ./larq_compute_engine/tflite/java/build_lce_aar.sh
