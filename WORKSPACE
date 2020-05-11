@@ -25,15 +25,14 @@ http_archive(
 )
 
 http_archive(
-    # This is the latest `aarch64-linux-gnu` compiler provided by ARM
+    # This is the latest `aarch64-none-linux-gnu` compiler provided by ARM
     # See https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a/downloads
-    # Download size: 260 MB compressed, 1.5 GB uncompressed
-    # The archive contains GCC version 8.3.0
+    # The archive contains GCC version 9.2.1
     name = "aarch64_compiler",
     build_file = "//third_party:arm_compiler.BUILD",
-    sha256 = "8ce3e7688a47d8cd2d8e8323f147104ae1c8139520eca50ccf8a7fa933002731",
-    strip_prefix = "gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu/",
-    url = "https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu.tar.xz?revision=2e88a73f-d233-4f96-b1f4-d8b36e9bb0b9&la=en&hash=167687FADA00B73D20EED2A67D0939A197504ACD",
+    sha256 = "8dfe681531f0bd04fb9c53cf3c0a3368c616aa85d48938eebe2b516376e06a66",
+    strip_prefix = "gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu",
+    urls = ["https://developer.arm.com/-/media/Files/downloads/gnu-a/9.2-2019.12/binrel/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu.tar.xz"],
 )
 
 load("//third_party/toolchains/cpus/arm:arm_compiler_configure.bzl", "arm_compiler_configure")

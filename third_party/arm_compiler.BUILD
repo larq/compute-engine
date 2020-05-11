@@ -53,9 +53,9 @@ filegroup(
 filegroup(
     name = "aarch64_compiler_pieces",
     srcs = glob([
-        "aarch64-linux-gnu/**",
+        "aarch64-none-linux-gnu/**",
         "libexec/**",
-        "lib/gcc/aarch64-linux-gnu/**",
+        "lib/gcc/aarch64-none-linux-gnu/**",
         "include/**",
     ]),
 )
