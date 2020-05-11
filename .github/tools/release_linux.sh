@@ -32,7 +32,7 @@ python -m pip install numpy six --no-cache-dir
 yes | ./configure.sh
 
 # Build
-bazelisk build :build_pip_pkg --copt=-fvisibility=hidden
+bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --distinct_host_configuration=false
 
 # Package Whl
 bazel-bin/build_pip_pkg artifacts
