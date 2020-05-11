@@ -155,46 +155,45 @@ func @bitpack_bconv2d_filters(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16xf
 }
 
 // CHECK-LABEL: @bitpack_activations_between_two_bconv2ds_valid_padding
-func @bitpack_activations_between_two_bconv2ds_valid_padding(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<65x3x3x3xf32>, %arg2: tensor<8x3x3x65xf32>) -> tensor<256x28x28x8xf32> {
-  %post_activation_multiplier_1 = constant dense<3.14> : tensor<65xf32>
-  %post_activation_bias_1 = constant dense<1.5> : tensor<65xf32>
-  %post_activation_multiplier_2 = constant dense<[1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0]> : tensor<8xf32>
-  %post_activation_bias_2 = constant dense<-1.5> : tensor<8xf32>
-  %0 = "tf.LceBconv2d"(%arg0, %arg1, %post_activation_multiplier_1, %post_activation_bias_1) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x30x30x65xf32>
-  %1 = "tf.LceBconv2d"(%0, %arg2, %post_activation_multiplier_2, %post_activation_bias_2) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x30x30x65xf32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x28x28x8xf32>
+func @bitpack_activations_between_two_bconv2ds_valid_padding(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<65x3x3x3xf32>, %arg2: tensor<65xf32>, %arg3: tensor<65xf32>, %arg4: tensor<8x3x3x65xf32>, %arg5: tensor<8xf32>, %arg6: tensor<8xf32>) -> tensor<256x28x28x8xf32> {
+  %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x30x30x65xf32>
+  %1 = "tf.LceBconv2d"(%0, %arg4, %arg5, %arg6) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x30x30x65xf32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x28x28x8xf32>
   return %1 : tensor<256x28x28x8xf32>
 
-  // CHECK: %0 = "tf.LceBconv2d"(%arg0, %arg1, %cst, %cst_0) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = true} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x30x30x3xi32>
-  // CHECK-NEXT: %1 = "tf.LceBconv2d"(%0, %arg2, %cst_1, %cst_2) {activation = "NONE", channels_in = 65 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = true, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x30x30x3xi32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x28x28x8xf32>
+  // CHECK: %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = true} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x30x30x3xi32>
+  // CHECK-NEXT: %1 = "tf.LceBconv2d"(%0, %arg4, %arg5, %arg6) {activation = "NONE", channels_in = 65 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = true, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x30x30x3xi32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x28x28x8xf32>
   // CHECK-NEXT: return %1
 }
 
 // CHECK-LABEL: @bitpack_activations_between_two_bconv2ds_same_one_padding
-func @bitpack_activations_between_two_bconv2ds_same_one_padding(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<65x3x3x3xf32>, %arg2: tensor<8x3x3x65xf32>) -> tensor<256x30x30x8xf32> {
-  %post_activation_multiplier_1 = constant dense<2.71> : tensor<65xf32>
-  %post_activation_bias_1 = constant dense<1.5> : tensor<65xf32>
-  %post_activation_multiplier_2 = constant dense<[1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0]> : tensor<8xf32>
-  %post_activation_bias_2 = constant dense<-1.5> : tensor<8xf32>
-  %0 = "tf.LceBconv2d"(%arg0, %arg1, %post_activation_multiplier_1, %post_activation_bias_1) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 1 : i32, padding = "SAME", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x32x32x65xf32>
-  %1 = "tf.LceBconv2d"(%0, %arg2, %post_activation_multiplier_2, %post_activation_bias_2) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x32x32x65xf32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x30x30x8xf32>
+func @bitpack_activations_between_two_bconv2ds_same_one_padding(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<65x3x3x3xf32>, %arg2: tensor<65xf32>, %arg3: tensor<65xf32>, %arg4: tensor<8x3x3x65xf32>, %arg5: tensor<8xf32>, %arg6: tensor<8xf32>) -> tensor<256x30x30x8xf32> {
+  %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 1 : i32, padding = "SAME", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x32x32x65xf32>
+  %1 = "tf.LceBconv2d"(%0, %arg4, %arg5, %arg6) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x32x32x65xf32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x30x30x8xf32>
   return %1 : tensor<256x30x30x8xf32>
 
-  // CHECK: %0 = "tf.LceBconv2d"(%arg0, %arg1, %cst, %cst_0) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 1 : i32, padding = "SAME", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = true} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x32x32x3xi32>
-  // CHECK-NEXT: %1 = "tf.LceBconv2d"(%0, %arg2, %cst_1, %cst_2) {activation = "NONE", channels_in = 65 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = true, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x32x32x3xi32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x30x30x8xf32>
+  // CHECK: %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 1 : i32, padding = "SAME", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = true} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x32x32x3xi32>
+  // CHECK-NEXT: %1 = "tf.LceBconv2d"(%0, %arg4, %arg5, %arg6) {activation = "NONE", channels_in = 65 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = true, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x32x32x3xi32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x30x30x8xf32>
   // CHECK-NEXT: return %1
 }
 
 // CHECK-LABEL: @do_not_bitpack_activations_between_two_bconv2ds_same_zero_padding
-func @do_not_bitpack_activations_between_two_bconv2ds_same_zero_padding(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<65x3x3x3xf32>, %arg2: tensor<8x3x3x65xf32>) -> tensor<256x30x30x8xf32> {
-  %post_activation_multiplier_1 = constant dense<1.62> : tensor<65xf32>
-  %post_activation_bias_1 = constant dense<1.5> : tensor<65xf32>
-  %post_activation_multiplier_2 = constant dense<[1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0]> : tensor<8xf32>
-  %post_activation_bias_2 = constant dense<-1.5> : tensor<8xf32>
-  %0 = "tf.LceBconv2d"(%arg0, %arg1, %post_activation_multiplier_1, %post_activation_bias_1) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "SAME", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x32x32x65xf32>
-  %1 = "tf.LceBconv2d"(%0, %arg2, %post_activation_multiplier_2, %post_activation_bias_2) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x32x32x65xf32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x30x30x8xf32>
+func @do_not_bitpack_activations_between_two_bconv2ds_same_zero_padding(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<65x3x3x3xf32>, %arg2: tensor<65xf32>, %arg3: tensor<65xf32>, %arg4: tensor<8x3x3x65xf32>, %arg5: tensor<8xf32>, %arg6: tensor<8xf32>) -> tensor<256x30x30x8xf32> {
+  %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "SAME", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x32x32x65xf32>
+  %1 = "tf.LceBconv2d"(%0, %arg4, %arg5, %arg6) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x32x32x65xf32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x30x30x8xf32>
   return %1 : tensor<256x30x30x8xf32>
 
-  // CHECK: %0 = "tf.LceBconv2d"(%arg0, %arg1, %cst, %cst_0) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "SAME", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false}
-  // CHECK-NEXT: %1 = "tf.LceBconv2d"(%0, %arg2, %cst_1, %cst_2) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false}
+  // CHECK: %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "SAME", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false}
+  // CHECK-NEXT: %1 = "tf.LceBconv2d"(%0, %arg4, %arg5, %arg6) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false}
   // CHECK-NEXT: return %1
+}
+
+// CHECK-LABEL: @bitpack_activations_between_two_bconv2ds_same_one_padding_multiple_uses
+func @bitpack_activations_between_two_bconv2ds_same_one_padding_multiple_uses(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<65x3x3x3xf32>, %arg2: tensor<65xf32>, %arg3: tensor<65xf32>, %arg4: tensor<8x3x3x65xf32>, %arg5: tensor<8xf32>, %arg6: tensor<8xf32>) -> (tensor<256x32x32x65xf32>, tensor<256x30x30x8xf32>) {
+  %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 1 : i32, padding = "SAME", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x32x32x65xf32>
+  %1 = "tf.LceBconv2d"(%0, %arg4, %arg5, %arg6) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false} : (tensor<256x32x32x65xf32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x30x30x8xf32>
+  return %0, %1: tensor<256x32x32x65xf32>, tensor<256x30x30x8xf32>
+
+  // CHECK: %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 1 : i32, padding = "SAME", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false}
+  // CHECK-NEXT: %1 = "tf.LceBconv2d"(%0, %arg4, %arg5, %arg6) {activation = "NONE", channels_in = -1 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", read_bitpacked_input = false, strides = [1, 1, 1, 1], write_bitpacked_output = false}
+  // CHECK-NEXT: return %0, %1
 }
