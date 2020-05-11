@@ -57,8 +57,6 @@ TODO
     DefaultValuedAttr<TF_ConvnetDataFormatAttr, "NHWC">:$data_format,
     DefaultValuedAttr<I64ArrayAttr, "{1, 1, 1, 1}">:$dilations,
     DefaultValuedAttr<TF_AnyStrAttrOf<["OHWI", "OHWI_PACKED"]>, "OHWI">:$filter_format,
-    DefaultValuedAttr<BoolAttr, "false">:$read_bitpacked_input,
-    DefaultValuedAttr<BoolAttr, "false">:$write_bitpacked_output,
     TFL_AFAttr:$activation
   );
 

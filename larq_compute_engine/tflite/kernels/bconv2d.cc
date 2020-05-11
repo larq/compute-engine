@@ -122,33 +122,12 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
     return conv_params;
   }
 
-  // Reading bitpacking flags
-  if (!m["read_bitpacked_input"].IsNull() &&
-      !m["write_bitpacked_output"].IsNull()) {
-    // We need to gatekeep with a null check in case the model was converted
-    // before these flags were added to the converter.
-    conv_params->read_bitpacked_input = m["read_bitpacked_input"].AsBool();
-    conv_params->write_bitpacked_output = m["write_bitpacked_output"].AsBool();
-  } else {
-    conv_params->read_bitpacked_input = false;
-    conv_params->write_bitpacked_output = false;
-  }
-
   // If we are reading bitpacked input then both the input tensor and the
   // filters are bitpacked along the (input) channels axis. This means that we
   // cannot infer the 'true' input shape, and so we have to add an explicit
   // integer attribute to the op in the converter.
   if (!m["channels_in"].IsNull()) {
-    // Again, we need to gatekeep with a null check here.
     conv_params->channels_in = m["channels_in"].AsInt32();
-  } else if (conv_params->read_bitpacked_input) {
-    // We don't expect this branch to ever be taken because the
-    // `read_bitpacked_input` and `channels_in` attributes will be added to the
-    // converter at the same time, but just in case we should throw here.
-    context->ReportError(context,
-                         "Cannot read bitpacked input unless the `channels_in` "
-                         "attribute is set in the converter.");
-    return conv_params;
   }
 
   if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame &&
@@ -157,14 +136,6 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
     context->ReportError(
         context,
         "Fused activations are only supported with valid or one-padding.");
-    return conv_params;
-  }
-
-  if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame &&
-      conv_params->pad_value != 1 && conv_params->write_bitpacked_output) {
-    context->ReportError(context,
-                         "Writing bitpacked output is only supported with "
-                         "valid or one-padding.");
     return conv_params;
   }
 
@@ -199,6 +170,17 @@ TfLiteStatus Prepare(KernelType kernel_type,
   TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_multiplier), 1);
   TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_bias), 1);
 
+  conv_params->read_bitpacked_input = input->type == kTfLiteInt32;
+  conv_params->write_bitpacked_output = output->type == kTfLiteInt32;
+
+  if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame &&
+      conv_params->pad_value != 1 && conv_params->write_bitpacked_output) {
+    context->ReportError(context,
+                         "Writing bitpacked output is only supported with "
+                         "valid or one-padding.");
+    return kTfLiteError;
+  }
+
   // Read the input dimensions. TF Lite has the same input format as TensorFlow:
   // (B, H, W, Ci).
   conv_params->batch = input->dims->data[0];
@@ -206,6 +188,15 @@ TfLiteStatus Prepare(KernelType kernel_type,
   conv_params->input_width = input->dims->data[2];
   if (!conv_params->read_bitpacked_input) {
     conv_params->channels_in = input->dims->data[3];
+  } else if (conv_params->channels_in == 0) {
+    // We don't expect this branch to ever be taken because the `channels_in`
+    // attribute was added to the converter at the same time that support for
+    // bitpacked activations was added, but just in case we don't have a value
+    // we should throw here.
+    context->ReportError(context,
+                         "Cannot read bitpacked input unless the `channels_in` "
+                         "attribute is set in the converter.");
+    return kTfLiteError;
   }
 
   // For 8-bit quantized networks, we support both int8 and float32
@@ -224,7 +215,6 @@ TfLiteStatus Prepare(KernelType kernel_type,
 
   if (conv_params->read_bitpacked_input) {
     // The kernels support only 32-bit bitpacking when reading bitpacked input.
-    TF_LITE_ENSURE_EQ(context, input->type, kTfLiteInt32);
     conv_params->bitpacking_bitwidth = 32;
   } else {
     TF_LITE_ENSURE(context,
@@ -246,14 +236,14 @@ TfLiteStatus Prepare(KernelType kernel_type,
     conv_params->channels_in = input->dims->data[3];
   }
 
-  if (conv_params->write_bitpacked_output) {
-    TF_LITE_ENSURE_EQ(context, output->type, kTfLiteInt32);
-  } else {
+  if (!conv_params->write_bitpacked_output) {
     if (conv_params->read_bitpacked_input) {
       TF_LITE_ENSURE(context, output->type == kTfLiteInt8 ||
                                   output->type == kTfLiteFloat32);
 
     } else {
+      // We're not reading or writing bitpacked output, so if the input is
+      // float, so should the output, and likewise for int8.
       TF_LITE_ENSURE_EQ(context, output->type, input->type);
     }
   }

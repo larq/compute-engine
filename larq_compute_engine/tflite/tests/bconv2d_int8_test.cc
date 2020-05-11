@@ -22,8 +22,7 @@ TEST(BConv2DTests, Int8ErrorTest) {
         Int8_BConv2DOpModel m_lce(
             compute_engine::tflite::Register_BCONV_2D64_OPT, input_tensor,
             packed_filter_tensor, output_tensor, post_tensor, post_tensor, 64,
-            1, 1, Padding_SAME, 0, ActivationFunctionType_NONE, 1, 1, false,
-            false, 1);
+            1, 1, Padding_SAME, 0, ActivationFunctionType_NONE, 1, 1, 1);
       },
       "8-bit quantization is only supported with valid or one-padding.");
 }
@@ -48,7 +47,7 @@ TEST(BConv2DTests, Int8PostTest) {
   BConv2DOpModel<T, T, T> m_lce(
       compute_engine::tflite::Register_BCONV_2D64_OPT, input_tensor,
       packed_filter_tensor, output_tensor, post_tensor, post_tensor, 2, 1, 1,
-      Padding_VALID, 0, ActivationFunctionType_NONE, 1, 1, false, false, 1);
+      Padding_VALID, 0, ActivationFunctionType_NONE, 1, 1, 1);
 
   m_lce.SetInput({
       1, 1,   // batch = 0, y = 0, x = 0

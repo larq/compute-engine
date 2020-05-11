@@ -669,8 +669,7 @@ void runTest(const TestParam& param) {
       registration, input_tensor, packed_filter_tensor, output_tensor,
       post_tensor, post_tensor, input_depth, stride_width, stride_height,
       bconv_padding, pad_values, activation, dilation_width_factor,
-      dilation_height_factor, read_bitpacked_input, write_bitpacked_output,
-      num_threads);
+      dilation_height_factor, num_threads);
 
   // Set op parameters.
   set_lce_op_input({input_batch_count, input_height, input_width, input_depth},
@@ -721,8 +720,8 @@ TEST_P(BConv2DOpTest, ReadInt8WriteBP) {
 using ::testing::Values;
 using ::testing::ValuesIn;
 
-// For testing its convenient to first run a small test on all the different
-// types
+// For testing it's convenient to first run a small test on all the different
+// types.
 INSTANTIATE_TEST_SUITE_P(
     SmallTest, BConv2DOpTest,
     ::testing::Combine(
@@ -739,7 +738,7 @@ INSTANTIATE_TEST_SUITE_P(
     TestParam::TestNameSuffix);
 
 // The BigTest suite will be skipped in the qemu CI runs as they take more than
-// an hour
+// an hour.
 INSTANTIATE_TEST_SUITE_P(
     BigTest, BConv2DOpTest,
     ::testing::Combine(
@@ -778,11 +777,10 @@ TEST(BConv2DTests, ReluErrorTest) {
   // Test if fused ReLu throws an error in combination with zero-padding
   EXPECT_DEATH(
       {
-        FP_BConv2DOpModel m_lce(compute_engine::tflite::Register_BCONV_2D64_OPT,
-                                input_tensor, packed_filter_tensor,
-                                output_tensor, post_tensor, post_tensor, 64, 1,
-                                1, Padding_SAME, 0, ActivationFunctionType_RELU,
-                                1, 1, false, false, 1);
+        FP_BConv2DOpModel m_lce(
+            compute_engine::tflite::Register_BCONV_2D64_OPT, input_tensor,
+            packed_filter_tensor, output_tensor, post_tensor, post_tensor, 64,
+            1, 1, Padding_SAME, 0, ActivationFunctionType_RELU, 1, 1, 1);
       },
       "Fused activations are only supported with valid or one-padding.");
 
@@ -792,9 +790,9 @@ TEST(BConv2DTests, ReluErrorTest) {
       {
         Bitpacked_BConv2DOpModel m_lce(
             compute_engine::tflite::Register_BCONV_2D64_OPT, input_tensor,
-            packed_filter_tensor, output_tensor, post_tensor, post_tensor, 64,
-            1, 1, Padding_SAME, 0, ActivationFunctionType_NONE, 1, 1, false,
-            true, 1);
+            packed_filter_tensor, packed_output_tensor, post_tensor,
+            post_tensor, 64, 1, 1, Padding_SAME, 0, ActivationFunctionType_NONE,
+            1, 1, 1);
       },
       "Writing bitpacked output is only supported with valid or one-padding.");
 }

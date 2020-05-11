@@ -80,15 +80,16 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
         dyn_cast_or_null<TF::LceBconv2dOp>(bconv_input.getDefiningOp());
     if (!bconv_input_op) return matchFailure();
 
-    if (bconv_input_op.write_bitpacked_output() &&
-        bconv_op.read_bitpacked_input())
-      return matchFailure();
+    const auto inner_tensor_type = bconv_input_op.getType().cast<ShapedType>();
+
+    // If the inner tensor type is Int32, we've already applied the
+    // transformation, so return a match failure.
+    if (!inner_tensor_type.getElementType().isF32()) return matchFailure();
 
     if (bconv_input_op.padding() == "SAME" && bconv_input_op.pad_values() != 1)
       return matchFailure();
 
-    const auto inner_tensor_shape =
-        bconv_input_op.getType().cast<ShapedType>().getShape();
+    const auto inner_tensor_shape = inner_tensor_type.getShape();
     if (inner_tensor_shape.size() != 4) return matchFailure();
 
     // We use 32-bit bitpacking.
@@ -97,13 +98,13 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
     const auto channels = inner_tensor_shape[3];
     const auto packed_channels = (channels + bitwidth - 1) / bitwidth;
 
-    RankedTensorType inner_tensor_type =
+    RankedTensorType new_inner_tensor_type =
         RankedTensorType::get({inner_tensor_shape[0], inner_tensor_shape[1],
                                inner_tensor_shape[2], packed_channels},
                               rewriter.getIntegerType(bitwidth));
 
     rewriter.replaceOpWithNewOp<TF::LceBconv2dOp>(
-        bconv_input_op, inner_tensor_type, bconv_input_op.input(),
+        bconv_input_op, new_inner_tensor_type, bconv_input_op.input(),
         bconv_input_op.filter(), bconv_input_op.post_activation_multiplier(),
         bconv_input_op.post_activation_bias(),
         rewriter.getIntegerAttr(rewriter.getIntegerType(32),
@@ -115,8 +116,6 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
         rewriter.getStringAttr(bconv_input_op.data_format()),
         bconv_input_op.dilations(),
         rewriter.getStringAttr(bconv_input_op.filter_format()),
-        rewriter.getBoolAttr(bconv_input_op.read_bitpacked_input()),
-        /*write_bitpacked_output=*/rewriter.getBoolAttr(true),
         rewriter.getStringAttr(bconv_input_op.activation()));
 
     rewriter.replaceOpWithNewOp<TF::LceBconv2dOp>(
@@ -129,8 +128,6 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
                                 bconv_op.pad_values()),
         rewriter.getStringAttr(bconv_op.data_format()), bconv_op.dilations(),
         rewriter.getStringAttr(bconv_op.filter_format()),
-        /*read_bitpacked_input=*/rewriter.getBoolAttr(true),
-        rewriter.getBoolAttr(bconv_op.write_bitpacked_output()),
         rewriter.getStringAttr(bconv_op.activation()));
 
     return matchSuccess();
