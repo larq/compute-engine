@@ -204,8 +204,9 @@ TfLiteStatus Prepare(KernelType kernel_type,
   conv_params->batch = input->dims->data[0];
   conv_params->input_height = input->dims->data[1];
   conv_params->input_width = input->dims->data[2];
-  if (!conv_params->read_bitpacked_input)
+  if (!conv_params->read_bitpacked_input) {
     conv_params->channels_in = input->dims->data[3];
+  }
 
   // For 8-bit quantized networks, we support both int8 and float32
   // post_activation_ values
