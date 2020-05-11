@@ -47,16 +47,54 @@ def toy_model(**kwargs):
     return tf.keras.Model(inputs=img_input, outputs=out)
 
 
+def toy_model_sequential(**kwargs):
+    return tf.keras.models.Sequential(
+        [
+            tf.keras.layers.Input((224, 224, 3)),
+            tf.keras.layers.Conv2D(16, (3, 3), strides=(2, 2), padding="same"),
+            tf.keras.layers.BatchNormalization(
+                gamma_initializer=tf.keras.initializers.RandomNormal(1.0),
+                beta_initializer="uniform",
+            ),
+            tf.keras.layers.ReLU(),
+            lq.layers.QuantConv2D(
+                32, (3, 3), strides=(2, 2), padding="same", pad_values=1.0
+            ),
+            tf.keras.layers.BatchNormalization(
+                gamma_initializer=tf.keras.initializers.RandomNormal(1.0),
+                beta_initializer="uniform",
+            ),
+            lq.layers.QuantConv2D(
+                32, (3, 3), strides=(2, 2), padding="same", pad_values=1.0
+            ),
+            tf.keras.layers.BatchNormalization(
+                gamma_initializer=tf.keras.initializers.RandomNormal(1.0),
+                beta_initializer="uniform",
+            ),
+            lq.layers.QuantConv2D(
+                32, (3, 3), strides=(2, 2), padding="same", pad_values=1.0
+            ),
+            tf.keras.layers.BatchNormalization(
+                gamma_initializer=tf.keras.initializers.RandomNormal(1.0),
+                beta_initializer="uniform",
+            ),
+            tf.keras.layers.GlobalAvgPool2D(),
+        ]
+    )
+
+
 def preprocess(data):
     return lqz.preprocess_input(data["image"])
 
 
 @pytest.mark.parametrize(
-    "model_cls", [toy_model, lqz.sota.QuickNet],
+    "model_cls", [toy_model, toy_model_sequential, lqz.sota.QuickNet],
 )
 def test_simple_model(model_cls):
     model = model_cls(weights="imagenet")
-    model_lce = convert_keras_model(model)
+    model_lce = convert_keras_model(
+        model, experimental_enable_bitpacked_activations=True
+    )
 
     # Test on the flowers dataset
     dataset = (
