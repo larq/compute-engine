@@ -85,7 +85,7 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
     // We use 32-bit bitpacking.
     constexpr int bitwidth = 32;
 
-    // We can only apply this transformation if the inner tensor type is F32.
+    // Don't apply this transformation if the inner tensor type is already I32.
     if (inner_tensor_type.getElementType().isInteger(bitwidth))
       return matchFailure();
 
