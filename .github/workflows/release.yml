@@ -102,7 +102,7 @@ jobs:
 
   upload-wheels:
     name: Publish wheels to PyPi
-    if: github.event_name == 'release'
+    if: github.event_name != 'push'
     needs: [manylinux-release-wheel, macos-release-wheel, windows-release-wheel]
     runs-on: ubuntu-latest
     steps:
