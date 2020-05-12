@@ -698,7 +698,8 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
   }
 }
 
-template <typename SrcScalar, typename TBitpacked, typename DstScalar>
+template <typename SrcScalar, typename TBitpacked, typename AccumScalar,
+          typename DstScalar>
 void EvalOpt(TfLiteContext* context, TfLiteNode* node,
              TfLiteBConv2DParams* params) {
   OneTimeSetup<SrcScalar, TBitpacked>(context, node, params);
@@ -725,7 +726,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   GetConvParamsType(*params, op_params);
   op_params.input_offset = input->params.zero_point;
 
-  OutputTransform<std::int32_t, DstScalar> output_transform;
+  OutputTransform<AccumScalar, DstScalar> output_transform;
   GetOutputTransform(context, node, params, output_transform);
 
   // `BConv2D` wants the *unpacked* filter and output shape.
@@ -739,7 +740,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   // weights data.
   //     Likewise, we pass the original output shape even if we are going to
   // write bitpacked output directly.
-  BConv2D<SrcScalar, TBitpacked, std::int32_t, DstScalar>(
+  BConv2D<SrcScalar, TBitpacked, AccumScalar, DstScalar>(
       op_params, GetTensorShape(input), GetTensorData<SrcScalar>(input),
       packed_input_data, unpacked_filter_shape,
       reinterpret_cast<TBitpacked*>(params->filter_packed.data()),
@@ -806,7 +807,26 @@ template <KernelType kernel_type, typename SrcScalar, typename DstScalar,
 TfLiteStatus EvalChooseKernelType(TfLiteContext* context, TfLiteNode* node,
                                   TfLiteBConv2DParams* params) {
   if (kernel_type == KernelType::kRuyOptimized) {
-    EvalOpt<SrcScalar, TBitpacked, DstScalar>(context, node, params);
+#if RUY_PLATFORM(ARM_64)
+    // On 64 bit Arm only there is an optimised kernel for 64-bit bitpacking,
+    // float output, and 16-bit accumulators. It is safe to use this without
+    // risk of overflow as long as the maximum value of the convolution (filter
+    // height * filter width * input channels, plus some overhead to account for
+    // potential padding) is less than 2^16.
+    //     We will almost always take this path: for a 3x3 filter there would
+    // need to be > 7000 input channels to present an overflow risk.
+    const int depth =
+        params->filter_height * params->filter_width * params->channels_in;
+    if (std::is_same<TBitpacked, std::uint64_t>::value &&
+        std::is_same<DstScalar, float>::value && depth + 512 < 1 << 16) {
+      EvalOpt<SrcScalar, TBitpacked, std::int16_t, DstScalar>(context, node,
+                                                              params);
+      return kTfLiteOk;
+    }
+#endif
+    // In all other cases, use 32-bit accumulators.
+    EvalOpt<SrcScalar, TBitpacked, std::int32_t, DstScalar>(context, node,
+                                                            params);
     return kTfLiteOk;
   } else if (kernel_type == KernelType::kGenericRef) {
     EvalRef<SrcScalar, TBitpacked, DstScalar>(context, node, params);

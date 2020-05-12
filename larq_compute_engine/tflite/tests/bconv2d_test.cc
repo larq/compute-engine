@@ -738,6 +738,24 @@ INSTANTIATE_TEST_SUITE_P(
         ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
     TestParam::TestNameSuffix);
 
+// Separately, for 64-bit optimised kernels only, test a very large input
+// channels and filter size that would overflow 16-bit accumulators (to check
+// that we successfully fall back to the 32-bit accumulator kernels).
+INSTANTIATE_TEST_SUITE_P(
+    OptimizedKernel16BitOverflowTest, BConv2DOpTest,
+    ::testing::Combine(
+        Values(std::array<int, 4>{1, 8, 8, 2048}),  // input shape [BHWI]
+        Values(std::array<int, 3>{7, 7, 4}),        // filter shape [HWO]
+        Values(std::array<int, 2>{1, 1}),           // strides height/width
+        Values(std::array<int, 2>{1, 1}),           // dilation height/width
+        Values(Padding_VALID, Padding_ONE),         // padding
+        Values(ActivationFunctionType_NONE,
+               ActivationFunctionType_RELU),  // activation function
+        Values(1, 2),                         // number of threads
+        Values(std::pair<std::string, register_function>{
+            "BConv2D64OPT", compute_engine::tflite::Register_BCONV_2D64_OPT})),
+    TestParam::TestNameSuffix);
+
 // The BigTest suite will be skipped in the qemu CI runs as they take more than
 // an hour
 INSTANTIATE_TEST_SUITE_P(
