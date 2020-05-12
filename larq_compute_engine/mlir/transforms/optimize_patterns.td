@@ -86,7 +86,7 @@ foreach actFnPair = [[TFL_ReluOp, TFL_AF_Relu],
 
 // Bitpack weights
 def Conv2DFilter : AttrConstraint<CPred<"IsConv2DFilter($_self)">>;
-def Bitpack: NativeCodeCall<"Bitpack($_builder, $0)">;
+def Bitpack : NativeCodeCall<"Bitpack($_builder, $0)">;
 
 def : Pat<(TF_LceBconv2dOp $input, (ConstantOp Conv2DFilter:$filter),
             $post_activation_multiplier, $post_activation_bias,

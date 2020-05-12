@@ -82,8 +82,7 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
 
     const auto inner_tensor_type = bconv_input_op.getType().cast<ShapedType>();
 
-    // If the inner tensor type is Int32, we've already applied the
-    // transformation, so return a match failure.
+    // We can only apply this transformation if the inner tensor type is F32.
     if (!inner_tensor_type.getElementType().isF32()) return matchFailure();
 
     if (bconv_input_op.padding() == "SAME" && bconv_input_op.pad_values() != 1)
@@ -122,7 +121,7 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
         bconv_op, bconv_op.getType(), bconv_op.input(), bconv_op.filter(),
         bconv_op.post_activation_multiplier(), bconv_op.post_activation_bias(),
         rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                inner_tensor_shape[3]),
+                                bconv_op.channels_in()),
         bconv_op.strides(), rewriter.getStringAttr(bconv_op.padding()),
         rewriter.getIntegerAttr(rewriter.getIntegerType(32),
                                 bconv_op.pad_values()),

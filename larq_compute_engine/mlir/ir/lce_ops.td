@@ -50,7 +50,7 @@ TODO
     TensorOf<[F32]>:$post_activation_multiplier,
     TensorOf<[F32]>:$post_activation_bias,
 
-    DefaultValuedAttr<I32Attr, "-1">:$channels_in,
+    DefaultValuedAttr<I32Attr, "0">:$channels_in,
     I64ArrayAttr:$strides,
     TF_AnyStrAttrOf<["SAME", "VALID"]>:$padding,
     DefaultValuedAttr<I32Attr, "0">:$pad_values,

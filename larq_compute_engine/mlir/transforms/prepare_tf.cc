@@ -97,6 +97,14 @@ bool IsSamePadding(Attribute paddings_attr, Value input, Value output,
          paddings.getValue<int>({3, 1}) == 0;
 }
 
+// Returns the number of channels of a shaped tensor. Will fail if any other
+// type is passed.
+IntegerAttr GetNumChannels(Builder& b, Value output_val) {
+  auto output_type = output_val.getType().cast<ShapedType>();
+  auto shape_vector = output_type.getShape();
+  return b.getI32IntegerAttr(shape_vector[shape_vector.size() - 1]);
+}
+
 #include "larq_compute_engine/mlir/transforms/generated_prepare.inc"
 
 void PrepareLCE::runOnFunction() {

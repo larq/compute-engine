@@ -26,6 +26,7 @@ class I32VectorElementsAttr<int len> : ElementsAttrBase<
 class GetConstantVector<string val> : NativeCodeCall<"GetConstantVector($0, " # val # ")">;
 def BinaryFilter : Constraint<CPred<"IsBinaryFilter($0)">>;
 def GetScaleVector : NativeCodeCall<"GetScaleVector($0)">;
+def GetNumChannels : NativeCodeCall<"GetNumChannels($_builder, $0)">;
 
 def : Pat<(TF_Conv2DOp (TF_LceBsignOp $input), (ConstantOp $filter), $strides, $use_cudnn,
                        $padding, $explicit_padding, IsDataFormatNHWC: $data_format, $dilations),
@@ -33,10 +34,16 @@ def : Pat<(TF_Conv2DOp (TF_LceBsignOp $input), (ConstantOp $filter), $strides, $
             (TF_TransposeOp (TF_DivOp (ConstantOp $filter), (ConstantOp (GetScaleVector $filter))), (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
             (ConstantOp (GetScaleVector $filter)),
             (ConstantOp (GetConstantVector<"0.0f"> $filter)),
-            ConstantAttr<I32Attr, "-1">, $strides, $padding,
-            ConstantAttr<I32Attr, "0">, $data_format, $dilations,
-            ConstantAttr<StrAttr, "OHWI">, TFL_AF_None),
-          [(BinaryFilter $filter)], (addBenefit 90)>;
+            (GetNumChannels $input),
+            $strides,
+            $padding,
+            ConstantAttr<I32Attr, "0">,
+            $data_format,
+            $dilations,
+            ConstantAttr<StrAttr, "OHWI">,
+            TFL_AF_None),
+          [(BinaryFilter $filter)],
+          (addBenefit 90)>;
 
 def ConstFloatValueIsOne : Constraint<
   CPred<"$0.isa<DenseElementsAttr>() && "
@@ -53,7 +60,7 @@ def : Pat<(TF_Conv2DOp: $output
             (TF_TransposeOp (TF_DivOp (ConstantOp $filter), (ConstantOp (GetScaleVector $filter))), (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
             (ConstantOp (GetScaleVector $filter)),
             (ConstantOp (GetConstantVector<"0.0f"> $filter)),
-            ConstantAttr<I32Attr, "-1">,
+            (GetNumChannels $input),
             $strides,
             ConstantAttr<StrAttr, "SAME">,
             ConstantAttr<I32Attr, "1">,
