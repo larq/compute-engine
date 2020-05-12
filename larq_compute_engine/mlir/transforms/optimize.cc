@@ -82,17 +82,18 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
 
     const auto inner_tensor_type = bconv_input_op.getType().cast<ShapedType>();
 
+    // We use 32-bit bitpacking.
+    constexpr int bitwidth = 32;
+
     // We can only apply this transformation if the inner tensor type is F32.
-    if (!inner_tensor_type.getElementType().isF32()) return matchFailure();
+    if (inner_tensor_type.getElementType().isInteger(bitwidth))
+      return matchFailure();
 
     if (bconv_input_op.padding() == "SAME" && bconv_input_op.pad_values() != 1)
       return matchFailure();
 
     const auto inner_tensor_shape = inner_tensor_type.getShape();
     if (inner_tensor_shape.size() != 4) return matchFailure();
-
-    // We use 32-bit bitpacking.
-    constexpr int bitwidth = 32;
 
     const auto channels = inner_tensor_shape[3];
     const auto packed_channels = (channels + bitwidth - 1) / bitwidth;
