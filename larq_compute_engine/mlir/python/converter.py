@@ -37,7 +37,11 @@ def concrete_function_from_keras_model(model):
     return func.get_concrete_function()
 
 
-def convert_keras_model(model: tf.keras.Model) -> bytes:
+def convert_keras_model(
+    model: tf.keras.Model,
+    *,  # Require remaining arguments to be keyword-only.
+    experimental_enable_bitpacked_activations: bool = False,
+) -> bytes:
     """Converts a Keras model to TFLite flatbuffer.
 
     !!! example
@@ -49,6 +53,10 @@ def convert_keras_model(model: tf.keras.Model) -> bytes:
 
     # Arguments
         model: The model to convert.
+        experimental_enable_bitpacked_activations: Enable an experimental
+            converter optimisation that attempts to reduce intermediate
+            activation memory usage by bitpacking the activation tensor between
+            consecutive binary convolutions where possible.
 
     # Returns
         The converted data in serialized format.
@@ -100,4 +108,5 @@ def convert_keras_model(model: tf.keras.Model) -> bytes:
         [DataType.Name(tensor.dtype.as_datatype_enum) for tensor in input_tensors],
         [tensor.shape.as_list() for tensor in input_tensors],
         [get_tensor_name(tensor) for tensor in output_tensors],
+        experimental_enable_bitpacked_activations,
     )

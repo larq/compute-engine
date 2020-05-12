@@ -19,7 +19,7 @@ class TestConverter(unittest.TestCase):
             model = lqz.sota.QuickNet(weights=None)
             convert_keras_model(model)
         mocked_converter.assert_called_once_with(
-            mock.ANY, ["input_1"], ["DT_FLOAT"], [[1, 224, 224, 3]], ["Identity"],
+            mock.ANY, ["input_1"], ["DT_FLOAT"], [[1, 224, 224, 3]], ["Identity"], False
         )
 
 

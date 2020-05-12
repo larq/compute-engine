@@ -35,7 +35,6 @@ class BaseBConv2DOpModel : public SingleOpModel {
       enum Padding padding = Padding_VALID, int pad_values = 0,
       enum ActivationFunctionType activation = ActivationFunctionType_NONE,
       int dilation_width_factor = 1, int dilation_height_factor = 1,
-      bool read_bitpacked_input = false, bool write_bitpacked_output = false,
       int num_threads = -1) {
     input_ = AddInput(input);
     filter_ = AddInput(filter);
@@ -64,8 +63,6 @@ class BaseBConv2DOpModel : public SingleOpModel {
       fbb.String("filter_format", "OHWI_PACKED");
       fbb.String("padding", GetPaddingName(padding));
       fbb.Int("pad_values", pad_values);
-      fbb.Bool("read_bitpacked_input", read_bitpacked_input);
-      fbb.Bool("write_bitpacked_output", write_bitpacked_output);
       fbb.String("activation", getActivationString(activation));
     });
     fbb.Finish();

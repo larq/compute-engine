@@ -10,7 +10,8 @@ namespace TFL {
 std::unique_ptr<OpPassBase<FuncOp>> CreatePrepareLCEPass();
 
 // Creates an instance of the TensorFlow dialect OptimizeLCE pass.
-std::unique_ptr<OpPassBase<FuncOp>> CreateOptimizeLCEPass();
+std::unique_ptr<OpPassBase<FuncOp>> CreateOptimizeLCEPass(
+    bool experimental_enable_bitpacked_activations);
 
 }  // namespace TFL
 }  // namespace mlir

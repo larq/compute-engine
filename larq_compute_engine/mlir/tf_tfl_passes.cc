@@ -15,7 +15,9 @@ CreateTFExecutorToControlDialectConversion();
 
 namespace tensorflow {
 
-void AddTFToLCETFLConversionPasses(mlir::OpPassManager* pass_manager) {
+void AddTFToLCETFLConversionPasses(
+    mlir::OpPassManager* pass_manager,
+    bool experimental_enable_bitpacked_activations) {
   pass_manager->addPass(mlir::tf_executor::CreateSwitchFoldPass());
   pass_manager->addPass(mlir::CreateTFExecutorToControlDialectConversion());
   pass_manager->addPass(mlir::TFControlFlow::CreateRaiseTFControlFlowPass());
@@ -49,7 +51,8 @@ void AddTFToLCETFLConversionPasses(mlir::OpPassManager* pass_manager) {
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
   pass_manager->addPass(mlir::TFL::CreateLegalizeTFPass());
   pass_manager->addPass(mlir::TFL::CreateOptimizePass());
-  pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass());
+  pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(
+      experimental_enable_bitpacked_activations));
   // This pass operates on TensorFlow ops but is triggered after legalization
   // so that it can target constants introduced once TensorFlow Identity ops
   // are removed during legalization.

@@ -8,7 +8,9 @@
 namespace tensorflow {
 
 // Add the TF to TFLite passes into a pass_manager.
-void AddTFToLCETFLConversionPasses(mlir::OpPassManager* pass_manager);
+void AddTFToLCETFLConversionPasses(
+    mlir::OpPassManager* pass_manager,
+    bool experimental_enable_bitpacked_activations = false);
 
 }  // namespace tensorflow
 

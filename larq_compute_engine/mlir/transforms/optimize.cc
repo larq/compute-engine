@@ -12,7 +12,17 @@ namespace {
 
 // Optimize LCE operations in functions.
 struct OptimizeLCE : public FunctionPass<OptimizeLCE> {
+ public:
+  // The default value must be true so that we can run with the optimisation in
+  // the file-check tests.
+  explicit OptimizeLCE() : experimental_enable_bitpacked_activations_(true) {}
+  explicit OptimizeLCE(bool experimental_enable_bitpacked_activations)
+      : experimental_enable_bitpacked_activations_(
+            experimental_enable_bitpacked_activations) {}
   void runOnFunction() override;
+
+ private:
+  bool experimental_enable_bitpacked_activations_;
 };
 
 bool IsConstantValue(Attribute values, float expected_value) {
@@ -58,12 +68,61 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
 
 #include "larq_compute_engine/mlir/transforms/generated_optimize.inc"
 
+struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
+  using OpRewritePattern<TF::LceBconv2dOp>::OpRewritePattern;
+
+  PatternMatchResult matchAndRewrite(TF::LceBconv2dOp bconv_op,
+                                     PatternRewriter& rewriter) const override {
+    Value bconv_input = bconv_op.input();
+    if (!bconv_input.hasOneUse()) return matchFailure();
+
+    auto bconv_input_op =
+        dyn_cast_or_null<TF::LceBconv2dOp>(bconv_input.getDefiningOp());
+    if (!bconv_input_op) return matchFailure();
+
+    const auto inner_tensor_type = bconv_input_op.getType().cast<ShapedType>();
+
+    // We use 32-bit bitpacking.
+    constexpr int bitwidth = 32;
+
+    // Don't apply this transformation if the inner tensor type is already I32.
+    if (inner_tensor_type.getElementType().isInteger(bitwidth))
+      return matchFailure();
+
+    if (bconv_input_op.padding() == "SAME" && bconv_input_op.pad_values() != 1)
+      return matchFailure();
+
+    const auto inner_tensor_shape = inner_tensor_type.getShape();
+    if (inner_tensor_shape.size() != 4) return matchFailure();
+
+    const auto channels = inner_tensor_shape[3];
+    const auto packed_channels = (channels + bitwidth - 1) / bitwidth;
+
+    RankedTensorType new_inner_tensor_type =
+        RankedTensorType::get({inner_tensor_shape[0], inner_tensor_shape[1],
+                               inner_tensor_shape[2], packed_channels},
+                              rewriter.getIntegerType(bitwidth));
+
+    rewriter.replaceOpWithNewOp<TF::LceBconv2dOp>(
+        bconv_input_op, new_inner_tensor_type, bconv_input_op.getOperands(),
+        bconv_input_op.getAttrs());
+    rewriter.replaceOpWithNewOp<TF::LceBconv2dOp>(bconv_op, bconv_op.getType(),
+                                                  bconv_op.getOperands(),
+                                                  bconv_op.getAttrs());
+
+    return matchSuccess();
+  };
+};
+
 void OptimizeLCE::runOnFunction() {
   OwningRewritePatternList patterns;
   auto* ctx = &getContext();
   auto func = getFunction();
 
   TFL::populateWithGenerated(ctx, &patterns);
+  if (experimental_enable_bitpacked_activations_) {
+    patterns.insert<SetBconvReadWriteBitpacked>(ctx);
+  }
   // Cleanup dead ops manually. LCE ops are not registered to the TF dialect so
   // op->hasNoSideEffect() will return false. Therefor applyPatternsGreedily
   // won't automatically remove the dead nodes. See
@@ -75,8 +134,10 @@ void OptimizeLCE::runOnFunction() {
 }  // namespace
 
 // Creates an instance of the TensorFlow dialect OptimizeLCE pass.
-std::unique_ptr<OpPassBase<FuncOp>> CreateOptimizeLCEPass() {
-  return std::make_unique<OptimizeLCE>();
+std::unique_ptr<OpPassBase<FuncOp>> CreateOptimizeLCEPass(
+    bool experimental_enable_bitpacked_activations) {
+  return std::make_unique<OptimizeLCE>(
+      experimental_enable_bitpacked_activations);
 }
 
 static PassRegistration<OptimizeLCE> pass(
