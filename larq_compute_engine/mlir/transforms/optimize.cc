@@ -71,14 +71,14 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
 struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
   using OpRewritePattern<TF::LceBconv2dOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(TF::LceBconv2dOp bconv_op,
-                                     PatternRewriter& rewriter) const override {
+  LogicalResult matchAndRewrite(TF::LceBconv2dOp bconv_op,
+                                PatternRewriter& rewriter) const override {
     Value bconv_input = bconv_op.input();
-    if (!bconv_input.hasOneUse()) return matchFailure();
+    if (!bconv_input.hasOneUse()) return failure();
 
     auto bconv_input_op =
         dyn_cast_or_null<TF::LceBconv2dOp>(bconv_input.getDefiningOp());
-    if (!bconv_input_op) return matchFailure();
+    if (!bconv_input_op) return failure();
 
     const auto inner_tensor_type = bconv_input_op.getType().cast<ShapedType>();
 
@@ -87,13 +87,13 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
 
     // Don't apply this transformation if the inner tensor type is already I32.
     if (inner_tensor_type.getElementType().isInteger(bitwidth))
-      return matchFailure();
+      return failure();
 
     if (bconv_input_op.padding() == "SAME" && bconv_input_op.pad_values() != 1)
-      return matchFailure();
+      return failure();
 
     const auto inner_tensor_shape = inner_tensor_type.getShape();
-    if (inner_tensor_shape.size() != 4) return matchFailure();
+    if (inner_tensor_shape.size() != 4) return failure();
 
     const auto channels = inner_tensor_shape[3];
     const auto packed_channels = (channels + bitwidth - 1) / bitwidth;
@@ -110,7 +110,7 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
                                                   bconv_op.getOperands(),
                                                   bconv_op.getAttrs());
 
-    return matchSuccess();
+    return success();
   };
 };
 
