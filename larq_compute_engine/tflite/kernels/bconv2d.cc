@@ -187,7 +187,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
   conv_params->input_height = input->dims->data[1];
   conv_params->input_width = input->dims->data[2];
   if (!conv_params->read_bitpacked_input) {
-    conv_params->channels_in = input->dims->data[3];
+    TF_LITE_ENSURE_EQ(context, conv_params->channels_in, input->dims->data[3]);
   } else if (conv_params->channels_in == 0) {
     // We don't expect this branch to ever be taken because the `channels_in`
     // attribute was added to the converter at the same time that support for
