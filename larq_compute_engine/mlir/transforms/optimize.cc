@@ -104,31 +104,11 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
                               rewriter.getIntegerType(bitwidth));
 
     rewriter.replaceOpWithNewOp<TF::LceBconv2dOp>(
-        bconv_input_op, new_inner_tensor_type, bconv_input_op.input(),
-        bconv_input_op.filter(), bconv_input_op.post_activation_multiplier(),
-        bconv_input_op.post_activation_bias(),
-        rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                bconv_input_op.channels_in()),
-        bconv_input_op.strides(),
-        rewriter.getStringAttr(bconv_input_op.padding()),
-        rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                bconv_input_op.pad_values()),
-        rewriter.getStringAttr(bconv_input_op.data_format()),
-        bconv_input_op.dilations(),
-        rewriter.getStringAttr(bconv_input_op.filter_format()),
-        rewriter.getStringAttr(bconv_input_op.activation()));
-
-    rewriter.replaceOpWithNewOp<TF::LceBconv2dOp>(
-        bconv_op, bconv_op.getType(), bconv_op.input(), bconv_op.filter(),
-        bconv_op.post_activation_multiplier(), bconv_op.post_activation_bias(),
-        rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                bconv_op.channels_in()),
-        bconv_op.strides(), rewriter.getStringAttr(bconv_op.padding()),
-        rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                bconv_op.pad_values()),
-        rewriter.getStringAttr(bconv_op.data_format()), bconv_op.dilations(),
-        rewriter.getStringAttr(bconv_op.filter_format()),
-        rewriter.getStringAttr(bconv_op.activation()));
+        bconv_input_op, new_inner_tensor_type, bconv_input_op.getOperands(),
+        bconv_input_op.getAttrs());
+    rewriter.replaceOpWithNewOp<TF::LceBconv2dOp>(bconv_op, bconv_op.getType(),
+                                                  bconv_op.getOperands(),
+                                                  bconv_op.getAttrs());
 
     return matchSuccess();
   };
