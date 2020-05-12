@@ -120,14 +120,49 @@ build:v2 --define=tf_api_version=2
 test:v1 --action_env=TF2_BEHAVIOR=0
 test:v2 --action_env=TF2_BEHAVIOR=1
 
+build --define=grpc_no_ares=true
+
 # Options to disable default on features
 build:noaws --define=no_aws_support=true
 build:nogcp --define=no_gcp_support=true
 build:nohdfs --define=no_hdfs_support=true
 build:nonccl --define=no_nccl_support=true
 
-build --config=v2 --config=noaws --config=nogcp --config=nohdfs --config=nonccl
 test --config=v2 --compilation_mode=fastbuild
+
+# Tensorflow uses M_* math constants that only get defined by MSVC headers if
+# _USE_MATH_DEFINES is defined.
+build:windows --copt=/D_USE_MATH_DEFINES
+build:windows --host_copt=/D_USE_MATH_DEFINES
+
+build:windows --cxxopt=/std:c++14
+build:windows --host_cxxopt=/std:c++14
+
+# Make sure to include as little of windows.h as possible
+build:windows --copt=-DWIN32_LEAN_AND_MEAN
+build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
+build:windows --copt=-DNOGDI
+build:windows --host_copt=-DNOGDI
+
+# Misc build options we need for windows.
+build:windows --linkopt=/DEBUG
+build:windows --host_linkopt=/DEBUG
+build:windows --linkopt=/OPT:REF
+build:windows --host_linkopt=/OPT:REF
+build:windows --linkopt=/OPT:ICF
+build:windows --host_linkopt=/OPT:ICF
+
+build:windows --copt=/d2ReducedOptimizeHugeFunctions
+build:windows --host_copt=/d2ReducedOptimizeHugeFunctions
+
+# Verbose failure logs when something goes wrong
+build:windows --verbose_failures
+
+# Suppress C++ compiler warnings, otherwise build logs become 10s of MBs.
+build:windows --copt=/w
+
+# On windows, we never cross compile
+build:windows --distinct_host_configuration=false
 
 # Android configs. Bazel needs to have --cpu and --fat_apk_cpu both set to the
 # target CPU to build transient dependencies correctly. See
@@ -157,3 +192,9 @@ build --action_env ANDROID_SDK_API_LEVEL="29"
 build --action_env ANDROID_SDK_HOME="/tmp/lce_android"
 
 EOM
+
+if is_windows; then
+  write_to_bazelrc "build --config=v2 --config=windows"
+else
+  write_to_bazelrc "build --config=v2 --config=noaws --config=nogcp --config=nohdfs --config=nonccl"
+fi

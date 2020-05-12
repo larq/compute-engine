@@ -70,10 +70,40 @@ jobs:
           name: ${{ runner.os }}-wheels
           path: wheelhouse
 
+  windows-release-wheel:
+    name: Build release wheels for Windows
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Build Windows wheels
+        run: |
+          export PYTHON_BIN_PATH=$(which python)
+          export BAZEL_VC="C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/"
+
+          python --version
+          python -m pip install wheel setuptools numpy six --no-cache-dir
+
+          ./configure.sh
+
+          bazelisk --output_base=cache build :build_pip_pkg --copt=/arch:AVX --enable_runfiles --define=override_eigen_strong_inline=true
+          bazel-bin/build_pip_pkg wheelhouse
+
+        shell: bash
+      - uses: actions/upload-artifact@v1
+        with:
+          name: ${{ runner.os }}-wheels
+          path: wheelhouse
+
   upload-wheels:
     name: Publish wheels to PyPi
     if: github.event_name == 'release'
-    needs: [manylinux-release-wheel, macos-release-wheel]
+    needs: [manylinux-release-wheel, macos-release-wheel, windows-release-wheel]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v1
@@ -84,11 +114,16 @@ jobs:
         with:
           name: macOS-wheels
           path: macOS-wheels
+      - uses: actions/download-artifact@v1
+        with:
+          name: Windows-wheels
+          path: Windows-wheels
       - run: |
           set -e -x
           mkdir -p dist
           cp Linux-wheels/*.whl dist/
           cp macOS-wheels/*.whl dist/
+          cp Windows-wheels/*.whl dist/
           ls -la dist/
           sha256sum dist/*.whl
       - uses: pypa/gh-action-pypi-publish@master
