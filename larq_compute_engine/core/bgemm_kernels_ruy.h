@@ -30,10 +30,9 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
   using LhsLayout = typename Spec::StandardCppKernelLhsLayout;
   using RhsLayout = typename Spec::StandardCppKernelRhsLayout;
   explicit BgemmKernel(ruy::Tuning) {}
-  void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
-           const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
-           int start_row, int start_col, int end_row, int end_col,
-           ruy::Matrix<DstScalar>* dst) const {
+  void Run(const ruy::PMat<LhsScalar>& lhs, const ruy::PMat<RhsScalar>& rhs,
+           const Spec& spec, int start_row, int start_col, int end_row,
+           int end_col, ruy::Mat<DstScalar>* dst) const {
     static_assert(std::is_same<LhsScalar, RhsScalar>::value,
                   "Inputs to binary kernel should have the same type.");
     static_assert(
@@ -88,10 +87,9 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int32_t,
   using LhsLayout = typename Spec::StandardCppKernelLhsLayout;
   using RhsLayout = typename Spec::StandardCppKernelRhsLayout;
   explicit BgemmKernel(ruy::Tuning) {}
-  void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
-           const ruy::PackedMatrix<RhsScalar>& rhs, const Spec& spec,
-           int start_row, int start_col, int end_row, int end_col,
-           ruy::Matrix<std::int32_t>* dst) const {
+  void Run(const ruy::PMat<LhsScalar>& lhs, const ruy::PMat<RhsScalar>& rhs,
+           const Spec& spec, int start_row, int start_col, int end_row,
+           int end_col, ruy::Mat<std::int32_t>* dst) const {
     static_assert(std::is_same<LhsScalar, RhsScalar>::value,
                   "Inputs to binary kernel should have the same type.");
     static_assert(
@@ -169,12 +167,10 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int32_t,
 
 template <ruy::Path ThePath, typename LhsScalar, typename RhsScalar,
           typename DstScalar, typename Spec>
-void RunBgemmKernelTyped(ruy::Tuning tuning,
-                         const ruy::PackedMatrix<LhsScalar>& lhs,
-                         const ruy::PackedMatrix<RhsScalar>& rhs,
-                         const Spec& spec, int start_row, int start_col,
-                         int end_row, int end_col,
-                         ruy::Matrix<DstScalar>* dst) {
+void RunBgemmKernelTyped(ruy::Tuning tuning, const ruy::PMat<LhsScalar>& lhs,
+                         const ruy::PMat<RhsScalar>& rhs, const Spec& spec,
+                         int start_row, int start_col, int end_row, int end_col,
+                         ruy::Mat<DstScalar>* dst) {
   using BKernel = BgemmKernel<ThePath, LhsScalar, RhsScalar, DstScalar, Spec>;
   BKernel kernel(tuning);
   using LhsLayout = typename BKernel::LhsLayout;
@@ -208,13 +204,13 @@ void RunBgemmKernelTyped(ruy::Tuning tuning,
 
 template <ruy::Path ThePath, typename LhsScalar, typename RhsScalar,
           typename DstScalar, typename Spec>
-void RunBgemmKernel(ruy::Tuning tuning, const ruy::SidePair<ruy::PMatrix>& src,
+void RunBgemmKernel(ruy::Tuning tuning, const ruy::SidePair<ruy::PEMat>& src,
                     void* spec, const ruy::SidePair<int>& start,
-                    const ruy::SidePair<int>& end, ruy::DMatrix* dst) {
-  ruy::Matrix<DstScalar> mdst = ruy::ToMatrix<DstScalar>(*dst);
+                    const ruy::SidePair<int>& end, ruy::EMat* dst) {
+  ruy::Mat<DstScalar> mdst = ruy::UneraseType<DstScalar>(*dst);
   RunBgemmKernelTyped<ThePath, LhsScalar, RhsScalar, DstScalar, Spec>(
-      tuning, ruy::ToPackedMatrix<LhsScalar>(src[ruy::Side::kLhs]),
-      ruy::ToPackedMatrix<RhsScalar>(src[ruy::Side::kRhs]),
+      tuning, ruy::UneraseType<LhsScalar>(src[ruy::Side::kLhs]),
+      ruy::UneraseType<RhsScalar>(src[ruy::Side::kRhs]),
       *static_cast<const Spec*>(spec), start[ruy::Side::kLhs],
       start[ruy::Side::kRhs], end[ruy::Side::kLhs], end[ruy::Side::kRhs],
       &mdst);

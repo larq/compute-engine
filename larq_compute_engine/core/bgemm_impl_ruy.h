@@ -3,7 +3,8 @@
 
 #include "bgemm_kernels_common.h"
 #include "bgemm_trmul_params.h"
-#include "ruy/context_internal.h"
+#include "ruy/context.h"
+#include "ruy/context_get_ctx.h"
 #include "ruy/matrix.h"
 #include "ruy/platform.h"
 #include "ruy/profiler/instrumentation.h"
@@ -36,36 +37,33 @@ struct BGemmImplUsingRuy {
                   "Output of BGEMM should be of a signed type.");
 
     // getting ruy context
-    auto ruy_context = context->ruy_context();
+    auto ruy_ctx = get_ctx(context->ruy_context());
 
     // Set up the matrix layouts and mul_params.
     ruy::Matrix<LhsScalar> lhs;
     ruy::MakeSimpleLayout(lhs_params.rows, lhs_params.cols,
-                          ruy::Order::kRowMajor, &lhs.layout);
+                          ruy::Order::kRowMajor, lhs.mutable_layout());
     ruy::Matrix<RhsScalar> rhs;
     ruy::MakeSimpleLayout(rhs_params.rows, rhs_params.cols,
-                          ruy::Order::kColMajor, &rhs.layout);
+                          ruy::Order::kColMajor, rhs.mutable_layout());
     ruy::Matrix<DstScalar> dst;
     ruy::MakeSimpleLayout(dst_params.rows, dst_params.cols,
-                          ruy::Order::kColMajor, &dst.layout);
-    lhs.data = lhs_data;
-    rhs.data = rhs_data;
-    dst.data = dst_data;
+                          ruy::Order::kColMajor, dst.mutable_layout());
+    lhs.set_data(lhs_data);
+    rhs.set_data(rhs_data);
+    dst.set_data(dst_data);
+
+    ruy::Mat<LhsScalar> internal_lhs = ruy::ToInternal(lhs);
+    ruy::Mat<RhsScalar> internal_rhs = ruy::ToInternal(rhs);
+    ruy::Mat<DstScalar> internal_dst = ruy::ToInternal(dst);
 
     BinaryMulParams<AccumScalar, DstScalar> mul_params;
     mul_params.output_transform = output_transform;
 
-    // The allocator is used to allocate memory for pre-packed matrices
-    ruy::Allocator allocator;
-    auto alloc_fn = [&allocator](std::size_t num_bytes) -> void* {
-      return allocator.AllocateBytes(num_bytes);
-    };
-
     constexpr auto BGemmCompiledPaths = ruy::kAllPaths & ~ruy::Path::kReference;
 
     // avoid the reference path for production code
-    ruy::Path bgemm_runtime_path =
-        ContextInternal::GetPathToTake<ruy::kAllPaths>(ruy_context);
+    ruy::Path bgemm_runtime_path = ruy_ctx->SelectPath(ruy::kAllPaths);
     RUY_CHECK_NE(bgemm_runtime_path, ruy::Path::kReference);
 
     // fallback to standard cpp kernel for all architectures that are not
@@ -99,41 +97,16 @@ struct BGemmImplUsingRuy {
       bgemm_runtime_path = ruy::Path::kStandardCpp;
     }
 
-    ruy::Matrix<LhsScalar> transposed_lhs(lhs);
+    ruy::Mat<LhsScalar> transposed_lhs(internal_lhs);
     Transpose(&transposed_lhs);
 
     ruy::TrMulParams binary_trmul_params;
     CreateBinaryTrMulParams<BGemmCompiledPaths>(
-        transposed_lhs, rhs, mul_params, ruy_context, &dst, bgemm_runtime_path,
-        &binary_trmul_params);
+        transposed_lhs, internal_rhs, mul_params, ruy_ctx, &internal_dst,
+        bgemm_runtime_path, &binary_trmul_params);
 
-    // pre-pack the lhs and rhs matrices
-    ruy::PrepackedMatrix prepacked_lhs;
-    ruy::PrepackedMatrix prepacked_rhs;
-    ruy::SidePair<ruy::PrepackedMatrix*> prepacked(&prepacked_lhs,
-                                                   &prepacked_rhs);
-
-    const ruy::SidePair<int> origin{0, 0};
-    const ruy::SidePair<int> rounded_dims{
-        binary_trmul_params.packed[ruy::Side::kLhs].layout.cols,
-        binary_trmul_params.packed[ruy::Side::kRhs].layout.cols};
-
-    ruy::Tuning tuning = ContextInternal::GetMainThreadTuning(ruy_context);
-    for (ruy::Side side : {ruy::Side::kLhs, ruy::Side::kRhs}) {
-      if (prepacked[side]) {
-        prepacked[side]->data_size = DataSize(binary_trmul_params.packed[side]);
-        prepacked[side]->sums_size = SumsSize(binary_trmul_params.packed[side]);
-        prepacked[side]->data = alloc_fn(prepacked[side]->data_size);
-        prepacked[side]->sums = alloc_fn(prepacked[side]->sums_size);
-        binary_trmul_params.packed[side].data = prepacked[side]->data;
-        binary_trmul_params.packed[side].sums = prepacked[side]->sums;
-        binary_trmul_params.RunPack(side, tuning, origin[side],
-                                    rounded_dims[side]);
-        binary_trmul_params.is_prepacked[side] = true;
-      }
-    }
-
-    ruy::TrMul(&binary_trmul_params, ruy_context);
+    HandlePrepackedCaching(&binary_trmul_params, ruy_ctx);
+    ruy::TrMul(&binary_trmul_params, ruy_ctx);
   }
 };
 

@@ -19,8 +19,6 @@ namespace tflite {
 template <ruy::Path ThePath, typename LhsScalar, typename RhsScalar,
           typename DstScalar, typename MulParamsType>
 void PopulateBinaryTrMulParams(ruy::TrMulParams* params) {
-  static_assert((ThePath & ruy::Path::kReference) == ruy::Path::kNone,
-                "Path::kReference should not do TrMul");
   // The optimized code paths don't handle the full generality of Ruy's API.
   // Fall back to Path::kStandardCpp if necessary.
   bool fallback_to_standard_cpp = false;
@@ -62,7 +60,6 @@ void PopulateBinaryTrMulParams(ruy::TrMulParams* params) {
   params->run_kernel =
       &RunBgemmKernel<ThePath, PackedLhsScalar, PackedRhsScalar, DstScalar,
                       MulParamsType>;
-  return;
 }
 
 // PopulateTrMulParamsAllCompiledPaths calls into one of multiple
@@ -175,15 +172,15 @@ void PopulateBinaryTrMulParamsAllCompiledPaths(ruy::Path the_path,
 
 template <ruy::Path CompiledPaths, typename LhsScalar, typename RhsScalar,
           typename DstScalar, typename MulParamsType>
-void CreateBinaryTrMulParams(const Matrix<LhsScalar>& lhs,
-                             const Matrix<RhsScalar>& rhs,
-                             const MulParamsType& mul_params, Context* context,
-                             Matrix<DstScalar>* dst, Path the_path,
+void CreateBinaryTrMulParams(const Mat<LhsScalar>& lhs,
+                             const Mat<RhsScalar>& rhs,
+                             const MulParamsType& mul_params, Ctx* ctx,
+                             Mat<DstScalar>* dst, Path the_path,
                              TrMulParams* params) {
   // Fill in the fields we already know.
-  params->src[Side::kLhs] = ToDMatrix(lhs);
-  params->src[Side::kRhs] = ToDMatrix(rhs);
-  params->dst = ToDMatrix(*dst);
+  params->src[Side::kLhs] = EraseType(lhs);
+  params->src[Side::kRhs] = EraseType(rhs);
+  params->dst = EraseType(*dst);
   params->mul_params = ToVoidPtr(&mul_params);
 
   // Create inner loops and packed matrices based on the Path.

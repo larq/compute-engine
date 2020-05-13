@@ -62,9 +62,9 @@ struct BinaryKernelParams {
 
 template <int LhsCols, int RhsCols, typename AccumScalar, typename T>
 inline void MakeBinaryKernelParams(
-    const PackedMatrix<T>& lhs, const PackedMatrix<T>& rhs,
+    const PMat<T>& lhs, const PMat<T>& rhs,
     const BinaryMulParams<AccumScalar, float>& spec, int start_row,
-    int start_col, int end_row, int end_col, Matrix<float>* dst,
+    int start_col, int end_row, int end_col, Mat<float>* dst,
     BinaryKernelParams<LhsCols, RhsCols, T>* params) {
   const int depth = lhs.layout.rows;
   RUY_DCHECK_EQ(start_row % LhsCols, 0);
