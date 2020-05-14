@@ -6,7 +6,7 @@
 #include <limits>
 
 #include "tensorflow/lite/kernels/internal/common.h"
-#include "tensorflow/lite/kernels/internal/round.h"
+#include "tensorflow/lite/kernels/internal/cppmath.h"
 
 namespace compute_engine {
 namespace core {

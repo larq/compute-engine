@@ -2,9 +2,9 @@
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_RUY_H_
 
 #include "larq_compute_engine/core/bgemm_functor.h"
-#include "tensorflow/lite/experimental/ruy/platform.h"
-#include "tensorflow/lite/experimental/ruy/profiler/instrumentation.h"
-#include "tensorflow/lite/experimental/ruy/ruy.h"
+#include "ruy/platform.h"
+#include "ruy/profiler/instrumentation.h"
+#include "ruy/ruy.h"
 
 namespace compute_engine {
 namespace tflite {
@@ -177,10 +177,8 @@ void RunBgemmKernelTyped(ruy::Tuning tuning,
                          ruy::Matrix<DstScalar>* dst) {
   using BKernel = BgemmKernel<ThePath, LhsScalar, RhsScalar, DstScalar, Spec>;
   BKernel kernel(tuning);
-#if !defined(NDEBUG) || !RUY_OPT_ENABLED(RUY_OPT_FAT_KERNEL)
   using LhsLayout = typename BKernel::LhsLayout;
   using RhsLayout = typename BKernel::RhsLayout;
-#endif
   // end_row and end_col may be larger than dst dimensions.
   // that is because kernels write directly to the destination matrix, whose
   // dimensions may not be a multiple of the kernel dimensions, and we try to

@@ -40,9 +40,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends qemu-user
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
       - name: Configure Bazel
         run: ./configure.sh <<< $'n\n'
         shell: bash
+      - name: Install pip dependencies
+        run: pip install numpy six --no-cache-dir
       - name: "TF Lite Arm32: Cross-compile and run unit tests in qemu"
         run: bazelisk test larq_compute_engine/tests:cc_tests_arm32_qemu --config=rpi3 --test_output=all --action_env=GTEST_FILTER="-*BigTest*"
       - name: "TF Lite Aarch64: Cross-compile and run unit tests in qemu"
@@ -96,6 +101,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
       - uses: actions/cache@v1
         id: cache
         with:
@@ -104,6 +112,8 @@ jobs:
       - name: Configure Bazel
         run: ./configure.sh <<< $'n\n'
         shell: bash
+      - name: Install pip dependencies
+        run: pip install numpy six --no-cache-dir
       - name: Download and install Android NDK/SDK
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./third_party/install_android.sh

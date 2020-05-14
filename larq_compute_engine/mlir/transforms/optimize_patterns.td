@@ -1,6 +1,7 @@
 include "mlir/Dialect/StandardOps/IR/Ops.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
+include "larq_compute_engine/mlir/transforms/op_removal_patterns.td"
 
 
 def F32ElementsAttr : ElementsAttrBase<

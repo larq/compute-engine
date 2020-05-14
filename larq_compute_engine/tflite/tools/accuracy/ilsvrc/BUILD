@@ -31,11 +31,10 @@ cc_library(
         "@org_tensorflow//tensorflow/core:tflite_portable_logging",
         "@org_tensorflow//tensorflow/lite/c:common",
         "@org_tensorflow//tensorflow/lite/tools:command_line_flags",
-        "@org_tensorflow//tensorflow/lite/tools/accuracy/ilsvrc/default:custom_delegates",
+        "@org_tensorflow//tensorflow/lite/tools/evaluation:evaluation_delegate_provider",
         "@org_tensorflow//tensorflow/lite/tools/evaluation:utils",
         "@org_tensorflow//tensorflow/lite/tools/evaluation/proto:evaluation_config_cc_proto",
         "@org_tensorflow//tensorflow/lite/tools/evaluation/proto:evaluation_stages_cc_proto",
-        "@org_tensorflow//tensorflow/lite/tools/evaluation/stages:image_classification_stage",
     ],
 )
 
@@ -49,7 +48,7 @@ cc_library(
         ":imagenet_model_evaluator",
         "@com_google_absl//absl/memory",
         "@org_tensorflow//tensorflow/core:tflite_portable_logging",
-        "@org_tensorflow//tensorflow/lite/c:c_api_internal",
+        "@org_tensorflow//tensorflow/lite/c:common",
         "@org_tensorflow//tensorflow/lite/profiling:time",
         "@org_tensorflow//tensorflow/lite/tools/accuracy:csv_writer",
         "@org_tensorflow//tensorflow/lite/tools/evaluation/proto:evaluation_stages_cc_proto",
@@ -64,5 +63,6 @@ cc_binary(
     deps = [
         ":imagenet_accuracy_eval_lib",
         "@org_tensorflow//tensorflow/lite/tools:command_line_flags",
+        "@org_tensorflow//tensorflow/lite/tools/evaluation:evaluation_delegate_provider",
     ],
 )

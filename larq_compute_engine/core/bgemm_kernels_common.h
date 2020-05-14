@@ -2,30 +2,35 @@
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_COMMON_H_
 
 #include "larq_compute_engine/core/bconv2d_output_transform.h"
-#include "tensorflow/lite/experimental/ruy/kernel_common.h"
+#include "ruy/kernel_common.h"
 
 using namespace ruy;
 
 using compute_engine::core::OutputTransform;
 
-// Our version of `ruy::BasicSpec`
-// Original is in `lite/experimental/ruy/spec.h`
-// We simply use our `OutputTransform` struct
+// Our version of `ruy::MulParams`; The original is in `ruy/mul_params.h`.
+// We simply use our `OutputTransform` struct.
 template <typename tAccumScalar, typename tDstScalar>
-struct BinaryBasicSpec {
+struct BinaryMulParams {
   using AccumScalar = tAccumScalar;
   using DstScalar = tDstScalar;
 
   OutputTransform<AccumScalar, DstScalar> output_transform;
 
-  // This is identical to `ruy::BasicSpec`
   static constexpr LoopStructure kLoopStructure = LoopStructure::kAuto;
   static constexpr LayoutSupport kLayoutSupport = LayoutSupport::kGeneral;
   static constexpr ZeroPointSupport kZeroPointSupport =
       ZeroPointSupport::kGeneral;
   using StandardCppKernelLhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
   using StandardCppKernelRhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
+  // Returns (a reasonable estimate of) the local CPU cache size.
+  // See ruy::LocalDataCacheSize() which returns some coarse, sane default for
+  // each CPU architecture.
+  // This may be overridden, either to provide more accurate/runtime values,
+  // or to test with other values to let testcases have more coverage.
   static int local_data_cache_size() { return LocalDataCacheSize(); }
+  // Same as local_data_cache_size but for the total data cache size accessible
+  // to each CPU core. See ruy::SharedDataCacheSize().
   static int shared_data_cache_size() { return SharedDataCacheSize(); }
 };
 
@@ -59,7 +64,7 @@ struct BinaryKernelParams {
 template <int LhsCols, int RhsCols, typename AccumScalar, typename T>
 inline void MakeBinaryKernelParams(
     const PackedMatrix<T>& lhs, const PackedMatrix<T>& rhs,
-    const BinaryBasicSpec<AccumScalar, float>& spec, int start_row,
+    const BinaryMulParams<AccumScalar, float>& spec, int start_row,
     int start_col, int end_row, int end_col, Matrix<float>* dst,
     BinaryKernelParams<LhsCols, RhsCols, T>* params) {
   const int depth = lhs.layout.rows;

@@ -3,9 +3,10 @@
 
 #include "bgemm_kernels_common.h"
 #include "bgemm_trmul_params.h"
-#include "tensorflow/lite/experimental/ruy/matrix.h"
-#include "tensorflow/lite/experimental/ruy/platform.h"
-#include "tensorflow/lite/experimental/ruy/profiler/instrumentation.h"
+#include "ruy/context_internal.h"
+#include "ruy/matrix.h"
+#include "ruy/platform.h"
+#include "ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 
@@ -37,7 +38,7 @@ struct BGemmImplUsingRuy {
     // getting ruy context
     auto ruy_context = context->ruy_context();
 
-    // Set up the matrix layouts and spec.
+    // Set up the matrix layouts and mul_params.
     ruy::Matrix<LhsScalar> lhs;
     ruy::MakeSimpleLayout(lhs_params.rows, lhs_params.cols,
                           ruy::Order::kRowMajor, &lhs.layout);
@@ -51,8 +52,8 @@ struct BGemmImplUsingRuy {
     rhs.data = rhs_data;
     dst.data = dst_data;
 
-    BinaryBasicSpec<AccumScalar, DstScalar> spec;
-    spec.output_transform = output_transform;
+    BinaryMulParams<AccumScalar, DstScalar> mul_params;
+    mul_params.output_transform = output_transform;
 
     // The allocator is used to allocate memory for pre-packed matrices
     ruy::Allocator allocator;
@@ -63,7 +64,8 @@ struct BGemmImplUsingRuy {
     constexpr auto BGemmCompiledPaths = ruy::kAllPaths & ~ruy::Path::kReference;
 
     // avoid the reference path for production code
-    ruy::Path bgemm_runtime_path = ruy_context->GetPathToTake<ruy::kAllPaths>();
+    ruy::Path bgemm_runtime_path =
+        ContextInternal::GetPathToTake<ruy::kAllPaths>(ruy_context);
     RUY_CHECK_NE(bgemm_runtime_path, ruy::Path::kReference);
 
     // fallback to standard cpp kernel for all architectures that are not
@@ -102,7 +104,7 @@ struct BGemmImplUsingRuy {
 
     ruy::TrMulParams binary_trmul_params;
     CreateBinaryTrMulParams<BGemmCompiledPaths>(
-        transposed_lhs, rhs, spec, ruy_context, &dst, bgemm_runtime_path,
+        transposed_lhs, rhs, mul_params, ruy_context, &dst, bgemm_runtime_path,
         &binary_trmul_params);
 
     // pre-pack the lhs and rhs matrices
@@ -116,7 +118,7 @@ struct BGemmImplUsingRuy {
         binary_trmul_params.packed[ruy::Side::kLhs].layout.cols,
         binary_trmul_params.packed[ruy::Side::kRhs].layout.cols};
 
-    ruy::Tuning tuning = ruy_context->GetMainThreadTuning();
+    ruy::Tuning tuning = ContextInternal::GetMainThreadTuning(ruy_context);
     for (ruy::Side side : {ruy::Side::kLhs, ruy::Side::kRhs}) {
       if (prepacked[side]) {
         prepacked[side]->data_size = DataSize(binary_trmul_params.packed[side]);

@@ -39,6 +39,7 @@ cc_library(
         "@org_tensorflow//tensorflow/lite/c:common",
         "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
         "@org_tensorflow//tensorflow/lite/profiling:time",
+        "@org_tensorflow//tensorflow/lite/tools/evaluation:evaluation_delegate_provider",
         "@org_tensorflow//tensorflow/lite/tools/evaluation:evaluation_stage",
         "@org_tensorflow//tensorflow/lite/tools/evaluation:utils",
         "@org_tensorflow//tensorflow/lite/tools/evaluation/proto:evaluation_config_cc_proto",
@@ -54,6 +55,7 @@ cc_library(
     deps = [
         ":tflite_inference_stage",
         "@org_tensorflow//tensorflow/core:tflite_portable_logging",
+        "@org_tensorflow//tensorflow/lite/tools/evaluation:evaluation_delegate_provider",
         "@org_tensorflow//tensorflow/lite/tools/evaluation:evaluation_stage",
         "@org_tensorflow//tensorflow/lite/tools/evaluation:utils",
         "@org_tensorflow//tensorflow/lite/tools/evaluation/proto:evaluation_config_cc_proto",

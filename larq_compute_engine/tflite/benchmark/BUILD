@@ -24,8 +24,8 @@ cc_binary(
     }),
     deps = [
         "//larq_compute_engine/tflite/kernels:lce_op_kernels",
+        "@org_tensorflow//tensorflow/lite/tools:logging",
         "@org_tensorflow//tensorflow/lite/tools/benchmark:benchmark_tflite_model_lib",
-        "@org_tensorflow//tensorflow/lite/tools/benchmark:logging",
     ],
 )
 
