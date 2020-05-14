@@ -167,3 +167,14 @@ cc_library(
         ":packbits_utils",
     ],
 )
+
+cc_library(
+    name = "maxpool",
+    hdrs = [
+        "maxpool.h",
+    ],
+    deps = [
+        "@org_tensorflow//tensorflow/lite/kernels/internal:common",
+        "@org_tensorflow//tensorflow/lite/kernels/internal:types",
+    ],
+)

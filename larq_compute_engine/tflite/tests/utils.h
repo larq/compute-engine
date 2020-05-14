@@ -183,6 +183,24 @@ struct LceTensor : public TensorData {
   std::int32_t reciprocal_scale;
 };
 
+//
+// Utility functions to switch between RuntimeShape and std::vector<int>
+//
+
+std::vector<int> GetShape(const RuntimeShape& shape) {
+  std::vector<int> s(shape.DimensionsCount());
+  for (int i = 0; i < shape.DimensionsCount(); ++i) {
+    s[i] = shape.Dims(i);
+  }
+  return s;
+}
+
+RuntimeShape GetShape(const std::vector<int>& shape) {
+  RuntimeShape s;
+  s.BuildFrom(shape);
+  return s;
+}
+
 }  // namespace tflite
 
 #endif  // LARQ_COMPUTE_ENGINE_TFLITE_TESTS_UTILS

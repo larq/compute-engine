@@ -302,8 +302,7 @@ BuiltinOpResolver::BuiltinOpResolver() {
   AddCustom("TFLite_Detection_PostProcess",
             tflite::ops::custom::Register_DETECTION_POSTPROCESS());
 
-  AddCustom("LceBsign", compute_engine::tflite::Register_BSIGN());
-  AddCustom("LceBconv2d", compute_engine::tflite::Register_BCONV_2D());
+  compute_engine::tflite::RegisterLCECustomOps(this);
 }
 
 }  // namespace builtin

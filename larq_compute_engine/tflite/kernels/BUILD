@@ -51,6 +51,7 @@ cc_library(
     name = "lce_op_kernels",
     srcs = [
         "bconv2d.cc",
+        "maxpool.cc",
         "sign.cc",
     ],
     hdrs = [
@@ -62,6 +63,7 @@ cc_library(
         ":bconv2d_output_transform_utils",
         ":bconv2d_params",
         "//larq_compute_engine/core:bconv2d_impl_ref",
+        "//larq_compute_engine/core:maxpool",
         "@flatbuffers",
         "@org_tensorflow//tensorflow/lite:framework",
         "@org_tensorflow//tensorflow/lite/c:c_api_internal",
