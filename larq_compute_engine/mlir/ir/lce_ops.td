@@ -69,4 +69,30 @@ TODO
 
   TF_DerivedOperandTypeAttr T = TF_DerivedOperandTypeAttr<0>;
 }
+
+def TF_LceBMaxPool2dOp : TF_Op<"LceBMaxPool2d", [NoSideEffect]> {
+  let summary = [{
+Binary MaxPool2D op.
+  }];
+
+  let description = [{
+Computes a MaxPool2D operation on bitpacked binary input.
+  }];
+
+  let arguments = (ins
+    TensorOf<[I32]>:$input,
+    TF_AnyStrAttrOf<["SAME", "VALID"]>:$padding,
+    I32Attr:$stride_w,
+    I32Attr:$stride_h,
+    I32Attr:$filter_width,
+    I32Attr:$filter_height
+  );
+
+  let results = (outs
+    TensorOf<[I32]>:$output
+  );
+
+  TF_DerivedOperandTypeAttr T = TF_DerivedOperandTypeAttr<0>;
+}
+
 #endif // LCE_OPS
