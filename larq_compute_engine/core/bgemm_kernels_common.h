@@ -17,7 +17,6 @@ struct BinaryMulParams {
 
   OutputTransform<AccumScalar, DstScalar> output_transform;
 
- public:
   static constexpr LoopStructure kLoopStructure = LoopStructure::kAuto;
   static constexpr LayoutSupport kLayoutSupport = LayoutSupport::kGeneral;
   static constexpr ZeroPointSupport kZeroPointSupport =
