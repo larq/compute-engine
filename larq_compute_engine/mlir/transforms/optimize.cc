@@ -97,37 +97,43 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
             : dyn_cast_or_null<TF::LceBconv2dOp>(
                   outer_bconv_op.input().getDefiningOp());
 
-    if (!inner_bconv_op) return failure();
-
-    if (inner_bconv_op.padding() == "SAME" && inner_bconv_op.pad_values() != 1)
+    if (inner_bconv_op && inner_bconv_op.padding() == "SAME" &&
+        inner_bconv_op.pad_values() != 1)
       return failure();
+
+    if (!inner_bconv_op && !intermediate_maxpool_op) return failure();
 
     constexpr int bitwidth = 32;  // We use 32-bit bitpacking.
-
-    ShapedType inner_bconv_op_type =
-        inner_bconv_op.getType().cast<ShapedType>();
-
-    // Don't apply this transformation if the type is already I32.
-    if (inner_bconv_op_type.getElementType().isInteger(bitwidth)) {
-      return failure();
-    }
 
     /*********************
      * Compute new types *
      *********************/
 
-    // Compute the new type for the inner bconv op.
-    const auto inner_bconv_op_shape = inner_bconv_op_type.getShape();
-    if (inner_bconv_op_shape.size() != 4) return failure();
-    const auto channels = inner_bconv_op_shape[3];
-    const auto packed_channels = (channels + bitwidth - 1) / bitwidth;
-    RankedTensorType new_inner_bconv_op_type =
-        RankedTensorType::get({inner_bconv_op_shape[0], inner_bconv_op_shape[1],
-                               inner_bconv_op_shape[2], packed_channels},
-                              rewriter.getIntegerType(bitwidth));
+    RankedTensorType new_inner_bconv_op_type;
+    RankedTensorType new_intermediate_maxpool_op_type;
+
+    // If applicable, compute the new type for the inner bconv op.
+    if (inner_bconv_op) {
+      ShapedType inner_bconv_op_type =
+          inner_bconv_op.getType().cast<ShapedType>();
+
+      // Don't apply this transformation if the type is already I32.
+      if (inner_bconv_op_type.getElementType().isInteger(bitwidth)) {
+        return failure();
+      }
+
+      // Compute the new type for the inner bconv op.
+      const auto inner_bconv_op_shape = inner_bconv_op_type.getShape();
+      if (inner_bconv_op_shape.size() != 4) return failure();
+      const auto channels = inner_bconv_op_shape[3];
+      const auto packed_channels = (channels + bitwidth - 1) / bitwidth;
+      new_inner_bconv_op_type = RankedTensorType::get(
+          {inner_bconv_op_shape[0], inner_bconv_op_shape[1],
+           inner_bconv_op_shape[2], packed_channels},
+          rewriter.getIntegerType(bitwidth));
+    }
 
     // If applicable, compute the new type for the intermediate maxpool op.
-    RankedTensorType new_intermediate_maxpool_op_type;
     if (intermediate_maxpool_op) {
       ShapedType intermediate_maxpool_op_type =
           intermediate_maxpool_op.getType().cast<ShapedType>();
@@ -153,11 +159,12 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
      ***************************/
 
     // We have to replace the inner-bconv op first...
-    rewriter.replaceOpWithNewOp<TF::LceBconv2dOp>(
-        inner_bconv_op, new_inner_bconv_op_type, inner_bconv_op.getOperands(),
-        inner_bconv_op.getAttrs());
-
-    // ...then, if necessary, the maxpool.
+    if (inner_bconv_op) {
+      rewriter.replaceOpWithNewOp<TF::LceBconv2dOp>(
+          inner_bconv_op, new_inner_bconv_op_type, inner_bconv_op.getOperands(),
+          inner_bconv_op.getAttrs());
+    }
+    // ...then the maxpool.
     if (intermediate_maxpool_op) {
       rewriter.replaceOpWithNewOp<TF::LceBMaxPool2dOp>(
           intermediate_maxpool_op, new_intermediate_maxpool_op_type,

@@ -76,11 +76,11 @@ Binary MaxPool2D op.
   }];
 
   let description = [{
-Computes a MaxPool2D operation on bitpacked binary input.
+Computes a MaxPool2D operation and outputs bitpacked binary values, for consumption by a binary convolution.
   }];
 
   let arguments = (ins
-    TensorOf<[I32]>:$input,
+    TensorOf<[F32, I32]>:$input,
     TF_AnyStrAttrOf<["SAME", "VALID"]>:$padding,
     I32Attr:$stride_w,
     I32Attr:$stride_h,
