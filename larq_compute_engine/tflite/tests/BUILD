@@ -8,6 +8,9 @@ cc_library(
     hdrs = [
         "utils.h",
     ],
+    deps = [
+        "@org_tensorflow//tensorflow/lite/kernels/internal:types",
+    ],
 )
 
 cc_library(

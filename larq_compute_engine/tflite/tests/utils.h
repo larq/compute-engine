@@ -5,6 +5,7 @@
 #include <random>
 #include <string>
 
+#include "tensorflow/lite/kernels/internal/types.h"
 #include "tensorflow/lite/kernels/test_util.h"
 
 namespace tflite {
