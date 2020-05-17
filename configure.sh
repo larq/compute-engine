@@ -67,13 +67,6 @@ if [[ "$PIP_MANYLINUX2010" == "1" ]]; then
   fi
 fi
 
-if ! is_windows; then
-  # By default, build TF in C++ 14 mode.
-  write_to_bazelrc "build --cxxopt=-std=c++14"
-  write_to_bazelrc "build --host_cxxopt=-std=c++14"
-fi
-
-
 cat << EOM >> .bazelrc
 # Disable visibility checks (works around some private deps in TensorFlow).
 build --nocheck_visibility
@@ -82,6 +75,16 @@ build --nocheck_visibility
 common --experimental_repo_remote_exec
 
 build --copt=-DTFLITE_WITH_RUY
+
+# By default, build TF in C++ 14 mode.
+build:android --cxxopt=-std=c++14
+build:android --host_cxxopt=-std=c++14
+build:linux --cxxopt=-std=c++14
+build:linux --host_cxxopt=-std=c++14
+build:macos --cxxopt=-std=c++14
+build:macos --host_cxxopt=-std=c++14
+build:windows --cxxopt=/std:c++14
+build:windows --host_cxxopt=/std:c++14
 
 # These can be activated using --config=rpi3 and --config=aarch64
 
@@ -163,6 +166,14 @@ build:windows --copt=/w
 
 # On windows, we never cross compile
 build:windows --distinct_host_configuration=false
+
+build --define=use_fast_cpp_protos=true
+build --define=allow_oversize_protos=true
+
+# Enable using platform specific build settings, except when cross-compiling for
+# mobile platforms.
+build --enable_platform_specific_config
+build:android --noenable_platform_specific_config
 
 # Android configs. Bazel needs to have --cpu and --fat_apk_cpu both set to the
 # target CPU to build transient dependencies correctly. See
