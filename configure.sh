@@ -123,6 +123,9 @@ build:v2 --define=tf_api_version=2
 test:v1 --action_env=TF2_BEHAVIOR=0
 test:v2 --action_env=TF2_BEHAVIOR=1
 
+build --config=v2
+test --config=v2 --compilation_mode=fastbuild
+
 build --define=grpc_no_ares=true
 
 # Options to disable default on features
@@ -131,8 +134,8 @@ build:nogcp --define=no_gcp_support=true
 build:nohdfs --define=no_hdfs_support=true
 build:nonccl --define=no_nccl_support=true
 
-build --config=v2
-test --config=v2 --compilation_mode=fastbuild
+build:linux --config=noaws --config=nogcp --config=nohdfs --config=nonccl
+build:macos --config=noaws --config=nogcp --config=nohdfs --config=nonccl
 
 # Tensorflow uses M_* math constants that only get defined by MSVC headers if
 # _USE_MATH_DEFINES is defined.
