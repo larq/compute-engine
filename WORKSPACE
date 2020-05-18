@@ -54,8 +54,9 @@ http_archive(
     ],
 )
 
-# The remainder of this file is derived from, and should be kept in sync with,
-# the TensorFlow WORKSPACE file:
+# The remainder of this file is derived from (and should be kept in sync with)
+# the TensorFlow WORKSPACE file, with the remote caching/execution and
+# `py_toolchain` configuration removed:
 # https://github.com/tensorflow/tensorflow/blob/master/WORKSPACE
 
 http_archive(
@@ -74,8 +75,6 @@ load("@org_tensorflow//tensorflow:workspace.bzl", "tf_repositories")
 
 # Please add all new TensorFlow dependencies in workspace.bzl.
 tf_repositories()
-
-register_toolchains("@local_config_python//:py_toolchain")
 
 load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
 

@@ -131,15 +131,13 @@ build:nogcp --define=no_gcp_support=true
 build:nohdfs --define=no_hdfs_support=true
 build:nonccl --define=no_nccl_support=true
 
+build --config=v2
 test --config=v2 --compilation_mode=fastbuild
 
 # Tensorflow uses M_* math constants that only get defined by MSVC headers if
 # _USE_MATH_DEFINES is defined.
 build:windows --copt=/D_USE_MATH_DEFINES
 build:windows --host_copt=/D_USE_MATH_DEFINES
-
-build:windows --cxxopt=/std:c++14
-build:windows --host_cxxopt=/std:c++14
 
 # Make sure to include as little of windows.h as possible
 build:windows --copt=-DWIN32_LEAN_AND_MEAN
@@ -203,9 +201,3 @@ build --action_env ANDROID_SDK_API_LEVEL="29"
 build --action_env ANDROID_SDK_HOME="/tmp/lce_android"
 
 EOM
-
-if is_windows; then
-  write_to_bazelrc "build --config=v2 --config=windows"
-else
-  write_to_bazelrc "build --config=v2 --config=noaws --config=nogcp --config=nohdfs --config=nonccl"
-fi
