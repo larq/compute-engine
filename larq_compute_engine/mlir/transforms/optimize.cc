@@ -98,8 +98,11 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
                   outer_bconv_op.input().getDefiningOp());
 
     if (inner_bconv_op && inner_bconv_op.padding() == "SAME" &&
-        inner_bconv_op.pad_values() != 1)
-      return failure();
+        inner_bconv_op.pad_values() != 1) {
+      // We don't return `failure()` here because we still want to match the
+      // pattern `binary maxpool -> binary conv`.
+      inner_bconv_op = nullptr;
+    }
 
     if (!inner_bconv_op && !intermediate_maxpool_op) return failure();
 
