@@ -3,13 +3,6 @@ workspace(name = "larq_compute_engine")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
-    name = "googlebenchmark",
-    sha256 = "2d22dd3758afee43842bb504af1a8385cccb3ee1f164824e4837c1c1b04d92a0",
-    strip_prefix = "benchmark-1.5.0",
-    url = "https://github.com/google/benchmark/archive/v1.5.0.zip",
-)
-
-http_archive(
     # This is the "raspberry pi compiler" as used in the tensorflow repository
     # Download size: 250 MB compressed
     # The archive contains GCC versions 4.9.4 (160 MB), 6.5.0 (290 MB) and 8.3.0 (270 MB)
@@ -41,7 +34,7 @@ arm_compiler_configure(
     name = "local_config_arm_compiler",
     build_file = "//third_party/toolchains/cpus/arm:BUILD",
     remote_config_repo_aarch64 = "../aarch64_compiler",
-    #These paths are relative to some_bazel_dir/external/local_config_arm_compiler/
+    # These paths are relative to some_bazel_dir/external/local_config_arm_compiler/
     remote_config_repo_arm = "../arm_compiler",
 )
 
@@ -61,9 +54,11 @@ http_archive(
     ],
 )
 
-# START: Upstream TensorFlow dependencies
-# TensorFlow build depends on these dependencies.
-# Needs to be in-sync with TensorFlow sources.
+# The remainder of this file is derived from (and should be kept in sync with)
+# the TensorFlow WORKSPACE file, with the remote caching/execution and
+# `py_toolchain` configuration removed:
+# https://github.com/tensorflow/tensorflow/blob/master/WORKSPACE
+
 http_archive(
     name = "io_bazel_rules_closure",
     sha256 = "5b00383d08dd71f28503736db0500b6fb4dda47489ff5fc6bed42557c07c6ba9",
@@ -74,42 +69,31 @@ http_archive(
     ],
 )
 
-http_archive(
-    name = "bazel_skylib",
-    sha256 = "1dde365491125a3db70731e25658dfdd3bc5dbdfd11b840b3e987ecf043c7ca0",
-    urls = [
-        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/bazel-skylib/releases/download/0.9.0/bazel_skylib-0.9.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-skylib/releases/download/0.9.0/bazel_skylib-0.9.0.tar.gz",
-    ],
-)  # https://github.com/bazelbuild/bazel-skylib/releases
-# END: Upstream TensorFlow dependencies
+# Load tf_repositories() before loading dependencies for other repository so
+# that dependencies like com_google_protobuf won't be overridden.
+load("@org_tensorflow//tensorflow:workspace.bzl", "tf_repositories")
 
-# Apple and Swift rules.
-http_archive(
-    name = "build_bazel_rules_apple",
-    sha256 = "a045a436b642c70fb0c10ca84ff0fd2dcbd59cc89100d597a61e8374afafb366",
-    urls = ["https://github.com/bazelbuild/rules_apple/releases/download/0.18.0/rules_apple.0.18.0.tar.gz"],
-)  # https://github.com/bazelbuild/rules_apple/releases
+# Please add all new TensorFlow dependencies in workspace.bzl.
+tf_repositories()
 
-http_archive(
-    name = "build_bazel_rules_swift",
-    sha256 = "18cd4df4e410b0439a4935f9ca035bd979993d42372ba79e7f2d4fafe9596ef0",
-    urls = ["https://github.com/bazelbuild/rules_swift/releases/download/0.12.1/rules_swift.0.12.1.tar.gz"],
-)  # https://github.com/bazelbuild/rules_swift/releases
+load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
 
-http_archive(
-    name = "build_bazel_apple_support",
-    sha256 = "122ebf7fe7d1c8e938af6aeaee0efe788a3a2449ece5a8d6a428cb18d6f88033",
-    urls = ["https://github.com/bazelbuild/apple_support/releases/download/0.7.1/apple_support.0.7.1.tar.gz"],
-)  # https://github.com/bazelbuild/apple_support/releases
+closure_repositories()
 
-# Import all of the tensorflow dependencies.
-load("@org_tensorflow//tensorflow:workspace.bzl", "tf_workspace")
+# Use `swift_rules_dependencies` to fetch the toolchains. With the
+# `git_repository` rules above, the following call will skip redefining them.
+load("@build_bazel_rules_swift//swift:repositories.bzl", "swift_rules_dependencies")
 
-# Bootstrap TensorFlow deps last so that ours can take precedence.
-tf_workspace(tf_repo_name = "org_tensorflow")
+swift_rules_dependencies()
 
-# android bazel configurations
+# We must check the bazel version before trying to parse any other BUILD
+# files, in case the parsing of those build files depends on the bazel
+# version we require here.
+load("@org_tensorflow//tensorflow:version_check.bzl", "check_bazel_version_at_least")
+
+# Keep in sync with `.bazelversion`.
+check_bazel_version_at_least("3.0.0")
+
 load("@org_tensorflow//third_party/android:android_configure.bzl", "android_configure")
 
 android_configure(name = "local_config_android")
@@ -118,11 +102,36 @@ load("@local_config_android//:android.bzl", "android_workspace")
 
 android_workspace()
 
+# If a target is bound twice, the later one wins, so we have to do tf bindings
+# at the end of the WORKSPACE file.
+load("@org_tensorflow//tensorflow:workspace.bzl", "tf_bind")
+
+tf_bind()
+
 # Required for dependency @com_github_grpc_grpc
+
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 
 grpc_deps()
 
+load(
+    "@build_bazel_rules_apple//apple:repositories.bzl",
+    "apple_rules_dependencies",
+)
+
+apple_rules_dependencies()
+
+load(
+    "@build_bazel_apple_support//lib:repositories.bzl",
+    "apple_support_dependencies",
+)
+
+apple_support_dependencies()
+
 load("@upb//bazel:repository_defs.bzl", "bazel_version_repository")
 
 bazel_version_repository(name = "bazel_version")
+
+load("@org_tensorflow//third_party/googleapis:repository_rules.bzl", "config_googleapis")
+
+config_googleapis()

@@ -67,13 +67,6 @@ if [[ "$PIP_MANYLINUX2010" == "1" ]]; then
   fi
 fi
 
-if ! is_windows; then
-  # By default, build TF in C++ 14 mode.
-  write_to_bazelrc "build --cxxopt=-std=c++14"
-  write_to_bazelrc "build --host_cxxopt=-std=c++14"
-fi
-
-
 cat << EOM >> .bazelrc
 # Disable visibility checks (works around some private deps in TensorFlow).
 build --nocheck_visibility
@@ -82,6 +75,16 @@ build --nocheck_visibility
 common --experimental_repo_remote_exec
 
 build --copt=-DTFLITE_WITH_RUY
+
+# By default, build TF in C++ 14 mode.
+build:android --cxxopt=-std=c++14
+build:android --host_cxxopt=-std=c++14
+build:linux --cxxopt=-std=c++14
+build:linux --host_cxxopt=-std=c++14
+build:macos --cxxopt=-std=c++14
+build:macos --host_cxxopt=-std=c++14
+build:windows --cxxopt=/std:c++14
+build:windows --host_cxxopt=/std:c++14
 
 # These can be activated using --config=rpi3 and --config=aarch64
 
@@ -120,6 +123,9 @@ build:v2 --define=tf_api_version=2
 test:v1 --action_env=TF2_BEHAVIOR=0
 test:v2 --action_env=TF2_BEHAVIOR=1
 
+build --config=v2
+test --config=v2 --compilation_mode=fastbuild
+
 build --define=grpc_no_ares=true
 
 # Options to disable default on features
@@ -128,15 +134,13 @@ build:nogcp --define=no_gcp_support=true
 build:nohdfs --define=no_hdfs_support=true
 build:nonccl --define=no_nccl_support=true
 
-test --config=v2 --compilation_mode=fastbuild
+build:linux --config=noaws --config=nogcp --config=nohdfs --config=nonccl
+build:macos --config=noaws --config=nogcp --config=nohdfs --config=nonccl
 
 # Tensorflow uses M_* math constants that only get defined by MSVC headers if
 # _USE_MATH_DEFINES is defined.
 build:windows --copt=/D_USE_MATH_DEFINES
 build:windows --host_copt=/D_USE_MATH_DEFINES
-
-build:windows --cxxopt=/std:c++14
-build:windows --host_cxxopt=/std:c++14
 
 # Make sure to include as little of windows.h as possible
 build:windows --copt=-DWIN32_LEAN_AND_MEAN
@@ -163,6 +167,14 @@ build:windows --copt=/w
 
 # On windows, we never cross compile
 build:windows --distinct_host_configuration=false
+
+build --define=use_fast_cpp_protos=true
+build --define=allow_oversize_protos=true
+
+# Enable using platform specific build settings, except when cross-compiling for
+# mobile platforms.
+build --enable_platform_specific_config
+build:android --noenable_platform_specific_config
 
 # Android configs. Bazel needs to have --cpu and --fat_apk_cpu both set to the
 # target CPU to build transient dependencies correctly. See
@@ -192,9 +204,3 @@ build --action_env ANDROID_SDK_API_LEVEL="29"
 build --action_env ANDROID_SDK_HOME="/tmp/lce_android"
 
 EOM
-
-if is_windows; then
-  write_to_bazelrc "build --config=v2 --config=windows"
-else
-  write_to_bazelrc "build --config=v2 --config=noaws --config=nogcp --config=nohdfs --config=nonccl"
-fi
