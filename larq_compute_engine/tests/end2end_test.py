@@ -83,12 +83,33 @@ def toy_model_sequential(**kwargs):
     )
 
 
+def quant(x):
+    return tf.quantization.fake_quant_with_min_max_vars(x, -3.0, 3.0)
+
+
+def toy_model_int8(**kwargs):
+    img = tf.keras.layers.Input(shape=(32, 32, 3))
+    x = quant(img)
+    x = lq.layers.QuantConv2D(
+        12, 3, input_quantizer="ste_sign", kernel_quantizer="ste_sign", activation=quant
+    )(x)
+    x = lq.layers.QuantConv2D(
+        12, 3, input_quantizer="ste_sign", kernel_quantizer="ste_sign", activation=quant
+    )(x)
+    x = tf.keras.layers.GlobalAveragePooling2D()(x)
+    x = lq.layers.QuantDense(
+        10, input_quantizer=quant, kernel_quantizer=quant, activation=quant
+    )(x)
+    x = tf.keras.layers.Activation("softmax")(x)
+    return tf.keras.Model(img, x)
+
+
 def preprocess(data):
     return lqz.preprocess_input(data["image"])
 
 
 @pytest.mark.parametrize(
-    "model_cls", [toy_model, toy_model_sequential, lqz.sota.QuickNet],
+    "model_cls", [toy_model, toy_model_sequential, toy_model_int8, lqz.sota.QuickNet],
 )
 def test_simple_model(model_cls):
     model = model_cls(weights="imagenet")

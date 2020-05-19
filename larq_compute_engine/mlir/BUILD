@@ -65,6 +65,20 @@ gentbl(
     ],
 )
 
+gentbl(
+    name = "quantize_lce_inc_gen",
+    tbl_outs = [
+        ("-gen-rewriters", "transforms/generated_quantize.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "transforms/quantize_patterns.td",
+    td_srcs = [
+        "ir/lce_ops.td",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+        "@llvm-project//mlir:StdOpsTdFiles",
+    ],
+)
+
 cc_library(
     name = "larq_compute_engine",
     srcs = [
@@ -135,6 +149,22 @@ cc_library(
 )
 
 cc_library(
+    name = "larq_compute_engine_quantize",
+    srcs = [
+        "transforms/generated_quantize.inc",
+        "transforms/quantize.cc",
+    ],
+    hdrs = [
+        "transforms/passes.h",
+    ],
+    deps = [
+        ":larq_compute_engine",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_quantize",
+    ],
+    alwayslink = 1,
+)
+
+cc_library(
     name = "lce_tfl_passes",
     srcs = ["tf_tfl_passes.cc"],
     hdrs = [
@@ -144,12 +174,17 @@ cc_library(
         ":larq_compute_engine_op_removal",
         ":larq_compute_engine_optimize",
         ":larq_compute_engine_prepare",
+        ":larq_compute_engine_quantize",
         "@llvm-project//mlir:AllPassesAndDialects",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:QuantOps",
         "@llvm-project//mlir:Transforms",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_legalize_tf",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_optimize",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_quantize",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_config",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_passes",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:decode_constant_pass",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_dialect_registration",
