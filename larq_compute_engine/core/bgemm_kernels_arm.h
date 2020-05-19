@@ -56,30 +56,11 @@ struct BgemmKernel<ruy::Path::kNeonDotprod, LhsScalar, RhsScalar, DstScalar,
 // A BGEMM kernel for ARM64 Neon.
 #include "bgemm_kernels_arm64.h"
 
-// specialized kernel for 32-bit bitpacking, float output and 32-bit accumulator
-template <>
-struct BgemmKernel<ruy::Path::kNeon, std::uint32_t, std::uint32_t, float,
-                   BinaryMulParams<std::int32_t, float>> {
-  Tuning tuning = Tuning::kAuto;
-  using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
-  using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
-  explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
-  void Run(const ruy::PackedMatrix<std::uint32_t>& lhs,
-           const ruy::PackedMatrix<std::uint32_t>& rhs,
-           const BinaryMulParams<std::int32_t /* accum. scalar */, float>&
-               mul_params,
-           int start_row, int start_col, int end_row, int end_col,
-           ruy::Matrix<float>* dst) const {
-    BinaryKernelParams<LhsLayout::kCols, RhsLayout::kCols, std::uint32_t>
-        params;
-    MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
-                           end_col, dst, &params);
-    BinaryKernelNeonOutOfOrder32BP4x4(params);
-  }
-};
+/******************************
+ * Kernels for uint64 inputs. *
+ ******************************/
 
-// Specialized kernel for 64-bit bitpacking, 16-bit accumulators, and float
-// output.
+// Optimised kernel for float output with 16-bit accumulators.
 template <>
 struct BgemmKernel<ruy::Path::kNeon, std::uint64_t, std::uint64_t, float,
                    BinaryMulParams<std::int16_t, float>> {
@@ -89,19 +70,20 @@ struct BgemmKernel<ruy::Path::kNeon, std::uint64_t, std::uint64_t, float,
   explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
   void Run(const ruy::PackedMatrix<std::uint64_t>& lhs,
            const ruy::PackedMatrix<std::uint64_t>& rhs,
-           const BinaryMulParams<std::int16_t /* accum. scalar */, float>& spec,
+           const BinaryMulParams<std::int16_t /* accum. scalar */, float>&
+               mul_params,
            int start_row, int start_col, int end_row, int end_col,
            ruy::Matrix<float>* dst) const {
     BinaryKernelParams<LhsLayout::kCols, RhsLayout::kCols, std::uint64_t>
         params;
-    MakeBinaryKernelParams(lhs, rhs, spec, start_row, start_col, end_row,
+    MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
                            end_col, dst, &params);
-    BinaryKernelNeonOutOfOrder64BP8x4(params);
+    BinaryKernelNeonOutOfOrder8x4(params);
   }
 };
 
-// Specialized kernel for 64-bit bitpacking, 32-bit accumulators, and float
-// output.
+// Fallback kernel for float output with 32-bit accumulators (when there's a
+// risk of overflowing 16-bit accumulators).
 template <>
 struct BgemmKernel<ruy::Path::kNeon, std::uint64_t, std::uint64_t, float,
                    BinaryMulParams<std::int32_t, float>> {
@@ -119,7 +101,62 @@ struct BgemmKernel<ruy::Path::kNeon, std::uint64_t, std::uint64_t, float,
         params;
     MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
                            end_col, dst, &params);
-    BinaryKernelNeonOutOfOrder64BP4x4(params);
+    BinaryKernelNeonOutOfOrder4x4(params);
+  }
+};
+
+/******************************
+ * Kernels for uint32 inputs. *
+ ******************************/
+
+// With uint32 inputs, we can still use the optimised kernels designed for
+// uint64 inputs by making adjustments to the declared kernel depth and LHS/RHS
+// strides (the latter is done in a specialised template of
+// `MakeBinaryKernelParams` that accepts uint32 LHS/RHS and uint64
+// `BinaryKernelParams`).
+
+// Optimised kernel for float output with 16-bit accumulators.
+template <>
+struct BgemmKernel<ruy::Path::kNeon, std::uint32_t, std::uint32_t, float,
+                   BinaryMulParams<std::int16_t, float>> {
+  Tuning tuning = Tuning::kAuto;
+  using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 8>;
+  using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
+  explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
+  void Run(const ruy::PackedMatrix<std::uint32_t>& lhs,
+           const ruy::PackedMatrix<std::uint32_t>& rhs,
+           const BinaryMulParams<std::int16_t /* accum. scalar */, float>&
+               mul_params,
+           int start_row, int start_col, int end_row, int end_col,
+           ruy::Matrix<float>* dst) const {
+    BinaryKernelParams<LhsLayout::kCols, RhsLayout::kCols, std::uint64_t>
+        params;
+    MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
+                           end_col, dst, &params);
+    BinaryKernelNeonOutOfOrder8x4(params);
+  }
+};
+
+// Fallback kernel for float output with 32-bit accumulators (when there's a
+// risk of overflowing 16-bit accumulators).
+template <>
+struct BgemmKernel<ruy::Path::kNeon, std::uint32_t, std::uint32_t, float,
+                   BinaryMulParams<std::int32_t, float>> {
+  Tuning tuning = Tuning::kAuto;
+  using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
+  using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
+  explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
+  void Run(const ruy::PackedMatrix<std::uint32_t>& lhs,
+           const ruy::PackedMatrix<std::uint32_t>& rhs,
+           const BinaryMulParams<std::int32_t /* accum. scalar */, float>&
+               mul_params,
+           int start_row, int start_col, int end_row, int end_col,
+           ruy::Matrix<float>* dst) const {
+    BinaryKernelParams<LhsLayout::kCols, RhsLayout::kCols, std::uint64_t>
+        params;
+    MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
+                           end_col, dst, &params);
+    BinaryKernelNeonOutOfOrder4x4(params);
   }
 };
 

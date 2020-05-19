@@ -3,6 +3,8 @@
 #include "larq_compute_engine/mlir/transforms/passes.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
+#include "tensorflow/compiler/mlir/lite/quantization/quantization_config.h"
+#include "tensorflow/compiler/mlir/lite/quantization/quantization_passes.h"
 #include "tensorflow/compiler/mlir/lite/transforms/passes.h"
 #include "tensorflow/compiler/mlir/tensorflow/transforms/decode_constant.h"
 #include "tensorflow/compiler/mlir/tensorflow/transforms/passes.h"
@@ -15,7 +17,21 @@ CreateTFExecutorToControlDialectConversion();
 
 namespace tensorflow {
 
+void AddQuantizationPasses(const mlir::TFL::QuantizationSpecs& quant_specs,
+                           mlir::OpPassManager* pass_manager) {
+  pass_manager->addPass(mlir::TFL::CreatePrepareQuantizePass(quant_specs));
+  pass_manager->addPass(mlir::TFL::CreateHybridQuantizePass());
+  bool emit_quant_adaptor_ops =
+      quant_specs.inference_type != quant_specs.inference_input_type;
+  pass_manager->addPass(
+      mlir::TFL::CreatePostQuantizePass(emit_quant_adaptor_ops));
+  pass_manager->addPass(mlir::TFL::CreateOpRemovalPass());
+  pass_manager->addPass(
+      mlir::TFL::CreatePostQuantizePass(emit_quant_adaptor_ops));
+}
+
 void AddTFToLCETFLConversionPasses(
+    const mlir::TFL::QuantizationSpecs& quant_specs,
     mlir::OpPassManager* pass_manager,
     bool experimental_enable_bitpacked_activations) {
   pass_manager->addPass(mlir::tf_executor::CreateSwitchFoldPass());
@@ -108,6 +124,12 @@ void AddTFToLCETFLConversionPasses(
   // merged inputs until we have 1st class variable support or reuse
   // tf.variable to model this.
   pass_manager->addPass(mlir::TFL::CreateSplitMergedOperandsPass());
+
+  // Run quantization after all the floating point model conversion is
+  // completed.
+  if (quant_specs.RunPropagationAndRewriteQuantizationPasses()) {
+    AddQuantizationPasses(quant_specs, pass_manager);
+  }
 }
 
 }  // namespace tensorflow
