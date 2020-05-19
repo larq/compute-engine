@@ -128,6 +128,8 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   const TBitpacked* packed_input_data;
   RuntimeShape packed_input_shape;
 
+  // Note: When we update the bconv op with an optimized riptide path then we
+  // might have to change the bitpack order here from Canonical to Optimized
   if (input->type == kTfLiteFloat32) {
     TfLiteTensor* packed_input = GetTemporary(context, node, 0);
     ce::core::packbits_tensor<ce::core::BitpackOrder::Canonical>(
