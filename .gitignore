@@ -1,4 +1,4 @@
-.bazelrc
+.lce_configure.bazelrc
 .DS_Store
 .ipynb_checkpoints
 node_modules

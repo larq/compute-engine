@@ -21,20 +21,15 @@ alias python='python3'
 PLATFORM="$(uname -s | tr 'A-Z' 'a-z')"
 
 function write_to_bazelrc() {
-  echo "$1" >> .bazelrc
+  echo "$1" >> .lce_configure.bazelrc
 }
 
 function is_linux() {
     [[ "${PLATFORM}" == "linux" ]]
 }
 
-function is_windows() {
-  # On windows, the shell script is actually running in msys
-  [[ "${PLATFORM}" =~ msys_nt*|mingw*|cygwin*|uwin* ]]
-}
-
 # Remove .bazelrc if it already exist
-[ -e .bazelrc ] && rm .bazelrc
+[ -e .lce_configure.bazelrc ] && rm .lce_configure.bazelrc
 
 # Check if we are building against manylinux1 or manylinux2010 pip package,
 # default manylinux2010
@@ -56,9 +51,6 @@ fi
 if is_linux; then
   write_to_bazelrc "build:manylinux2010 --crosstool_top=//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.1:toolchain"
 fi
-write_to_bazelrc "build --spawn_strategy=standalone"
-write_to_bazelrc "build --strategy=Genrule=standalone"
-write_to_bazelrc "build -c opt"
 
 if [[ "$PIP_MANYLINUX2010" == "1" ]]; then
   if is_linux; then
@@ -66,141 +58,3 @@ if [[ "$PIP_MANYLINUX2010" == "1" ]]; then
     write_to_bazelrc "test --config=manylinux2010"
   fi
 fi
-
-cat << EOM >> .bazelrc
-# Disable visibility checks (works around some private deps in TensorFlow).
-build --nocheck_visibility
-
-# For compatibility with TensorFlow config
-common --experimental_repo_remote_exec
-
-build --copt=-DTFLITE_WITH_RUY
-
-# By default, build TF in C++ 14 mode.
-build:android --cxxopt=-std=c++14
-build:android --host_cxxopt=-std=c++14
-build:linux --cxxopt=-std=c++14
-build:linux --host_cxxopt=-std=c++14
-build:macos --cxxopt=-std=c++14
-build:macos --host_cxxopt=-std=c++14
-build:windows --cxxopt=/std:c++14
-build:windows --host_cxxopt=/std:c++14
-
-# These can be activated using --config=rpi3 and --config=aarch64
-
-build:rpi3 --crosstool_top=@local_config_arm_compiler//:toolchain
-build:rpi3 --cpu=armeabi
-build:rpi3 -c opt  \
-  --copt=-march=armv7-a --copt=-mfpu=neon-vfpv4 \
-  --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR \
-  --copt=-O3 --copt=-fno-tree-pre \
-  --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 \
-  --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 \
-  --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 \
-  --define=raspberry_pi_with_neon=true \
-  --define=framework_shared_object=false \
-  --copt=-funsafe-math-optimizations --copt=-ftree-vectorize \
-  --copt=-fomit-frame-pointer \
-  --verbose_failures
-
-build:aarch64 --crosstool_top=@local_config_arm_compiler//:toolchain
-build:aarch64 --cpu=aarch64
-build:aarch64 -c opt  \
-  --copt=-march=armv8-a \
-  --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR \
-  --copt=-O3 --copt=-fno-tree-pre \
-  --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 \
-  --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 \
-  --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 \
-  --define=framework_shared_object=false \
-  --copt=-funsafe-math-optimizations --copt=-ftree-vectorize \
-  --copt=-fomit-frame-pointer \
-  --verbose_failures
-
-# Options to build TensorFlow 1.x or 2.x.
-build:v1 --define=tf_api_version=1
-build:v2 --define=tf_api_version=2
-test:v1 --action_env=TF2_BEHAVIOR=0
-test:v2 --action_env=TF2_BEHAVIOR=1
-
-build --config=v2
-test --config=v2 --compilation_mode=fastbuild
-
-build --define=grpc_no_ares=true
-
-# Options to disable default on features
-build:noaws --define=no_aws_support=true
-build:nogcp --define=no_gcp_support=true
-build:nohdfs --define=no_hdfs_support=true
-build:nonccl --define=no_nccl_support=true
-
-build:linux --config=noaws --config=nogcp --config=nohdfs --config=nonccl
-build:macos --config=noaws --config=nogcp --config=nohdfs --config=nonccl
-
-# Tensorflow uses M_* math constants that only get defined by MSVC headers if
-# _USE_MATH_DEFINES is defined.
-build:windows --copt=/D_USE_MATH_DEFINES
-build:windows --host_copt=/D_USE_MATH_DEFINES
-
-# Make sure to include as little of windows.h as possible
-build:windows --copt=-DWIN32_LEAN_AND_MEAN
-build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
-build:windows --copt=-DNOGDI
-build:windows --host_copt=-DNOGDI
-
-# Misc build options we need for windows.
-build:windows --linkopt=/DEBUG
-build:windows --host_linkopt=/DEBUG
-build:windows --linkopt=/OPT:REF
-build:windows --host_linkopt=/OPT:REF
-build:windows --linkopt=/OPT:ICF
-build:windows --host_linkopt=/OPT:ICF
-
-build:windows --copt=/d2ReducedOptimizeHugeFunctions
-build:windows --host_copt=/d2ReducedOptimizeHugeFunctions
-
-# Verbose failure logs when something goes wrong
-build:windows --verbose_failures
-
-# Suppress C++ compiler warnings, otherwise build logs become 10s of MBs.
-build:windows --copt=/w
-
-# On windows, we never cross compile
-build:windows --distinct_host_configuration=false
-
-build --define=use_fast_cpp_protos=true
-build --define=allow_oversize_protos=true
-
-# Enable using platform specific build settings, except when cross-compiling for
-# mobile platforms.
-build --enable_platform_specific_config
-build:android --noenable_platform_specific_config
-
-# Android configs. Bazel needs to have --cpu and --fat_apk_cpu both set to the
-# target CPU to build transient dependencies correctly. See
-# https://docs.bazel.build/versions/master/user-manual.html#flag--fat_apk_cpu
-build:android --crosstool_top=//external:android/crosstool
-build:android --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
-build:android_arm --config=android
-build:android_arm --cpu=armeabi-v7a
-build:android_arm --fat_apk_cpu=armeabi-v7a
-build:android_arm64 --config=android
-build:android_arm64 --cpu=arm64-v8a
-build:android_arm64 --fat_apk_cpu=arm64-v8a
-build:android_x86 --config=android
-build:android_x86 --cpu=x86
-build:android_x86 --fat_apk_cpu=x86
-build:android_x86_64 --config=android
-build:android_x86_64 --cpu=x86_64
-build:android_x86_64 --fat_apk_cpu=x86_64
-
-# The default android SDK/NDK paths are hardcoded here and the user needs
-# to change the paths according to the local configuration or
-# the "install_android.sh" script
-build --action_env ANDROID_NDK_HOME="/tmp/lce_android/ndk/18.1.5063045"
-build --action_env ANDROID_NDK_API_LEVEL="21"
-build --action_env ANDROID_BUILD_TOOLS_VERSION="28.0.3"
-build --action_env ANDROID_SDK_API_LEVEL="29"
-build --action_env ANDROID_SDK_HOME="/tmp/lce_android"
-
-EOM
