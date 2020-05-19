@@ -40,7 +40,7 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
     const std::vector<string>& input_arrays,
     const std::vector<string>& input_dtypes,
     const std::vector<std::vector<int>>& input_shapes,
-    const std::vector<string>& output_arrays, const bool& should_quantize,
+    const std::vector<string>& output_arrays, const bool should_quantize,
     const bool experimental_enable_bitpacked_activations) {
   GraphDef graphdef;
   if (!tensorflow::LoadProtoFromBuffer(std::string(graphdef_bytes), &graphdef)
