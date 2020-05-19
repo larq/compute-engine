@@ -169,9 +169,9 @@ cc_library(
 )
 
 cc_library(
-    name = "maxpool",
+    name = "bmaxpool",
     hdrs = [
-        "maxpool.h",
+        "bmaxpool.h",
     ],
     deps = [
         "@org_tensorflow//tensorflow/lite/kernels/internal:common",

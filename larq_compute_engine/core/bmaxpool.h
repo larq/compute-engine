@@ -1,5 +1,5 @@
-#ifndef LARQ_COMPUTE_ENGINE_CORE_MAXPOOL_H_
-#define LARQ_COMPUTE_ENGINE_CORE_MAXPOOL_H_
+#ifndef COMPUTE_ENGINE_CORE_MAXPOOL_H_
+#define COMPUTE_ENGINE_CORE_MAXPOOL_H_
 
 #include "tensorflow/lite/kernels/internal/common.h"
 #include "tensorflow/lite/kernels/internal/types.h"
@@ -8,15 +8,16 @@
 using namespace tflite;
 
 namespace compute_engine {
-namespace core {
+namespace ce = compute_engine;
+namespace ref {
 
 struct BMaxPool2DParams {
-  std::int32_t filter_height;
-  std::int32_t filter_width;
-  std::int32_t stride_height;
-  std::int32_t stride_width;
-  TfLitePaddingValues padding;
-  TfLitePadding padding_type;
+  std::int32_t filter_height{0};
+  std::int32_t filter_width{0};
+  std::int32_t stride_height{0};
+  std::int32_t stride_width{0};
+  TfLitePaddingValues padding{};
+  TfLitePadding padding_type{};
 };
 
 // Effectively takes the AND of everything in the filter region
@@ -31,6 +32,8 @@ void MaxPool2D(const BMaxPool2DParams& params, const RuntimeShape& input_shape,
   const int input_width = input_shape.Dims(2);
   const int output_height = output_shape.Dims(1);
   const int output_width = output_shape.Dims(2);
+  const int filter_height = params.filter_height;
+  const int filter_width = params.filter_width;
   const int stride_height = params.stride_height;
   const int stride_width = params.stride_width;
   const int channels = MatchingDim(input_shape, 3, output_shape, 3);
@@ -49,9 +52,9 @@ void MaxPool2D(const BMaxPool2DParams& params, const RuntimeShape& input_shape,
         const int in_y = in_y_origin + filter_y_start;
 
         const int filter_x_count =
-            std::min(params.filter_width - filter_x_start, input_width - in_x);
-        const int filter_y_count = std::min(
-            params.filter_height - filter_y_start, input_height - in_y);
+            std::min(filter_width - filter_x_start, input_width - in_x);
+        const int filter_y_count =
+            std::min(filter_height - filter_y_start, input_height - in_y);
 
         // How far to jump to the next input pixel in the x direction
         const int x_stride = channels;
@@ -85,7 +88,7 @@ void MaxPool2D(const BMaxPool2DParams& params, const RuntimeShape& input_shape,
   }
 }
 
-}  // namespace core
+}  // namespace ref
 }  // namespace compute_engine
 
-#endif  // LARQ_COMPUTE_ENGINE_CORE_MAXPOOL_H_
+#endif  // COMPUTE_ENGINE_CORE_MAXPOOL_H_

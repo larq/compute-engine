@@ -1,5 +1,5 @@
 
-#include "larq_compute_engine/core/maxpool.h"
+#include "larq_compute_engine/core/bmaxpool.h"
 
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
 #include "larq_compute_engine/core/packbits_utils.h"
@@ -11,18 +11,16 @@
 
 using namespace tflite;
 
+namespace ce = compute_engine;
+
 namespace compute_engine {
 namespace tflite {
-namespace maxpool {
-
-using namespace compute_engine::core;
-// using compute_engine::core::BMaxPool2DParams;
-// using compute_engine::core::MaxPool2D;
+namespace bmaxpool {
 
 using TBitpacked = std::uint32_t;
 
 void* Init(TfLiteContext* context, const char* buffer, size_t length) {
-  auto* poolparams = new BMaxPool2DParams{};
+  auto* poolparams = new ce::ref::BMaxPool2DParams{};
 
   const std::uint8_t* buffer_t = reinterpret_cast<const std::uint8_t*>(buffer);
   const flexbuffers::Map& m = flexbuffers::GetRoot(buffer_t, length).AsMap();
@@ -46,12 +44,12 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
 }
 
 void Free(TfLiteContext* context, void* buffer) {
-  delete reinterpret_cast<BMaxPool2DParams*>(buffer);
+  delete reinterpret_cast<ce::ref::BMaxPool2DParams*>(buffer);
 }
 
 TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
-  BMaxPool2DParams* poolparams =
-      reinterpret_cast<BMaxPool2DParams*>(node->user_data);
+  ce::ref::BMaxPool2DParams* poolparams =
+      reinterpret_cast<ce::ref::BMaxPool2DParams*>(node->user_data);
 
   TF_LITE_ENSURE_EQ(context, NumInputs(node), 1);
   TF_LITE_ENSURE_EQ(context, NumOutputs(node), 1);
@@ -66,7 +64,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
 
   int channels_out = 0;
   if (input->type == kTfLiteFloat32 || input->type == kTfLiteInt8) {
-    channels_out = GetPackedSize<TBitpacked>(input->dims->data[3]);
+    channels_out = ce::core::GetPackedSize<TBitpacked>(input->dims->data[3]);
   } else {
     TF_LITE_ENSURE_EQ(context, input->type, kTfLiteInt32);
     channels_out = input->dims->data[3];
@@ -121,8 +119,8 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
 }
 
 TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
-  BMaxPool2DParams* poolparams =
-      reinterpret_cast<BMaxPool2DParams*>(node->user_data);
+  ce::ref::BMaxPool2DParams* poolparams =
+      reinterpret_cast<ce::ref::BMaxPool2DParams*>(node->user_data);
 
   TfLiteTensor* output = GetOutput(context, node, 0);
   const TfLiteTensor* input = GetInput(context, node, 0);
@@ -149,17 +147,17 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
     packed_input_data = GetTensorData<TBitpacked>(input);
   }
 
-  MaxPool2D(*poolparams, packed_input_shape, packed_input_data,
-            GetTensorShape(output), GetTensorData<TBitpacked>(output));
+  ce::ref::MaxPool2D(*poolparams, packed_input_shape, packed_input_data,
+                     GetTensorShape(output), GetTensorData<TBitpacked>(output));
 
   return kTfLiteOk;
 }
 
-}  // namespace maxpool
+}  // namespace bmaxpool
 
 TfLiteRegistration* Register_BMAXPOOL_2D() {
-  static TfLiteRegistration r = {maxpool::Init, maxpool::Free, maxpool::Prepare,
-                                 maxpool::Eval};
+  static TfLiteRegistration r = {bmaxpool::Init, bmaxpool::Free,
+                                 bmaxpool::Prepare, bmaxpool::Eval};
   return &r;
 }
 
