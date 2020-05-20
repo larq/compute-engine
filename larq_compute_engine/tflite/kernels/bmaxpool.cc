@@ -27,8 +27,8 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
 
   poolparams->filter_height = m["filter_height"].AsInt32();
   poolparams->filter_width = m["filter_width"].AsInt32();
-  poolparams->stride_height = m["stride_height"].AsInt32();
-  poolparams->stride_width = m["stride_width"].AsInt32();
+  poolparams->stride_height = m["stride_h"].AsInt32();
+  poolparams->stride_width = m["stride_w"].AsInt32();
 
   if (m["padding"].ToString() == "VALID" ||
       m["padding"].ToString() == "valid") {
@@ -102,6 +102,11 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
                                                      packed_input_size));
   }
 
+  TF_LITE_ENSURE(context, poolparams->stride_height != 0);
+  TF_LITE_ENSURE(context, poolparams->stride_width != 0);
+  TF_LITE_ENSURE(context, poolparams->filter_height != 0);
+  TF_LITE_ENSURE(context, poolparams->filter_width != 0);
+
   // Matching GetWindowedOutputSize in TensorFlow.
   int out_width, out_height;
 
@@ -152,7 +157,6 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
 
   ce::ref::BMaxPool(*poolparams, packed_input_shape, packed_input_data,
                     GetTensorShape(output), GetTensorData<TBitpacked>(output));
-
   return kTfLiteOk;
 }
 

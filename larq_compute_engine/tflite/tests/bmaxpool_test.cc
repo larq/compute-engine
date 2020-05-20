@@ -68,8 +68,8 @@ class BaseBMaxPoolOpModel : public SingleOpModel {
 
     flexbuffers::Builder fbb;
     fbb.Map([&]() {
-      fbb.Int("stride_height", stride_height);
-      fbb.Int("stride_width", stride_width);
+      fbb.Int("stride_h", stride_height);
+      fbb.Int("stride_w", stride_width);
       fbb.Int("filter_height", filter_height);
       fbb.Int("filter_width", filter_width);
       fbb.String("padding", GetPaddingName(padding));
