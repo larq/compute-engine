@@ -77,16 +77,11 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
      * Match ops *
      *************/
 
-    if (!outer_bconv_op.input().hasOneUse()) {
-      return failure();
-    }
-
     auto intermediate_maxpool_op = dyn_cast_or_null<TFL::MaxPool2DOp>(
         outer_bconv_op.input().getDefiningOp());
 
     if (intermediate_maxpool_op &&
-        (!intermediate_maxpool_op.input().hasOneUse() ||
-         intermediate_maxpool_op.fused_activation_function() != "NONE")) {
+        intermediate_maxpool_op.fused_activation_function() != "NONE") {
       return failure();
     }
 
@@ -105,6 +100,12 @@ struct SetBconvReadWriteBitpacked : public OpRewritePattern<TF::LceBconv2dOp> {
     }
 
     if (!inner_bconv_op && !intermediate_maxpool_op) return failure();
+
+    if (!outer_bconv_op.input().hasOneUse() ||
+        (intermediate_maxpool_op && inner_bconv_op &&
+         !intermediate_maxpool_op.input().hasOneUse())) {
+      return failure();
+    }
 
     constexpr int bitwidth = 32;  // We use 32-bit bitpacking.
 
