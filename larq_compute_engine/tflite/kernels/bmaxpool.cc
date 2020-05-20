@@ -27,8 +27,8 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
 
   poolparams->filter_height = m["filter_height"].AsInt32();
   poolparams->filter_width = m["filter_width"].AsInt32();
-  poolparams->stride_height = m["stride_h"].AsInt32();
-  poolparams->stride_width = m["stride_w"].AsInt32();
+  poolparams->stride_height = m["stride_height"].AsInt32();
+  poolparams->stride_width = m["stride_width"].AsInt32();
 
   if (m["padding"].ToString() == "VALID" ||
       m["padding"].ToString() == "valid") {
