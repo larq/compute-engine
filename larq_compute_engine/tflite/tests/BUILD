@@ -8,6 +8,9 @@ cc_library(
     hdrs = [
         "utils.h",
     ],
+    deps = [
+        "@org_tensorflow//tensorflow/lite/kernels/internal:types",
+    ],
 )
 
 cc_library(
@@ -54,6 +57,22 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "bmaxpool_test",
+    size = "small",
+    srcs = ["bmaxpool_test.cc"],
+    deps = [
+        ":utils",
+        "//larq_compute_engine/core:packbits_utils",
+        "//larq_compute_engine/tflite/kernels:lce_ops",
+        "@com_google_googletest//:gtest",
+        "@flatbuffers",
+        "@org_tensorflow//tensorflow/lite:framework",
+        "@org_tensorflow//tensorflow/lite/kernels:test_main",
+        "@org_tensorflow//tensorflow/lite/kernels:test_util",
+    ],
+)
+
 # COLLECTION OF ALL TFLITE CC TESTS
 # each new cc test needs to be added here
 test_suite(
@@ -61,5 +80,6 @@ test_suite(
     tests = [
         ":bconv2d_int8_test",
         ":bconv2d_test",
+        ":bmaxpool_test",
     ],
 )

@@ -12,6 +12,7 @@ namespace tflite {
 
 TfLiteRegistration* Register_BSIGN();
 TfLiteRegistration* Register_BCONV_2D();
+TfLiteRegistration* Register_BMAXPOOL_2D();
 
 // By calling this function on TF lite mutable op resolver, all LCE custom ops
 // will be registerd to the op resolver.
@@ -19,6 +20,8 @@ inline void RegisterLCECustomOps(::tflite::MutableOpResolver* resolver) {
   resolver->AddCustom("LceBsign", compute_engine::tflite::Register_BSIGN());
   resolver->AddCustom("LceBconv2d",
                       compute_engine::tflite::Register_BCONV_2D());
+  resolver->AddCustom("LceBMaxPool2d",
+                      compute_engine::tflite::Register_BMAXPOOL_2D());
 };
 
 }  // namespace tflite
