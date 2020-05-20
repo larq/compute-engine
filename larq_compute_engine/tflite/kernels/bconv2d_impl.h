@@ -145,6 +145,7 @@ inline void BConv2D(
     } else {
       // The input tensor has this shape which we bitpack along the channels
       // dimension [batch, input height, input width, channels].
+      ruy::profiler::ScopeLabel label("Bitpack activations (before im2col)");
       ce::core::packbits_tensor<ce::core::BitpackOrder::Optimized>(
           input_shape, input_data, params.input_offset, packed_input_shape,
           packed_input_data);
@@ -167,9 +168,12 @@ inline void BConv2D(
     // The RHS tensor has this shape which we bitpack along the last dimension
     //  [batch, output_height, output_width, k * bitwidth]
     RuntimeShape packed_input_shape;
-    ce::core::packbits_tensor<ce::core::BitpackOrder::Optimized>(
-        result_shape, result_data, params.input_offset, packed_input_shape,
-        packed_input_data);
+    {
+      ruy::profiler::ScopeLabel lable("Bitpack activations (after im2col)");
+      ce::core::packbits_tensor<ce::core::BitpackOrder::Optimized>(
+          result_shape, result_data, params.input_offset, packed_input_shape,
+          packed_input_data);
+    }
     rhs_data = packed_input_data;
 
     k = packed_input_shape.Dims(3);

@@ -5,8 +5,6 @@
 #include <cstdint>
 #include <limits>
 
-#include "larq_compute_engine/core/macros.h"
-
 namespace compute_engine {
 namespace core {
 
