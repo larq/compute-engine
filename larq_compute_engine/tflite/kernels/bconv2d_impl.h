@@ -169,7 +169,7 @@ inline void BConv2D(
     //  [batch, output_height, output_width, k * bitwidth]
     RuntimeShape packed_input_shape;
     {
-      ruy::profiler::ScopeLabel lable("Bitpack activations (after im2col)");
+      ruy::profiler::ScopeLabel label("Bitpack activations (after im2col)");
       ce::core::packbits_tensor<ce::core::BitpackOrder::Optimized>(
           result_shape, result_data, params.input_offset, packed_input_shape,
           packed_input_data);
