@@ -82,8 +82,8 @@ Computes a MaxPool2D operation and outputs bitpacked binary values, for consumpt
   let arguments = (ins
     TensorOf<[F32, I32]>:$input,
     TF_AnyStrAttrOf<["SAME", "VALID"]>:$padding,
-    I32Attr:$stride_w,
-    I32Attr:$stride_h,
+    I32Attr:$stride_width,
+    I32Attr:$stride_height,
     I32Attr:$filter_width,
     I32Attr:$filter_height
   );
