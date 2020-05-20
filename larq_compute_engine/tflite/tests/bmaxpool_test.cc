@@ -56,13 +56,13 @@ using TBitpacked = std::int32_t;
 
 typedef TfLiteRegistration* (*register_function)(void);
 
-class BaseBMaxPool2DOpModel : public SingleOpModel {
+class BaseBMaxPoolOpModel : public SingleOpModel {
  public:
-  BaseBMaxPool2DOpModel(register_function registration, const TensorData& input,
-                        const TensorData& output, int filter_height = 2,
-                        int filter_width = 2, int stride_height = 1,
-                        int stride_width = 1,
-                        enum Padding padding = Padding_SAME) {
+  BaseBMaxPoolOpModel(register_function registration, const TensorData& input,
+                      const TensorData& output, int filter_height = 2,
+                      int filter_width = 2, int stride_height = 1,
+                      int stride_width = 1,
+                      enum Padding padding = Padding_SAME) {
     input_ = AddInput(input);
     output_ = AddOutput(output);
 
@@ -75,7 +75,7 @@ class BaseBMaxPool2DOpModel : public SingleOpModel {
       fbb.String("padding", GetPaddingName(padding));
     });
     fbb.Finish();
-    SetCustomOp("LceBmaxpool2d", fbb.GetBuffer(), registration);
+    SetCustomOp("LceBMaxPool2d", fbb.GetBuffer(), registration);
     BuildInterpreter({GetShape(input_)}, 1);
   }
 
@@ -85,9 +85,9 @@ class BaseBMaxPool2DOpModel : public SingleOpModel {
 };
 
 template <typename TInput>
-class BMaxPool2DOpModel : public BaseBMaxPool2DOpModel {
+class BMaxPoolOpModel : public BaseBMaxPoolOpModel {
  public:
-  using BaseBMaxPool2DOpModel::BaseBMaxPool2DOpModel;
+  using BaseBMaxPoolOpModel::BaseBMaxPoolOpModel;
 
   void SetInput(const std::vector<TInput>& data) {
     PopulateTensor(input_, data);
@@ -151,9 +151,9 @@ struct TestParam {
   register_function registration = compute_engine::tflite::Register_BMAXPOOL_2D;
 };
 
-class BMaxPool2DOpTest : public ::testing::TestWithParam<TestParamTuple> {};
+class BMaxPoolOpTest : public ::testing::TestWithParam<TestParamTuple> {};
 
-TEST_P(BMaxPool2DOpTest, FloatAndBinaryInput) {
+TEST_P(BMaxPoolOpTest, FloatAndBinaryInput) {
   TestParam params(GetParam());
 
   int packed_input_depth = GetPackedSize<TBitpacked>(params.input_depth);
@@ -186,7 +186,7 @@ TEST_P(BMaxPool2DOpTest, FloatAndBinaryInput) {
                                            input_data_bp.data());
 
   // Our op with binary input
-  BMaxPool2DOpModel<TBitpacked> m_lce_binary(
+  BMaxPoolOpModel<TBitpacked> m_lce_binary(
       params.registration, packed_input_tensor, packed_output_tensor,
       params.filter_height, params.filter_width, params.stride_height,
       params.stride_width, params.padding);
@@ -194,10 +194,10 @@ TEST_P(BMaxPool2DOpTest, FloatAndBinaryInput) {
   m_lce_binary.Invoke();
 
   // Our op with float input
-  BMaxPool2DOpModel<float> m_lce_float(
-      params.registration, input_tensor, packed_output_tensor,
-      params.filter_height, params.filter_width, params.stride_height,
-      params.stride_width, params.padding);
+  BMaxPoolOpModel<float> m_lce_float(params.registration, input_tensor,
+                                     packed_output_tensor, params.filter_height,
+                                     params.filter_width, params.stride_height,
+                                     params.stride_width, params.padding);
   m_lce_float.SetInput(input_data);
   m_lce_float.Invoke();
 
@@ -227,7 +227,7 @@ TEST_P(BMaxPool2DOpTest, FloatAndBinaryInput) {
   EXPECT_EQ(m_lce_float.GetOutput(), builtin_output_data_bp);
 }
 
-TEST_P(BMaxPool2DOpTest, Int8Input) {
+TEST_P(BMaxPoolOpTest, Int8Input) {
   TestParam params(GetParam());
 
   int packed_input_depth = GetPackedSize<TBitpacked>(params.input_depth);
@@ -263,10 +263,10 @@ TEST_P(BMaxPool2DOpTest, Int8Input) {
       packed_input_shape, input_data_bp.data());
 
   // Our op with int8 input
-  BMaxPool2DOpModel<std::int8_t> m_lce(
-      params.registration, input_tensor, packed_output_tensor,
-      params.filter_height, params.filter_width, params.stride_height,
-      params.stride_width, params.padding);
+  BMaxPoolOpModel<std::int8_t> m_lce(params.registration, input_tensor,
+                                     packed_output_tensor, params.filter_height,
+                                     params.filter_width, params.stride_height,
+                                     params.stride_width, params.padding);
   m_lce.SetInput(input_data);
   m_lce.Invoke();
 
@@ -293,7 +293,7 @@ TEST_P(BMaxPool2DOpTest, Int8Input) {
 
 using ::testing::Values;
 INSTANTIATE_TEST_SUITE_P(
-    AllCombinations, BMaxPool2DOpTest,
+    AllCombinations, BMaxPoolOpTest,
     ::testing::Combine(
         Values(std::array<int, 4>{1, 7, 7, 1}, std::array<int, 4>{1, 8, 5, 1},
                std::array<int, 4>{2, 7, 7, 64}, std::array<int, 4>{2, 8, 5, 64},

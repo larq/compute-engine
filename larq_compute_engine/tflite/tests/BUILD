@@ -58,9 +58,9 @@ cc_test(
 )
 
 cc_test(
-    name = "maxpool_test",
+    name = "bmaxpool_test",
     size = "small",
-    srcs = ["maxpool_test.cc"],
+    srcs = ["bmaxpool_test.cc"],
     deps = [
         ":utils",
         "//larq_compute_engine/core:packbits_utils",
@@ -80,6 +80,6 @@ test_suite(
     tests = [
         ":bconv2d_int8_test",
         ":bconv2d_test",
-        ":maxpool_test",
+        ":bmaxpool_test",
     ],
 )

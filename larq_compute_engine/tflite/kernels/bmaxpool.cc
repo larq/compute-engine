@@ -37,7 +37,7 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
              m["padding"].ToString() == "same") {
     poolparams->padding_type = kTfLitePaddingSame;
   } else {
-    context->ReportError(context, "Bmaxpool2d: invalid padding attribute.");
+    context->ReportError(context, "BMaxPool: invalid padding attribute.");
   }
 
   return poolparams;
