@@ -20,7 +20,7 @@ namespace bmaxpool {
 using TBitpacked = std::uint32_t;
 
 void* Init(TfLiteContext* context, const char* buffer, size_t length) {
-  auto* poolparams = new ce::ref::BMaxPool2DParams{};
+  auto* poolparams = new ce::ref::BMaxPoolParams{};
 
   const std::uint8_t* buffer_t = reinterpret_cast<const std::uint8_t*>(buffer);
   const flexbuffers::Map& m = flexbuffers::GetRoot(buffer_t, length).AsMap();
@@ -44,12 +44,12 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
 }
 
 void Free(TfLiteContext* context, void* buffer) {
-  delete reinterpret_cast<ce::ref::BMaxPool2DParams*>(buffer);
+  delete reinterpret_cast<ce::ref::BMaxPoolParams*>(buffer);
 }
 
 TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
-  ce::ref::BMaxPool2DParams* poolparams =
-      reinterpret_cast<ce::ref::BMaxPool2DParams*>(node->user_data);
+  ce::ref::BMaxPoolParams* poolparams =
+      reinterpret_cast<ce::ref::BMaxPoolParams*>(node->user_data);
 
   TF_LITE_ENSURE_EQ(context, NumInputs(node), 1);
   TF_LITE_ENSURE_EQ(context, NumOutputs(node), 1);
@@ -119,8 +119,8 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
 }
 
 TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
-  ce::ref::BMaxPool2DParams* poolparams =
-      reinterpret_cast<ce::ref::BMaxPool2DParams*>(node->user_data);
+  ce::ref::BMaxPoolParams* poolparams =
+      reinterpret_cast<ce::ref::BMaxPoolParams*>(node->user_data);
 
   TfLiteTensor* output = GetOutput(context, node, 0);
   const TfLiteTensor* input = GetInput(context, node, 0);
@@ -150,8 +150,8 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
     packed_input_data = GetTensorData<TBitpacked>(input);
   }
 
-  ce::ref::MaxPool2D(*poolparams, packed_input_shape, packed_input_data,
-                     GetTensorShape(output), GetTensorData<TBitpacked>(output));
+  ce::ref::BMaxPool(*poolparams, packed_input_shape, packed_input_data,
+                    GetTensorShape(output), GetTensorData<TBitpacked>(output));
 
   return kTfLiteOk;
 }

@@ -1,5 +1,5 @@
-#ifndef COMPUTE_ENGINE_CORE_MAXPOOL_H_
-#define COMPUTE_ENGINE_CORE_MAXPOOL_H_
+#ifndef COMPUTE_ENGINE_CORE_BMAXPOOL_H_
+#define COMPUTE_ENGINE_CORE_BMAXPOOL_H_
 
 #include "tensorflow/lite/kernels/internal/common.h"
 #include "tensorflow/lite/kernels/internal/types.h"
@@ -11,7 +11,7 @@ namespace compute_engine {
 namespace ce = compute_engine;
 namespace ref {
 
-struct BMaxPool2DParams {
+struct BMaxPoolParams {
   std::int32_t filter_height{0};
   std::int32_t filter_width{0};
   std::int32_t stride_height{0};
@@ -22,9 +22,9 @@ struct BMaxPool2DParams {
 
 // Effectively takes the AND of everything in the filter region
 template <typename TBitpacked>
-void MaxPool2D(const BMaxPool2DParams& params, const RuntimeShape& input_shape,
-               const TBitpacked* input_data, const RuntimeShape& output_shape,
-               TBitpacked* output_data) {
+void BMaxPool(const BMaxPoolParams& params, const RuntimeShape& input_shape,
+              const TBitpacked* input_data, const RuntimeShape& output_shape,
+              TBitpacked* output_data) {
   TFLITE_DCHECK_EQ(input_shape.DimensionsCount(), 4);
   TFLITE_DCHECK_EQ(output_shape.DimensionsCount(), 4);
   const int batches = MatchingDim(input_shape, 0, output_shape, 0);
@@ -58,8 +58,8 @@ void MaxPool2D(const BMaxPool2DParams& params, const RuntimeShape& input_shape,
 
         // How far to jump to the next input pixel in the x direction
         const int x_stride = channels;
-        // How far to jump to the next input pixel in the y direction, in a
-        // "\r\n" style
+        // How far to jump to the next input pixel in the y direction, and
+        // 'back' to the first pixel in the x direction.
         const int y_stride = channels * (input_width - filter_x_count);
 
         // Get the pointer to the input pixel corresponding top-left filter
