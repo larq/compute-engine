@@ -26,25 +26,34 @@ class I32VectorElementsAttr<int len> : ElementsAttrBase<
     "RankedTensorType::get({" # len # "}, $_builder.getIntegerType(32)), $0)";
 }
 
+// Extract the ith int element from an ArrayAttr $0 as an 32-bit IntegerAttr
+// with builder.
+class ExtractI32At<int i> : NativeCodeCall<
+    "$_builder.getI32IntegerAttr($_self.cast<ArrayAttr>().getValue()[" # i #
+    "].cast<IntegerAttr>().getInt())">;
+def IsIntList1XY1 : AttrConstraint<CPred<"TFIntListIs1XY1($_self)">>;
+
 class GetConstantVector<string val> : NativeCodeCall<"GetConstantVector($0, " # val # ")">;
 def BinaryFilter : Constraint<CPred<"IsBinaryFilter($0)">>;
 def GetScaleVector : NativeCodeCall<"GetScaleVector($0)">;
 def GetNumChannels : NativeCodeCall<"GetNumChannels($_builder, $0)">;
 def IsDataFormatNHWC : ConstantAttr<TF_ConvnetDataFormatAttr, "NHWC">;
 
-def : Pat<(TF_Conv2DOp (TF_LceBsignOp $input), (ConstantOp $filter), $strides, $use_cudnn,
-                       $padding, $explicit_padding, IsDataFormatNHWC: $data_format, $dilations),
+def : Pat<(TF_Conv2DOp (TF_LceBsignOp $input), (ConstantOp $filter), IsIntList1XY1:$strides, $use_cudnn,
+                       $padding, $explicit_padding, IsDataFormatNHWC: $data_format, IsIntList1XY1:$dilations),
           (TF_LceBconv2dOp $input,
             (TF_TransposeOp (TF_DivOp (ConstantOp $filter), (ConstantOp (GetScaleVector $filter))), (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
             (ConstantOp (GetScaleVector $filter)),
             (ConstantOp (GetConstantVector<"0.0f"> $filter)),
             (GetNumChannels $input),
-            $strides,
-            $padding,
-            ConstantAttr<I32Attr, "0">,
-            $dilations,
+            ExtractI32At<1>:$dilations,
+            ExtractI32At<2>:$dilations,
             ConstantAttr<StrAttr, "OHWI">,
-            TFL_AF_None),
+            TFL_AF_None,
+            ConstantAttr<I32Attr, "0">,
+            $padding,
+            ExtractI32At<1>:$strides,
+            ExtractI32At<2>:$strides),
           [(BinaryFilter $filter)],
           (addBenefit 90)>;
 
@@ -57,19 +66,21 @@ def SamePadding : Constraint<CPred<"IsSamePadding($0, $1, $2, $3)">>;
 
 def : Pat<(TF_Conv2DOp: $output
             (TF_PadV2Op (TF_LceBsignOp $input), (ConstantOp $paddings), (ConstantOp $pad_values)),
-            (ConstantOp $filter), $strides, $use_cudnn, ConstantAttr<StrAttr, "VALID">,
-            $explicit_padding, IsDataFormatNHWC: $data_format, $dilations),
+            (ConstantOp $filter), IsIntList1XY1:$strides, $use_cudnn, ConstantAttr<StrAttr, "VALID">,
+            $explicit_padding, IsDataFormatNHWC: $data_format, IsIntList1XY1:$dilations),
           (TF_LceBconv2dOp $input,
             (TF_TransposeOp (TF_DivOp (ConstantOp $filter), (ConstantOp (GetScaleVector $filter))), (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
             (ConstantOp (GetScaleVector $filter)),
             (ConstantOp (GetConstantVector<"0.0f"> $filter)),
             (GetNumChannels $input),
-            $strides,
-            ConstantAttr<StrAttr, "SAME">,
-            ConstantAttr<I32Attr, "1">,
-            $dilations,
+            ExtractI32At<1>:$dilations,
+            ExtractI32At<2>:$dilations,
             ConstantAttr<StrAttr, "OHWI">,
-            TFL_AF_None),
+            TFL_AF_None,
+            ConstantAttr<I32Attr, "1">,
+            ConstantAttr<StrAttr, "SAME">,
+            ExtractI32At<1>:$strides,
+            ExtractI32At<2>:$strides),
           [(BinaryFilter $filter),
            (ConstFloatValueIsOne $pad_values),
            (SamePadding $paddings, $input, $output, $strides)],

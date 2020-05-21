@@ -54,12 +54,14 @@ TODO
     TensorOf<[F32]>:$post_activation_bias,
 
     I32Attr:$channels_in,
-    I64ArrayAttr:$strides,
-    TF_AnyStrAttrOf<["SAME", "VALID"]>:$padding,
-    DefaultValuedAttr<I32Attr, "0">:$pad_values,
-    DefaultValuedAttr<I64ArrayAttr, "{1, 1, 1, 1}">:$dilations,
+    I32Attr:$dilation_height_factor,
+    I32Attr:$dilation_width_factor,
     DefaultValuedAttr<TF_AnyStrAttrOf<["OHWI", "OHWI_PACKED"]>, "OHWI">:$filter_format,
-    TFL_AFAttr:$activation
+    TFL_AFAttr:$fused_activation_function,
+    DefaultValuedAttr<I32Attr, "0">:$pad_values,
+    TF_AnyStrAttrOf<["SAME", "VALID"]>:$padding,
+    I32Attr:$stride_height,
+    I32Attr:$stride_width
   );
 
   let results = (outs
