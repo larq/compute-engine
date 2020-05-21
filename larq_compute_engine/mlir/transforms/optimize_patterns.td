@@ -15,11 +15,11 @@ multiclass FuseAddOrSubWithBConv2D<dag binaryOp> {
   def : Pat<(binaryOp (TF_LceBconv2dOp:$output $input, $filter,
                           $post_activation_multiplier, (ConstantOp F32ElementsAttr:$post_activation_bias),
                           $channels_in, $strides, $padding, $pad_values,
-                          $data_format, $dilations, $filter_format, $activation),
+                          $dilations, $filter_format, $activation),
                       (ConstantOp F32ElementsAttr:$value), TFL_AF_None),
             (TF_LceBconv2dOp $input, $filter, $post_activation_multiplier,
                           (binaryOp (ConstantOp $post_activation_bias), (ConstantOp $value), TFL_AF_None),
-                          $channels_in, $strides, $padding, $pad_values, $data_format,
+                          $channels_in, $strides, $padding, $pad_values,
                           $dilations, $filter_format, $activation),
             [(HasOneUse $output)]>;
 }
@@ -31,7 +31,7 @@ multiclass FuseMulOrDivWithBConv2D<dag binaryOp> {
   def : Pat<(binaryOp (TF_LceBconv2dOp:$conv_output $input, $filter,
                         (ConstantOp F32ElementsAttr:$post_activation_multiplier),
                         (ConstantOp F32ElementsAttr:$post_activation_bias),
-                        $channels_in, $strides, $padding, $pad_values, $data_format,
+                        $channels_in, $strides, $padding, $pad_values,
                         $dilations, $filter_format, $activation),
                       (ConstantOp F32ElementsAttr:$value), TFL_AF_None),
             (TF_LceBconv2dOp $input, $filter,
@@ -39,7 +39,7 @@ multiclass FuseMulOrDivWithBConv2D<dag binaryOp> {
                                   (ConstantOp $value), TFL_AF_None),
                         (binaryOp (ConstantOp $post_activation_bias),
                                   (ConstantOp $value), TFL_AF_None),
-                        $channels_in, $strides, $padding, $pad_values, $data_format,
+                        $channels_in, $strides, $padding, $pad_values,
                         $dilations, $filter_format, $activation),
          [(HasOneUse $conv_output)]>;
 }
@@ -55,11 +55,11 @@ multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
                         (ConstantOp ConstantValue<"1.0f">:$post_activation_multiplier),
                         (ConstantOp ConstantValue<"0.0f">:$post_activation_bias),
                         $channels_in, $strides, ConstantAttr<StrAttr, "VALID">:$padding,
-                        $pad_values, $data_format, $dilations, $filter_format, TFL_AF_None)),
+                        $pad_values, $dilations, $filter_format, TFL_AF_None)),
             (TF_LceBconv2dOp $input, $filter,
                         (ConstantOp $post_activation_multiplier),
                         (ConstantOp $post_activation_bias),
-                        $channels_in, $strides, $padding, $pad_values, $data_format,
+                        $channels_in, $strides, $padding, $pad_values,
                         $dilations, $filter_format, ActFnAttr),
          [(HasOneUse $conv_output)]>;
   def : Pat<(ActFnOp (TF_LceBconv2dOp:$conv_output $input, $filter,
@@ -69,12 +69,12 @@ multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
                         $strides,
                         ConstantAttr<StrAttr, "SAME">:$padding,
                         ConstantAttr<I32Attr, "1">:$pad_values,
-                        $data_format, $dilations, $filter_format,
+                        $dilations, $filter_format,
                         TFL_AF_None)),
             (TF_LceBconv2dOp $input, $filter,
                         (ConstantOp $post_activation_multiplier),
                         (ConstantOp $post_activation_bias),
-                        $channels_in, $strides, $padding, $pad_values, $data_format,
+                        $channels_in, $strides, $padding, $pad_values,
                         $dilations, $filter_format, ActFnAttr),
          [(HasOneUse $conv_output)]>;
 }
@@ -91,9 +91,9 @@ def Bitpack : NativeCodeCall<"Bitpack($_builder, $0)">;
 
 def : Pat<(TF_LceBconv2dOp $input, (ConstantOp Conv2DFilter:$filter),
             $post_activation_multiplier, $post_activation_bias,
-            $channels_in, $strides, $padding, $pad_values, $data_format, $dilations,
+            $channels_in, $strides, $padding, $pad_values, $dilations,
             ConstantAttr<StrAttr, "OHWI">, $act),
           (TF_LceBconv2dOp $input, (ConstantOp (Bitpack $filter)),
             $post_activation_multiplier, $post_activation_bias,
-            $channels_in, $strides, $padding, $pad_values, $data_format, $dilations,
+            $channels_in, $strides, $padding, $pad_values, $dilations,
             ConstantAttr<StrAttr, "OHWI_PACKED">, $act)>;

@@ -297,7 +297,7 @@ func @QuantizeBConv2D(tensor<1x224x224x3x!quant.uniform<u8:f32, 7.812500e-03:128
   %cst1 = constant dense<1.10976315> : tensor<32xf32>
   %4 = "tfl.quantize"(%cst1) {qtype = tensor<32x!quant.uniform<u8:f32, 0.023528476789885875>>} : (tensor<32xf32>) -> tensor<32x!quant.uniform<u8:f32, 0.023528476789885875>>
   %5 = "tfl.dequantize"(%4) : (tensor<32x!quant.uniform<u8:f32, 0.023528476789885875>>) -> tensor<32xf32>
-  %6 = "tf.LceBconv2d"(%1, %arg1, %3, %5) {activation = "NONE", channels_in = 3 : i32, data_format = "NHWC", dilations = [1, 2, 3, 1], filter_format = "OHWI_PACKED", pad_values = 0 : i32, padding = "SAME", strides = [1, 4, 5, 1]} : (tensor<1x224x224x3xf32>, tensor<32x3x3x1xi32>, tensor<32xf32>, tensor<32xf32>) -> tensor<1x112x112x32xf32>
+  %6 = "tf.LceBconv2d"(%1, %arg1, %3, %5) {activation = "NONE", channels_in = 3 : i32, dilations = [1, 2, 3, 1], filter_format = "OHWI_PACKED", pad_values = 0 : i32, padding = "SAME", strides = [1, 4, 5, 1]} : (tensor<1x224x224x3xf32>, tensor<32x3x3x1xi32>, tensor<32xf32>, tensor<32xf32>) -> tensor<1x112x112x32xf32>
   %7 = "tfl.quantize"(%6) {qtype = tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>} : (tensor<1x112x112x32xf32>) -> tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>
   return %7 : tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>
 

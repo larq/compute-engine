@@ -59,7 +59,7 @@ func @used_bsign(%arg0: tensor<10xf32>) -> tensor<10xf32> {
 
 // CHECK-LABEL: @unused_bconv2d
 func @unused_bconv2d(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16x3x3x3xf32>, %arg2: tensor<16xf32>, %arg3: tensor<16xf32>) -> tensor<256x32x32x3xf32> {
-  %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {activation = "NONE", channels_in = 3 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x32x32x16xf32>
+  %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {activation = "NONE", channels_in = 3 : i32, dilations = [1, 1, 1, 1], filter_format = "OHWI", padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x32x32x16xf32>
   return %arg0 : tensor<256x32x32x3xf32>
 
   // CHECK-NEXT: return %arg0 : tensor<256x32x32x3xf32>
@@ -67,7 +67,7 @@ func @unused_bconv2d(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16x3x3x3xf32>
 
 // CHECK-LABEL: @used_bconv2d
 func @used_bconv2d(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16x3x3x3xf32>, %arg2: tensor<16xf32>, %arg3: tensor<16xf32>) -> tensor<256x32x32x16xf32> {
-  %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {activation = "NONE", channels_in = 3 : i32, data_format = "NHWC", dilations = [1, 1, 1, 1], filter_format = "OHWI", padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x32x32x16xf32>
+  %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {activation = "NONE", channels_in = 3 : i32, dilations = [1, 1, 1, 1], filter_format = "OHWI", padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x32x32x16xf32>
   return %0 : tensor<256x32x32x16xf32>
 
   // CHECK-NEXT: %0 = "tf.LceBconv2d"
