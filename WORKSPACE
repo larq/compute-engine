@@ -71,7 +71,7 @@ http_archive(
 
 # Load tf_repositories() before loading dependencies for other repository so
 # that dependencies like com_google_protobuf won't be overridden.
-load("@org_tensorflow//tensorflow:workspace.bzl", "tf_repositories")
+load("@org_tensorflow//tensorflow:workspace.bzl", "tf_bind", "tf_repositories")
 
 # Please add all new TensorFlow dependencies in workspace.bzl.
 tf_repositories()
@@ -104,8 +104,6 @@ android_workspace()
 
 # If a target is bound twice, the later one wins, so we have to do tf bindings
 # at the end of the WORKSPACE file.
-load("@org_tensorflow//tensorflow:workspace.bzl", "tf_bind")
-
 tf_bind()
 
 # Required for dependency @com_github_grpc_grpc

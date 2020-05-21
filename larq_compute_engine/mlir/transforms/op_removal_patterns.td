@@ -30,7 +30,7 @@ def : Pat<(TF_IdentityNOp $arg), (replaceWithValue $arg)>;
 def : Pat<(TF_LceBsignOp:$op $x), (replaceWithValue $x), [(HasNoUseOf:$op)]>;
 def : Pat<(TF_LceBconv2dOp:$op $input, $filter, $post_activation_multiplier,
             $post_activation_bias, $channels_in, $strides, $padding, $pad_values,
-            $data_format, $dilations, $filter_format, $act),
+            $dilations, $filter_format, $act),
           (replaceWithValue $input), [(HasNoUseOf:$op)]>;
 def : Pat<(TF_LceBMaxPool2dOp:$op $input, $padding, $stride_width,
             $stride_height, $filter_width, $filter_height),
