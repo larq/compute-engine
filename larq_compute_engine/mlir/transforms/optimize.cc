@@ -1,5 +1,6 @@
 #include "larq_compute_engine/core/packbits.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
+#include "llvm/ADT/Optional.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -68,24 +69,18 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
 
 #include "larq_compute_engine/mlir/transforms/generated_optimize.inc"
 
-/**
- * Returns `false` if some assumption does not hold (the consumer should then
- * consider the rewrite pattern match to have failed).
- */
-bool getBitpackedType(PatternRewriter& rewriter, ShapedType existing_type,
-                      RankedTensorType& bitpacked_type) {
-  if (existing_type.getElementType().isInteger(32)) return false;
+llvm::Optional<RankedTensorType> getBitpackedType(PatternRewriter& rewriter,
+                                                  ShapedType existing_type) {
+  if (existing_type.getElementType().isInteger(32)) return llvm::None;
 
   const auto existing_shape = existing_type.getShape();
-
-  if (existing_shape.size() != 4) return false;
+  if (existing_shape.size() != 4) return llvm::None;
 
   const auto channels = existing_shape[3];
   const auto packed_channels = (channels + 32 - 1) / 32;
-  bitpacked_type = RankedTensorType::get({existing_shape[0], existing_shape[1],
-                                          existing_shape[2], packed_channels},
-                                         rewriter.getIntegerType(32));
-  return true;
+  return RankedTensorType::get({existing_shape[0], existing_shape[1],
+                                existing_shape[2], packed_channels},
+                               rewriter.getIntegerType(32));
 }
 
 template <typename BinaryOp>
@@ -107,16 +102,13 @@ struct SetBitpackedActivations : public OpRewritePattern<BinaryOp> {
         return failure();
       }
 
-      RankedTensorType bitpacked_type;
-      if (!getBitpackedType(rewriter,
-                            inner_bconv_op.getType().cast<ShapedType>(),
-                            bitpacked_type)) {
-        return failure();
-      }
+      auto maybe_bitpacked_type = getBitpackedType(
+          rewriter, inner_bconv_op.getType().cast<ShapedType>());
+      if (!maybe_bitpacked_type.hasValue()) return failure();
 
       rewriter.replaceOpWithNewOp<TF::LceBconv2dOp>(
-          inner_bconv_op, bitpacked_type, inner_bconv_op.getOperands(),
-          inner_bconv_op.getAttrs());
+          inner_bconv_op, maybe_bitpacked_type.getValue(),
+          inner_bconv_op.getOperands(), inner_bconv_op.getAttrs());
 
       return success();
     }
@@ -128,14 +120,12 @@ struct SetBitpackedActivations : public OpRewritePattern<BinaryOp> {
         return failure();
       }
 
-      RankedTensorType bitpacked_type;
-      if (!getBitpackedType(rewriter, maxpool_op.getType().cast<ShapedType>(),
-                            bitpacked_type)) {
-        return failure();
-      }
+      auto maybe_bitpacked_type =
+          getBitpackedType(rewriter, maxpool_op.getType().cast<ShapedType>());
+      if (!maybe_bitpacked_type.hasValue()) return failure();
 
       rewriter.replaceOpWithNewOp<TF::LceBMaxPool2dOp>(
-          maxpool_op, bitpacked_type, maxpool_op.input(),
+          maxpool_op, maybe_bitpacked_type.getValue(), maxpool_op.input(),
           rewriter.getStringAttr(maxpool_op.padding()),
           rewriter.getIntegerAttr(rewriter.getIntegerType(32),
                                   maxpool_op.stride_h()),
