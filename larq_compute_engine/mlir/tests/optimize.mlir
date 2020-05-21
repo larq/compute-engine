@@ -209,16 +209,19 @@ func @bitpack_activations_between_binary_maxpool_and_bconv(%arg0: tensor<256x32x
   // CHECK-NEXT: return %1
 }
 
-// CHECK-LABEL: @bitpack_activations_with_intermediate_binary_maxpool
-func @bitpack_activations_with_intermediate_binary_maxpool(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<65x3x3x3xf32>, %arg2: tensor<65xf32>, %arg3: tensor<65xf32>, %arg4: tensor<8x3x3x65xf32>, %arg5: tensor<8xf32>, %arg6: tensor<8xf32>) -> tensor<256x14x14x8xf32> {
-  %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {activation = "NONE", channels_in = 3 : i32, dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 1 : i32, padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x32x32x65xf32>
-  %1 = "tfl.max_pool_2d"(%0) {filter_height = 2 : i32, filter_width = 2 : i32, fused_activation_function = "NONE", padding = "SAME", stride_h = 2 : i32, stride_w = 2 : i32} : (tensor<256x32x32x65xf32>) -> tensor<256x16x16x65xf32>
-  %2 = "tf.LceBconv2d"(%1, %arg4, %arg5, %arg6) {activation = "NONE", channels_in = 65 : i32, dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x16x16x65xf32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x14x14x8xf32>
-  return %2 : tensor<256x14x14x8xf32>
+// CHECK-LABEL: @bitpack_activations_bconv_relu_maxpool_bconv
+func @bitpack_activations_bconv_relu_maxpool_bconv(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<65x3x3x3xf32>, %arg2: tensor<8x3x3x65xf32>, %arg3: tensor<8xf32>, %arg4: tensor<8xf32>) -> tensor<256x14x14x8xf32> {
+  %post_activation_multiplier = constant dense<1.0> : tensor<65xf32>
+  %post_activation_bias = constant dense<0.0> : tensor<65xf32>
+  %0 = "tf.LceBconv2d"(%arg0, %arg1, %post_activation_multiplier, %post_activation_bias) {activation = "NONE", channels_in = 3 : i32, dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 1 : i32, padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x32x32x65xf32>
+  %1 = "tfl.relu"(%0) : (tensor<256x32x32x65xf32>) -> tensor<256x32x32x65xf32>
+  %2 = "tfl.max_pool_2d"(%1) {filter_height = 2 : i32, filter_width = 2 : i32, fused_activation_function = "NONE", padding = "SAME", stride_h = 2 : i32, stride_w = 2 : i32} : (tensor<256x32x32x65xf32>) -> tensor<256x16x16x65xf32>
+  %3 = "tf.LceBconv2d"(%2, %arg2, %arg3, %arg4) {activation = "NONE", channels_in = 65 : i32, dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x16x16x65xf32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x14x14x8xf32>
+  return %3 : tensor<256x14x14x8xf32>
 
-  // CHECK: %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {activation = "NONE", channels_in = 3 : i32, dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 1 : i32, padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x32x32x3xi32>
+  // CHECK: %0 = "tf.LceBconv2d"(%arg0, %arg1, %cst, %cst_0) {activation = "RELU", channels_in = 3 : i32, dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 1 : i32, padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>) -> tensor<256x32x32x3xi32>
   // CHECK: %1 = "tf.LceBMaxPool2d"(%0) {filter_height = 2 : i32, filter_width = 2 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 2 : i32} : (tensor<256x32x32x3xi32>) -> tensor<256x16x16x3xi32>
-  // CHECK-NEXT: %2 = "tf.LceBconv2d"(%1, %arg4, %arg5, %arg6) {activation = "NONE", channels_in = 65 : i32, dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x16x16x3xi32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x14x14x8xf32>
+  // CHECK-NEXT: %2 = "tf.LceBconv2d"(%1, %arg2, %arg3, %arg4) {activation = "NONE", channels_in = 65 : i32, dilations = [1, 1, 1, 1], filter_format = "OHWI", pad_values = 0 : i32, padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x16x16x3xi32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x14x14x8xf32>
   // CHECK-NEXT: return %2
 }
 
