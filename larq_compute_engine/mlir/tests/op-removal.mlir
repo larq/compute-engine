@@ -72,3 +72,19 @@ func @used_bconv2d(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16x3x3x3xf32>, 
 
   // CHECK-NEXT: %0 = "tf.LceBconv2d"
 }
+
+// CHECK-LABEL: @unused_bmaxpool2d
+func @unused_bmaxpool2d(%arg0: tensor<256x32x32x3xi32>) -> tensor<256x32x32x3xi32> {
+  %0 = "tf.LceBMaxPool2d"(%arg0) {filter_height = 2 : i32, filter_width = 2 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 2 : i32} : (tensor<256x32x32x3xi32>) -> tensor<256x16x16x3xi32>
+  return %arg0 : tensor<256x32x32x3xi32>
+
+  // CHECK-NEXT: return %arg0 : tensor<256x32x32x3xi32>
+}
+
+// CHECK-LABEL: @used_bmaxpool2d
+func @used_bmaxpool2d(%arg0: tensor<256x32x32x3xi32>) -> tensor<256x16x16x3xi32> {
+  %0 = "tf.LceBMaxPool2d"(%arg0) {filter_height = 2 : i32, filter_width = 2 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 2 : i32} : (tensor<256x32x32x3xi32>) -> tensor<256x16x16x3xi32>
+  return %0 : tensor<256x16x16x3xi32>
+
+  // CHECK-NEXT: %0 = "tf.LceBMaxPool2d"
+}
