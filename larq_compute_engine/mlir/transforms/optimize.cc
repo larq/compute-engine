@@ -69,8 +69,8 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
 
 #include "larq_compute_engine/mlir/transforms/generated_optimize.inc"
 
-llvm::Optional<RankedTensorType> getBitpackedType(PatternRewriter& rewriter,
-                                                  ShapedType existing_type) {
+llvm::Optional<RankedTensorType> maybeGetBitpackedType(
+    PatternRewriter& rewriter, ShapedType existing_type) {
   if (existing_type.getElementType().isInteger(32)) return llvm::None;
 
   const auto existing_shape = existing_type.getShape();
@@ -102,15 +102,13 @@ struct SetBitpackedActivations : public OpRewritePattern<BinaryOp> {
         return failure();
       }
 
-      auto maybe_bitpacked_type = getBitpackedType(
-          rewriter, inner_bconv_op.getType().cast<ShapedType>());
-      if (!maybe_bitpacked_type.hasValue()) return failure();
-
-      rewriter.replaceOpWithNewOp<TF::LceBconv2dOp>(
-          inner_bconv_op, maybe_bitpacked_type.getValue(),
-          inner_bconv_op.getOperands(), inner_bconv_op.getAttrs());
-
-      return success();
+      if (auto maybe_bitpacked_type = maybeGetBitpackedType(
+              rewriter, inner_bconv_op.getType().cast<ShapedType>())) {
+        rewriter.replaceOpWithNewOp<TF::LceBconv2dOp>(
+            inner_bconv_op, *maybe_bitpacked_type, inner_bconv_op.getOperands(),
+            inner_bconv_op.getAttrs());
+        return success();
+      }
     }
 
     // Otherwise, try and match `input_op` to a maxpool.
@@ -120,23 +118,21 @@ struct SetBitpackedActivations : public OpRewritePattern<BinaryOp> {
         return failure();
       }
 
-      auto maybe_bitpacked_type =
-          getBitpackedType(rewriter, maxpool_op.getType().cast<ShapedType>());
-      if (!maybe_bitpacked_type.hasValue()) return failure();
-
-      rewriter.replaceOpWithNewOp<TF::LceBMaxPool2dOp>(
-          maxpool_op, maybe_bitpacked_type.getValue(), maxpool_op.input(),
-          rewriter.getStringAttr(maxpool_op.padding()),
-          rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                  maxpool_op.stride_h()),
-          rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                  maxpool_op.stride_w()),
-          rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                  maxpool_op.filter_width()),
-          rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                  maxpool_op.filter_height()));
-
-      return success();
+      if (auto bitpacked_type = maybeGetBitpackedType(
+              rewriter, maxpool_op.getType().cast<ShapedType>())) {
+        rewriter.replaceOpWithNewOp<TF::LceBMaxPool2dOp>(
+            maxpool_op, *bitpacked_type, maxpool_op.input(),
+            rewriter.getStringAttr(maxpool_op.padding()),
+            rewriter.getIntegerAttr(rewriter.getIntegerType(32),
+                                    maxpool_op.stride_h()),
+            rewriter.getIntegerAttr(rewriter.getIntegerType(32),
+                                    maxpool_op.stride_w()),
+            rewriter.getIntegerAttr(rewriter.getIntegerType(32),
+                                    maxpool_op.filter_width()),
+            rewriter.getIntegerAttr(rewriter.getIntegerType(32),
+                                    maxpool_op.filter_height()));
+        return success();
+      }
     }
 
     return failure();
