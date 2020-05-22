@@ -42,6 +42,32 @@ bool IsConv2DFilter(Attribute filter) {
          filter_type.getShape().size() == 4;
 }
 
+DenseElementsAttr ComputeBSignAndExpandTo4D(Attribute attr) {
+  auto tensor = attr.cast<DenseElementsAttr>();
+  auto channels = tensor.getNumElements();
+  auto tensor_type = attr.getType().cast<ShapedType>();
+
+  std::vector<APFloat> results;
+  results.reserve(channels);
+  for (auto value : tensor.getValues<float>()) {
+    auto result = std::signbit(value) ? -1.0f : 1.0f;
+    results.push_back(APFloat(result));
+  }
+
+  auto expanded_shape =
+      RankedTensorType::get({channels, 1, 1, 1}, tensor_type.getElementType());
+  return DenseElementsAttr::get(expanded_shape, results);
+}
+
+bool HasNegativeValues(Attribute attr) {
+  if (!attr.isa<DenseElementsAttr>()) return false;
+
+  for (auto value : attr.cast<DenseElementsAttr>().getValues<float>()) {
+    if (value < 0.0f) return true;
+  }
+  return false;
+}
+
 DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
   const auto& dense_elements_iter =
       x.cast<DenseElementsAttr>().getValues<float>();

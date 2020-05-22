@@ -21,7 +21,7 @@ multiclass FuseAddOrSubWithBConv2D<dag binaryOp> {
                           (binaryOp (ConstantOp $post_activation_bias), (ConstantOp $value), TFL_AF_None),
                           $channels_in, $strides, $padding, $pad_values,
                           $dilations, $filter_format, $activation),
-            [(HasOneUse $output)]>;
+            [(HasOneUse $output)], (addBenefit 100)>;
 }
 foreach binaryOp = [TFL_AddOp, TFL_SubOp] in
   defm : FuseAddOrSubWithBConv2D<binaryOp>;
@@ -41,8 +41,22 @@ multiclass FuseMulOrDivWithBConv2D<dag binaryOp> {
                                   (ConstantOp $value), TFL_AF_None),
                         $channels_in, $strides, $padding, $pad_values,
                         $dilations, $filter_format, $activation),
-         [(HasOneUse $conv_output)]>;
+         [(HasOneUse $conv_output)], (addBenefit 100)>;
 }
+
+def HasNegativeValues : AttrConstraint<CPred<"HasNegativeValues($_self)">>;
+def ComputeBSignAndExpandTo4D : NativeCodeCall<"ComputeBSignAndExpandTo4D($0)">;
+
+def : Pat<(TF_LceBconv2dOp $input, (ConstantOp F32ElementsAttr:$filter),
+            (ConstantOp HasNegativeValues:$post_activation_multiplier),
+            $post_activation_bias, $channels_in, $strides, $padding,
+            $pad_values, $dilations, $filter_format, $act),
+          (TF_LceBconv2dOp $input,
+            (TFL_MulOp (ConstantOp $filter), (ConstantOp (ComputeBSignAndExpandTo4D $post_activation_multiplier)), TFL_AF_None),
+            (TFL_AbsOp (ConstantOp $post_activation_multiplier)),
+            $post_activation_bias, $channels_in, $strides, $padding,
+            $pad_values, $dilations, $filter_format, $act),
+          [], (addBenefit 90)>;
 
 foreach binaryOp = [TFL_DivOp, TFL_MulOp] in
   defm : FuseMulOrDivWithBConv2D<binaryOp>;

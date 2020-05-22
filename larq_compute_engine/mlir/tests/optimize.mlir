@@ -145,9 +145,10 @@ func @do_not_fuse_relu_into_bconv2d_no_post_activation_multiplier(%arg0: tensor<
 }
 
 // CHECK-LABEL: @bitpack_bconv2d_filters
-func @bitpack_bconv2d_filters(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16xf32>, %arg2: tensor<16xf32>) -> tensor<256x30x30x16xf32> {
-  %cst = constant dense<1.0> : tensor<16x3x3x3xf32>
-  %0 = "tf.LceBconv2d"(%arg0, %cst, %arg1, %arg2) {activation = "NONE", channels_in = 3 : i32, filter_format = "OHWI", padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x30x30x16xf32>
+func @bitpack_bconv2d_filters(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16xf32>) -> tensor<256x30x30x16xf32> {
+  %multiplier = constant dense<-3.0> : tensor<16xf32>
+  %filter = constant dense<1.0> : tensor<16x3x3x3xf32>
+  %0 = "tf.LceBconv2d"(%arg0, %filter, %multiplier, %arg1) {activation = "NONE", channels_in = 3 : i32, filter_format = "OHWI", padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x30x30x16xf32>
   return %0 : tensor<256x30x30x16xf32>
 
   // CHECK: %cst = constant dense<0> : tensor<16x3x3x1xi32>
