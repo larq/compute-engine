@@ -88,7 +88,7 @@ def quant(x):
 
 
 def toy_model_int8(**kwargs):
-    img = tf.keras.layers.Input(shape=(32, 32, 3))
+    img = tf.keras.layers.Input(shape=(224, 224, 3))
     x = quant(img)
     x = lq.layers.QuantConv2D(
         12, 3, input_quantizer="ste_sign", kernel_quantizer="ste_sign", activation=quant
@@ -108,6 +108,15 @@ def preprocess(data):
     return lqz.preprocess_input(data["image"])
 
 
+def assert_model_output(model_lce, inputs, outputs):
+    for input, output in zip(inputs, outputs):
+        actual_outputs = run_model(model_lce, list(input.flatten()))
+        assert len(actual_outputs) > 1
+        np.testing.assert_allclose(actual_outputs[0], actual_outputs[1], rtol=1e-5)
+        for actual_output in actual_outputs:
+            np.testing.assert_allclose(actual_output, output, rtol=0.001, atol=0.25)
+
+
 @pytest.mark.parametrize(
     "model_cls", [toy_model, toy_model_sequential, toy_model_int8, lqz.sota.QuickNet],
 )
@@ -121,24 +130,20 @@ def test_simple_model(model_cls):
     dataset = (
         tfds.load("tf_flowers", split="train", try_gcs=True)
         .map(preprocess)
-        .shuffle(256)
+        .shuffle(100)
         .batch(10)
         .take(1)
     )
     inputs = next(tfds.as_numpy(dataset))
 
     outputs = model(inputs).numpy()
-    for input, output in zip(inputs, outputs):
-        for actual_output in run_model(model_lce, list(input.flatten())):
-            np.testing.assert_allclose(actual_output, output, rtol=0.001, atol=0.25)
+    assert_model_output(model_lce, inputs, outputs)
 
     # Test on some random inputs
     input_shape = (10, *model.input.shape[1:])
     inputs = np.random.uniform(-1, 1, size=input_shape).astype(np.float32)
     outputs = model(inputs).numpy()
-    for input, output in zip(inputs, outputs):
-        for actual_output in run_model(model_lce, list(input.flatten())):
-            np.testing.assert_allclose(actual_output, output, rtol=0.001, atol=0.25)
+    assert_model_output(model_lce, inputs, outputs)
 
 
 if __name__ == "__main__":

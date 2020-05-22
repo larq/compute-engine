@@ -31,10 +31,9 @@ bool getFlatTensor(Interpreter* interpreter, int tensor_id, float** data,
   return true;
 }
 
-#define MINIMAL_CHECK(x)                                    \
-  if (!(x)) {                                               \
-    std::cerr << "Error at line " << __LINE__ << std::endl; \
-    return result;                                          \
+#define MINIMAL_CHECK(x)                                                   \
+  if (!(x)) {                                                              \
+    throw std::runtime_error("Error at line " + std::to_string(__LINE__)); \
   }
 
 std::vector<std::vector<float>> runModel(const pybind11::bytes& _flatbuffer,
