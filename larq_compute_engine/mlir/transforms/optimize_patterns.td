@@ -50,12 +50,12 @@ def ComputeBSignAndExpandTo4D : NativeCodeCall<"ComputeBSignAndExpandTo4D($0)">;
 def : Pat<(TF_LceBconv2dOp $input, (ConstantOp F32ElementsAttr:$filter),
             (ConstantOp HasNegativeValues:$post_activation_multiplier),
             $post_activation_bias, $channels_in, $strides, $padding,
-            $pad_values, $dilations, $filter_format, $act),
+            $pad_values, $dilations, $filter_format, TFL_AF_None),
           (TF_LceBconv2dOp $input,
             (TFL_MulOp (ConstantOp $filter), (ConstantOp (ComputeBSignAndExpandTo4D $post_activation_multiplier)), TFL_AF_None),
             (TFL_AbsOp (ConstantOp $post_activation_multiplier)),
             $post_activation_bias, $channels_in, $strides, $padding,
-            $pad_values, $dilations, $filter_format, $act),
+            $pad_values, $dilations, $filter_format, TFL_AF_None),
           [], (addBenefit 90)>;
 
 foreach binaryOp = [TFL_DivOp, TFL_MulOp] in
