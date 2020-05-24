@@ -60,8 +60,6 @@ gentbl(
     td_file = "transforms/optimize_patterns.td",
     td_srcs = [
         "ir/lce_ops.td",
-        "transforms/op_removal_patterns.td",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
     ],
@@ -140,7 +138,6 @@ cc_library(
         "transforms/passes.h",
     ],
     deps = [
-        ":larq_compute_engine",
         "@llvm-project//mlir:StandardOps",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
     ],

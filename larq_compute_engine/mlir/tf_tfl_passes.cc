@@ -36,10 +36,6 @@ void AddQuantizationPasses(const mlir::TFL::QuantizationSpecs& quant_specs,
     pass_manager->addPass(
         mlir::TFL::CreatePostQuantizePass(emit_quant_adaptor_ops));
   }
-
-  pass_manager->addPass(mlir::TFL::CreateOpRemovalPass());
-  pass_manager->addPass(
-      mlir::TFL::CreatePostQuantizePass(emit_quant_adaptor_ops));
 }
 
 void AddTFToLCETFLConversionPasses(
