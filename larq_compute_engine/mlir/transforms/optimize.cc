@@ -37,8 +37,9 @@ bool IsConstantValue(Attribute values, float expected_value) {
 
 bool IsConv2DFilter(Attribute filter) {
   if (!filter.isa<DenseElementsAttr>()) return false;
-  if (filter.getType().cast<ShapedType>().getShape().size() != 4) return false;
-  return true;
+  auto filter_type = filter.getType().cast<ShapedType>();
+  return filter_type.getElementType().isF32() &&
+         filter_type.getShape().size() == 4;
 }
 
 DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
