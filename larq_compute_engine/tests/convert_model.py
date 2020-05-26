@@ -24,7 +24,7 @@ def model_fn():
 @click.option(
     "--outfile",
     default="model.tflite",
-    help="Destination used to save converted TFLite flatbuffer.",
+    help="Destination (relative to bazel rundir) used to save converted TFLite flatbuffer.",
     type=click.Path(writable=True, resolve_path=True),
 )
 def convert_model(outfile):
