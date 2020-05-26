@@ -150,6 +150,7 @@ func @bitpack_bconv2d_filters(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16xf
   %0 = "tf.LceBconv2d"(%arg0, %cst, %arg1, %arg2) {activation = "NONE", channels_in = 3 : i32, filter_format = "OHWI", padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x30x30x16xf32>
   return %0 : tensor<256x30x30x16xf32>
 
+  // CHECK: %cst = constant dense<0> : tensor<16x3x3x1xi32>
   // CHECK: %0 = "tf.LceBconv2d"(%arg0, %cst, %arg1, %arg2) {activation = "NONE", channels_in = 3 : i32, dilations = [1, 1, 1, 1], filter_format = "OHWI_PACKED", pad_values = 0 : i32, padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x32x32x3xf32>, tensor<16x3x3x1xi32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x30x30x16xf32>
   // CHECK-NEXT: return %0
 }
