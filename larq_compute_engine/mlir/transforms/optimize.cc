@@ -55,11 +55,17 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
   int packed_channels = (unpacked_channels + bitwidth - 1) / bitwidth;
 
   std::vector<PackedType> new_values(num_rows * packed_channels);
+  std::vector<float> old_values(num_rows * unpacked_channels);
 
-  const float* in_ptr = &(*dense_elements_iter.begin());
+  int i = 0;
+  for (float x : dense_elements_iter) {
+    old_values[i++] = x;
+  }
+  assert(i == num_rows * unpacked_channels);
+
   using namespace compute_engine::core;
-  packbits_matrix<BitpackOrder::Canonical>(in_ptr, num_rows, unpacked_channels,
-                                           new_values.data());
+  packbits_matrix<BitpackOrder::Canonical>(
+      old_values.data(), num_rows, unpacked_channels, new_values.data());
 
   RankedTensorType out_tensor_type =
       RankedTensorType::get({shape[0], shape[1], shape[2], packed_channels},
