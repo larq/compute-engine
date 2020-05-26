@@ -15,6 +15,13 @@ def TFL_AFAttr : StrEnumAttr<
     "ActivationFunctionType", "fused activation enum", [
       TFL_AF_None,  TFL_AF_Relu, TFL_AF_Relu1, TFL_AF_Relu6
     ]>;
+
+def TFL_PAD_Same  : StrEnumAttrCase<"SAME">;
+def TFL_PAD_Valid : StrEnumAttrCase<"VALID">;
+
+def TFL_PaddingAttr : StrEnumAttr<"Padding", "padding enum", [
+      TFL_PAD_Same, TFL_PAD_Valid
+    ]>;
 #endif
 
 #ifndef LCE_OPS
@@ -59,7 +66,7 @@ TODO
     DefaultValuedAttr<TF_AnyStrAttrOf<["OHWI", "OHWI_PACKED"]>, "OHWI">:$filter_format,
     TFL_AFAttr:$fused_activation_function,
     DefaultValuedAttr<I32Attr, "0">:$pad_values,
-    TF_AnyStrAttrOf<["SAME", "VALID"]>:$padding,
+    TFL_PaddingAttr:$padding,
     I32Attr:$stride_height,
     I32Attr:$stride_width
   );
@@ -82,7 +89,7 @@ Computes a MaxPool2D operation and outputs bitpacked binary values, for consumpt
 
   let arguments = (ins
     TensorOf<[F32, I32]>:$input,
-    TF_AnyStrAttrOf<["SAME", "VALID"]>:$padding,
+    TFL_PaddingAttr:$padding,
     I32Attr:$stride_width,
     I32Attr:$stride_height,
     I32Attr:$filter_width,
