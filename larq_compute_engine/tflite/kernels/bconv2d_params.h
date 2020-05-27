@@ -25,10 +25,12 @@ typedef struct {
   std::int64_t channels_out{0};
 
   // strides
-  std::int64_t strides[4] = {};
+  std::int64_t stride_height{0};
+  std::int64_t stride_width{0};
 
   // dilations
-  std::int64_t dilations[4] = {};
+  std::int64_t dilation_height_factor{0};
+  std::int64_t dilation_width_factor{0};
 
   // padding
   TfLitePadding padding_type{};
@@ -42,7 +44,7 @@ typedef struct {
   compute_engine::core::FilterFormat filter_format{
       compute_engine::core::FilterFormat::Unknown};
 
-  TfLiteFusedActivation activation = kTfLiteActNone;
+  TfLiteFusedActivation fused_activation_function = kTfLiteActNone;
   // These min,max take care of a Relu.
   // Later they will *also* do the clamping in order to go from int32 to int8
   std::int32_t output_activation_min;
