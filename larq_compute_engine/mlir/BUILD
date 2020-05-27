@@ -11,11 +11,13 @@ gentbl(
     tbl_outs = [
         ("-gen-op-decls", "ir/lce_ops.h.inc"),
         ("-gen-op-defs", "ir/lce_ops.cc.inc"),
+        ("-gen-dialect-decls -dialect=lq", "ir/lce_dialect.h.inc"),
         ("-gen-op-doc", "g3doc/lce_ops.md"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "ir/lce_ops.td",
     td_srcs = [
+        "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
     ],
 )
@@ -99,6 +101,7 @@ gentbl(
 cc_library(
     name = "larq_compute_engine",
     srcs = [
+        "ir/lce_dialect.h.inc",
         "ir/lce_ops.cc",
         "ir/lce_ops.cc.inc",
         "ir/lce_ops.h.inc",
@@ -108,7 +111,21 @@ cc_library(
         "transforms/passes.h",
     ],
     deps = [
+        "@llvm-project//mlir:QuantOps",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
+    ],
+    alwayslink = 1,
+)
+
+# Library with tensorflow Lite dialect static initialization.
+cc_library(
+    name = "larq_dialect_registration",
+    srcs = [
+        "ir/dialect_registration.cc",
+    ],
+    deps = [
+        ":larq_compute_engine",
+        "@llvm-project//mlir:IR",
     ],
     alwayslink = 1,
 )
@@ -233,6 +250,7 @@ cc_library(
 cc_binary(
     name = "lce-tf-opt",
     deps = [
+        ":larq_dialect_registration",
         ":lce_tfl_passes",
         "@llvm-project//mlir:MlirOptMain",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_dialect_registration",
@@ -245,6 +263,7 @@ pybind_extension(
     srcs = ["python/graphdef_tfl_flatbuffer.cc"],
     module_name = "graphdef_tfl_flatbuffer",
     deps = [
+        ":larq_dialect_registration",
         ":lce_tfl_passes",
         "@org_tensorflow//tensorflow/compiler/mlir:op_or_arg_name_mapper",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",

@@ -43,7 +43,7 @@ func @identity(%arg0: tensor<10xi32>, %arg1: tensor<20xi32>, %arg2: tensor<30xi3
 
 // CHECK-LABEL: @unused_bsign
 func @unused_bsign(%arg0: tensor<10xf32>) -> tensor<10xf32> {
-  %0 = "tf.LceBsign"(%arg0) : (tensor<10xf32>) -> tensor<10xf32>
+  %0 = "lq.LceBsign"(%arg0) : (tensor<10xf32>) -> tensor<10xf32>
   return %arg0 : tensor<10xf32>
 
   // CHECK-NEXT: return %arg0 : tensor<10xf32>
@@ -51,15 +51,15 @@ func @unused_bsign(%arg0: tensor<10xf32>) -> tensor<10xf32> {
 
 // CHECK-LABEL: @used_bsign
 func @used_bsign(%arg0: tensor<10xf32>) -> tensor<10xf32> {
-  %0 = "tf.LceBsign"(%arg0) : (tensor<10xf32>) -> tensor<10xf32>
+  %0 = "lq.LceBsign"(%arg0) : (tensor<10xf32>) -> tensor<10xf32>
   return %0 : tensor<10xf32>
 
-  // CHECK-NEXT: %0 = "tf.LceBsign"
+  // CHECK-NEXT: %0 = "lq.LceBsign"
 }
 
 // CHECK-LABEL: @unused_bconv2d
 func @unused_bconv2d(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16x3x3x3xf32>, %arg2: tensor<16xf32>, %arg3: tensor<16xf32>) -> tensor<256x32x32x3xf32> {
-  %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x32x32x16xf32>
+  %0 = "lq.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x32x32x16xf32>
   return %arg0 : tensor<256x32x32x3xf32>
 
   // CHECK-NEXT: return %arg0 : tensor<256x32x32x3xf32>
@@ -67,15 +67,15 @@ func @unused_bconv2d(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16x3x3x3xf32>
 
 // CHECK-LABEL: @used_bconv2d
 func @used_bconv2d(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16x3x3x3xf32>, %arg2: tensor<16xf32>, %arg3: tensor<16xf32>) -> tensor<256x32x32x16xf32> {
-  %0 = "tf.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x32x32x16xf32>
+  %0 = "lq.LceBconv2d"(%arg0, %arg1, %arg2, %arg3) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x32x32x16xf32>
   return %0 : tensor<256x32x32x16xf32>
 
-  // CHECK-NEXT: %0 = "tf.LceBconv2d"
+  // CHECK-NEXT: %0 = "lq.LceBconv2d"
 }
 
 // CHECK-LABEL: @unused_bmaxpool2d
 func @unused_bmaxpool2d(%arg0: tensor<256x32x32x3xi32>) -> tensor<256x32x32x3xi32> {
-  %0 = "tf.LceBMaxPool2d"(%arg0) {filter_height = 2 : i32, filter_width = 2 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 2 : i32} : (tensor<256x32x32x3xi32>) -> tensor<256x16x16x3xi32>
+  %0 = "lq.LceBMaxPool2d"(%arg0) {filter_height = 2 : i32, filter_width = 2 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 2 : i32} : (tensor<256x32x32x3xi32>) -> tensor<256x16x16x3xi32>
   return %arg0 : tensor<256x32x32x3xi32>
 
   // CHECK-NEXT: return %arg0 : tensor<256x32x32x3xi32>
@@ -83,8 +83,8 @@ func @unused_bmaxpool2d(%arg0: tensor<256x32x32x3xi32>) -> tensor<256x32x32x3xi3
 
 // CHECK-LABEL: @used_bmaxpool2d
 func @used_bmaxpool2d(%arg0: tensor<256x32x32x3xi32>) -> tensor<256x16x16x3xi32> {
-  %0 = "tf.LceBMaxPool2d"(%arg0) {filter_height = 2 : i32, filter_width = 2 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 2 : i32} : (tensor<256x32x32x3xi32>) -> tensor<256x16x16x3xi32>
+  %0 = "lq.LceBMaxPool2d"(%arg0) {filter_height = 2 : i32, filter_width = 2 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 2 : i32} : (tensor<256x32x32x3xi32>) -> tensor<256x16x16x3xi32>
   return %0 : tensor<256x16x16x3xi32>
 
-  // CHECK-NEXT: %0 = "tf.LceBMaxPool2d"
+  // CHECK-NEXT: %0 = "lq.LceBMaxPool2d"
 }
