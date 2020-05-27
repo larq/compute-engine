@@ -29,6 +29,14 @@ py_test(
     ],
 )
 
+py_test(
+    name = "convert_model",
+    srcs = ["convert_model.py"],
+    deps = [
+        "//larq_compute_engine/mlir:converter",
+    ],
+)
+
 test_suite(
     name = "cc_tests",
     tests = [
