@@ -19,7 +19,7 @@ jobs:
           submodules: true
       - name: Install Bazelisk
         run: |
-          curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-linux-amd64 > bazelisk
+          curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.4.0/bazelisk-linux-amd64 > bazelisk
           chmod +x bazelisk
       - name: Configure Bazel
         run: ./configure.sh <<< $'yes\n' #yes for manylinux2010
@@ -40,7 +40,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends qemu-user
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
         with:
           python-version: 3.7
       - name: Configure Bazel
@@ -66,7 +66,7 @@ jobs:
         with:
           service_account_key: ${{ secrets.gcs_bazel_cache }}
           export_default_credentials: true
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
         with:
           python-version: 3.7
       - name: Configure Bazel
@@ -87,7 +87,7 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
         with:
           python-version: 3.7
       - name: Install dependencies
@@ -100,11 +100,13 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
 
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-python@v1
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v2
         with:
           python-version: 3.7
-      - uses: actions/cache@v1
+      - uses: actions/cache@v2
         id: cache
         with:
           path: /tmp/lce_android
