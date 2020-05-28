@@ -56,7 +56,13 @@ def LarqDialect : Dialect {
 
 // Base class for the operation in this dialect
 class LQ_Op<string mnemonic, list<OpTrait> traits = []> :
-    Op<LarqDialect, mnemonic, traits>;
+    Op<LarqDialect, mnemonic, traits> {
+
+  let extraClassDeclaration = [{
+    std::vector<uint8_t> buildCustomOptions();
+  }];
+}
+
 
 class TensorOfOrNone<list<Type> allowedTypes, string description = ""> :
   AnyTypeOf<[TensorOf<allowedTypes>, NoneType], description>;

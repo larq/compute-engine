@@ -109,6 +109,7 @@ cc_library(
         "transforms/passes.h",
     ],
     deps = [
+        "@flatbuffers",
         "@llvm-project//mlir:QuantOps",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
     ],
@@ -209,7 +210,6 @@ cc_library(
     ],
     deps = [
         ":larq_compute_engine",
-        "@flatbuffers",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
     ],
     alwayslink = 1,
