@@ -12,7 +12,7 @@ def HasOneUse : Constraint<CPred<"$0.hasOneUse()">>;
 // TODO: Check shapes before fusing
 multiclass FuseAddOrSubWithBConv2D<dag binaryOp> {
   def : Pat<(binaryOp
-                (LQ_LceBconv2dOp:$output
+                (LQ_Bconv2dOp:$output
                     $input,
                     $filter,
                     $post_activation_multiplier,
@@ -27,7 +27,7 @@ multiclass FuseAddOrSubWithBConv2D<dag binaryOp> {
                     $stride_height,
                     $stride_width),
                 (ConstantOp F32ElementsAttr:$value), TFL_AF_None),
-            (LQ_LceBconv2dOp
+            (LQ_Bconv2dOp
                 $input,
                 $filter,
                 $post_activation_multiplier,
@@ -50,7 +50,7 @@ foreach binaryOp = [TFL_AddOp, TFL_SubOp] in
 // TODO: Check shapes before fusing
 multiclass FuseMulOrDivWithBConv2D<dag binaryOp> {
   def : Pat<(binaryOp
-                (LQ_LceBconv2dOp:$conv_output
+                (LQ_Bconv2dOp:$conv_output
                     $input,
                     $filter,
                     (ConstantOp F32ElementsAttr:$post_activation_multiplier),
@@ -65,7 +65,7 @@ multiclass FuseMulOrDivWithBConv2D<dag binaryOp> {
                     $stride_height,
                     $stride_width),
                 (ConstantOp F32ElementsAttr:$value), TFL_AF_None),
-            (LQ_LceBconv2dOp
+            (LQ_Bconv2dOp
                 $input,
                 $filter,
                 (binaryOp (ConstantOp $post_activation_multiplier),
@@ -92,7 +92,7 @@ class ConstantValue<string val> : AttrConstraint<CPred<"IsConstantValue($_self, 
 // Fuse activation function into BConv2D
 multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
   def : Pat<(ActFnOp
-                (LQ_LceBconv2dOp:$conv_output
+                (LQ_Bconv2dOp:$conv_output
                     $input,
                     $filter,
                     (ConstantOp ConstantValue<"1.0f">:$post_activation_multiplier),
@@ -106,7 +106,7 @@ multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
                     ConstantAttr<StrAttr, "VALID">:$padding,
                     $stride_height,
                     $stride_width)),
-            (LQ_LceBconv2dOp
+            (LQ_Bconv2dOp
                 $input,
                 $filter,
                 (ConstantOp $post_activation_multiplier),
@@ -122,7 +122,7 @@ multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
                 $stride_width),
             [(HasOneUse $conv_output)], (addBenefit 100)>;
   def : Pat<(ActFnOp
-                (LQ_LceBconv2dOp:$conv_output
+                (LQ_Bconv2dOp:$conv_output
                     $input,
                     $filter,
                     (ConstantOp ConstantValue<"1.0f">:$post_activation_multiplier),
@@ -138,7 +138,7 @@ multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
                     "SAME">:$padding,
                     $stride_height,
                     $stride_width)),
-            (LQ_LceBconv2dOp
+            (LQ_Bconv2dOp
                 $input,
                 $filter,
                 (ConstantOp $post_activation_multiplier),

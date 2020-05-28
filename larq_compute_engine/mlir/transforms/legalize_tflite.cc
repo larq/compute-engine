@@ -9,9 +9,9 @@ namespace TFL {
 
 namespace {
 
-std::vector<uint8_t> buildCustomOption(TF::LceBsignOp op) { return {}; }
+std::vector<uint8_t> buildCustomOption(TF::BsignOp op) { return {}; }
 
-std::vector<uint8_t> buildCustomOption(TF::LceBconv2dOp op) {
+std::vector<uint8_t> buildCustomOption(TF::Bconv2dOp op) {
   flexbuffers::Builder fbb;
   fbb.Map([&]() {
     fbb.Int("channels_in", op.channels_in().getSExtValue());
@@ -29,7 +29,7 @@ std::vector<uint8_t> buildCustomOption(TF::LceBconv2dOp op) {
   return fbb.GetBuffer();
 }
 
-std::vector<uint8_t> buildCustomOption(TF::LceBMaxPool2dOp op) {
+std::vector<uint8_t> buildCustomOption(TF::BMaxPool2dOp op) {
   flexbuffers::Builder fbb;
   fbb.Map([&]() {
     fbb.String("padding", std::string(op.padding()));
@@ -62,7 +62,7 @@ struct LegalizeToCustomOp : public OpRewritePattern<LarqOp> {
 
     rewriter.replaceOpWithNewOp<CustomOp>(
         op, op->getResultTypes(), op->getOperands(),
-        LarqOp::getOperationName().drop_front(3), attr);
+        "Lce" + std::string(LarqOp::getOperationName().drop_front(3)), attr);
     return success();
   }
 };
@@ -72,9 +72,9 @@ void LegalizeLCE::runOnFunction() {
   auto* ctx = &getContext();
   auto func = getFunction();
 
-  patterns.insert<LegalizeToCustomOp<TF::LceBsignOp>,
-                  LegalizeToCustomOp<TF::LceBconv2dOp>,
-                  LegalizeToCustomOp<TF::LceBMaxPool2dOp>>(ctx);
+  patterns.insert<LegalizeToCustomOp<TF::BsignOp>,
+                  LegalizeToCustomOp<TF::Bconv2dOp>,
+                  LegalizeToCustomOp<TF::BMaxPool2dOp>>(ctx);
 
   applyPatternsAndFoldGreedily(func, patterns);
 }

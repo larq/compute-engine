@@ -61,7 +61,7 @@ class LQ_Op<string mnemonic, list<OpTrait> traits = []> :
 class TensorOfOrNone<list<Type> allowedTypes, string description = ""> :
   AnyTypeOf<[TensorOf<allowedTypes>, NoneType], description>;
 
-def LQ_LceBsignOp : LQ_Op<"LceBsign", [NoSideEffect, SameOperandsAndResultType]> {
+def LQ_BsignOp : LQ_Op<"Bsign", [NoSideEffect, SameOperandsAndResultType]> {
   let summary = "Returns an element-wise indication of the binary sign of a number.";
 
   let description = [{
@@ -79,7 +79,7 @@ def LQ_LceBsignOp : LQ_Op<"LceBsign", [NoSideEffect, SameOperandsAndResultType]>
   TF_DerivedOperandTypeAttr T = TF_DerivedOperandTypeAttr<0>;
 }
 
-def LQ_LceBconv2dOp : LQ_Op<"LceBconv2d", [NoSideEffect]> {
+def LQ_Bconv2dOp : LQ_Op<"Bconv2d", [NoSideEffect]> {
   let summary = [{
 Computes a 2D binary convolution by binarizing and bitpacking the input and filter.
   }];
@@ -112,7 +112,7 @@ TODO
   TF_DerivedOperandTypeAttr T = TF_DerivedOperandTypeAttr<0>;
 }
 
-def LQ_LceBMaxPool2dOp : LQ_Op<"LceBMaxPool2d", [NoSideEffect]> {
+def LQ_BMaxPool2dOp : LQ_Op<"BMaxPool2d", [NoSideEffect]> {
   let summary = [{
 Binary MaxPool2D op.
   }];
