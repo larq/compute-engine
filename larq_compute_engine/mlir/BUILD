@@ -200,6 +200,22 @@ cc_library(
 )
 
 cc_library(
+    name = "larq_compute_engine_legalize_tflite",
+    srcs = [
+        "transforms/legalize_tflite.cc",
+    ],
+    hdrs = [
+        "transforms/passes.h",
+    ],
+    deps = [
+        ":larq_compute_engine",
+        "@flatbuffers",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+    ],
+    alwayslink = 1,
+)
+
+cc_library(
     name = "larq_compute_engine_quantize",
     srcs = [
         "transforms/generated_quantize.inc",
@@ -223,6 +239,7 @@ cc_library(
     ],
     deps = [
         ":larq_compute_engine_bitpack_weights",
+        ":larq_compute_engine_legalize_tflite",
         ":larq_compute_engine_op_removal",
         ":larq_compute_engine_optimize",
         ":larq_compute_engine_prepare",
