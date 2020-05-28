@@ -119,7 +119,6 @@ void AddTFToLCETFLConversionPasses(
   pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(
       experimental_enable_bitpacked_activations));
   pass_manager->addPass(mlir::TFL::CreateBitpackWeightsLCEPass());
-  pass_manager->addPass(mlir::TFL::CreateLegalizeLCEPass());
   // This pass operates on TensorFlow ops but is triggered after legalization
   // so that it can target constants introduced once TensorFlow Identity ops
   // are removed during legalization.
@@ -140,6 +139,7 @@ void AddTFToLCETFLConversionPasses(
   if (quant_specs.RunPropagationAndRewriteQuantizationPasses()) {
     AddQuantizationPasses(quant_specs, pass_manager);
   }
+  pass_manager->addPass(mlir::TFL::CreateLegalizeLCEPass());
 }
 
 }  // namespace tensorflow
