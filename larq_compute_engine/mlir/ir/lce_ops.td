@@ -75,8 +75,6 @@ def LQ_BsignOp : LQ_Op<"Bsign", [NoSideEffect, SameOperandsAndResultType]> {
   let results = (outs
     TensorOf<[BF16, F16, F32, F64, I32, I64, TF_Complex128, TF_Complex64]>:$y
   );
-
-  TF_DerivedOperandTypeAttr T = TF_DerivedOperandTypeAttr<0>;
 }
 
 def LQ_Bconv2dOp : LQ_Op<"Bconv2d", [NoSideEffect]> {
@@ -108,8 +106,6 @@ TODO
   let results = (outs
     TensorOf<[F32, I32, QI8]>:$output
   );
-
-  TF_DerivedOperandTypeAttr T = TF_DerivedOperandTypeAttr<0>;
 }
 
 def LQ_BMaxPool2dOp : LQ_Op<"BMaxPool2d", [NoSideEffect]> {
@@ -133,8 +129,6 @@ Computes a MaxPool2D operation and outputs bitpacked binary values, for consumpt
   let results = (outs
     TensorOf<[I32]>:$output
   );
-
-  TF_DerivedOperandTypeAttr T = TF_DerivedOperandTypeAttr<0>;
 }
 
 #endif // LARQ_DIALECT
