@@ -86,11 +86,11 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
   LCE_ENSURE_PARAM(conv_params, context, !m["dilation_width_factor"].IsNull());
 
   // reading strides
-  conv_params->stride_height = m["stride_height"].AsInt64();
-  conv_params->stride_width = m["stride_width"].AsInt64();
+  conv_params->stride_height = m["stride_height"].AsInt32();
+  conv_params->stride_width = m["stride_width"].AsInt32();
   // reading dilations
-  conv_params->dilation_height_factor = m["dilation_height_factor"].AsInt64();
-  conv_params->dilation_width_factor = m["dilation_width_factor"].AsInt64();
+  conv_params->dilation_height_factor = m["dilation_height_factor"].AsInt32();
+  conv_params->dilation_width_factor = m["dilation_width_factor"].AsInt32();
 
   // reading padding
   if (m["padding"].ToString() == "VALID" ||
@@ -121,7 +121,7 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
     return conv_params;
   }
   conv_params->pad_value =
-      m["pad_values"].IsNull() ? 0 : m["pad_values"].AsInt64();
+      m["pad_values"].IsNull() ? 0 : m["pad_values"].AsInt32();
   if (conv_params->pad_value != 0 && conv_params->pad_value != 1) {
     context->ReportError(context, "Attribute pad_values must be 0 or 1.");
     return conv_params;
