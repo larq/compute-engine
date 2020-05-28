@@ -12,7 +12,7 @@ gentbl(
         ("-gen-op-decls", "ir/lce_ops.h.inc"),
         ("-gen-op-defs", "ir/lce_ops.cc.inc"),
         ("-gen-dialect-decls -dialect=lq", "ir/lce_dialect.h.inc"),
-        ("-gen-op-doc", "g3doc/lce_ops.md"),
+        ("-gen-dialect-doc", "g3doc/lce_ops.md"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "ir/lce_ops.td",
