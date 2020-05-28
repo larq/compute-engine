@@ -1,4 +1,4 @@
-// RUN: lce-tf-opt %s -tfl-prepare-quantize -tfl-hybrid-quantize -lce-op-removal-tf | FileCheck %s --dump-input-on-failure
+// RUN: lce-tf-opt %s -tfl-prepare-quantize -tfl-hybrid-quantize | FileCheck %s --dump-input-on-failure
 
 // CHECK-LABEL: QuantizeFloatConst
 func @QuantizeFloatConst() -> tensor<2x2x!quant.uniform<u8:f32, 7.8431372549019615E-4:128>> {
