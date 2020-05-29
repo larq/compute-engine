@@ -24,7 +24,6 @@ void GetBaseParams(TfLiteContext* context, TfLiteNode* node,
   static_assert(std::is_same<AccumScalar, std::int32_t>::value ||
                     std::is_same<AccumScalar, std::int16_t>::value,
                 "AccumScalar must be int32 or int16");
-  auto input_shape = GetTensorShape(GetInput(context, node, 0));
   auto filter_shape = GetTensorShape(GetInput(context, node, 1));
   output_transform.backtransform_add =
       filter_shape.Dims(1) * filter_shape.Dims(2) * params->channels_in;
@@ -53,23 +52,8 @@ template <typename AccumScalar>
 void GetOutputTransform(
     TfLiteContext* context, TfLiteNode* node, TfLiteBConv2DParams* params,
     OutputTransform<AccumScalar, std::int32_t>& output_transform) {
-  GetBaseParams(context, node, params, output_transform);
-  const auto* post_activation_multiplier = GetInput(context, node, 2);
-  const auto* post_activation_bias = GetInput(context, node, 3);
-  if (post_activation_multiplier->type == kTfLiteFloat32 &&
-      post_activation_bias->type == kTfLiteFloat32) {
-    output_transform.post_activation_multiplier =
-        GetTensorData<float>(post_activation_multiplier);
-    output_transform.post_activation_bias =
-        GetTensorData<float>(post_activation_bias);
-  } else {
-    // When the post data was stored in int8, then SetupQuantization will have
-    // converted it to float
-    output_transform.post_activation_multiplier =
-        params->scaled_post_activation_multiplier.data();
-    output_transform.post_activation_bias =
-        params->scaled_post_activation_bias.data();
-  }
+  const auto* thresholds = GetInput(context, node, 4);
+  output_transform.thresholds = GetTensorData<AccumScalar>(thresholds);
 }
 
 // Fill the OutputTransform values for int8 outputs

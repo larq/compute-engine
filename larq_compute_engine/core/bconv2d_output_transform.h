@@ -60,21 +60,13 @@ struct OutputTransform<AccumScalar, float> : OutputTransformBase<AccumScalar> {
 };
 
 // Output transformation for bitpacked output
-// Currently uses an un-optimized path by using the float transform.
-// TODO: Precompute a per-channel accumulation threshold
-// so that we can simply do a single compare here:
-//     return (accum <= threshold[out_channel]);
-// Note: This would require modifying the converter or Prepare step to always
-// have *positive* post_activation_multipliers, since otherwise we would have
-// `<=` for some channels and `>=` for other channels.
 template <typename AccumScalar>
-struct OutputTransform<AccumScalar, std::int32_t>
-    : OutputTransform<AccumScalar, float> {
+struct OutputTransform<AccumScalar, std::int32_t> {
+  const AccumScalar* thresholds = nullptr;
+
   bool Run(const AccumScalar accum, int out_channel) const {
-    // Currently we take an un-optimized reference approach by first running the
-    // float kernel and then taking the sign.
-    float x = OutputTransform<AccumScalar, float>::Run(accum, out_channel);
-    return (x < 0);
+    TF_LITE_ASSERT(thresholds != nullptr);
+    return accum > thresholds[out_channel];
   }
 };
 
