@@ -42,6 +42,22 @@ func @fuse_scaled_bconv2d(%arg0: tensor<1x112x112x2xf32>) -> tensor<1x112x112x2x
   // CHECK-NEXT: return %[[conv]]
 }
 
+// CHECK-LABEL: @fuse_dilated_bconv
+func @fuse_dilated_bconv(%arg0: tensor<1x128x128x3xf32>) -> tensor<1x128x128x8xf32> {
+  %cst = constant dense<[2, 2]> : tensor<2xi32>
+  %cst_0 = constant dense<2> : tensor<2x2xi32>
+  %cst_1 = constant dense<1.0> : tensor<5x5x3x8xf32>
+  %0 = "tf.LceBsign"(%arg0) : (tensor<1x128x128x3xf32>) -> tensor<1x128x128x3xf32>
+  %1 = "tf.SpaceToBatchND"(%0, %cst, %cst_0) : (tensor<1x128x128x3xf32>, tensor<2xi32>, tensor<2x2xi32>) -> tensor<4x68x68x3xf32>
+  %2 = "tf.Conv2D"(%1, %cst_1) {padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<4x68x68x3xf32>, tensor<5x5x3x8xf32>) -> tensor<4x64x64x8xf32>
+  %3 = "tf.BatchToSpaceND"(%2, %cst, %cst_0) : (tensor<4x64x64x8xf32>, tensor<2xi32>, tensor<2x2xi32>) -> tensor<1x128x128x8xf32>
+  return %3 : tensor<1x128x128x8xf32>
+
+  // CHECK: %[[transpose:.*]] = "tf.Transpose"
+  // CHECK-NEXT: %[[conv:.*]] = "tf.LceBconv2d"(%arg0, %[[transpose]], %cst_0, %cst_1) {channels_in = 3 : i32, dilation_height_factor = 2 : i32, dilation_width_factor = 2 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<1x128x128x3xf32>, tensor<8x5x5x3xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<1x128x128x8xf32>
+  // CHECK-NEXT: return %[[conv]] : tensor<1x128x128x8xf32>
+}
+
 // CHECK-LABEL: @do_not_fuse_bconv2d
 func @do_not_fuse_bconv2d(%arg0: tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32> {
   %cst = constant dense<[[[[3.0, -1.0], [0.1, 1.0]], [[-1.0, 1.0], [-1.0, 1.0]]]]> : tensor<1x2x2x2xf32>

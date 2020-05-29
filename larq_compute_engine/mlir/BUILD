@@ -126,6 +126,7 @@ cc_library(
         ":larq_compute_engine",
         "@llvm-project//mlir:StandardOps",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_legalize_tf",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:validators",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
     ],

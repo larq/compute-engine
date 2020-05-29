@@ -3,6 +3,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
+#include "tensorflow/compiler/mlir/lite/transforms/dilated_conv.h"
 #include "tensorflow/compiler/mlir/lite/utils/validators.h"
 #include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.h"
 
@@ -111,6 +112,11 @@ void PrepareLCE::runOnFunction() {
   OwningRewritePatternList patterns;
   auto* ctx = &getContext();
   auto func = getFunction();
+
+  // This pattern will try to identify and optimize for dilated convolution.
+  // e.g. Patterns like "SpaceToBatchND -> Conv2D -> BatchToSpaceND" will be
+  // replaced with a single Conv op with dilation parameter.
+  patterns.insert<ConvertTFDilatedConvOp<TF::Conv2DOp>>(ctx);
 
   TFL::populateWithGenerated(ctx, &patterns);
   applyPatternsAndFoldGreedily(func, patterns);
