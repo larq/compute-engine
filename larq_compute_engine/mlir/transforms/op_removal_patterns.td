@@ -31,7 +31,7 @@ def : Pat<(TF_LceBsignOp:$op $x), (replaceWithValue $x), [(HasNoUseOf:$op)]>;
 def : Pat<(TF_LceBconv2dOp:$op $input, $filter, $post_activation_multiplier,
             $post_activation_bias, $channels_in,
             $dilation_height_factor, $dilation_width_factor,
-            $filter_format, $fused_activation_function, $pad_values, $padding,
+            $fused_activation_function, $pad_values, $padding,
             $stride_height, $stride_width),
           (replaceWithValue $input), [(HasNoUseOf:$op)]>;
 def : Pat<(TF_LceBMaxPool2dOp:$op $input, $padding, $stride_width,

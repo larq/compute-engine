@@ -63,7 +63,6 @@ TODO
     I32Attr:$channels_in,
     I32Attr:$dilation_height_factor,
     I32Attr:$dilation_width_factor,
-    DefaultValuedAttr<TF_AnyStrAttrOf<["OHWI", "OHWI_PACKED"]>, "OHWI">:$filter_format,
     TFL_AFAttr:$fused_activation_function,
     DefaultValuedAttr<I32Attr, "0">:$pad_values,
     TFL_PaddingAttr:$padding,

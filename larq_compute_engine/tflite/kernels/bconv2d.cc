@@ -67,18 +67,6 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
   const std::uint8_t* buffer_t = reinterpret_cast<const std::uint8_t*>(buffer);
   const flexbuffers::Map& m = flexbuffers::GetRoot(buffer_t, length).AsMap();
 
-  // Later we can change this so that we only allow "OHWI_PACKED" (prepacked)
-  if (m["filter_format"].IsNull() || m["filter_format"].ToString() == "HWIO") {
-    conv_params->filter_format = ce::core::FilterFormat::HWIO;
-  } else if (m["filter_format"].ToString() == "OHWI") {
-    conv_params->filter_format = ce::core::FilterFormat::OHWI;
-  } else if (m["filter_format"].ToString() == "OHWI_PACKED") {
-    conv_params->filter_format = ce::core::FilterFormat::OHWI_PACKED;
-  } else {
-    context->ReportError(context, "Invalid filter format.");
-    return conv_params;
-  }
-
   // reading the op's input arguments into the "conv_params" struct
   LCE_ENSURE_PARAM(conv_params, context, !m["stride_height"].IsNull());
   LCE_ENSURE_PARAM(conv_params, context, !m["stride_width"].IsNull());
@@ -254,21 +242,18 @@ TfLiteStatus Prepare(KernelType kernel_type,
   }
 
   // reading the filter dimensions
-  // only OHWI layout is supported for filters
-  TF_LITE_ENSURE(
-      context,
-      conv_params->filter_format == ce::core::FilterFormat::OHWI ||
-          conv_params->filter_format == ce::core::FilterFormat::OHWI_PACKED);
-
   conv_params->channels_out = filter->dims->data[0];
   conv_params->filter_height = filter->dims->data[1];
   conv_params->filter_width = filter->dims->data[2];
-  if (conv_params->filter_format == ce::core::FilterFormat::OHWI) {
-    TF_LITE_ENSURE_EQ(context, filter->type, kTfLiteFloat32);
+
+  if (filter->type == kTfLiteFloat32) {
+    conv_params->filter_format = ce::core::FilterFormat::OHWI;
     TF_LITE_ENSURE_EQ(context, conv_params->channels_in, filter->dims->data[3]);
+  } else if (filter->type == kTfLiteInt32) {
+    conv_params->filter_format = ce::core::FilterFormat::OHWI_PACKED;
   } else {
-    // TF Lite does not support the unsigned int32 type so we use int32 here
-    TF_LITE_ENSURE_EQ(context, filter->type, kTfLiteInt32);
+    context->ReportError(context, "Invalid filter format.");
+    return kTfLiteError;
   }
 
   TF_LITE_ENSURE_EQ(context, post_activation_multiplier->dims->data[0],
