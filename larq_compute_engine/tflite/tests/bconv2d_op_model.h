@@ -48,22 +48,14 @@ class BaseBConv2DOpModel : public SingleOpModel {
       // we're reading bitpacked input then we don't have access to the original
       // 'true' number of input channels.
       fbb.Int("channels_in", channels_in);
-      fbb.TypedVector("strides", [&]() {
-        fbb.Int(1);
-        fbb.Int(stride_height);
-        fbb.Int(stride_width);
-        fbb.Int(1);
-      });
-      fbb.TypedVector("dilations", [&]() {
-        fbb.Int(1);
-        fbb.Int(dilation_height_factor);
-        fbb.Int(dilation_width_factor);
-        fbb.Int(1);
-      });
+      fbb.Int("stride_height", stride_height);
+      fbb.Int("stride_width", stride_width);
+      fbb.Int("dilation_height_factor", dilation_height_factor);
+      fbb.Int("dilation_width_factor", dilation_width_factor);
       fbb.String("filter_format", "OHWI_PACKED");
       fbb.String("padding", GetPaddingName(padding));
       fbb.Int("pad_values", pad_values);
-      fbb.String("activation", getActivationString(activation));
+      fbb.String("fused_activation_function", getActivationString(activation));
     });
     fbb.Finish();
     SetCustomOp("LceBconv2d", fbb.GetBuffer(), registration);

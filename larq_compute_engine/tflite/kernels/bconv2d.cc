@@ -52,6 +52,15 @@ inline void decide_bitpack_before_im2col(KernelType kernel_type,
   }
 }
 
+#define LCE_ENSURE_PARAM(conv_params, context, a)                       \
+  do {                                                                  \
+    if (!(a)) {                                                         \
+      TF_LITE_KERNEL_LOG((context), "%s:%d %s was not true.", __FILE__, \
+                         __LINE__, #a);                                 \
+      return conv_params;                                               \
+    }                                                                   \
+  } while (0)
+
 void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
   auto* conv_params = new TfLiteBConv2DParams{};
 
@@ -71,23 +80,17 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
   }
 
   // reading the op's input arguments into the "conv_params" struct
-  // readng strides
-  auto strides_vector = m["strides"].AsTypedVector();
-  if (strides_vector.size() != 4) {
-    context->ReportError(context, "Strides vector should have size 4.");
-    return conv_params;
-  }
-  for (std::size_t i = 0; i < strides_vector.size(); ++i)
-    conv_params->strides[i] = strides_vector[i].AsInt64();
+  LCE_ENSURE_PARAM(conv_params, context, !m["stride_height"].IsNull());
+  LCE_ENSURE_PARAM(conv_params, context, !m["stride_width"].IsNull());
+  LCE_ENSURE_PARAM(conv_params, context, !m["dilation_height_factor"].IsNull());
+  LCE_ENSURE_PARAM(conv_params, context, !m["dilation_width_factor"].IsNull());
 
+  // reading strides
+  conv_params->stride_height = m["stride_height"].AsInt32();
+  conv_params->stride_width = m["stride_width"].AsInt32();
   // reading dilations
-  auto dilation_vector = m["dilations"].AsTypedVector();
-  if (dilation_vector.size() != 4) {
-    context->ReportError(context, "Dilations vector should have size 4.");
-    return conv_params;
-  }
-  for (std::size_t i = 0; i < dilation_vector.size(); ++i)
-    conv_params->dilations[i] = dilation_vector[i].AsInt64();
+  conv_params->dilation_height_factor = m["dilation_height_factor"].AsInt32();
+  conv_params->dilation_width_factor = m["dilation_width_factor"].AsInt32();
 
   // reading padding
   if (m["padding"].ToString() == "VALID" ||
@@ -102,21 +105,23 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
   }
 
   // Read fused activation
-  if (m["activation"].IsNull() || m["activation"].ToString() == "" ||
-      m["activation"].ToString() == "NONE") {
-    conv_params->activation = kTfLiteActNone;
-  } else if (m["activation"].ToString() == "RELU") {
-    conv_params->activation = kTfLiteActRelu;
-  } else if (m["activation"].ToString() == "RELU_N1_TO_1") {
-    conv_params->activation = kTfLiteActRelu1;
-  } else if (m["activation"].ToString() == "RELU6") {
-    conv_params->activation = kTfLiteActRelu6;
+  if (m["fused_activation_function"].IsNull() ||
+      m["fused_activation_function"].ToString() == "" ||
+      m["fused_activation_function"].ToString() == "NONE") {
+    conv_params->fused_activation_function = kTfLiteActNone;
+  } else if (m["fused_activation_function"].ToString() == "RELU") {
+    conv_params->fused_activation_function = kTfLiteActRelu;
+  } else if (m["fused_activation_function"].ToString() == "RELU_N1_TO_1") {
+    conv_params->fused_activation_function = kTfLiteActRelu1;
+  } else if (m["fused_activation_function"].ToString() == "RELU6") {
+    conv_params->fused_activation_function = kTfLiteActRelu6;
   } else {
-    context->ReportError(context, "Invalid value for activation.");
+    context->ReportError(context,
+                         "Invalid value for fused_activation_function.");
     return conv_params;
   }
   conv_params->pad_value =
-      m["pad_values"].IsNull() ? 0 : m["pad_values"].AsInt64();
+      m["pad_values"].IsNull() ? 0 : m["pad_values"].AsInt32();
   if (conv_params->pad_value != 0 && conv_params->pad_value != 1) {
     context->ReportError(context, "Attribute pad_values must be 0 or 1.");
     return conv_params;
@@ -132,7 +137,7 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
 
   if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame &&
       conv_params->pad_value != 1 &&
-      conv_params->activation != kTfLiteActNone) {
+      conv_params->fused_activation_function != kTfLiteActNone) {
     context->ReportError(
         context,
         "Fused activations are only supported with valid or one-padding.");
@@ -274,18 +279,16 @@ TfLiteStatus Prepare(KernelType kernel_type,
   // computing the padding and output values (height, width)
   int out_width, out_height;
   conv_params->padding_values = ComputePaddingHeightWidth(
-      conv_params->strides[1] /* strides height */,
-      conv_params->strides[2] /* strides width */,
-      conv_params->dilations[1] /* dil. height */,
-      conv_params->dilations[2] /* dil. width */, conv_params->input_height,
-      conv_params->input_width, conv_params->filter_height,
-      conv_params->filter_width, conv_params->padding_type, &out_height,
-      &out_width);
+      conv_params->stride_height, conv_params->stride_width,
+      conv_params->dilation_height_factor, conv_params->dilation_width_factor,
+      conv_params->input_height, conv_params->input_width,
+      conv_params->filter_height, conv_params->filter_width,
+      conv_params->padding_type, &out_height, &out_width);
 
   conv_params->out_width = out_width;
   conv_params->out_height = out_height;
 
-  CalculateActivationRange(conv_params->activation,
+  CalculateActivationRange(conv_params->fused_activation_function,
                            &conv_params->output_activation_min,
                            &conv_params->output_activation_max);
 
@@ -346,10 +349,9 @@ TfLiteStatus Prepare(KernelType kernel_type,
   // pre-allocate temporary tensors for optimized version
   if (kernel_type == KernelType::kRuyOptimized) {
     conv_params->need_im2col =
-        (conv_params->strides[2] /* width */ != 1 ||
-         conv_params->strides[1] /* height */ != 1 ||
-         conv_params->dilations[2] /* width */ != 1 ||
-         conv_params->dilations[1] /* height */ != 1 ||
+        (conv_params->stride_width != 1 || conv_params->stride_height != 1 ||
+         conv_params->dilation_width_factor != 1 ||
+         conv_params->dilation_height_factor != 1 ||
          conv_params->filter_width != 1 || conv_params->filter_height != 1);
 
     if (conv_params->need_im2col) {
@@ -501,12 +503,12 @@ inline void GetConvParamsType(const TfLiteBConv2DParams& conv_params,
   op_params.padding_values.height = conv_params.padding_values.height;
 
   // strides
-  op_params.stride_height = conv_params.strides[1];
-  op_params.stride_width = conv_params.strides[2];
+  op_params.stride_height = conv_params.stride_height;
+  op_params.stride_width = conv_params.stride_width;
 
   // dilations
-  op_params.dilation_height_factor = conv_params.dilations[1];
-  op_params.dilation_width_factor = conv_params.dilations[2];
+  op_params.dilation_height_factor = conv_params.dilation_height_factor;
+  op_params.dilation_width_factor = conv_params.dilation_width_factor;
 
   // Activation function
   op_params.quantized_activation_min = conv_params.output_activation_min;
@@ -636,14 +638,14 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
 
       std::size_t padding_cache_size = padding_functor.get_cache_size(
           params->filter_height, params->filter_width, params->channels_out,
-          params->dilations[1], params->dilations[2]);
+          params->dilation_height_factor, params->dilation_width_factor);
 
       params->padding_buffer.resize(padding_cache_size);
 
       padding_functor.cache_correction_values(
           filter_unpacked, params->filter_height, params->filter_width,
-          params->channels_out, params->channels_in, params->dilations[1],
-          params->dilations[2],
+          params->channels_out, params->channels_in,
+          params->dilation_height_factor, params->dilation_width_factor,
           GetTensorData<float>(post_activation_multiplier),
           params->padding_buffer.data());
     }
