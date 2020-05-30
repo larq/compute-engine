@@ -82,9 +82,6 @@ inline void MakeBinaryKernelParams(
   params->post_activation_multiplier =
       spec.output_transform.post_activation_multiplier;
   params->post_activation_bias = spec.output_transform.post_activation_bias;
-  if (params->post_activation_multiplier && params->post_activation_bias) {
-    flags |= RUY_ASM_FLAG_HAS_BIAS;
-  }
   params->backtransform_add = spec.output_transform.backtransform_add;
   params->flags = flags;
   params->start_row = start_row;
@@ -130,9 +127,6 @@ inline void MakeBinaryKernelParams(
   params->post_activation_multiplier =
       spec.output_transform.post_activation_multiplier;
   params->post_activation_bias = spec.output_transform.post_activation_bias;
-  if (params->post_activation_multiplier && params->post_activation_bias) {
-    flags |= RUY_ASM_FLAG_HAS_BIAS;
-  }
   params->backtransform_add = spec.output_transform.backtransform_add;
   params->flags = flags;
   params->start_row = start_row;

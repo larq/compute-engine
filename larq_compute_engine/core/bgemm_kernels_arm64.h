@@ -89,7 +89,6 @@ using namespace ruy;
 #define RUY_OFFSET_CLAMP_MIN 80
 #define RUY_OFFSET_CLAMP_MAX 84
 #define RUY_OFFSET_BACKTRANSFORM_ADD 88
-#define RUY_OFFSET_FLAGS 92
 
 template <typename Params>
 void CheckOffsetsInKernelParams(const Params&) {
@@ -114,7 +113,6 @@ void CheckOffsetsInKernelParams(const Params&) {
   static_assert(offsetof(Params, clamp_max) == RUY_OFFSET_CLAMP_MAX, "");
   static_assert(
       offsetof(Params, backtransform_add) == RUY_OFFSET_BACKTRANSFORM_ADD, "");
-  static_assert(offsetof(Params, flags) == RUY_OFFSET_FLAGS, "");
 }
 
 // clang-format off
@@ -295,9 +293,6 @@ void BinaryKernelNeonOutOfOrder4x4(
       "mov %[lhs_ptr], %[lhs_col_ptr]\n"
       "mov %[rhs_ptr], %[rhs_col_ptr]\n"
 
-      // Load some parameters needed for the end work on current block.
-      "ldrb w4, [%[params], #" RUY_STR(RUY_OFFSET_FLAGS) "]\n"
-
       // Load backtransform add (duplicate 4 times into v13)
       "ldr w1, [%[params], #" RUY_STR(RUY_OFFSET_BACKTRANSFORM_ADD) "]\n"
       "dup v13.4s, w1 \n"
@@ -305,18 +300,14 @@ void BinaryKernelNeonOutOfOrder4x4(
       // Load multiplication bias
       "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_MULTIPLIER) "]\n"
       // Offset these base pointers as needed given the current row, col.
-      "add x2, x1, %x[row], lsl #2\n"
-      "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
-      "csel x1, x1, x2, eq\n"
+      "add x1, x1, %x[row], lsl #2\n"
       // Load 4 bias-multiplication values.
       "ld1 {v14.4s}, [x1], #16\n"
 
       // Load addition bias
       "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_BIAS) "]\n"
       // Offset these base pointers as needed given the current row, col.
-      "add x2, x1, %x[row], lsl #2\n"
-      "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
-      "csel x1, x1, x2, eq\n"
+      "add x1, x1, %x[row], lsl #2\n"
       // Load 4 bias-addition values.
       "ld1 {v15.4s}, [x1], #16\n"
 
@@ -492,7 +483,6 @@ void BinaryKernelNeonOutOfOrder4x4(
 #undef RUY_OFFSET_BACKTRANSFORM_ADD
 #undef RUY_OFFSET_POST_ACTIVATION_MULTIPLIER
 #undef RUY_OFFSET_POST_ACTIVATION_BIAS
-#undef RUY_OFFSET_FLAGS
 #undef RUY_OFFSET_LHS_BASE_PTR
 #undef RUY_OFFSET_CLAMP_MIN
 #undef RUY_OFFSET_CLAMP_MAX
@@ -631,7 +621,6 @@ void BinaryKernelNeonOutOfOrder4x4(
 #define RUY_OFFSET_CLAMP_MIN 80
 #define RUY_OFFSET_CLAMP_MAX 84
 #define RUY_OFFSET_BACKTRANSFORM_ADD 88
-#define RUY_OFFSET_FLAGS 92
 
 // clang-format off
 
@@ -814,9 +803,6 @@ void BinaryKernelNeonOutOfOrder8x4(
       "mov %[lhs_ptr], %[lhs_col_ptr]\n"
       "mov %[rhs_ptr], %[rhs_col_ptr]\n"
 
-      // Load some parameters needed for the end work on current block.
-      "ldrb w4, [%[params], #" RUY_STR(RUY_OFFSET_FLAGS) "]\n"
-
       // Now that we know what LHS and RHS data the next iteration of the main
       // loop will need to load, we start loading the first 128 bytes of the LHS
       // and 64 bytes of the RHS into v0 -- v7 and v8 -- v11 as we don't need
@@ -884,9 +870,7 @@ void BinaryKernelNeonOutOfOrder8x4(
       // Load multiplication bias (in parallel with the float-conversion).
       "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_MULTIPLIER) "]\n"
       // Offset these base pointers as needed given the current row, col.
-      "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
-      "add x2, x1, %x[row], lsl #2\n"
-      "csel x1, x1, x2, eq\n"
+      "add x1, x1, %x[row], lsl #2\n"
 
       // Convert to single precision float.
       "scvtf v20.4s, v20.4s\n"
@@ -902,9 +886,7 @@ void BinaryKernelNeonOutOfOrder8x4(
       // Load addition bias (in parallel with the post-multiplication).
       "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_BIAS) "]\n"
       // Offset these base pointers as needed given the current row, col.
-      "tst w4, #" RUY_STR(RUY_ASM_FLAG_HAS_BIAS) "\n"
-      "add x2, x1, %x[row], lsl #2\n"
-      "csel x1, x1, x2, eq\n"
+      "add x1, x1, %x[row], lsl #2\n"
 
       // Perform the post multiplications.
       "fmul v20.4s, v20.4s, v14.4s\n"
@@ -1046,7 +1028,6 @@ void BinaryKernelNeonOutOfOrder8x4(
 #undef RUY_OFFSET_BACKTRANSFORM_ADD
 #undef RUY_OFFSET_POST_ACTIVATION_MULTIPLIER
 #undef RUY_OFFSET_POST_ACTIVATION_BIAS
-#undef RUY_OFFSET_FLAGS
 #undef RUY_OFFSET_LHS_BASE_PTR
 #undef RUY_OFFSET_CLAMP_MIN
 #undef RUY_OFFSET_CLAMP_MAX
