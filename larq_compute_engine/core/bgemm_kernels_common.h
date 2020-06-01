@@ -57,7 +57,6 @@ struct BinaryKernelParams {
   std::int32_t clamp_min;
   std::int32_t clamp_max;
   std::int32_t backtransform_add;
-  std::uint8_t flags;
   float dst_tmp_buf[LhsCols * RhsCols];
 };
 
@@ -78,12 +77,10 @@ inline void MakeBinaryKernelParams(
   params->dst_base_ptr =
       dst->data.get() + start_col * dst->layout.stride + start_row;
 
-  std::uint8_t flags = 0;
   params->post_activation_multiplier =
       spec.output_transform.post_activation_multiplier;
   params->post_activation_bias = spec.output_transform.post_activation_bias;
   params->backtransform_add = spec.output_transform.backtransform_add;
-  params->flags = flags;
   params->start_row = start_row;
   params->start_col = start_col;
   params->last_row = end_row - LhsCols;
@@ -123,12 +120,10 @@ inline void MakeBinaryKernelParams(
   params->dst_base_ptr =
       dst->data.get() + start_col * dst->layout.stride + start_row;
 
-  std::uint8_t flags = 0;
   params->post_activation_multiplier =
       spec.output_transform.post_activation_multiplier;
   params->post_activation_bias = spec.output_transform.post_activation_bias;
   params->backtransform_add = spec.output_transform.backtransform_add;
-  params->flags = flags;
   params->start_row = start_row;
   params->start_col = start_col;
   params->last_row = end_row - LhsCols;
