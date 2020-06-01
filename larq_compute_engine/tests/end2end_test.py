@@ -139,7 +139,7 @@ def assert_model_output(model_lce, inputs, outputs):
 def test_simple_model(model_cls):
     model = model_cls(weights="imagenet")
     model_lce = convert_keras_model(
-        model, experimental_enable_bitpacked_activations=True
+        model, experimental_enable_bitpacked_activations=False
     )
 
     # Test on the flowers dataset
