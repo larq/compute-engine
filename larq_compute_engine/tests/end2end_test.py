@@ -58,7 +58,15 @@ def toy_model_sequential(**kwargs):
             ),
             # This will be converted to a float->bitpacked binary max pool.
             tf.keras.layers.MaxPooling2D((2, 2)),
-            lq.layers.QuantConv2D(32, (3, 3), padding="same", pad_values=1.0),
+            lq.layers.QuantConv2D(
+                32,
+                (3, 3),
+                input_quantizer="ste_sign",
+                kernel_quantizer="ste_sign",
+                padding="same",
+                pad_values=1.0,
+                use_bias=False,
+            ),
             tf.keras.layers.BatchNormalization(
                 gamma_initializer=tf.keras.initializers.RandomNormal(1.0),
                 beta_initializer="uniform",
@@ -73,7 +81,15 @@ def toy_model_sequential(**kwargs):
             # This will be converted to a bitpacked->bitpacked binary max pool.
             # Test some funky filter/stride combination.
             tf.keras.layers.MaxPooling2D((3, 2), strides=(1, 2)),
-            lq.layers.QuantConv2D(32, (3, 3), padding="same", pad_values=1.0),
+            lq.layers.QuantConv2D(
+                32,
+                (3, 3),
+                input_quantizer="ste_sign",
+                kernel_quantizer="ste_sign",
+                padding="same",
+                pad_values=1.0,
+                use_bias=False,
+            ),
             tf.keras.layers.BatchNormalization(
                 gamma_initializer=tf.keras.initializers.RandomNormal(1.0),
                 beta_initializer="uniform",
