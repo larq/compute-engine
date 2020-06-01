@@ -72,7 +72,14 @@ def toy_model_sequential(**kwargs):
                 beta_initializer="uniform",
             ),
             lq.layers.QuantConv2D(
-                32, (3, 3), strides=(2, 2), padding="same", pad_values=1.0
+                32,
+                (3, 3),
+                input_quantizer="ste_sign",
+                kernel_quantizer="ste_sign",
+                strides=(2, 2),
+                padding="same",
+                pad_values=1.0,
+                use_bias=False,
             ),
             tf.keras.layers.BatchNormalization(
                 gamma_initializer=tf.keras.initializers.RandomNormal(1.0),
