@@ -57,7 +57,7 @@ def toy_model_sequential(**kwargs):
                 beta_initializer="uniform",
             ),
             # This will be converted to a float->bitpacked binary max pool.
-            tf.keras.layers.AveragePooling2D((2, 2)),
+            tf.keras.layers.MaxPooling2D((2, 2)),
             lq.layers.QuantConv2D(
                 32,
                 (3, 3),
@@ -87,7 +87,7 @@ def toy_model_sequential(**kwargs):
             ),
             # This will be converted to a bitpacked->bitpacked binary max pool.
             # Test some funky filter/stride combination.
-            tf.keras.layers.AveragePooling2D((3, 2), strides=(1, 2)),
+            tf.keras.layers.MaxPooling2D((3, 2), strides=(1, 2)),
             lq.layers.QuantConv2D(
                 32,
                 (3, 3),
