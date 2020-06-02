@@ -226,13 +226,13 @@ func @do_not_bitpack_activations_between_two_bconv2ds_same_one_padding_multiple_
 }
 
 // CHECK-LABEL: @bitpack_activations_between_binary_maxpool_and_bconv
-func @bitpack_activations_between_binary_maxpool_and_bconv(%arg0: tensor<256x32x32x65xf32>, %arg1: tensor<8x3x3x65xf32>, %arg2: tensor<8xf32>, %arg3: tensor<8xf32>) -> tensor<256x14x14x8xf32> {
-  %0 = "tfl.max_pool_2d"(%arg0) {filter_height = 2 : i32, filter_width = 2 : i32, fused_activation_function = "NONE", padding = "SAME", stride_h = 2 : i32, stride_w = 2 : i32} : (tensor<256x32x32x65xf32>) -> tensor<256x16x16x65xf32>
-  %1 = "tf.LceBconv2d"(%0, %arg1, %arg2, %arg3) {channels_in = 65 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<256x16x16x65xf32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x14x14x8xf32>
-  return %1 : tensor<256x14x14x8xf32>
+func @bitpack_activations_between_binary_maxpool_and_bconv(%arg0: tensor<256x32x32x65xf32>, %arg1: tensor<8x3x3x65xf32>, %arg2: tensor<8xf32>, %arg3: tensor<8xf32>) -> tensor<256x14x6x8xf32> {
+  %0 = "tfl.max_pool_2d"(%arg0) {filter_height = 3 : i32, filter_width = 2 : i32, fused_activation_function = "NONE", padding = "SAME", stride_h = 2 : i32, stride_w = 4 : i32} : (tensor<256x32x32x65xf32>) -> tensor<256x16x8x65xf32>
+  %1 = "tf.LceBconv2d"(%0, %arg1, %arg2, %arg3) {channels_in = 65 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<256x16x8x65xf32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x14x6x8xf32>
+  return %1 : tensor<256x14x6x8xf32>
 
-  // CHECK: %0 = "tf.LceBMaxPool2d"(%arg0) {filter_height = 2 : i32, filter_width = 2 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 2 : i32} : (tensor<256x32x32x65xf32>) -> tensor<256x16x16x3xi32>
-  // CHECK-NEXT: %1 = "tf.LceBconv2d"(%0, %arg1, %arg2, %arg3) {channels_in = 65 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<256x16x16x3xi32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x14x14x8xf32>
+  // CHECK: %0 = "tf.LceBMaxPool2d"(%arg0) {filter_height = 3 : i32, filter_width = 2 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 4 : i32} : (tensor<256x32x32x65xf32>) -> tensor<256x16x8x3xi32>
+  // CHECK-NEXT: %1 = "tf.LceBconv2d"(%0, %arg1, %arg2, %arg3) {channels_in = 65 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<256x16x8x3xi32>, tensor<8x3x3x65xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<256x14x6x8xf32>
   // CHECK-NEXT: return %1
 }
 
