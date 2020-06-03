@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -e
+
 # default LCE Android Env. variables
 export ANDROID_SDK_URL="https://dl.google.com/android/repository/sdk-tools-linux-3859397.zip"
 export ANDROID_HOME="/tmp/lce_android"
