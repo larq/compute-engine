@@ -5,6 +5,8 @@ categories:
     label: "breaking-change"
   - title: ":tada: Features"
     label: "feature"
+  - title: ":rocket: Performance"
+    label: "performance"
   - title: ":bug: Bug Fixes"
     label: "bug"
   - title: ":book: Documentation"
