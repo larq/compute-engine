@@ -22,8 +22,9 @@ func @fuse_bconv2d(%arg0: tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32> {
   // CHECK: %cst = constant
   // CHECK: %[[post_activation_multiplier:.*]] = constant dense<1.000000e+00> : tensor<2xf32>
   // CHECK: %[[post_activation_bias:.*]] = constant dense<0.000000e+00> : tensor<2xf32>
+  // CHECK: %[[write_bitpacked_threshold:.*]] = constant unit
   // CHECK: %[[transpose:.*]] = "tf.Transpose"
-  // CHECK-NEXT: %[[conv:.*]] = "tf.LceBconv2d"(%arg0, %[[transpose]], %[[post_activation_multiplier]], %[[post_activation_bias]]) {channels_in = 2 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<1x112x112x2xf32>, tensor<2x1x2x2xf32>, tensor<2xf32>, tensor<2xf32>) -> tensor<1x112x112x2xf32>
+  // CHECK-NEXT: %[[conv:.*]] = "tf.LceBconv2d"(%arg0, %[[transpose]], %[[post_activation_multiplier]], %[[post_activation_bias]], %[[write_bitpacked_threshold:.*]]) {channels_in = 2 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<1x112x112x2xf32>, tensor<2x1x2x2xf32>, tensor<2xf32>, tensor<2xf32>, none) -> tensor<1x112x112x2xf32>
   // CHECK-NEXT: return %[[conv]]
 }
 
@@ -37,8 +38,9 @@ func @fuse_scaled_bconv2d(%arg0: tensor<1x112x112x2xf32>) -> tensor<1x112x112x2x
   // CHECK: %cst = constant
   // CHECK: %[[post_activation_multiplier:.*]] = constant dense<[3.000000e-01, 1.000000e-01]> : tensor<2xf32>
   // CHECK: %[[post_activation_bias:.*]] = constant dense<0.000000e+00> : tensor<2xf32>
+  // CHECK: %[[write_bitpacked_threshold:.*]] = constant unit
   // CHECK: %[[transpose:.*]] = "tf.Transpose"
-  // CHECK-NEXT: %[[conv:.*]] = "tf.LceBconv2d"(%arg0, %[[transpose]], %[[post_activation_multiplier]], %[[post_activation_bias]]) {channels_in = 2 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<1x112x112x2xf32>, tensor<2x1x2x2xf32>, tensor<2xf32>, tensor<2xf32>) -> tensor<1x112x112x2xf32>
+  // CHECK-NEXT: %[[conv:.*]] = "tf.LceBconv2d"(%arg0, %[[transpose]], %[[post_activation_multiplier]], %[[post_activation_bias]], %[[write_bitpacked_threshold:.*]]) {channels_in = 2 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<1x112x112x2xf32>, tensor<2x1x2x2xf32>, tensor<2xf32>, tensor<2xf32>, none) -> tensor<1x112x112x2xf32>
   // CHECK-NEXT: return %[[conv]]
 }
 
@@ -47,6 +49,7 @@ func @fuse_dilated_bconv(%arg0: tensor<1x128x128x3xf32>) -> tensor<1x128x128x8xf
   %cst = constant dense<[2, 2]> : tensor<2xi32>
   %cst_0 = constant dense<2> : tensor<2x2xi32>
   %cst_1 = constant dense<1.0> : tensor<5x5x3x8xf32>
+  %cst_2 = constant unit
   %0 = "tf.LceBsign"(%arg0) : (tensor<1x128x128x3xf32>) -> tensor<1x128x128x3xf32>
   %1 = "tf.SpaceToBatchND"(%0, %cst, %cst_0) : (tensor<1x128x128x3xf32>, tensor<2xi32>, tensor<2x2xi32>) -> tensor<4x68x68x3xf32>
   %2 = "tf.Conv2D"(%1, %cst_1) {padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<4x68x68x3xf32>, tensor<5x5x3x8xf32>) -> tensor<4x64x64x8xf32>
@@ -54,7 +57,7 @@ func @fuse_dilated_bconv(%arg0: tensor<1x128x128x3xf32>) -> tensor<1x128x128x8xf
   return %3 : tensor<1x128x128x8xf32>
 
   // CHECK: %[[transpose:.*]] = "tf.Transpose"
-  // CHECK-NEXT: %[[conv:.*]] = "tf.LceBconv2d"(%arg0, %[[transpose]], %cst_0, %cst_1) {channels_in = 3 : i32, dilation_height_factor = 2 : i32, dilation_width_factor = 2 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<1x128x128x3xf32>, tensor<8x5x5x3xf32>, tensor<8xf32>, tensor<8xf32>) -> tensor<1x128x128x8xf32>
+  // CHECK-NEXT: %[[conv:.*]] = "tf.LceBconv2d"(%arg0, %[[transpose]], %cst_0, %cst_1, %cst_2) {channels_in = 3 : i32, dilation_height_factor = 2 : i32, dilation_width_factor = 2 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<1x128x128x3xf32>, tensor<8x5x5x3xf32>, tensor<8xf32>, tensor<8xf32>, none) -> tensor<1x128x128x8xf32>
   // CHECK-NEXT: return %[[conv]] : tensor<1x128x128x8xf32>
 }
 
@@ -96,8 +99,9 @@ func @fuse_bconv2d_padding(%arg0: tensor<256x32x32x3xf32>) -> tensor<256x16x16x1
 
   // CHECK:  %[[CST1:.*]] = constant dense<1.000000e+00> : tensor<16xf32>
   // CHECK:  %[[CST2:.*]] = constant dense<0.000000e+00> : tensor<16xf32>
+  // CHECK:  %[[CST3:.*]] = constant unit
   // CHECK:  %[[TRP:.*]] = "tf.Transpose"
-  // CHECK:  %[[CONV:.*]] = "tf.LceBconv2d"(%arg0, %[[TRP]], %[[CST1]], %[[CST2]]) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 1 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 2 : i32} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>) -> tensor<256x16x16x16xf32>
+  // CHECK:  %[[CONV:.*]] = "tf.LceBconv2d"(%arg0, %[[TRP]], %[[CST1]], %[[CST2]], %[[CST3:.*]]) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 1 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 2 : i32} : (tensor<256x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>, tensor<16xf32>, none) -> tensor<256x16x16x16xf32>
 }
 
 // CHECK-LABEL: @do_not_fuse_bconv2d_padding_same

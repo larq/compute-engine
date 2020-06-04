@@ -27,6 +27,9 @@ def TFL_PaddingAttr : StrEnumAttr<"Padding", "padding enum", [
 #ifndef LCE_OPS
 #define LCE_OPS
 
+class TensorOfOrNone<list<Type> allowedTypes, string description = ""> :
+  AnyTypeOf<[TensorOf<allowedTypes>, NoneType], description>;
+
 def TF_LceBsignOp : TF_Op<"LceBsign", [NoSideEffect, SameOperandsAndResultType]> {
   let summary = "Returns an element-wise indication of the binary sign of a number.";
 
@@ -47,7 +50,7 @@ def TF_LceBsignOp : TF_Op<"LceBsign", [NoSideEffect, SameOperandsAndResultType]>
 
 def TF_LceBconv2dOp : TF_Op<"LceBconv2d", [NoSideEffect]> {
   let summary = [{
-Computes a 2-D binary convolution by binarizing and bitpacking the input and filter.
+Computes a 2D binary convolution by binarizing and bitpacking the input and filter.
   }];
 
   let description = [{
@@ -57,8 +60,9 @@ TODO
   let arguments = (ins
     TensorOf<[F32]>:$input,
     TensorOf<[F32, I32]>:$filter,
-    TensorOf<[F32]>:$post_activation_multiplier,
-    TensorOf<[F32]>:$post_activation_bias,
+    TensorOfOrNone<[F32]>:$post_activation_multiplier,
+    TensorOfOrNone<[F32]>:$post_activation_bias,
+    TensorOfOrNone<[I32]>:$write_bitpacked_threshold,
 
     I32Attr:$channels_in,
     I32Attr:$dilation_height_factor,

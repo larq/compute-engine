@@ -68,7 +68,9 @@ def toy_model_sequential(**kwargs):
                 use_bias=False,
             ),
             tf.keras.layers.BatchNormalization(
-                gamma_initializer=tf.keras.initializers.RandomNormal(1.0),
+                # Use an initialiser with mean 0 to test the negative
+                # multipliers corner-case.
+                gamma_initializer=tf.keras.initializers.RandomNormal(mean=0.0),
                 beta_initializer="uniform",
             ),
             lq.layers.QuantConv2D(
@@ -82,7 +84,9 @@ def toy_model_sequential(**kwargs):
                 use_bias=False,
             ),
             tf.keras.layers.BatchNormalization(
-                gamma_initializer=tf.keras.initializers.RandomNormal(1.0),
+                # Use an initialiser with mean 0 to test the negative
+                # multipliers corner-case.
+                gamma_initializer=tf.keras.initializers.RandomNormal(0.0),
                 beta_initializer="uniform",
             ),
             # This will be converted to a bitpacked->bitpacked binary max pool.
