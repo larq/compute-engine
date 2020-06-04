@@ -200,7 +200,6 @@ TfLiteStatus Prepare(KernelType kernel_type,
 
   if (conv_params->write_bitpacked_output) {
     TF_LITE_ENSURE_EQ(context, thresholds->type, kTfLiteInt32);
-
   } else {
     // For 8-bit quantized networks, we support both int8 and float32
     // post_activation_ values
