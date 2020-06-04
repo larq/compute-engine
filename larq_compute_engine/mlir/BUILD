@@ -66,6 +66,23 @@ gentbl(
 )
 
 gentbl(
+    name = "bitpack_weights_lce_inc_gen",
+    tbl_outs = [
+        ("-gen-rewriters", "transforms/generated_bitpack_weights.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "transforms/bitpack_weights_patterns.td",
+    td_srcs = [
+        "ir/lce_ops.td",
+        "transforms/bitpack_weights_patterns.td",
+        "transforms/op_removal_patterns.td",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+        "@llvm-project//mlir:StdOpsTdFiles",
+    ],
+)
+
+gentbl(
     name = "quantize_lce_inc_gen",
     tbl_outs = [
         ("-gen-rewriters", "transforms/generated_quantize.inc"),
@@ -144,6 +161,24 @@ cc_library(
     ],
     deps = [
         ":larq_compute_engine",
+        "@llvm-project//llvm:support",
+        "@llvm-project//mlir:IR",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+    ],
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "larq_compute_engine_bitpack_weights",
+    srcs = [
+        "transforms/bitpack_weights.cc",
+        "transforms/generated_bitpack_weights.inc",
+    ],
+    hdrs = [
+        "transforms/passes.h",
+    ],
+    deps = [
+        ":larq_compute_engine",
         "//larq_compute_engine/core:packbits",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
     ],
@@ -173,6 +208,7 @@ cc_library(
         "tf_tfl_passes.h",
     ],
     deps = [
+        ":larq_compute_engine_bitpack_weights",
         ":larq_compute_engine_op_removal",
         ":larq_compute_engine_optimize",
         ":larq_compute_engine_prepare",

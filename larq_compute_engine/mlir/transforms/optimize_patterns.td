@@ -108,19 +108,3 @@ foreach actFnPair = [[TFL_ReluOp, TFL_AF_Relu],
                      [TFL_Relu1Op, TFL_AF_Relu1],
                      [TFL_Relu6Op, TFL_AF_Relu6]] in
   defm : FuseActFnIntoConvOpPat<actFnPair[0], actFnPair[1]>;
-
-
-// Bitpack weights
-def Conv2DFilter : AttrConstraint<CPred<"IsConv2DFilter($_self)">>;
-def Bitpack : NativeCodeCall<"Bitpack($_builder, $0)">;
-
-def : Pat<(TF_LceBconv2dOp $input, (ConstantOp Conv2DFilter:$filter),
-            $post_activation_multiplier, $post_activation_bias,
-            $channels_in, $dilation_height_factor, $dilation_width_factor,
-            $fused_activation_function,
-            $pad_values, $padding, $stride_height, $stride_width),
-          (TF_LceBconv2dOp $input, (ConstantOp (Bitpack $filter)),
-            $post_activation_multiplier, $post_activation_bias,
-            $channels_in, $dilation_height_factor, $dilation_width_factor,
-            $fused_activation_function,
-            $pad_values, $padding, $stride_height, $stride_width)>;
