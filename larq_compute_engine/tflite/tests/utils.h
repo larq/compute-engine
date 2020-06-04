@@ -97,7 +97,7 @@ struct GetPostType<float> {
 
 template <>
 struct GetPostType<std::int8_t> {
-  // The converter curretly uses float, the kernel supports both
+  // The converter currently uses float, the kernel supports both
   using type = float;
   // using type = std::int8_t;
 };
