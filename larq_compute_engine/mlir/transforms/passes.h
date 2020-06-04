@@ -16,6 +16,9 @@ std::unique_ptr<OperationPass<FuncOp>> CreatePrepareLCEPass();
 std::unique_ptr<OperationPass<FuncOp>> CreateOptimizeLCEPass(
     bool experimental_enable_bitpacked_activations);
 
+// Creates an instance of the TensorFlow dialect BitpackWeightsLCE pass.
+std::unique_ptr<OperationPass<FuncOp>> CreateBitpackWeightsLCEPass();
+
 // Creates an instance of the TensorFlow Lite dialect QuantizeTFL pass.
 std::unique_ptr<OperationPass<FuncOp>> CreateHybridQuantizePass();
 
