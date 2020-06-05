@@ -5,6 +5,7 @@ labelRule:
     - "bug"
     - "documentation"
     - "internal-improvement"
+    - "performance"
     - "dependencies"
     - "feature"
     - "breaking-change"
