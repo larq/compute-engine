@@ -285,7 +285,7 @@ struct SetBitpackedActivations : public OpRewritePattern<BinaryOp> {
         RankedTensorType thresholds_type = RankedTensorType::get(
             {filter_shape[0]}, rewriter.getIntegerType(32));
         Value thresholds_input = rewriter.create<ConstantOp>(
-            inner_bconv_op.write_bitpacked_threshold().getLoc(),
+            inner_bconv_op.output_threshold().getLoc(),
             DenseElementsAttr::get<std::int32_t>(thresholds_type, thresholds));
 
         // We need an empty input with which to overwrite the

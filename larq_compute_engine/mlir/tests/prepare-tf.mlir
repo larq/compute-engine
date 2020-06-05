@@ -22,9 +22,9 @@ func @fuse_bconv2d(%arg0: tensor<1x112x112x2xf32>) -> tensor<1x112x112x2xf32> {
   // CHECK: %cst = constant
   // CHECK: %[[post_activation_multiplier:.*]] = constant dense<1.000000e+00> : tensor<2xf32>
   // CHECK: %[[post_activation_bias:.*]] = constant dense<0.000000e+00> : tensor<2xf32>
-  // CHECK: %[[write_bitpacked_threshold:.*]] = constant unit
+  // CHECK: %[[output_threshold:.*]] = constant unit
   // CHECK: %[[transpose:.*]] = "tf.Transpose"
-  // CHECK-NEXT: %[[conv:.*]] = "tf.LceBconv2d"(%arg0, %[[transpose]], %[[post_activation_multiplier]], %[[post_activation_bias]], %[[write_bitpacked_threshold:.*]]) {channels_in = 2 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<1x112x112x2xf32>, tensor<2x1x2x2xf32>, tensor<2xf32>, tensor<2xf32>, none) -> tensor<1x112x112x2xf32>
+  // CHECK-NEXT: %[[conv:.*]] = "tf.LceBconv2d"(%arg0, %[[transpose]], %[[post_activation_multiplier]], %[[post_activation_bias]], %[[output_threshold:.*]]) {channels_in = 2 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<1x112x112x2xf32>, tensor<2x1x2x2xf32>, tensor<2xf32>, tensor<2xf32>, none) -> tensor<1x112x112x2xf32>
   // CHECK-NEXT: return %[[conv]]
 }
 
@@ -38,9 +38,9 @@ func @fuse_scaled_bconv2d(%arg0: tensor<1x112x112x2xf32>) -> tensor<1x112x112x2x
   // CHECK: %cst = constant
   // CHECK: %[[post_activation_multiplier:.*]] = constant dense<[3.000000e-01, 1.000000e-01]> : tensor<2xf32>
   // CHECK: %[[post_activation_bias:.*]] = constant dense<0.000000e+00> : tensor<2xf32>
-  // CHECK: %[[write_bitpacked_threshold:.*]] = constant unit
+  // CHECK: %[[output_threshold:.*]] = constant unit
   // CHECK: %[[transpose:.*]] = "tf.Transpose"
-  // CHECK-NEXT: %[[conv:.*]] = "tf.LceBconv2d"(%arg0, %[[transpose]], %[[post_activation_multiplier]], %[[post_activation_bias]], %[[write_bitpacked_threshold:.*]]) {channels_in = 2 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<1x112x112x2xf32>, tensor<2x1x2x2xf32>, tensor<2xf32>, tensor<2xf32>, none) -> tensor<1x112x112x2xf32>
+  // CHECK-NEXT: %[[conv:.*]] = "tf.LceBconv2d"(%arg0, %[[transpose]], %[[post_activation_multiplier]], %[[post_activation_bias]], %[[output_threshold:.*]]) {channels_in = 2 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<1x112x112x2xf32>, tensor<2x1x2x2xf32>, tensor<2xf32>, tensor<2xf32>, none) -> tensor<1x112x112x2xf32>
   // CHECK-NEXT: return %[[conv]]
 }
 

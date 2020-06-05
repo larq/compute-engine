@@ -32,7 +32,7 @@ def : Pat<(TF_LceBconv2dOp:$op
               $filter,
               $post_activation_multiplier,
               $post_activation_bias,
-              $write_bitpacked_threshold,
+              $output_threshold,
               $channels_in,
               $dilation_height_factor,
               $dilation_width_factor,

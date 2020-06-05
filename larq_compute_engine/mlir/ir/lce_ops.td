@@ -62,7 +62,7 @@ TODO
     TensorOf<[F32, I32]>:$filter,
     TensorOfOrNone<[F32]>:$post_activation_multiplier,
     TensorOfOrNone<[F32]>:$post_activation_bias,
-    TensorOfOrNone<[I32]>:$write_bitpacked_threshold,
+    TensorOfOrNone<[I32]>:$output_threshold,
 
     I32Attr:$channels_in,
     I32Attr:$dilation_height_factor,
