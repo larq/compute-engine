@@ -112,6 +112,7 @@ cc_library(
         "@flatbuffers",
         "@llvm-project//mlir:QuantOps",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
+        "@org_tensorflow//tensorflow/lite/c:common",
     ],
     alwayslink = 1,
 )

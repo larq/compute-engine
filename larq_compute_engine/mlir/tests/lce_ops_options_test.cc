@@ -4,6 +4,7 @@
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OperationSupport.h"
+#include "tensorflow/lite/c/builtin_op_data.h"
 
 using namespace mlir;
 
@@ -46,8 +47,9 @@ TEST(LCEOpsSerializationTest, BConv2dTest) {
   ASSERT_EQ(m["stride_height"].AsInt32(), 1);
   ASSERT_EQ(m["stride_width"].AsInt32(), 2);
   ASSERT_EQ(m["pad_values"].AsInt32(), 1);
-  ASSERT_EQ(m["fused_activation_function"].ToString(), "RELU");
-  ASSERT_EQ(m["padding"].ToString(), "SAME");
+  ASSERT_EQ((TfLiteFusedActivation)m["fused_activation_function"].AsInt32(),
+            kTfLiteActRelu);
+  ASSERT_EQ((TfLitePadding)m["padding"].AsInt32(), kTfLitePaddingSame);
 }
 
 TEST(LCEOpsSerializationTest, BMaxPool2dTest) {
@@ -66,7 +68,7 @@ TEST(LCEOpsSerializationTest, BMaxPool2dTest) {
   std::vector<uint8_t> v = cast<TF::BMaxPool2dOp>(op).buildCustomOptions();
   const flexbuffers::Map& m = flexbuffers::GetRoot(v).AsMap();
 
-  ASSERT_EQ(m["padding"].ToString(), "SAME");
+  ASSERT_EQ((TfLitePadding)m["padding"].AsInt32(), kTfLitePaddingSame);
   ASSERT_EQ(m["stride_width"].AsInt32(), 2);
   ASSERT_EQ(m["stride_height"].AsInt32(), 1);
   ASSERT_EQ(m["filter_width"].AsInt32(), 3);

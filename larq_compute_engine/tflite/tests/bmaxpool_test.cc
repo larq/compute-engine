@@ -72,7 +72,7 @@ class BaseBMaxPoolOpModel : public SingleOpModel {
       fbb.Int("stride_width", stride_width);
       fbb.Int("filter_height", filter_height);
       fbb.Int("filter_width", filter_width);
-      fbb.String("padding", GetPaddingName(padding));
+      fbb.Int("padding", (int)GetTfLitePadding(padding));
     });
     fbb.Finish();
     SetCustomOp("LceBMaxPool2d", fbb.GetBuffer(), registration);

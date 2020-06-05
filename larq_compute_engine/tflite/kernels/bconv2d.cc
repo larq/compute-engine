@@ -80,34 +80,10 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
   conv_params->dilation_height_factor = m["dilation_height_factor"].AsInt32();
   conv_params->dilation_width_factor = m["dilation_width_factor"].AsInt32();
 
-  // reading padding
-  if (m["padding"].ToString() == "VALID" ||
-      m["padding"].ToString() == "valid") {
-    conv_params->padding_type = kTfLitePaddingValid;
-  } else if (m["padding"].ToString() == "SAME" ||
-             m["padding"].ToString() == "same") {
-    conv_params->padding_type = kTfLitePaddingSame;
-  } else {
-    context->ReportError(context, "Invalid padding attribute.");
-    return conv_params;
-  }
+  conv_params->padding_type = (TfLitePadding)m["padding"].AsInt32();
+  conv_params->fused_activation_function =
+      (TfLiteFusedActivation)m["fused_activation_function"].AsInt32();
 
-  // Read fused activation
-  if (m["fused_activation_function"].IsNull() ||
-      m["fused_activation_function"].ToString() == "" ||
-      m["fused_activation_function"].ToString() == "NONE") {
-    conv_params->fused_activation_function = kTfLiteActNone;
-  } else if (m["fused_activation_function"].ToString() == "RELU") {
-    conv_params->fused_activation_function = kTfLiteActRelu;
-  } else if (m["fused_activation_function"].ToString() == "RELU_N1_TO_1") {
-    conv_params->fused_activation_function = kTfLiteActRelu1;
-  } else if (m["fused_activation_function"].ToString() == "RELU6") {
-    conv_params->fused_activation_function = kTfLiteActRelu6;
-  } else {
-    context->ReportError(context,
-                         "Invalid value for fused_activation_function.");
-    return conv_params;
-  }
   conv_params->pad_value =
       m["pad_values"].IsNull() ? 0 : m["pad_values"].AsInt32();
   if (conv_params->pad_value != 0 && conv_params->pad_value != 1) {
@@ -123,7 +99,7 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
     conv_params->channels_in = m["channels_in"].AsInt32();
   }
 
-  if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame &&
+  if (conv_params->padding_type == kTfLitePaddingSame &&
       conv_params->pad_value != 1 &&
       conv_params->fused_activation_function != kTfLiteActNone) {
     context->ReportError(
@@ -172,7 +148,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
     TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_bias), 1);
   }
 
-  if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame &&
+  if (conv_params->padding_type == kTfLitePaddingSame &&
       conv_params->pad_value != 1 && conv_params->write_bitpacked_output) {
     context->ReportError(context,
                          "Writing bitpacked output is only supported with "
@@ -226,7 +202,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
                    input->type == kTfLiteInt8 || input->type == kTfLiteFloat32);
 
     if (input->type == kTfLiteInt8 &&
-        conv_params->padding_type == TfLitePadding::kTfLitePaddingSame &&
+        conv_params->padding_type == kTfLitePaddingSame &&
         conv_params->pad_value != 1) {
       context->ReportError(
           context,
@@ -343,8 +319,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
     // We only support one-padding or valid-padding in the reference
     // implementation.
     TF_LITE_ENSURE(context, !(conv_params->pad_value == 0 &&
-                              conv_params->padding_type ==
-                                  TfLitePadding::kTfLitePaddingSame));
+                              conv_params->padding_type == kTfLitePaddingSame));
   }
 
   // Figure out how many temporary buffers we need
@@ -636,7 +611,7 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
 
     // Fill the zero-padding cache
     if (!params->is_padding_correction_cached &&
-        (params->padding_type == TfLitePadding::kTfLitePaddingSame &&
+        (params->padding_type == kTfLitePaddingSame &&
          params->pad_value == 0)) {
       using PaddingFunctor =
           ce::core::PaddingFunctor<float, UnpackType, float, float,

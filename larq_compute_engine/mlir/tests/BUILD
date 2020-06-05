@@ -22,5 +22,6 @@ cc_test(
         "@com_google_googletest//:gtest_main",
         "@flatbuffers",
         "@llvm-project//mlir:IR",
+        "@org_tensorflow//tensorflow/lite/c:common",
     ],
 )
