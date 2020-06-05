@@ -30,8 +30,8 @@ class BaseBConv2DOpModel : public SingleOpModel {
       register_function registration, const TensorData& input,
       const TensorData& filter, const TensorData& output,
       const TensorData& post_activation_multiplier,
-      const TensorData& post_activation_bias, int channels_in,
-      int stride_width = 1, int stride_height = 1,
+      const TensorData& post_activation_bias, const TensorData& thresholds,
+      int channels_in, int stride_width = 1, int stride_height = 1,
       enum Padding padding = Padding_VALID, int pad_values = 0,
       enum ActivationFunctionType activation = ActivationFunctionType_NONE,
       int dilation_width_factor = 1, int dilation_height_factor = 1,
@@ -40,6 +40,7 @@ class BaseBConv2DOpModel : public SingleOpModel {
     filter_ = AddInput(filter);
     post_activation_multiplier_ = AddInput(post_activation_multiplier);
     post_activation_bias_ = AddInput(post_activation_bias);
+    thresholds_ = AddInput(thresholds);
     output_ = AddOutput(output);
 
     flexbuffers::Builder fbb;
@@ -67,6 +68,7 @@ class BaseBConv2DOpModel : public SingleOpModel {
   int output_;
   int post_activation_multiplier_;
   int post_activation_bias_;
+  int thresholds_;
 };
 
 template <typename TInput, typename PostType, typename TOutput>
@@ -88,6 +90,10 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
 
   void SetPostActivationBias(const std::vector<PostType>& f) {
     PopulateTensor(post_activation_bias_, f);
+  }
+
+  void SetThresholds(const std::vector<std::int32_t>& f) {
+    PopulateTensor(thresholds_, f);
   }
 
   std::vector<TOutput> GetOutput() { return ExtractVector<TOutput>(output_); }

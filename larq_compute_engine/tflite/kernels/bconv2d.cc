@@ -150,21 +150,27 @@ TfLiteStatus Prepare(KernelType kernel_type,
   // If an error happened in Init, then report an error message
   if (!conv_params->conv_params_initialized) return kTfLiteError;
 
-  TF_LITE_ENSURE(context, node->inputs->size == 4);
+  TF_LITE_ENSURE(context, node->inputs->size == 5);
 
   const auto* input = GetInput(context, node, 0);
   const auto* filter = GetInput(context, node, 1);
   const auto* post_activation_multiplier = GetInput(context, node, 2);
   const auto* post_activation_bias = GetInput(context, node, 3);
+  const auto* thresholds = GetInput(context, node, 4);
   auto* output = GetOutput(context, node, 0);
 
   TF_LITE_ENSURE_EQ(context, NumDimensions(input), 4);
   TF_LITE_ENSURE_EQ(context, NumDimensions(filter), 4);
-  TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_multiplier), 1);
-  TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_bias), 1);
 
   conv_params->read_bitpacked_input = input->type == kTfLiteInt32;
   conv_params->write_bitpacked_output = output->type == kTfLiteInt32;
+
+  if (conv_params->write_bitpacked_output) {
+    TF_LITE_ENSURE_EQ(context, NumDimensions(thresholds), 1);
+  } else {
+    TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_multiplier), 1);
+    TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_bias), 1);
+  }
 
   if (conv_params->padding_type == TfLitePadding::kTfLitePaddingSame &&
       conv_params->pad_value != 1 && conv_params->write_bitpacked_output) {
@@ -192,18 +198,24 @@ TfLiteStatus Prepare(KernelType kernel_type,
     return kTfLiteError;
   }
 
-  // For 8-bit quantized networks, we support both int8 and float32
-  // post_activation_ values
-  TF_LITE_ENSURE(context, post_activation_multiplier->type == kTfLiteFloat32 ||
-                              post_activation_multiplier->type == kTfLiteInt8);
-  TF_LITE_ENSURE(context, post_activation_bias->type == kTfLiteFloat32 ||
-                              post_activation_bias->type == kTfLiteInt8);
+  if (conv_params->write_bitpacked_output) {
+    TF_LITE_ENSURE_EQ(context, thresholds->type, kTfLiteInt32);
+  } else {
+    // For 8-bit quantized networks, we support both int8 and float32
+    // post_activation_ values
+    TF_LITE_ENSURE(context,
+                   post_activation_multiplier->type == kTfLiteFloat32 ||
+                       post_activation_multiplier->type == kTfLiteInt8);
+    TF_LITE_ENSURE(context, post_activation_bias->type == kTfLiteFloat32 ||
+                                post_activation_bias->type == kTfLiteInt8);
 
-  // In case that our network is not 8-bit quantized, we do require float values
-  if (input->type == kTfLiteFloat32 || output->type == kTfLiteFloat32) {
-    TF_LITE_ENSURE_EQ(context, post_activation_multiplier->type,
-                      kTfLiteFloat32);
-    TF_LITE_ENSURE_EQ(context, post_activation_bias->type, kTfLiteFloat32);
+    // In case that our network is not 8-bit quantized, we do require float
+    // values
+    if (input->type == kTfLiteFloat32 || output->type == kTfLiteFloat32) {
+      TF_LITE_ENSURE_EQ(context, post_activation_multiplier->type,
+                        kTfLiteFloat32);
+      TF_LITE_ENSURE_EQ(context, post_activation_bias->type, kTfLiteFloat32);
+    }
   }
 
   if (conv_params->read_bitpacked_input) {
@@ -256,10 +268,15 @@ TfLiteStatus Prepare(KernelType kernel_type,
     return kTfLiteError;
   }
 
-  TF_LITE_ENSURE_EQ(context, post_activation_multiplier->dims->data[0],
-                    conv_params->channels_out);
-  TF_LITE_ENSURE_EQ(context, post_activation_bias->dims->data[0],
-                    conv_params->channels_out);
+  if (conv_params->write_bitpacked_output) {
+    TF_LITE_ENSURE_EQ(context, thresholds->dims->data[0],
+                      conv_params->channels_out);
+  } else {
+    TF_LITE_ENSURE_EQ(context, post_activation_multiplier->dims->data[0],
+                      conv_params->channels_out);
+    TF_LITE_ENSURE_EQ(context, post_activation_bias->dims->data[0],
+                      conv_params->channels_out);
+  }
 
   // computing the padding and output values (height, width)
   int out_width, out_height;
@@ -295,9 +312,11 @@ TfLiteStatus Prepare(KernelType kernel_type,
 #endif
   }
 
-  conv_params->scaled_post_activation_multiplier.resize(
-      conv_params->channels_out);
-  conv_params->scaled_post_activation_bias.resize(conv_params->channels_out);
+  if (!conv_params->write_bitpacked_output) {
+    conv_params->scaled_post_activation_multiplier.resize(
+        conv_params->channels_out);
+    conv_params->scaled_post_activation_bias.resize(conv_params->channels_out);
+  }
 
   // determine the output dimensions
   TfLiteIntArray* output_shape = TfLiteIntArrayCreate(4);
@@ -515,6 +534,9 @@ void SetupQuantization(TfLiteContext* context, TfLiteNode* node,
   const auto* output = GetOutput(context, node, 0);
   const auto* post_activation_multiplier = GetInput(context, node, 2);
   const auto* post_activation_bias = GetInput(context, node, 3);
+
+  // Not required when writing bitpacked output
+  if (output->type == kTfLiteInt32) return;
 
   // Step 1
   // If the post_activation_ data is stored in int8, then convert it to float

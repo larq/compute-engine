@@ -315,6 +315,47 @@ class BConv2DOpTest : public ::testing::TestWithParam<TestParamTuple> {
   }
 };
 
+void ComputeThresholds(int input_depth, int filter_height, int filter_width,
+                       const std::vector<float>& post_activation_multiplier,
+                       const std::vector<float>& post_activation_bias,
+                       enum ActivationFunctionType activation,
+                       std::vector<std::int32_t>& threshold) {
+  // Precompute thresholds
+  // fp_result = post_bias + post_mul * clamp(backtransform - 2 * accumulator)
+  // The output bit is 1 iff fp_result < 0
+  // So when -post_bias/post_mul is within the clamp range, then this means:
+  // The output bit is 1 iff:
+  // accumulator > (backtransform_add + post_bias / post_mul) / 2.0f
+
+  std::int32_t output_activation_min, output_activation_max;
+  if (activation == ActivationFunctionType_RELU) {
+    output_activation_min = 0;
+    output_activation_max = std::numeric_limits<std::int32_t>::max();
+  } else {
+    output_activation_min = std::numeric_limits<std::int32_t>::lowest();
+    output_activation_max = std::numeric_limits<std::int32_t>::max();
+  }
+
+  // We do all intermediate computations here in double to keep accuracy
+  const double backtransform_add = filter_height * filter_width * input_depth;
+  for (size_t i = 0; i < post_activation_multiplier.size(); ++i) {
+    const double post_mul = post_activation_multiplier[i];
+    const double post_bias = post_activation_bias[i];
+
+    const double t1 = -post_bias / post_mul;
+    const double t2 = (0.5 * (backtransform_add + post_bias / post_mul));
+    // The rounding direction is important here.
+    // We have to use a truncating cast instead of a round
+    threshold[i] = static_cast<std::int32_t>(t2);
+
+    if (t2 >= 2 * backtransform_add || t1 <= output_activation_min) {
+      threshold[i] = std::numeric_limits<std::int32_t>::max();
+    } else if (t2 <= 0.0 || t1 >= output_activation_max) {
+      threshold[i] = std::numeric_limits<std::int32_t>::lowest();
+    }
+  }
+}
+
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 
@@ -469,6 +510,8 @@ void runTest(const TestParam& param) {
   // because they have the same shape and datatype
   LceTensor<PostType> post_tensor({filter_count});
 
+  LceTensor<std::int32_t> threshold_tensor({filter_count});
+
   LceTensor<TOutput> output_tensor;
   LceTensor<BuiltinType> builtin_output_tensor;
 
@@ -502,6 +545,7 @@ void runTest(const TestParam& param) {
   std::vector<BuiltinType> input_data, padded_input_data, filters_data;
   std::vector<PostType> post_activation_multiplier_data,
       post_activation_bias_data;
+  std::vector<std::int32_t> threshold_data;
   std::vector<BuiltinBiasType> bias_data;
 
   std::vector<PackedFilterType> packed_filters_data;
@@ -514,6 +558,7 @@ void runTest(const TestParam& param) {
       0);  // bias always has zero_point = 0, scale = input * filter
   post_activation_multiplier_data.resize(filter_count, 1);
   post_activation_bias_data.resize(filter_count, 0);
+  threshold_data.resize(filter_count);
 
   // Fill input and filter with -1,+1 with quantization taken into account
   input_tensor.GenerateSigns(gen, std::begin(input_data), std::end(input_data));
@@ -530,13 +575,19 @@ void runTest(const TestParam& param) {
     }
   } else {  // Bitpacked input or float input
     auto float_generator = [&gen]() {
-      return std::uniform_real_distribution<>(-1.5, 1.5)(gen);
+      return std::uniform_real_distribution<>(0.01, 1.5)(gen);
     };
 
     std::generate(std::begin(post_activation_multiplier_data),
                   std::end(post_activation_multiplier_data), float_generator);
     std::generate(std::begin(post_activation_bias_data),
                   std::end(post_activation_bias_data), float_generator);
+  }
+
+  if (write_bitpacked_output) {
+    ComputeThresholds(input_depth, filter_height, filter_width,
+                      post_activation_multiplier_data,
+                      post_activation_bias_data, activation, threshold_data);
   }
 
   // Bitpack filters
@@ -667,16 +718,20 @@ void runTest(const TestParam& param) {
 
   BConv2DOpModel<TInput, PostType, TOutput> m_lce(
       registration, input_tensor, packed_filter_tensor, output_tensor,
-      post_tensor, post_tensor, input_depth, stride_width, stride_height,
-      bconv_padding, pad_values, activation, dilation_width_factor,
-      dilation_height_factor, num_threads);
+      post_tensor, post_tensor, threshold_tensor, input_depth, stride_width,
+      stride_height, bconv_padding, pad_values, activation,
+      dilation_width_factor, dilation_height_factor, num_threads);
 
   // Set op parameters.
   set_lce_op_input({input_batch_count, input_height, input_width, input_depth},
                    input_data, input_tensor.zero_point, m_lce);
   m_lce.SetFilter(packed_filters_data);
-  m_lce.SetPostActivationMultiplier(post_activation_multiplier_data);
-  m_lce.SetPostActivationBias(post_activation_bias_data);
+  if (write_bitpacked_output) {
+    m_lce.SetThresholds(threshold_data);
+  } else {
+    m_lce.SetPostActivationMultiplier(post_activation_multiplier_data);
+    m_lce.SetPostActivationBias(post_activation_bias_data);
+  }
 
   // Invoke the op and test that the output is correct.
   m_lce.Invoke();
@@ -784,6 +839,7 @@ TEST(BConv2DTests, ReluErrorTest) {
   LceTensor<float> input_tensor({1, 16, 16, 64});
   LceTensor<std::int32_t> packed_filter_tensor({128, 3, 3, 64});
   LceTensor<float> post_tensor({128});
+  LceTensor<std::int32_t> threshold_tensor({128});
   LceTensor<float> output_tensor;
   LceTensor<std::int32_t> packed_output_tensor;
 
@@ -795,10 +851,11 @@ TEST(BConv2DTests, ReluErrorTest) {
   // Test if fused ReLu throws an error in combination with zero-padding
   EXPECT_DEATH(
       {
-        FP_BConv2DOpModel m_lce(
-            compute_engine::tflite::Register_BCONV_2D64_OPT, input_tensor,
-            packed_filter_tensor, output_tensor, post_tensor, post_tensor, 64,
-            1, 1, Padding_SAME, 0, ActivationFunctionType_RELU, 1, 1, 1);
+        FP_BConv2DOpModel m_lce(compute_engine::tflite::Register_BCONV_2D64_OPT,
+                                input_tensor, packed_filter_tensor,
+                                output_tensor, post_tensor, post_tensor,
+                                threshold_tensor, 64, 1, 1, Padding_SAME, 0,
+                                ActivationFunctionType_RELU, 1, 1, 1);
       },
       "Fused activations are only supported with valid or one-padding.");
 
@@ -809,8 +866,8 @@ TEST(BConv2DTests, ReluErrorTest) {
         Bitpacked_BConv2DOpModel m_lce(
             compute_engine::tflite::Register_BCONV_2D64_OPT, input_tensor,
             packed_filter_tensor, packed_output_tensor, post_tensor,
-            post_tensor, 64, 1, 1, Padding_SAME, 0, ActivationFunctionType_NONE,
-            1, 1, 1);
+            post_tensor, threshold_tensor, 64, 1, 1, Padding_SAME, 0,
+            ActivationFunctionType_NONE, 1, 1, 1);
       },
       "Writing bitpacked output is only supported with valid or one-padding.");
 }
