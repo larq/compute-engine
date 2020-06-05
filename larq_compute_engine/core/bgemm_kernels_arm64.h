@@ -500,11 +500,11 @@ void BinaryKernelNeonOutOfOrder4x4(
 // clang-format off
 
 /*
- * The 8x4 kernel defined below uses int16 accumulators, hence the terminology
- * `LCE_BMLA_HALF`. This means that all eight accumulators for a single column
- * fit in a single NEON register, freeing up register space, but more
- * importantly it allows for a slightly more optimised BMLA implementation
- * (there's no need for an extra `uadalp` instruction to go from 16 to 32 bits).
+ * The 8x4 kernel defined below uses int16 accumulators. This means that all
+ * eight accumulators for a single column fit in a single NEON register, freeing
+ * up register space, but more importantly it allows for a slightly more
+ * optimised BMLA implementation (there's no need for an extra `uadalp`
+ * instruction to go from 16 to 32 bits).
  *
  * We don't expect to often encounter inputs that risk accumulator overflow. For
  * 3x3 kernels, this would require more then 2^16 / (3*3) > 7000 input channels.
@@ -512,96 +512,93 @@ void BinaryKernelNeonOutOfOrder4x4(
  * instead when `filter_height` * `filter_width` * `input_channels` >= 2^16.
  */
 
-// Temporary NEON registers: v28, v29, v30, v31.
-#define LCE_BMLA_HALF(Vd, Vr, Vl1, Vl2, Vl3, Vl4, Vl5, Vl6, Vl7, Vl8) \
-  "eor v28.16b, " #Vr".16b, " #Vl1".16b\n"                            \
-  "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"                            \
-  "eor v30.16b, " #Vr".16b, " #Vl3".16b\n"                            \
-  "eor v31.16b, " #Vr".16b, " #Vl4".16b\n"                            \
-  "cnt v28.16b, v28.16b\n"                                            \
-  "cnt v29.16b, v29.16b\n"                                            \
-  "cnt v30.16b, v30.16b\n"                                            \
-  "cnt v31.16b, v31.16b\n"                                            \
-  "addp v28.16b, v28.16b, v29.16b\n"                                  \
-  "addp v30.16b, v30.16b, v31.16b\n"                                  \
-  "addp v28.16b, v28.16b, v30.16b\n"                                  \
-  "eor v29.16b, " #Vr".16b, " #Vl5".16b\n"                            \
-  "eor v31.16b, " #Vr".16b, " #Vl6".16b\n"                            \
-  "cnt v29.16b, v29.16b\n"                                            \
-  "cnt v31.16b, v31.16b\n"                                            \
-  "addp v29.16b, v29.16b, v31.16b\n"                                  \
-  "eor v30.16b, " #Vr".16b, " #Vl7".16b\n"                            \
-  "eor v31.16b, " #Vr".16b, " #Vl8".16b\n"                            \
-  "cnt v30.16b, v30.16b\n"                                            \
-  "cnt v31.16b, v31.16b\n"                                            \
-  "addp v30.16b, v30.16b, v31.16b\n"                                  \
-  "addp v29.16b, v29.16b, v30.16b\n"                                  \
-  "addp v28.16b, v28.16b, v29.16b\n"                                  \
-  "uadalp " #Vd".8h, v28.16b\n"
+// XOR-CNT registers: v12 -- v19.
+#define LCE_XOR(Vr, Vl1, Vl2, Vl3, Vl4, Vl5, Vl6, Vl7, Vl8) \
+  "eor v12.16b, " #Vr".16b, " #Vl1".16b\n"                  \
+  "eor v13.16b, " #Vr".16b, " #Vl2".16b\n"                  \
+  "eor v14.16b, " #Vr".16b, " #Vl3".16b\n"                  \
+  "eor v15.16b, " #Vr".16b, " #Vl4".16b\n"                  \
+  "eor v16.16b, " #Vr".16b, " #Vl5".16b\n"                  \
+  "eor v17.16b, " #Vr".16b, " #Vl6".16b\n"                  \
+  "eor v18.16b, " #Vr".16b, " #Vl7".16b\n"                  \
+  "eor v19.16b, " #Vr".16b, " #Vl8".16b\n"
 
-// Temporary NEON registers: v28, v29, v30, v31.
-#define LCE_BMLA_HALF_LD_RHS(Vd, Vr, Vl1, Vl2, Vl3, Vl4, Vl5, Vl6, Vl7, Vl8) \
-  "eor v28.16b, " #Vr".16b, " #Vl1".16b\n"                                   \
-  "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"                                   \
-  "eor v30.16b, " #Vr".16b, " #Vl3".16b\n"                                   \
-  "eor v31.16b, " #Vr".16b, " #Vl4".16b\n"                                   \
-  "cnt v28.16b, v28.16b\n"                                                   \
-  "cnt v29.16b, v29.16b\n"                                                   \
-  "cnt v30.16b, v30.16b\n"                                                   \
-  "cnt v31.16b, v31.16b\n"                                                   \
-  "addp v28.16b, v28.16b, v29.16b\n"                                         \
-  "addp v30.16b, v30.16b, v31.16b\n"                                         \
-  "addp v28.16b, v28.16b, v30.16b\n"                                         \
-  "eor v29.16b, " #Vr".16b, " #Vl5".16b\n"                                   \
-  "eor v31.16b, " #Vr".16b, " #Vl6".16b\n"                                   \
-  "cnt v29.16b, v29.16b\n"                                                   \
-  "cnt v31.16b, v31.16b\n"                                                   \
-  "addp v29.16b, v29.16b, v31.16b\n"                                         \
-  "eor v30.16b, " #Vr".16b, " #Vl7".16b\n"                                   \
-  "eor v31.16b, " #Vr".16b, " #Vl8".16b\n"                                   \
-  "cnt v30.16b, v30.16b\n"                                                   \
-  "cnt v31.16b, v31.16b\n"                                                   \
-  "ld1 {"#Vr".2d}, [%[rhs_ptr]], #16\n"                                      \
-  "addp v30.16b, v30.16b, v31.16b\n"                                         \
-  "addp v29.16b, v29.16b, v30.16b\n"                                         \
-  "addp v28.16b, v28.16b, v29.16b\n"                                         \
-  "uadalp " #Vd".8h, v28.16b\n"
+// XOR-CNT registers: v12 -- v19. ACCUM registers: v20 -- v23.
+#define LCE_CNT_ACCUM(Vd)            \
+  "cnt v12.16b, v12.16b\n"           \
+  "cnt v13.16b, v13.16b\n"           \
+  "cnt v14.16b, v14.16b\n"           \
+  "cnt v15.16b, v15.16b\n"           \
+  "addp v20.16b, v12.16b, v13.16b\n" \
+  "cnt v16.16b, v16.16b\n"           \
+  "addp v21.16b, v14.16b, v15.16b\n" \
+  "cnt v17.16b, v17.16b\n"           \
+  "cnt v18.16b, v18.16b\n"           \
+  "cnt v19.16b, v19.16b\n"           \
+  "addp v20.16b, v20.16b, v21.16b\n" \
+  "addp v22.16b, v16.16b, v17.16b\n" \
+  "addp v23.16b, v18.16b, v19.16b\n" \
+  "addp v22.16b, v22.16b, v23.16b\n" \
+  "addp v20.16b, v20.16b, v22.16b\n" \
+  "uadalp " #Vd".8h, v20.16b\n"
 
-// Temporary NEON registers: v28, v29, v30, v31.
-#define LCE_BMLA_HALF_LD_ALL(Vd, Vr, Vl1, Vl2, Vl3, Vl4, Vl5, Vl6, Vl7, Vl8) \
-  "eor v28.16b, " #Vr".16b, " #Vl1".16b\n"                                   \
-  "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"                                   \
-  "eor v30.16b, " #Vr".16b, " #Vl3".16b\n"                                   \
-  "eor v31.16b, " #Vr".16b, " #Vl4".16b\n"                                   \
-  "cnt v28.16b, v28.16b\n"                                                   \
-  "cnt v29.16b, v29.16b\n"                                                   \
-  "ld1 {"#Vl1".2d}, [%[lhs_ptr]], #16\n"                                     \
-  "cnt v30.16b, v30.16b\n"                                                   \
-  "cnt v31.16b, v31.16b\n"                                                   \
-  "ld1 {"#Vl2".2d}, [%[lhs_ptr]], #16\n"                                     \
-  "addp v28.16b, v28.16b, v29.16b\n"                                         \
-  "addp v30.16b, v30.16b, v31.16b\n"                                         \
-  "ld1 {"#Vl3".2d}, [%[lhs_ptr]], #16\n"                                     \
-  "addp v28.16b, v28.16b, v30.16b\n"                                         \
-  "eor v29.16b, " #Vr".16b, " #Vl5".16b\n"                                   \
-  "ld1 {"#Vl4".2d}, [%[lhs_ptr]], #16\n"                                     \
-  "eor v31.16b, " #Vr".16b, " #Vl6".16b\n"                                   \
-  "cnt v29.16b, v29.16b\n"                                                   \
-  "ld1 {"#Vl5".2d}, [%[lhs_ptr]], #16\n"                                     \
-  "cnt v31.16b, v31.16b\n"                                                   \
-  "addp v29.16b, v29.16b, v31.16b\n"                                         \
-  "ld1 {"#Vl6".2d}, [%[lhs_ptr]], #16\n"                                     \
-  "eor v30.16b, " #Vr".16b, " #Vl7".16b\n"                                   \
-  "eor v31.16b, " #Vr".16b, " #Vl8".16b\n"                                   \
-  "cnt v30.16b, v30.16b\n"                                                   \
-  "ld1 {"#Vl7".2d}, [%[lhs_ptr]], #16\n"                                     \
-  "cnt v31.16b, v31.16b\n"                                                   \
-  "addp v30.16b, v30.16b, v31.16b\n"                                         \
-  "ld1 {"#Vr".2d}, [%[rhs_ptr]], #16\n"                                      \
-  "addp v29.16b, v29.16b, v30.16b\n"                                         \
-  "addp v28.16b, v28.16b, v29.16b\n"                                         \
-  "ld1 {"#Vl8".2d}, [%[lhs_ptr]], #16\n"                                     \
-  "uadalp " #Vd".8h, v28.16b\n"
+// XOR-CNT registers: v12 -- v19. ACCUM registers: v20 -- v23.
+#define LCE_CNT_ACCUM_LD_RHS_XOR(Vd, Vr, Vl1, Vl2, Vl3, Vl4, Vl5, Vl6, Vl7, Vl8) \
+  "ld1 {"#Vr".2d}, [%[rhs_ptr]], #16\n"                                          \
+  "cnt v12.16b, v12.16b\n"                                                       \
+  "cnt v13.16b, v13.16b\n"                                                       \
+  "cnt v14.16b, v14.16b\n"                                                       \
+  "cnt v15.16b, v15.16b\n"                                                       \
+  "cnt v16.16b, v16.16b\n"                                                       \
+  "cnt v17.16b, v17.16b\n"                                                       \
+  "cnt v18.16b, v18.16b\n"                                                       \
+  "cnt v19.16b, v19.16b\n"                                                       \
+  "addp v20.16b, v12.16b, v13.16b\n"                                             \
+  "addp v21.16b, v14.16b, v15.16b\n"                                             \
+  "addp v22.16b, v16.16b, v17.16b\n"                                             \
+  "addp v23.16b, v18.16b, v19.16b\n"                                             \
+  "eor v12.16b, " #Vr".16b, " #Vl1".16b\n"                                       \
+  "eor v13.16b, " #Vr".16b, " #Vl2".16b\n"                                       \
+  "addp v20.16b, v20.16b, v21.16b\n"                                             \
+  "addp v22.16b, v22.16b, v23.16b\n"                                             \
+  "eor v14.16b, " #Vr".16b, " #Vl3".16b\n"                                       \
+  "eor v15.16b, " #Vr".16b, " #Vl4".16b\n"                                       \
+  "eor v16.16b, " #Vr".16b, " #Vl5".16b\n"                                       \
+  "addp v20.16b, v20.16b, v22.16b\n"                                             \
+  "eor v17.16b, " #Vr".16b, " #Vl6".16b\n"                                       \
+  "eor v18.16b, " #Vr".16b, " #Vl7".16b\n"                                       \
+  "eor v19.16b, " #Vr".16b, " #Vl8".16b\n"                                       \
+  "uadalp " #Vd".8h, v20.16b\n"
+
+// XOR-CNT registers: v12 -- v19. ACCUM registers: v20 -- v23.
+#define LCE_CNT_ACCUM_LD_ALL_XOR(Vd, Vr, Vl1, Vl2, Vl3, Vl4, Vl5, Vl6, Vl7, Vl8) \
+  "ld1 {"#Vr".2d}, [%[rhs_ptr]], #16\n"                                          \
+  "cnt v12.16b, v12.16b\n"                                                       \
+  "cnt v13.16b, v13.16b\n"                                                       \
+  "ld1 {"#Vl1".2d, "#Vl2".2d, "#Vl3".2d, "#Vl4".2d}, [%[lhs_ptr]], #64\n"        \
+  "cnt v14.16b, v14.16b\n"                                                       \
+  "cnt v15.16b, v15.16b\n"                                                       \
+  "cnt v16.16b, v16.16b\n"                                                       \
+  "cnt v17.16b, v17.16b\n"                                                       \
+  "ld1 {"#Vl5".2d, "#Vl6".2d, "#Vl7".2d, "#Vl8".2d}, [%[lhs_ptr]], #64\n"        \
+  "cnt v18.16b, v18.16b\n"                                                       \
+  "cnt v19.16b, v19.16b\n"                                                       \
+  "addp v20.16b, v12.16b, v13.16b\n"                                             \
+  "addp v21.16b, v14.16b, v15.16b\n"                                             \
+  "addp v22.16b, v16.16b, v17.16b\n"                                             \
+  "addp v23.16b, v18.16b, v19.16b\n"                                             \
+  "eor v12.16b, " #Vr".16b, " #Vl1".16b\n"                                       \
+  "eor v13.16b, " #Vr".16b, " #Vl2".16b\n"                                       \
+  "addp v20.16b, v20.16b, v21.16b\n"                                             \
+  "addp v22.16b, v22.16b, v23.16b\n"                                             \
+  "eor v14.16b, " #Vr".16b, " #Vl3".16b\n"                                       \
+  "eor v15.16b, " #Vr".16b, " #Vl4".16b\n"                                       \
+  "eor v16.16b, " #Vr".16b, " #Vl5".16b\n"                                       \
+  "addp v20.16b, v20.16b, v22.16b\n"                                             \
+  "eor v17.16b, " #Vr".16b, " #Vl6".16b\n"                                       \
+  "eor v18.16b, " #Vr".16b, " #Vl7".16b\n"                                       \
+  "eor v19.16b, " #Vr".16b, " #Vl8".16b\n"                                       \
+  "uadalp " #Vd".8h, v20.16b\n"
 
 // clang-format on
 
@@ -647,9 +644,9 @@ void BinaryKernelNeonOutOfOrder4x4(
 //      \-----------------/  \--------------------------------------/
 //                                 int16 accumulators 8x4 block
 //
-// In the RUY_OPT_MAX_STREAMING part of the kernel, this elementary step is
-// repeated two times, using additional registers for the LHS (v12 -- v19) and
-// RHS (v20 -- v23).
+// During the computation, v12 -- v19 are used to store XOR and byte-level CNT
+// results. v20 -- v23 are used to combine the byte-level CNT results for
+// accumulation into the destination registers.
 
 // clang-format on
 
@@ -688,10 +685,10 @@ void BinaryKernelNeonOutOfOrder8x4(
       "ldr w12, [%[params], #" RUY_STR(RUY_OFFSET_DEPTH) "]\n"
       RUY_MAKE_ZERO(v27)
 
-      // Load the first 128 bytes of LHS and 64 bytes of RHS data.
+      // Load the first 128 bytes of LHS and 16 bytes of RHS data.
+      "ld1 {v8.2d}, [%[rhs_ptr]], #16\n"
       "ld1 {v0.2d, v1.2d, v2.2d, v3.2d}, [%[lhs_ptr]], #64\n"
       "ld1 {v4.2d, v5.2d, v6.2d, v7.2d}, [%[lhs_ptr]], #64\n"
-      "ld1 {v8.2d, v9.2d, v10.2d, v11.2d}, [%[rhs_ptr]], #64\n"
 
       // w1 is the number of levels of depth that we have already loaded
       // LHS and RHS data for.
@@ -703,46 +700,7 @@ void BinaryKernelNeonOutOfOrder8x4(
       // destination matrix.
       "1:\n"
 
-      LCE_BMLA_HALF(v24, v8, v0, v1, v2, v3, v4, v5, v6, v7)
-
-#if RUY_OPT_ENABLED(RUY_OPT_MAX_STREAMING)
-      "cmp w12, #8\n"
-      "blt 78f\n"
-      "and w2, w12, #-4\n"
-
-      // Load the next 128 bytes of LHS data and 64 bytes of RHS data.
-      "ld1 {v12.2d, v13.2d, v14.2d, v15.2d}, [%[lhs_ptr]], #64\n"
-      "ld1 {v16.2d, v17.2d, v18.2d, v19.2d}, [%[lhs_ptr]], #64\n"
-      "ld1 {v20.2d, v21.2d, v22.2d, v23.2d}, [%[rhs_ptr]], #64\n"
-
-      "mov w1, #4\n"
-
-      "80:\n"
-
-      // Load v8.
-      "ld1 {v8.2d}, [%[rhs_ptr]], #16\n"
-
-      LCE_BMLA_HALF_LD_RHS(v25, v9, v0, v1, v2, v3, v4, v5, v6, v7)
-      LCE_BMLA_HALF_LD_RHS(v26, v10, v0, v1, v2, v3, v4, v5, v6, v7)
-      LCE_BMLA_HALF_LD_ALL(v27, v11, v0, v1, v2, v3, v4, v5, v6, v7)
-      LCE_BMLA_HALF_LD_RHS(v24, v20, v12, v13, v14, v15, v16, v17, v18, v19)
-      LCE_BMLA_HALF_LD_RHS(v25, v21, v12, v13, v14, v15, v16, v17, v18, v19)
-      LCE_BMLA_HALF_LD_RHS(v26, v22, v12, v13, v14, v15, v16, v17, v18, v19)
-      LCE_BMLA_HALF_LD_ALL(v27, v23, v12, v13, v14, v15, v16, v17, v18, v19)
-
-      LCE_BMLA_HALF(v24, v8, v0, v1, v2, v3, v4, v5, v6, v7)
-
-      "add w1, w1, #4\n"
-      "cmp w1, w2\n"
-      "blt 80b\n"
-
-      LCE_BMLA_HALF(v24, v20, v12, v13, v14, v15, v16, v17, v18, v19)
-      LCE_BMLA_HALF(v25, v21, v12, v13, v14, v15, v16, v17, v18, v19)
-      LCE_BMLA_HALF(v26, v22, v12, v13, v14, v15, v16, v17, v18, v19)
-      LCE_BMLA_HALF(v27, v23, v12, v13, v14, v15, v16, v17, v18, v19)
-
-      "78:\n"
-#endif
+      LCE_XOR(v8, v0, v1, v2, v3, v4, v5, v6, v7)
 
       // Accumulation loop
       "cmp w1, w12\n"
@@ -750,25 +708,23 @@ void BinaryKernelNeonOutOfOrder8x4(
 
       "2:\n"
 
-      // Load v8.
-      "ld1 {v8.2d}, [%[rhs_ptr]], #16\n"
-
-      LCE_BMLA_HALF_LD_RHS(v25, v9, v0, v1, v2, v3, v4, v5, v6, v7)
-      LCE_BMLA_HALF_LD_RHS(v26, v10, v0, v1, v2, v3, v4, v5, v6, v7)
-      LCE_BMLA_HALF_LD_ALL(v27, v11, v0, v1, v2, v3, v4, v5, v6, v7)
+      LCE_CNT_ACCUM_LD_RHS_XOR(v24, v9, v0, v1, v2, v3, v4, v5, v6, v7)
+      LCE_CNT_ACCUM_LD_RHS_XOR(v25, v10, v0, v1, v2, v3, v4, v5, v6, v7)
+      LCE_CNT_ACCUM_LD_RHS_XOR(v26, v11, v0, v1, v2, v3, v4, v5, v6, v7)
 
       "add w1, w1, #2\n"
       "cmp w1, w12\n"
 
-      LCE_BMLA_HALF(v24, v8, v0, v1, v2, v3, v4, v5, v6, v7)
+      LCE_CNT_ACCUM_LD_ALL_XOR(v27, v8, v0, v1, v2, v3, v4, v5, v6, v7)
 
       "blt 2b\n"
 
       "79:\n"
 
-      LCE_BMLA_HALF(v25, v9, v0, v1, v2, v3, v4, v5, v6, v7)
-      LCE_BMLA_HALF(v26, v10, v0, v1, v2, v3, v4, v5, v6, v7)
-      LCE_BMLA_HALF(v27, v11, v0, v1, v2, v3, v4, v5, v6, v7)
+      LCE_CNT_ACCUM_LD_RHS_XOR(v24, v9, v0, v1, v2, v3, v4, v5, v6, v7)
+      LCE_CNT_ACCUM_LD_RHS_XOR(v25, v10, v0, v1, v2, v3, v4, v5, v6, v7)
+      LCE_CNT_ACCUM_LD_RHS_XOR(v26, v11, v0, v1, v2, v3, v4, v5, v6, v7)
+      LCE_CNT_ACCUM(v27)
 
       // End of accumulation. The registers v24 -- v27 contain the final int16
       // accumulator values of the current 8x4 destination block.
@@ -805,109 +761,106 @@ void BinaryKernelNeonOutOfOrder8x4(
 
       // Now that we know what LHS and RHS data the next iteration of the main
       // loop will need to load, we start loading the first 128 bytes of the LHS
-      // and 64 bytes of the RHS into v0 -- v7 and v8 -- v11 as we don't need
-      // them anymore in the rest of the work on the current block. We do it in
+      // and 16 bytes of the RHS into v0 -- v7 and v8 as we don't need them
+      // anymore in the rest of the work on the current block. We do it in
       // parallel with the back-transform shift.
 
-      // Load backtransform add (also in parallel with applying the
-      // back-transform shift).
+      // Load the backtransform add.
       "ldr w1, [%[params], #" RUY_STR(RUY_OFFSET_BACKTRANSFORM_ADD) "]\n"
+
+      // Load the `clamp_min` bound.
+      "ldr w2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
+
+      // Load the `clamp_max` bound.
+      "ldr w3, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MAX) "]\n"
 
       // Perform the back-transformation shift with 'unsigned shift left long'
       // instructions; this performs the necessary left shift and extends the
       // result, so we get a int16 -> int32 transformation for free.
       "ushll v20.4s, v24.4h, #1\n"
-      "dup v13.4s, w1\n"  // Duplicate `backtransform_add` four times into v13.
+      "dup v28.4s, w1\n"  // In parallel, duplicate `backtransform_add` into v28.
       "ushll2 v21.4s, v24.8h, #1\n"
+      "ld1 {v8.2d}, [%[rhs_ptr]], #16\n"
       "ushll v22.4s, v25.4h, #1\n"
-      "ld1 {v0.2d, v1.2d, v2.2d, v3.2d}, [%[lhs_ptr]], #64\n"
       "ushll2 v23.4s, v25.8h, #1\n"
+      "ld1 {v0.2d, v1.2d, v2.2d, v3.2d}, [%[lhs_ptr]], #64\n"
       "ushll v24.4s, v26.4h, #1\n"
-      "ld1 {v8.2d, v9.2d, v10.2d, v11.2d}, [%[rhs_ptr]], #64\n"
       "ushll2 v25.4s, v26.8h, #1\n"
       "ushll v26.4s, v27.4h, #1\n"
-      "ld1 {v4.2d, v5.2d, v6.2d, v7.2d}, [%[lhs_ptr]], #64\n"
       "ushll2 v27.4s, v27.8h, #1\n"
-
-      // Load the `clamp_min` bound (in parallel with applying the subtraction).
-      "ldr w2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
+      "ld1 {v4.2d, v5.2d, v6.2d, v7.2d}, [%[lhs_ptr]], #64\n"
 
       // Apply the back-transformation subtraction.
-      "sub v20.4s, v13.4s, v20.4s\n"
-      "sub v21.4s, v13.4s, v21.4s\n"
-      "sub v22.4s, v13.4s, v22.4s\n"
-      "sub v23.4s, v13.4s, v23.4s\n"
-      "dup v12.4s, w2\n"  // Duplicate `clamp_min` four times into v12.
-      "sub v24.4s, v13.4s, v24.4s\n"
-      "sub v25.4s, v13.4s, v25.4s\n"
-      "sub v26.4s, v13.4s, v26.4s\n"
-      "sub v27.4s, v13.4s, v27.4s\n"
-
-      // Load the `clamp_max` bound (in parallel with applying the `clamp_min`).
-      "ldr w3, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MAX) "]\n"
+      "dup v29.4s, w2\n"  // In parallel, duplicate `clamp_min` into v29.
+      "sub v20.4s, v28.4s, v20.4s\n"
+      "sub v21.4s, v28.4s, v21.4s\n"
+      "sub v22.4s, v28.4s, v22.4s\n"
+      "sub v23.4s, v28.4s, v23.4s\n"
+      "sub v24.4s, v28.4s, v24.4s\n"
+      "sub v25.4s, v28.4s, v25.4s\n"
+      "sub v26.4s, v28.4s, v26.4s\n"
+      "sub v27.4s, v28.4s, v27.4s\n"
 
       // Apply the `clamp_min` bound.
-      "smax v20.4s, v20.4s, v12.4s\n"
-      "smax v21.4s, v21.4s, v12.4s\n"
-      "smax v22.4s, v22.4s, v12.4s\n"
-      "smax v23.4s, v23.4s, v12.4s\n"
-      "dup v13.4s, w3\n"  // Duplicate `clamp_max` four times into v13.
-      "smax v24.4s, v24.4s, v12.4s\n"
-      "smax v25.4s, v25.4s, v12.4s\n"
-      "smax v26.4s, v26.4s, v12.4s\n"
-      "smax v27.4s, v27.4s, v12.4s\n"
+      "dup v30.4s, w3\n"  // In parallel, duplicate `clamp_max` into v30.
+      "smax v20.4s, v20.4s, v29.4s\n"
+      "smax v21.4s, v21.4s, v29.4s\n"
+      "smax v22.4s, v22.4s, v29.4s\n"
+      "smax v23.4s, v23.4s, v29.4s\n"
+      "smax v24.4s, v24.4s, v29.4s\n"
+      "smax v25.4s, v25.4s, v29.4s\n"
+      "smax v26.4s, v26.4s, v29.4s\n"
+      "smax v27.4s, v27.4s, v29.4s\n"
+
+      // Load the multiplier and bias pointers.
+      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_MULTIPLIER) "]\n"
+      "ldr x2, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_BIAS) "]\n"
 
       // Apply the clamp_max bound.
-      "smin v20.4s, v20.4s, v13.4s\n"
-      "smin v21.4s, v21.4s, v13.4s\n"
-      "smin v22.4s, v22.4s, v13.4s\n"
-      "smin v23.4s, v23.4s, v13.4s\n"
-      "smin v24.4s, v24.4s, v13.4s\n"
-      "smin v25.4s, v25.4s, v13.4s\n"
-      "smin v26.4s, v26.4s, v13.4s\n"
-      "smin v27.4s, v27.4s, v13.4s\n"
+      "smin v20.4s, v20.4s, v30.4s\n"
+      "smin v21.4s, v21.4s, v30.4s\n"
+      "smin v22.4s, v22.4s, v30.4s\n"
+      "smin v23.4s, v23.4s, v30.4s\n"
+      "smin v24.4s, v24.4s, v30.4s\n"
+      "smin v25.4s, v25.4s, v30.4s\n"
+      "smin v26.4s, v26.4s, v30.4s\n"
+      "smin v27.4s, v27.4s, v30.4s\n"
 
-      // Load multiplication bias (in parallel with the float-conversion).
-      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_MULTIPLIER) "]\n"
-      // Offset these base pointers as needed given the current row, col.
+      // Offset the multiplier/bias pointers as needed given the current row, col.
       "add x1, x1, %x[row], lsl #2\n"
+      "add x2, x2, %x[row], lsl #2\n"
 
       // Convert to single precision float.
+      "ld1 {v28.4s, v29.4s}, [x1]\n"  // In parallel, load 8 multiplier values.
       "scvtf v20.4s, v20.4s\n"
       "scvtf v21.4s, v21.4s\n"
       "scvtf v22.4s, v22.4s\n"
       "scvtf v23.4s, v23.4s\n"
-      "ld1 {v14.4s, v15.4s}, [x1]\n"  // Load 8 bias-multiplication values.
       "scvtf v24.4s, v24.4s\n"
       "scvtf v25.4s, v25.4s\n"
       "scvtf v26.4s, v26.4s\n"
       "scvtf v27.4s, v27.4s\n"
 
-      // Load addition bias (in parallel with the post-multiplication).
-      "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_BIAS) "]\n"
-      // Offset these base pointers as needed given the current row, col.
-      "add x1, x1, %x[row], lsl #2\n"
-
       // Perform the post multiplications.
-      "fmul v20.4s, v20.4s, v14.4s\n"
-      "fmul v21.4s, v21.4s, v15.4s\n"
-      "fmul v22.4s, v22.4s, v14.4s\n"
-      "fmul v23.4s, v23.4s, v15.4s\n"
-      "ld1 {v16.4s, v17.4s}, [x1]\n"  // Load 8 bias-addition values.
-      "fmul v24.4s, v24.4s, v14.4s\n"
-      "fmul v25.4s, v25.4s, v15.4s\n"
-      "fmul v26.4s, v26.4s, v14.4s\n"
-      "fmul v27.4s, v27.4s, v15.4s\n"
+      "ld1 {v30.4s, v31.4s}, [x2]\n"  // In parallel, load 8 bias-addition values.
+      "fmul v20.4s, v20.4s, v28.4s\n"
+      "fmul v21.4s, v21.4s, v29.4s\n"
+      "fmul v22.4s, v22.4s, v28.4s\n"
+      "fmul v23.4s, v23.4s, v29.4s\n"
+      "fmul v24.4s, v24.4s, v28.4s\n"
+      "fmul v25.4s, v25.4s, v29.4s\n"
+      "fmul v26.4s, v26.4s, v28.4s\n"
+      "fmul v27.4s, v27.4s, v29.4s\n"
 
       // Perform the post additions.
-      "fadd v20.4s, v20.4s, v16.4s\n"
-      "fadd v21.4s, v21.4s, v17.4s\n"
-      "fadd v22.4s, v22.4s, v16.4s\n"
-      "fadd v23.4s, v23.4s, v17.4s\n"
-      "fadd v24.4s, v24.4s, v16.4s\n"
-      "fadd v25.4s, v25.4s, v17.4s\n"
-      "fadd v26.4s, v26.4s, v16.4s\n"
-      "fadd v27.4s, v27.4s, v17.4s\n"
+      "fadd v20.4s, v20.4s, v30.4s\n"
+      "fadd v21.4s, v21.4s, v31.4s\n"
+      "fadd v22.4s, v22.4s, v30.4s\n"
+      "fadd v23.4s, v23.4s, v31.4s\n"
+      "fadd v24.4s, v24.4s, v30.4s\n"
+      "fadd v25.4s, v25.4s, v31.4s\n"
+      "fadd v26.4s, v26.4s, v30.4s\n"
+      "fadd v27.4s, v27.4s, v31.4s\n"
 
       // Compute how much of the 8x4 block of destination values that we have
       // computed fits in the destination matrix. Typically, all of it fits, but
