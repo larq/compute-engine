@@ -13,6 +13,41 @@ env:
   IMAGE_NAME: dev
 
 jobs:
+  benchmark-binaries:
+    name: Build Benchmark Binaries for AArch64 and Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: /tmp/lce_android
+          key: ${{ runner.os }}-${{ hashFiles('**/third_party/install_android.sh') }}
+      - name: Configure Bazel
+        run: ./configure.sh <<< $'n\n'
+        shell: bash
+      - name: Install pip dependencies
+        run: pip install numpy six --no-cache-dir
+      - name: Download and install Android NDK/SDK
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: ./third_party/install_android.sh
+      - run: mkdir benchmark-binaries
+      - name: Build Benchmark utility for AArch64
+        run: |
+          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model -c opt --config=aarch64
+          cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_aarch64
+      - name: Build Benchmark utility for Android
+        run: |
+          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model -c opt --config=android_arm64
+          cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_android_arm64
+      - uses: actions/upload-artifact@v1
+        with:
+          name: Benchmark-Binaries
+          path: benchmark-binaries
+
   macos-release-wheel:
     name: Build release wheels for macOS
     runs-on: macos-latest
