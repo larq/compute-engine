@@ -3,8 +3,8 @@
 
 #include "bgemm_kernels_common.h"
 #include "ruy/common.h"
-#include "ruy/internal_matrix.h"
 #include "ruy/kernel_common.h"
+#include "ruy/mat.h"
 #include "ruy/matrix.h"
 #include "ruy/mul_params.h"
 #include "ruy/opt_set.h"
@@ -27,10 +27,9 @@ struct BgemmKernel<ruy::Path::kNeon, LhsScalar, RhsScalar, DstScalar,
   using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
   using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
   explicit BgemmKernel(ruy::Tuning tuning_) : tuning(tuning_) {}
-  void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
-           const ruy::PackedMatrix<RhsScalar>& rhs,
+  void Run(const ruy::PMat<LhsScalar>& lhs, const ruy::PMat<RhsScalar>& rhs,
            const MulParamsType& mul_params, int start_row, int start_col,
-           int end_row, int end_col, ruy::Matrix<DstScalar>* dst) const {
+           int end_row, int end_col, ruy::Mat<DstScalar>* dst) const {
     TFLITE_DCHECK(false);
   }
 };
@@ -44,10 +43,9 @@ struct BgemmKernel<ruy::Path::kNeonDotprod, LhsScalar, RhsScalar, DstScalar,
   using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
   using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
   explicit BgemmKernel(ruy::Tuning tuning_) : tuning(tuning_) {}
-  void Run(const ruy::PackedMatrix<LhsScalar>& lhs,
-           const ruy::PackedMatrix<RhsScalar>& rhs,
+  void Run(const ruy::PMat<LhsScalar>& lhs, const ruy::PMat<RhsScalar>& rhs,
            const MulParamsType& mul_params, int start_row, int start_col,
-           int end_row, int end_col, ruy::Matrix<DstScalar>* dst) const {
+           int end_row, int end_col, ruy::Mat<DstScalar>* dst) const {
     TFLITE_DCHECK(false);
   }
 };
@@ -68,12 +66,12 @@ struct BgemmKernel<ruy::Path::kNeon, std::uint64_t, std::uint64_t, float,
   using LhsLayout = FixedKernelLayout<Order::kColMajor, 2, 8>;
   using RhsLayout = FixedKernelLayout<Order::kColMajor, 2, 4>;
   explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
-  void Run(const ruy::PackedMatrix<std::uint64_t>& lhs,
-           const ruy::PackedMatrix<std::uint64_t>& rhs,
+  void Run(const ruy::PMat<std::uint64_t>& lhs,
+           const ruy::PMat<std::uint64_t>& rhs,
            const BinaryMulParams<std::int16_t /* accum. scalar */, float>&
                mul_params,
            int start_row, int start_col, int end_row, int end_col,
-           ruy::Matrix<float>* dst) const {
+           ruy::Mat<float>* dst) const {
     BinaryKernelParams<LhsLayout::kCols, RhsLayout::kCols, std::uint64_t>
         params;
     MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
@@ -91,12 +89,12 @@ struct BgemmKernel<ruy::Path::kNeon, std::uint64_t, std::uint64_t, float,
   using LhsLayout = FixedKernelLayout<Order::kColMajor, 2, 4>;
   using RhsLayout = FixedKernelLayout<Order::kColMajor, 2, 4>;
   explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
-  void Run(const ruy::PackedMatrix<std::uint64_t>& lhs,
-           const ruy::PackedMatrix<std::uint64_t>& rhs,
+  void Run(const ruy::PMat<std::uint64_t>& lhs,
+           const ruy::PMat<std::uint64_t>& rhs,
            const BinaryMulParams<std::int32_t /* accum. scalar */, float>&
                mul_params,
            int start_row, int start_col, int end_row, int end_col,
-           ruy::Matrix<float>* dst) const {
+           ruy::Mat<float>* dst) const {
     BinaryKernelParams<LhsLayout::kCols, RhsLayout::kCols, std::uint64_t>
         params;
     MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
@@ -123,12 +121,12 @@ struct BgemmKernel<ruy::Path::kNeon, std::uint32_t, std::uint32_t, float,
   using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 8>;
   using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
   explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
-  void Run(const ruy::PackedMatrix<std::uint32_t>& lhs,
-           const ruy::PackedMatrix<std::uint32_t>& rhs,
+  void Run(const ruy::PMat<std::uint32_t>& lhs,
+           const ruy::PMat<std::uint32_t>& rhs,
            const BinaryMulParams<std::int16_t /* accum. scalar */, float>&
                mul_params,
            int start_row, int start_col, int end_row, int end_col,
-           ruy::Matrix<float>* dst) const {
+           ruy::Mat<float>* dst) const {
     BinaryKernelParams<LhsLayout::kCols, RhsLayout::kCols, std::uint64_t>
         params;
     MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
@@ -146,12 +144,12 @@ struct BgemmKernel<ruy::Path::kNeon, std::uint32_t, std::uint32_t, float,
   using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
   using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
   explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
-  void Run(const ruy::PackedMatrix<std::uint32_t>& lhs,
-           const ruy::PackedMatrix<std::uint32_t>& rhs,
+  void Run(const ruy::PMat<std::uint32_t>& lhs,
+           const ruy::PMat<std::uint32_t>& rhs,
            const BinaryMulParams<std::int32_t /* accum. scalar */, float>&
                mul_params,
            int start_row, int start_col, int end_row, int end_col,
-           ruy::Matrix<float>* dst) const {
+           ruy::Mat<float>* dst) const {
     BinaryKernelParams<LhsLayout::kCols, RhsLayout::kCols, std::uint64_t>
         params;
     MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
