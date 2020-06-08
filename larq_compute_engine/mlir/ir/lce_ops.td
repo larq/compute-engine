@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 include "mlir/IR/OpBase.td"
-include "mlir/Interfaces/SideEffects.td"
 include "tensorflow/compiler/mlir/tensorflow/ir/tf_op_base.td"
 include "tensorflow/compiler/mlir/lite/quantization/quantization.td"
 
