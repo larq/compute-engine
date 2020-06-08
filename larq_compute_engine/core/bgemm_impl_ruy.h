@@ -53,18 +53,21 @@ struct BGemmImplUsingRuy {
     rhs.set_data(rhs_data);
     dst.set_data(dst_data);
 
-    ruy::Mat<LhsScalar> internal_lhs = ruy::ToInternal(lhs);
-    ruy::Mat<RhsScalar> internal_rhs = ruy::ToInternal(rhs);
+    // We have to make this a `const` matrix because otherwise gcc will try to
+    // use the non-const versions of `matrix.data()`
+    ruy::Mat<LhsScalar> internal_lhs =
+        ruy::ToInternal((const ruy::Matrix<LhsScalar>)lhs);
+    ruy::Mat<RhsScalar> internal_rhs =
+        ruy::ToInternal((const ruy::Matrix<RhsScalar>)rhs);
     ruy::Mat<DstScalar> internal_dst = ruy::ToInternal(dst);
 
     BinaryMulParams<AccumScalar, DstScalar> mul_params;
     mul_params.output_transform = output_transform;
 
-    constexpr auto BGemmCompiledPaths = ruy::kAllPaths & ~ruy::Path::kReference;
+    constexpr auto BGemmCompiledPaths = ruy::kAllPaths;
 
     // avoid the reference path for production code
     ruy::Path bgemm_runtime_path = ruy_ctx->SelectPath(ruy::kAllPaths);
-    RUY_CHECK_NE(bgemm_runtime_path, ruy::Path::kReference);
 
     // fallback to standard cpp kernel for all architectures that are not
     // supported yet.

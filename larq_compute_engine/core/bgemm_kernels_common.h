@@ -102,10 +102,9 @@ inline void MakeBinaryKernelParams(
 // but we're using a kernel designed for uint64 bitpacked inputs.
 template <int LhsCols, int RhsCols, typename AccumScalar>
 inline void MakeBinaryKernelParams(
-    const PackedMatrix<std::uint32_t>& lhs,
-    const PackedMatrix<std::uint32_t>& rhs,
+    const ruy::PMat<std::uint32_t>& lhs, const ruy::PMat<std::uint32_t>& rhs,
     const BinaryMulParams<AccumScalar, float>& spec, int start_row,
-    int start_col, int end_row, int end_col, Matrix<float>* dst,
+    int start_col, int end_row, int end_col, Mat<float>* dst,
     BinaryKernelParams<LhsCols, RhsCols, std::uint64_t>* params) {
   const int depth = lhs.layout.rows;
   RUY_DCHECK_EQ(start_row % LhsCols, 0);
