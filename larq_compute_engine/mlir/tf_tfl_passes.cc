@@ -25,6 +25,18 @@ void AddQuantizationPasses(const mlir::TFL::QuantizationSpecs& quant_specs,
       quant_specs.inference_type != quant_specs.inference_input_type;
   pass_manager->addPass(
       mlir::TFL::CreatePostQuantizePass(emit_quant_adaptor_ops));
+
+  if (quant_specs.default_ranges.first.hasValue() ||
+      quant_specs.default_ranges.second.hasValue()) {
+    pass_manager->addPass(mlir::TFL::CreateDefaultQuantParamsPass(
+        quant_specs.default_ranges.first.getValueOr(0.0),
+        quant_specs.default_ranges.second.getValueOr(0.0),
+        quant_specs.IsSignedInferenceType()));
+    pass_manager->addPass(mlir::TFL::CreateHybridQuantizePass());
+    pass_manager->addPass(
+        mlir::TFL::CreatePostQuantizePass(emit_quant_adaptor_ops));
+  }
+
   pass_manager->addPass(mlir::TFL::CreateOpRemovalPass());
   pass_manager->addPass(
       mlir::TFL::CreatePostQuantizePass(emit_quant_adaptor_ops));

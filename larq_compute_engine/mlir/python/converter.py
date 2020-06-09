@@ -1,4 +1,6 @@
 from packaging import version
+import warnings
+from typing import Optional, Tuple
 import tensorflow as tf
 
 from larq_compute_engine.mlir._graphdef_tfl_flatbuffer import (
@@ -50,6 +52,7 @@ def _contains_training_quant_op(graph_def):
 def convert_keras_model(
     model: tf.keras.Model,
     *,  # Require remaining arguments to be keyword-only.
+    experimental_default_int8_range: Optional[Tuple[float, float]] = None,
     experimental_enable_bitpacked_activations: bool = False,
 ) -> bytes:
     """Converts a Keras model to TFLite flatbuffer.
@@ -63,6 +66,9 @@ def convert_keras_model(
 
     # Arguments
         model: The model to convert.
+        experimental_default_int8_range: Tuple of integers representing `(min, max)`
+            range values for all arrays without a specified range. Intended for
+            experimenting with quantization via "dummy quantization". (default None)
         experimental_enable_bitpacked_activations: Enable an experimental
             converter optimisation that attempts to reduce intermediate
             activation memory usage by bitpacking the activation tensor between
@@ -76,6 +82,11 @@ def convert_keras_model(
             "Graph mode is not supported. Please enable eager execution using "
             "tf.enable_eager_execution() when using TensorFlow 1.x"
         )
+    if experimental_default_int8_range:
+        warnings.warn(
+            "Using `experimental_default_int8_range` as fallback quantization stats. "
+            "This should only be used for latency tests."
+        )
     func = concrete_function_from_keras_model(model)
     if version.parse(tf.__version__) >= version.parse("1.15"):
         frozen_func = convert_variables_to_constants_v2(func, lower_control_flow=False)
@@ -87,7 +98,10 @@ def convert_keras_model(
     output_tensors = frozen_func.outputs
 
     graph_def = frozen_func.graph.as_graph_def()
-    should_quantize = _contains_training_quant_op(graph_def)
+    should_quantize = (
+        _contains_training_quant_op(graph_def)
+        or experimental_default_int8_range is not None
+    )
 
     # Checks dimensions in input tensor.
     for tensor in input_tensors:
@@ -111,5 +125,6 @@ def convert_keras_model(
         [tensor.shape.as_list() for tensor in input_tensors],
         [get_tensor_name(tensor) for tensor in output_tensors],
         should_quantize,
+        experimental_default_int8_range,
         experimental_enable_bitpacked_activations,
     )
