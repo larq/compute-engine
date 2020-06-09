@@ -89,8 +89,8 @@ cc_library(
         "bconv2d_output_transform.h",
     ],
     deps = [
-        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
         "@org_tensorflow//tensorflow/lite/kernels/internal:common",
+        "@org_tensorflow//tensorflow/lite/kernels/internal:cppmath",
     ],
 )
 
@@ -159,12 +159,12 @@ cc_library(
 cc_library(
     name = "bconv2d_impl_ref",
     hdrs = [
-        "bconv2d_impl_ref.h",
+        "bconv2d_impl.h",
     ],
     deps = [
         ":bconv2d_output_transform",
         ":bgemm_functor",
-        ":packbits_utils",
+        "@org_tensorflow//tensorflow/lite/kernels/internal:types",
     ],
 )
 

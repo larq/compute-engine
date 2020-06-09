@@ -5,7 +5,7 @@
 #include "bconv2d_output_transform_utils.h"
 #include "bconv2d_params.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
-#include "larq_compute_engine/core/bconv2d_impl_ref.h"
+#include "larq_compute_engine/core/bconv2d_impl.h"
 #include "larq_compute_engine/core/padding_functor.h"
 #include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
@@ -796,11 +796,11 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   GetOutputTransform(context, node, params, output_transform);
 
   TfLiteTensor* im2col = nullptr;
-  ce::ref::BConv2D<SrcScalar, TBitpacked, std::int32_t, DstScalar>(
+  ce::core::BConv2D<TBitpacked, std::int32_t, DstScalar>(
       op_params, packed_input_shape, packed_input_data, packed_filter_shape,
       GetTensorData<TBitpacked>(packed_filter), output_transform,
       GetTensorShape(output), GetTensorData<DstScalar>(output),
-      GetTensorShape(im2col), GetTensorData<SrcScalar>(im2col),
+      GetTensorShape(im2col), GetTensorData<TBitpacked>(im2col),
       false /*bitpack before im2col*/, nullptr /*padding buffer*/,
       params->pad_value, nullptr /*cpu backend context*/);
 }
