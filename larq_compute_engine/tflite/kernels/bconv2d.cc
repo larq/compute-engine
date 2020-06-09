@@ -72,6 +72,9 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
   LCE_ENSURE_PARAM(conv_params, context, !m["stride_width"].IsNull());
   LCE_ENSURE_PARAM(conv_params, context, !m["dilation_height_factor"].IsNull());
   LCE_ENSURE_PARAM(conv_params, context, !m["dilation_width_factor"].IsNull());
+  LCE_ENSURE_PARAM(conv_params, context, !m["padding"].IsNull());
+  LCE_ENSURE_PARAM(conv_params, context,
+                   !m["fused_activation_function"].IsNull());
 
   // reading strides
   conv_params->stride_height = m["stride_height"].AsInt32();
