@@ -7,7 +7,7 @@ include "larq_compute_engine/mlir/transforms/op_removal_patterns.td"
 def Conv2DFilter : AttrConstraint<CPred<"IsConv2DFilter($_self)">>;
 def Bitpack : NativeCodeCall<"Bitpack($_builder, $0)">;
 
-def : Pat<(TF_LceBconv2dOp
+def : Pat<(LQ_Bconv2dOp
               $input,
               (ConstantOp Conv2DFilter:$filter),
               $post_activation_multiplier,
@@ -21,7 +21,7 @@ def : Pat<(TF_LceBconv2dOp
               $padding,
               $stride_height,
               $stride_width),
-          (TF_LceBconv2dOp
+          (LQ_Bconv2dOp
               $input,
               (ConstantOp (Bitpack $filter)),
               $post_activation_multiplier,

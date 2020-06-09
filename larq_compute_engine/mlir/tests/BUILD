@@ -13,3 +13,14 @@ lce_lit_test_suite(
         "@llvm-project//llvm:FileCheck",
     ],
 )
+
+cc_test(
+    name = "lce_ops_options_test",
+    srcs = ["lce_ops_options_test.cc"],
+    deps = [
+        "//larq_compute_engine/mlir:larq_compute_engine",
+        "@com_google_googletest//:gtest_main",
+        "@flatbuffers",
+        "@llvm-project//mlir:IR",
+    ],
+)

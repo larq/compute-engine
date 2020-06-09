@@ -1,9 +1,14 @@
 // This is the operation definition file for Larq Compute engine ops.
 
-// We extend the TensorFlow dialect in order to allow for easy generation of
-// of the TFLite flatbuffer using TensorFlows infrastructure.
+//===----------------------------------------------------------------------===//
+//
+// This is the operation definition file for Larq dialect operations.
+//
+//===----------------------------------------------------------------------===//
 
+include "mlir/IR/OpBase.td"
 include "tensorflow/compiler/mlir/tensorflow/ir/tf_op_base.td"
+include "tensorflow/compiler/mlir/lite/quantization/quantization.td"
 
 #ifndef TFL_OPS
 def TFL_AF_None  : StrEnumAttrCase<"NONE">;
@@ -24,13 +29,44 @@ def TFL_PaddingAttr : StrEnumAttr<"Padding", "padding enum", [
     ]>;
 #endif
 
-#ifndef LCE_OPS
-#define LCE_OPS
+//===----------------------------------------------------------------------===//
+// Larq dialect definitions
+//===----------------------------------------------------------------------===//
+
+#ifndef LARQ_DIALECT
+#define LARQ_DIALECT
+
+def LarqDialect : Dialect {
+  let name = "lq";
+
+  let summary = "Types and operations for Larq dialect";
+  let description = [{
+    This dialect contains operations for Larq. This dialect will be used in
+    conjunction with the TensorFlow dialects for converting & optimizing
+    TF graphs to be deployed on Larq Compute Engine.
+  }];
+
+  let cppNamespace = "TF";
+}
+
+//===----------------------------------------------------------------------===//
+// Larq op definitions
+//===----------------------------------------------------------------------===//
+
+// Base class for the operation in this dialect
+class LQ_Op<string mnemonic, list<OpTrait> traits = []> :
+    Op<LarqDialect, mnemonic, traits> {
+
+  let extraClassDeclaration = [{
+    std::vector<uint8_t> buildCustomOptions();
+  }];
+}
+
 
 class TensorOfOrNone<list<Type> allowedTypes, string description = ""> :
   AnyTypeOf<[TensorOf<allowedTypes>, NoneType], description>;
 
-def TF_LceBsignOp : TF_Op<"LceBsign", [NoSideEffect, SameOperandsAndResultType]> {
+def LQ_BsignOp : LQ_Op<"Bsign", [NoSideEffect, SameOperandsAndResultType]> {
   let summary = "Returns an element-wise indication of the binary sign of a number.";
 
   let description = [{
@@ -44,11 +80,9 @@ def TF_LceBsignOp : TF_Op<"LceBsign", [NoSideEffect, SameOperandsAndResultType]>
   let results = (outs
     TensorOf<[BF16, F16, F32, F64, I32, I64, TF_Complex128, TF_Complex64]>:$y
   );
-
-  TF_DerivedOperandTypeAttr T = TF_DerivedOperandTypeAttr<0>;
 }
 
-def TF_LceBconv2dOp : TF_Op<"LceBconv2d", [NoSideEffect]> {
+def LQ_Bconv2dOp : LQ_Op<"Bconv2d", [NoSideEffect]> {
   let summary = [{
 Computes a 2D binary convolution by binarizing and bitpacking the input and filter.
   }];
@@ -58,7 +92,7 @@ TODO
   }];
 
   let arguments = (ins
-    TensorOf<[F32]>:$input,
+    TensorOf<[F32, I32, QI8]>:$input,
     TensorOf<[F32, I32]>:$filter,
     TensorOfOrNone<[F32]>:$post_activation_multiplier,
     TensorOfOrNone<[F32]>:$post_activation_bias,
@@ -75,13 +109,11 @@ TODO
   );
 
   let results = (outs
-    TensorOf<[F32]>:$output
+    TensorOf<[F32, I32, QI8]>:$output
   );
-
-  TF_DerivedOperandTypeAttr T = TF_DerivedOperandTypeAttr<0>;
 }
 
-def TF_LceBMaxPool2dOp : TF_Op<"LceBMaxPool2d", [NoSideEffect]> {
+def LQ_BMaxPool2dOp : LQ_Op<"BMaxPool2d", [NoSideEffect]> {
   let summary = [{
 Binary MaxPool2D op.
   }];
@@ -102,8 +134,6 @@ Computes a MaxPool2D operation and outputs bitpacked binary values, for consumpt
   let results = (outs
     TensorOf<[I32]>:$output
   );
-
-  TF_DerivedOperandTypeAttr T = TF_DerivedOperandTypeAttr<0>;
 }
 
-#endif // LCE_OPS
+#endif // LARQ_DIALECT

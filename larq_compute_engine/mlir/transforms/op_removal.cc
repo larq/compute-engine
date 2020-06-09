@@ -1,4 +1,3 @@
-#include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
