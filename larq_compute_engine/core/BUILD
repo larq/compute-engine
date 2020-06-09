@@ -159,7 +159,7 @@ cc_library(
 cc_library(
     name = "bconv2d_impl_ref",
     hdrs = [
-        "bconv2d_impl.h",
+        "bconv2d_impl_ref.h",
     ],
     deps = [
         ":bconv2d_output_transform",

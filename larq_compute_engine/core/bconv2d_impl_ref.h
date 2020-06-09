@@ -28,7 +28,7 @@ using namespace tflite;
 
 namespace compute_engine {
 namespace ce = compute_engine;
-namespace core {
+namespace ref {
 
 template <typename TBitpacked, typename AccumScalar, typename DstScalar>
 inline void BConv2D(
@@ -128,7 +128,7 @@ inline void BConv2D(
   }
 }
 
-}  // namespace core
+}  // namespace ref
 }  // namespace compute_engine
 
 #endif  // COMPUTE_EGNINE_CORE_BCONV2d_IMPL_H_
