@@ -796,11 +796,11 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   GetOutputTransform(context, node, params, output_transform);
 
   TfLiteTensor* im2col = nullptr;
-  ce::ref::BConv2D<SrcScalar, TBitpacked, std::int32_t, DstScalar>(
+  ce::ref::BConv2D<TBitpacked, std::int32_t, DstScalar>(
       op_params, packed_input_shape, packed_input_data, packed_filter_shape,
       GetTensorData<TBitpacked>(packed_filter), output_transform,
       GetTensorShape(output), GetTensorData<DstScalar>(output),
-      GetTensorShape(im2col), GetTensorData<SrcScalar>(im2col),
+      GetTensorShape(im2col), GetTensorData<TBitpacked>(im2col),
       false /*bitpack before im2col*/, nullptr /*padding buffer*/,
       params->pad_value, nullptr /*cpu backend context*/);
 }
