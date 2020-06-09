@@ -28,12 +28,7 @@ using namespace tflite;
 
 namespace compute_engine {
 namespace ce = compute_engine;
-#ifdef LCE_OVERRIDE_NAMESPACE
-// Needed for unittests
-namespace LCE_OVERRIDE_NAMESPACE {
-#else
 namespace core {
-#endif
 
 template <typename TBitpacked, typename AccumScalar, typename DstScalar>
 inline void BConv2D(
@@ -133,7 +128,7 @@ inline void BConv2D(
   }
 }
 
-}  // namespace ref
+}  // namespace core
 }  // namespace compute_engine
 
 #endif  // COMPUTE_EGNINE_CORE_BCONV2d_IMPL_H_
