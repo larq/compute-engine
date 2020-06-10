@@ -123,7 +123,7 @@ Computes a MaxPool2D operation and outputs bitpacked binary values, for consumpt
   }];
 
   let arguments = (ins
-    TensorOf<[F32, I32]>:$input,
+    TensorOf<[F32, I32, QI8]>:$input,
     TFL_PaddingAttr:$padding,
     I32Attr:$stride_width,
     I32Attr:$stride_height,
