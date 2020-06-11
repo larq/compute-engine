@@ -20,7 +20,7 @@ std::unique_ptr<OperationPass<FuncOp>> CreateOptimizeLCEPass(
 std::unique_ptr<OperationPass<FuncOp>> CreateBitpackWeightsLCEPass();
 
 // Creates an instance of the TensorFlow Lite dialect QuantizeTFL pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateHybridQuantizePass();
+std::unique_ptr<OperationPass<FuncOp>> CreateLCEQuantizePass();
 
 // Creates an instance of LegalizeLCE pass.
 std::unique_ptr<OperationPass<FuncOp>> CreateLegalizeLCEPass();

@@ -92,7 +92,6 @@ gentbl(
     td_srcs = [
         "ir/lce_ops.td",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
-        "@llvm-project//mlir:StdOpsTdFiles",
     ],
 )
 
@@ -226,7 +225,7 @@ cc_library(
     ],
     deps = [
         ":larq_compute_engine",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_quantize",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
     ],
     alwayslink = 1,
 )
