@@ -1,4 +1,4 @@
-// RUN: lce-tf-opt %s -tfl-prepare-lce | FileCheck %s --dump-input-on-failure
+// RUN: lce-tf-opt %s -tfl-prepare-lce | FileCheck %s
 
 // CHECK-LABEL: @fuse_bsign
 func @fuse_bsign(%arg0: tensor<8x16xf32>) -> tensor<8x16xf32> {
