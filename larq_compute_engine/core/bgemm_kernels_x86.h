@@ -13,7 +13,7 @@
 
 using namespace ruy;
 
-#if RUY_PLATFORM(X86)
+#if RUY_PLATFORM_X86
 
 template <typename LhsScalar, typename RhsScalar, typename DstScalar,
           typename MulParamsType>
@@ -107,6 +107,6 @@ struct BgemmKernel<Path::kSse42, LhsScalar, RhsScalar, DstScalar,
   }
 };
 
-#endif  // RUY_PLATFORM(X86)
+#endif  // RUY_PLATFORM_X86
 
 #endif  // COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_X86_H_

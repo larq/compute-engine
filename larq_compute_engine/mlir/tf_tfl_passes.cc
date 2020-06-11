@@ -44,9 +44,12 @@ void AddTFToLCETFLConversionPasses(
     const mlir::TFL::QuantizationSpecs& quant_specs,
     mlir::OpPassManager* pass_manager,
     bool experimental_enable_bitpacked_activations) {
-  pass_manager->addPass(mlir::tf_executor::CreateSwitchFoldPass());
-  pass_manager->addPass(mlir::CreateTFExecutorToControlDialectConversion());
-  pass_manager->addPass(mlir::TFControlFlow::CreateRaiseTFControlFlowPass());
+  mlir::TF::StandardPipelineOptions standard_pipeline_options;
+  standard_pipeline_options.enable_inliner = false;
+  standard_pipeline_options.form_clusters = false;
+  mlir::TF::CreateTFStandardPipeline(*pass_manager, standard_pipeline_options);
+
+  pass_manager->addPass(mlir::TF::CreateTFShapeInferencePass());
 
   // The conversion pipeline has to follow the following orders:
   // 1) Saved model related optimization like decompose resource ops
@@ -60,6 +63,9 @@ void AddTFToLCETFLConversionPasses(
   pass_manager->addNestedPass<mlir::FuncOp>(
       mlir::TFDevice::CreateDecomposeResourceOpsPass());
 
+  // Note:
+  // We need to fuse composite ops before LowerStaticTensorList pass.
+  // The tensorflow list is not supported right now by that pass.
   // Enable fusing composite ops that can be lowered to built-in TFLite ops.
   pass_manager->addPass(mlir::TFL::CreatePrepareCompositeFunctionsPass());
 
@@ -116,6 +122,8 @@ void AddTFToLCETFLConversionPasses(
   // the TFLite dialect.
   pass_manager->addPass(mlir::TFL::CreatePrepareTFPass(true));
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
+  // Add a shape inference pass to optimize away the unnecessary casts.
+  pass_manager->addPass(mlir::TF::CreateTFShapeInferencePass());
   pass_manager->addPass(mlir::TFL::CreateLegalizeTFPass(true));
   pass_manager->addPass(mlir::TFL::CreateOptimizePass());
   pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(

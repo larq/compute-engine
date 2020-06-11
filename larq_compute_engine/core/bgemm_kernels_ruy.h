@@ -16,9 +16,9 @@ template <ruy::Path ThePath, typename LhsScalar, typename RhsScalar,
 struct BgemmKernel {};
 
 // TODO: this is hacky
-#if RUY_PLATFORM(NEON)
+#if RUY_PLATFORM_NEON
 #include "bgemm_kernels_arm.h"
-#elif RUY_PLATFORM(X86)
+#elif RUY_PLATFORM_X86
 #include "bgemm_kernels_x86.h"
 #endif
 
@@ -189,7 +189,7 @@ void RunBgemmKernelTyped(ruy::Tuning tuning, const ruy::PMat<LhsScalar>& lhs,
   RUY_DCHECK_LE(start_col, end_col);
   RUY_DCHECK_LT(end_col, dst->layout.cols + RhsLayout::kCols);
   RUY_DCHECK_EQ((end_col - start_col) % RhsLayout::kCols, 0);
-#if RUY_OPT_ENABLED(RUY_OPT_FAT_KERNEL)
+#if RUY_OPT(FAT_KERNEL)
   kernel.Run(lhs, rhs, spec, start_row, start_col, end_row, end_col, dst);
 #else
   for (int col = start_col; col < end_col; col += RhsLayout::kCols) {

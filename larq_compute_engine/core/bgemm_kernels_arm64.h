@@ -13,7 +13,7 @@
 
 using namespace ruy;
 
-#if RUY_PLATFORM(NEON_64) && RUY_OPT_ENABLED(RUY_OPT_ASM)
+#if RUY_PLATFORM_NEON_64 && RUY_OPT(ASM)
 
 // clang-format off
 
@@ -137,7 +137,7 @@ void CheckOffsetsInKernelParams(const Params&) {
 //      \----------------/  \--------------------------------------/
 //                                  int32 accumulators 4x4 block
 //
-// In the RUY_OPT_MAX_STREAMING part of the kernel, this elementary step
+// In the MAX_STREAMING part of the kernel, this elementary step
 // is repeated 2 times, using 2x more registers for LHS and RHS.
 
 // clang-format on
@@ -193,7 +193,7 @@ void BinaryKernelNeonOutOfOrder4x4(
 
       LCE_BMLA(v24, v4, v0, v1, v2, v3)
 
-#if RUY_OPT_ENABLED(RUY_OPT_MAX_STREAMING)
+#if RUY_OPT(MAX_STREAMING)
       "cmp w12, #8\n"
       "blt 78f\n"
       "and w2, w12, #-4\n"
@@ -995,4 +995,4 @@ void BinaryKernelNeonOutOfOrder8x4(
 #undef RUY_OFFSET_RHS_BASE_PTR
 #undef RUY_OFFSET_DST_BASE_PTR
 
-#endif  // RUY_PLATFORM(NEON_64) && RUY_OPT_ENABLED(RUY_OPT_ASM)
+#endif  // RUY_PLATFORM_NEON_64 && RUY_OPT(ASM)
