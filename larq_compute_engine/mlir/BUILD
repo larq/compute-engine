@@ -175,7 +175,7 @@ cc_library(
     ],
     deps = [
         ":larq_compute_engine",
-        "@llvm-project//llvm:support",
+        "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
     ],

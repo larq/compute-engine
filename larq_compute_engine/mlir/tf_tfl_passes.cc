@@ -69,12 +69,6 @@ void AddTFToLCETFLConversionPasses(
   // Enable fusing composite ops that can be lowered to built-in TFLite ops.
   pass_manager->addPass(mlir::TFL::CreatePrepareCompositeFunctionsPass());
 
-  // This pass marks non-exported functions as symbol visibility 'private'
-  // those deemed read-only as immutable.
-  pass_manager->addPass(
-      mlir::tf_saved_model::
-          CreateMarkFunctionVisibilityUsingSavedModelLinkagePass());
-
   pass_manager->addPass(mlir::createInlinerPass());
   pass_manager->addPass(mlir::createSymbolDCEPass());
 
@@ -133,6 +127,7 @@ void AddTFToLCETFLConversionPasses(
   // so that it can target constants introduced once TensorFlow Identity ops
   // are removed during legalization.
   pass_manager->addPass(mlir::TFL::CreateOptimizeFunctionalOpsPass());
+  pass_manager->addPass(mlir::createSymbolDCEPass());
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCSEPass());
   // This pass should be always at the end of the floating point model
