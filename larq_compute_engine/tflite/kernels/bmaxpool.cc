@@ -29,16 +29,7 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
   poolparams->filter_width = m["filter_width"].AsInt32();
   poolparams->stride_height = m["stride_height"].AsInt32();
   poolparams->stride_width = m["stride_width"].AsInt32();
-
-  if (m["padding"].ToString() == "VALID" ||
-      m["padding"].ToString() == "valid") {
-    poolparams->padding_type = kTfLitePaddingValid;
-  } else if (m["padding"].ToString() == "SAME" ||
-             m["padding"].ToString() == "same") {
-    poolparams->padding_type = kTfLitePaddingSame;
-  } else {
-    context->ReportError(context, "BMaxPool: invalid padding attribute.");
-  }
+  poolparams->padding_type = (TfLitePadding)m["padding"].AsInt32();
 
   return poolparams;
 }
