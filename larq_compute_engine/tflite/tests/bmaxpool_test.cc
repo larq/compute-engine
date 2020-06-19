@@ -76,7 +76,8 @@ class BaseBMaxPoolOpModel : public SingleOpModel {
     });
     fbb.Finish();
     SetCustomOp("LceBMaxPool2d", fbb.GetBuffer(), registration);
-    BuildInterpreter({GetShape(input_)}, 1);
+    BuildInterpreter({GetShape(input_)}, 1, /*allow_fp32_relax_to_fp16=*/false,
+                     /*apply_delegate=*/true);
   }
 
  protected:

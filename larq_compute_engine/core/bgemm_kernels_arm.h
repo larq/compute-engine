@@ -16,7 +16,7 @@
 
 using namespace ruy;
 
-#if RUY_PLATFORM(NEON)
+#if RUY_PLATFORM_NEON
 
 // Generic kNeon template when no types are specified
 template <typename LhsScalar, typename RhsScalar, typename DstScalar,
@@ -50,7 +50,7 @@ struct BgemmKernel<ruy::Path::kNeonDotprod, LhsScalar, RhsScalar, DstScalar,
   }
 };
 
-#if RUY_PLATFORM(NEON) && RUY_OPT_ENABLED(RUY_OPT_ASM) && RUY_PLATFORM(NEON_64)
+#if RUY_PLATFORM_NEON && RUY_OPT(ASM) && RUY_PLATFORM_NEON_64
 // A BGEMM kernel for ARM64 Neon.
 #include "bgemm_kernels_arm64.h"
 
@@ -158,8 +158,8 @@ struct BgemmKernel<ruy::Path::kNeon, std::uint32_t, std::uint32_t, float,
   }
 };
 
-#endif  // RUY_OPT_ENABLED(RUY_OPT_ASM) && RUY_PLATFORM(NEON_64)
+#endif  // RUY_OPT(ASM) && RUY_PLATFORM_NEON_64
 
-#endif  // RUY_PLATFORM(NEON)
+#endif  // RUY_PLATFORM_NEON
 
 #endif  // COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_ARM_H_

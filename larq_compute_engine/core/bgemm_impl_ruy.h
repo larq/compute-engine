@@ -73,10 +73,10 @@ struct BGemmImplUsingRuy {
     // supported yet.
     // TODO: this needs to be modified as soon as architecture-specific
     // optimized kernels are added.
-#if RUY_PLATFORM(ARM)
+#if RUY_PLATFORM_ARM
     if (bgemm_runtime_path == ruy::Path::kNeonDotprod)
       bgemm_runtime_path = ruy::Path::kNeon;
-#if RUY_PLATFORM(NEON_32)
+#if RUY_PLATFORM_NEON_32
     // 32-bit NEON optimized code is not available yet
     bgemm_runtime_path = ruy::Path::kStandardCpp;
 #endif
@@ -84,7 +84,7 @@ struct BGemmImplUsingRuy {
     // For 8-bit, fall back to the standard cpp kernel.
     if (std::is_same<LhsScalar, std::uint8_t>::value)
       bgemm_runtime_path = ruy::Path::kStandardCpp;
-#elif RUY_PLATFORM(X86)
+#elif RUY_PLATFORM_X86
     if (bgemm_runtime_path == ruy::Path::kAvx2 ||
         bgemm_runtime_path == ruy::Path::kAvx512)
       bgemm_runtime_path = ruy::Path::kStandardCpp;

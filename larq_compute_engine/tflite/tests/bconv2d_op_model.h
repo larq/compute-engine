@@ -59,7 +59,9 @@ class BaseBConv2DOpModel : public SingleOpModel {
     });
     fbb.Finish();
     SetCustomOp("LceBconv2d", fbb.GetBuffer(), registration);
-    BuildInterpreter({GetShape(input_), GetShape(filter_)}, num_threads);
+    BuildInterpreter({GetShape(input_), GetShape(filter_)}, num_threads,
+                     /*allow_fp32_relax_to_fp16=*/false,
+                     /*apply_delegate=*/true);
   }
 
  protected:

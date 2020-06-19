@@ -810,7 +810,7 @@ template <KernelType kernel_type, typename SrcScalar, typename DstScalar,
 TfLiteStatus EvalChooseKernelType(TfLiteContext* context, TfLiteNode* node,
                                   TfLiteBConv2DParams* params) {
   if (kernel_type == KernelType::kRuyOptimized) {
-#if RUY_PLATFORM(ARM_64)
+#if RUY_PLATFORM_ARM_64
     // On 64 bit Arm only there is an optimised kernel for 16-bit accumulators
     // and float output. It is safe to use this without risk of overflow as long
     // as the maximum value of the convolution (filter height * filter width *
@@ -919,7 +919,7 @@ TfLiteRegistration* Register_BCONV_2D64_OPT() {
 TfLiteRegistration* Register_BCONV_2D() {
 #if defined TFLITE_WITH_RUY
 
-#if RUY_PLATFORM(ARM_32)
+#if RUY_PLATFORM_ARM_32
   return Register_BCONV_2D32_OPT();
 #else  // ARM 64 and x86
   return Register_BCONV_2D64_OPT();

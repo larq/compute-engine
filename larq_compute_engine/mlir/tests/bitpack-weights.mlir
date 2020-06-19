@@ -1,4 +1,4 @@
-// RUN: lce-tf-opt %s -tfl-lce-bitpack-weights | FileCheck %s --dump-input-on-failure
+// RUN: lce-tf-opt %s -tfl-lce-bitpack-weights | FileCheck %s
 
 // CHECK-LABEL: @bitpack_bconv2d_filters
 func @bitpack_bconv2d_filters(%arg0: tensor<256x32x32x3xf32>, %arg1: tensor<16xf32>, %arg2: tensor<16xf32>, %arg3: none) -> tensor<256x30x30x16xf32> {
