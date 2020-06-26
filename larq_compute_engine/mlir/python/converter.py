@@ -77,6 +77,10 @@ def convert_keras_model(
     # Returns
         The converted data in serialized format.
     """
+    if not isinstance(model, tf.keras.Model):
+        raise ValueError(
+            f"Expected `model` argument to be a `tf.keras.Model` instance, got `{model}`."
+        )
     if not tf.executing_eagerly():
         raise RuntimeError(
             "Graph mode is not supported. Please enable eager execution using "
