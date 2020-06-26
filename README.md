@@ -26,7 +26,7 @@ advantage of multi-core modern desktop and mobile CPUs.
       is available in [Larq Zoo](https://docs.larq.dev/zoo/)
       and can be used out-of-the-box with LCE.
 
-    - LCE provides a custom [MLIR-based model converter](https://docs.larq.dev/compute-engine/converter) which
+    - LCE provides a custom [MLIR-based model converter](https://docs.larq.dev/compute-engine/api/converter) which
       is fully compatible with TensorFlow Lite and performs additional
       network level optimizations for Larq models.
 
@@ -83,7 +83,7 @@ Follow these steps to deploy a BNN with LCE:
 
 2. **Convert the Larq model**
 
-    LCE is built on top of TensorFlow Lite and uses the TensorFlow Lite [FlatBuffer format](https://google.github.io/flatbuffers/) to convert and serialize Larq models for inference. We provide an [LCE Converter](https://docs.larq.dev/compute-engine/converter) with additional optimization passes to increase the speed of execution of Larq models on supported target platforms.
+    LCE is built on top of TensorFlow Lite and uses the TensorFlow Lite [FlatBuffer format](https://google.github.io/flatbuffers/) to convert and serialize Larq models for inference. We provide an [LCE Converter](https://docs.larq.dev/compute-engine/api/converter) with additional optimization passes to increase the speed of execution of Larq models on supported target platforms.
 
 3. **Build LCE**
 
