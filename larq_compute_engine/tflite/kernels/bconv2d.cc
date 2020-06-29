@@ -90,7 +90,7 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
   conv_params->pad_value =
       m["pad_values"].IsNull() ? 0 : m["pad_values"].AsInt32();
   if (conv_params->pad_value != 0 && conv_params->pad_value != 1) {
-    context->ReportError(context, "Attribute pad_values must be 0 or 1.");
+    TF_LITE_KERNEL_LOG(context, "Attribute pad_values must be 0 or 1.");
     return conv_params;
   }
 
@@ -105,7 +105,7 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
   if (conv_params->padding_type == kTfLitePaddingSame &&
       conv_params->pad_value != 1 &&
       conv_params->fused_activation_function != kTfLiteActNone) {
-    context->ReportError(
+    TF_LITE_KERNEL_LOG(
         context,
         "Fused activations are only supported with valid or one-padding.");
     return conv_params;
@@ -153,9 +153,9 @@ TfLiteStatus Prepare(KernelType kernel_type,
 
   if (conv_params->padding_type == kTfLitePaddingSame &&
       conv_params->pad_value != 1 && conv_params->write_bitpacked_output) {
-    context->ReportError(context,
-                         "Writing bitpacked output is only supported with "
-                         "valid or one-padding.");
+    TF_LITE_KERNEL_LOG(context,
+                       "Writing bitpacked output is only supported with "
+                       "valid or one-padding.");
     return kTfLiteError;
   }
 
@@ -171,9 +171,9 @@ TfLiteStatus Prepare(KernelType kernel_type,
     // attribute was added to the converter at the same time that support for
     // bitpacked activations was added, but just in case we don't have a value
     // we should throw here.
-    context->ReportError(context,
-                         "Cannot read bitpacked input unless the `channels_in` "
-                         "attribute is set in the converter.");
+    TF_LITE_KERNEL_LOG(context,
+                       "Cannot read bitpacked input unless the `channels_in` "
+                       "attribute is set in the converter.");
     return kTfLiteError;
   }
 
@@ -207,7 +207,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
     if (input->type == kTfLiteInt8 &&
         conv_params->padding_type == kTfLitePaddingSame &&
         conv_params->pad_value != 1) {
-      context->ReportError(
+      TF_LITE_KERNEL_LOG(
           context,
           "8-bit quantization is only supported with valid or one-padding");
       return kTfLiteError;
@@ -243,7 +243,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
   } else if (filter->type == kTfLiteInt32) {
     conv_params->filter_format = ce::core::FilterFormat::OHWI_PACKED;
   } else {
-    context->ReportError(context, "Invalid filter format.");
+    TF_LITE_KERNEL_LOG(context, "Invalid filter format.");
     return kTfLiteError;
   }
 
