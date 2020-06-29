@@ -17,7 +17,7 @@ static TfLiteFusedActivation ConvertTfLiteFusedActivationAttr(
   return llvm::StringSwitch<TfLiteFusedActivation>(str)
       .Case("NONE", kTfLiteActNone)
       .Case("RELU", kTfLiteActRelu)
-      .Case("RELU_N1_TO_1", kTfLiteActRelu1)
+      .Case("RELU_N1_TO_1", kTfLiteActReluN1To1)
       .Case("RELU6", kTfLiteActRelu6);
 }
 
