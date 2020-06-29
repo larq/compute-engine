@@ -144,15 +144,15 @@ jobs:
     needs: [manylinux-release-wheel, macos-release-wheel, windows-release-wheel]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v1
+      - uses: actions/download-artifact@v2
         with:
           name: Linux-wheels
           path: Linux-wheels
-      - uses: actions/download-artifact@v1
+      - uses: actions/download-artifact@v2
         with:
           name: macOS-wheels
           path: macOS-wheels
-      - uses: actions/download-artifact@v1
+      - uses: actions/download-artifact@v2
         with:
           name: Windows-wheels
           path: Windows-wheels
