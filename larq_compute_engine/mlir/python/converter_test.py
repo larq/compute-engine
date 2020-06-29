@@ -29,6 +29,10 @@ class TestConverter(unittest.TestCase):
             False,
         )
 
+    def test_wrong_arg(self):
+        with self.assertRaises(ValueError):
+            convert_keras_model("./model.h5")
+
 
 if __name__ == "__main__":
     unittest.main()
