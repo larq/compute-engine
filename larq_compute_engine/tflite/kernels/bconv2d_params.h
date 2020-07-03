@@ -51,18 +51,9 @@ typedef struct {
   std::int32_t output_activation_max;
 
   // This is only for int8 mode, its the post_activation_ values scaled by the
-  // output tensor scale. Until we have optimized code for writing bitpacked
-  // outputs, these are also used there.
+  // output tensor scale, and the bias includes the output zero-point.
   std::vector<float> scaled_post_activation_multiplier;
   std::vector<float> scaled_post_activation_bias;
-#ifndef LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
-  // Quantizaion parameters, per output channel.
-  // Because we fuse the post_activation_add with the zero-point we now have
-  // preprocessed zero-points, and they are per-channel instead of per-tensor.
-  std::vector<std::int32_t> output_multiplier;
-  std::vector<std::int32_t> output_shift;
-  std::vector<std::int32_t> output_zero_point;
-#endif
   bool is_quantization_initialized = false;
 
   bool bitpack_before_im2col = false;
