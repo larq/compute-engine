@@ -5,6 +5,7 @@ import larq_zoo as lqz
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import numpy as np
+import math
 
 from larq_compute_engine.mlir.python.converter import convert_keras_model
 from larq_compute_engine.tests._end2end_verify import run_model
@@ -118,16 +119,32 @@ def toy_model_int8(**kwargs):
     img = tf.keras.layers.Input(shape=(224, 224, 3))
     x = quant(img)
     x = lq.layers.QuantConv2D(
-        12, 3, input_quantizer="ste_sign", kernel_quantizer="ste_sign", activation=quant
+        12, 3, input_quantizer="ste_sign", kernel_quantizer="ste_sign"
     )(x)
+    # Make sure the typical output is in the (-3, 3) range
+    # by dividing by sqrt(filter_height * filter_width * input_channels)
+    x = tf.keras.layers.BatchNormalization(
+        gamma_initializer=tf.keras.initializers.RandomNormal(
+            1.0 / math.sqrt(3 * 3 * 3), stddev=0.1 / math.sqrt(3 * 3 * 3)
+        ),
+        beta_initializer="uniform",
+    )(x)
+    x = quant(x)
     x = lq.layers.QuantConv2D(
-        12, 3, input_quantizer="ste_sign", kernel_quantizer="ste_sign", activation=quant
+        12, 3, input_quantizer="ste_sign", kernel_quantizer="ste_sign"
     )(x)
+    # Make sure the typical output is in the (-3, 3) range
+    # by dividing by sqrt(filter_height * filter_width * input_channels)
+    x = tf.keras.layers.BatchNormalization(
+        gamma_initializer=tf.keras.initializers.RandomNormal(
+            1.0 / math.sqrt(3 * 3 * 12), stddev=0.1 / math.sqrt(3 * 3 * 12)
+        ),
+        beta_initializer="uniform",
+    )(x)
+    x = quant(x)
     x = tf.keras.layers.GlobalAveragePooling2D()(x)
-    x = lq.layers.QuantDense(
-        10, input_quantizer=quant, kernel_quantizer=quant, activation=quant
-    )(x)
-    x = tf.keras.layers.Activation("softmax")(x)
+    # We do not use a Dense layer or softmax here, because this introduces error,
+    # and in this test we want to test the int8 part of our bconvs
     return tf.keras.Model(img, x)
 
 
@@ -141,7 +158,9 @@ def assert_model_output(model_lce, inputs, outputs):
         assert len(actual_outputs) > 1
         np.testing.assert_allclose(actual_outputs[0], actual_outputs[1], rtol=1e-5)
         for actual_output in actual_outputs:
-            np.testing.assert_allclose(actual_output, output, rtol=0.001, atol=0.25)
+            np.testing.assert_allclose(
+                actual_output, output.flatten(), rtol=0.001, atol=0.25
+            )
 
 
 @pytest.mark.parametrize(

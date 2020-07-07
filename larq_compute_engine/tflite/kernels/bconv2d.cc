@@ -281,14 +281,6 @@ TfLiteStatus Prepare(KernelType kernel_type,
   if (output->type == kTfLiteInt8) {
     TF_LITE_ENSURE_EQ(context, output->quantization.type,
                       kTfLiteAffineQuantization);
-
-    // We resize the arrays here
-    // They will be filled in OneTimeSetup
-#ifndef LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
-    conv_params->output_multiplier.resize(conv_params->channels_out);
-    conv_params->output_shift.resize(conv_params->channels_out);
-    conv_params->output_zero_point.resize(conv_params->channels_out);
-#endif
   }
 
   if (!conv_params->write_bitpacked_output) {
@@ -535,28 +527,16 @@ void SetupQuantization(TfLiteContext* context, TfLiteNode* node,
   // Step 2
   // If the output is 8-bit quantized, then rescale these values by the output
   // scale
+  const double output_zero_point =
+      static_cast<double>(output->params.zero_point);
   const double output_scale = static_cast<double>(output->params.scale);
   for (int i = 0; i < params->channels_out; ++i) {
     const double post_mul = GetTensorValue(post_activation_multiplier, i);
     const double post_bias = GetTensorValue(post_activation_bias, i);
 
-#ifdef LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
     params->scaled_post_activation_multiplier[i] = post_mul / output_scale;
-    params->scaled_post_activation_bias[i] = post_bias / output_scale;
-#else
-    const double effective_scale = post_mul / output_scale;
-
-    const std::int32_t effective_zero_point =
-        output->params.zero_point + std::lround(post_bias / output_scale);
-
-    std::int32_t significand;
-    std::int32_t shift;
-    QuantizeMultiplier(effective_scale, &significand, &shift);
-
-    params->output_multiplier[i] = significand;
-    params->output_shift[i] = shift;
-    params->output_zero_point[i] = effective_zero_point;
-#endif
+    params->scaled_post_activation_bias[i] =
+        post_bias / output_scale + output_zero_point;
   }
 }
 

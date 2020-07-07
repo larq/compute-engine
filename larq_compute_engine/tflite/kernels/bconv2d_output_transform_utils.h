@@ -62,19 +62,10 @@ void GetOutputTransform(
     TfLiteContext* context, TfLiteNode* node, TfLiteBConv2DParams* params,
     OutputTransform<AccumScalar, std::int8_t>& output_transform) {
   GetBaseParams(context, node, params, output_transform);
-#ifdef LCE_RUN_OUTPUT_TRANSFORM_IN_FLOAT
   output_transform.effective_post_activation_multiplier =
       params->scaled_post_activation_multiplier.data();
   output_transform.effective_post_activation_bias =
       params->scaled_post_activation_bias.data();
-  output_transform.output_zero_point =
-      GetOutput(context, node, 0)->params.zero_point;
-#else
-  output_transform.output_multiplier = params->output_multiplier.data();
-  output_transform.output_shift = params->output_shift.data();
-  output_transform.output_effective_zero_point =
-      params->output_zero_point.data();
-#endif
 }
 
 }  // namespace bconv2d
