@@ -30,17 +30,19 @@ namespace compute_engine {
 namespace ce = compute_engine;
 namespace ref {
 
-template <typename TBitpacked, typename AccumScalar, typename DstScalar>
-inline void BConv2D(
-    const ConvParams& params, const RuntimeShape& packed_input_shape,
-    const TBitpacked* packed_input_data,
-    const RuntimeShape& packed_filter_shape,
-    const TBitpacked* packed_filter_data,
-    const ce::core::OutputTransform<std::int32_t, DstScalar>& output_transform,
-    const RuntimeShape& output_shape, DstScalar* output_data,
-    const RuntimeShape& im2col_shape, TBitpacked* im2col_data,
-    bool bitpack_before_im2col, void* padding_buffer, const int pad_value,
-    void* cpu_backend_context) {
+template <typename TBitpacked, typename AccumScalar, typename DstScalar,
+          ce::core::OutputTransformDetails details>
+inline void BConv2D(const ConvParams& params,
+                    const RuntimeShape& packed_input_shape,
+                    const TBitpacked* packed_input_data,
+                    const RuntimeShape& packed_filter_shape,
+                    const TBitpacked* packed_filter_data,
+                    const ce::core::OutputTransform<std::int32_t, DstScalar,
+                                                    details>& output_transform,
+                    const RuntimeShape& output_shape, DstScalar* output_data,
+                    const RuntimeShape& im2col_shape, TBitpacked* im2col_data,
+                    bool bitpack_before_im2col, void* padding_buffer,
+                    const int pad_value, void* cpu_backend_context) {
   static_assert(std::is_same<DstScalar, float>::value ||
                     std::is_same<DstScalar, std::int32_t>::value ||
                     std::is_same<DstScalar, std::int8_t>::value,
