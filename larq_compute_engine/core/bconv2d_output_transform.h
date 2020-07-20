@@ -11,6 +11,12 @@
 namespace compute_engine {
 namespace core {
 
+enum class OutputTransformDetails {
+  Default,
+  Preprocessed,
+  PreprocessedIntegerOnly
+};
+
 //
 // The `OutputTransform` struct describes what needs to be done to get from the
 // int32 accumulator value to the final result that is written back to memory.
@@ -19,7 +25,8 @@ namespace core {
 // - float
 // - int32 (meaning bitpacked output)
 // - int8
-template <typename AccumScalar, typename DstScalar>
+template <typename AccumScalar, typename DstScalar,
+          OutputTransformDetails = OutputTransformDetails::Default>
 struct OutputTransform {};
 
 // A part of the transformation is common to all output types.
@@ -42,26 +49,26 @@ struct OutputTransformBase {
 
 // Output transformation for float kernels
 template <typename AccumScalar>
-struct OutputTransform<AccumScalar, float> : OutputTransformBase<AccumScalar> {
+struct OutputTransform<AccumScalar, float, OutputTransformDetails::Default>
+    : OutputTransformBase<AccumScalar> {
   const float* post_activation_multiplier = nullptr;
   const float* post_activation_bias = nullptr;
 
   float Run(const AccumScalar accum, int out_channel) const {
+    TF_LITE_ASSERT(post_activation_multiplier != nullptr);
+    TF_LITE_ASSERT(post_activation_bias != nullptr);
     // Post multiply and add are done in float
     float x = static_cast<float>(this->RunBase(accum));
-    if (post_activation_multiplier) {
-      x *= post_activation_multiplier[out_channel];
-    }
-    if (post_activation_bias) {
-      x += post_activation_bias[out_channel];
-    }
+    x *= post_activation_multiplier[out_channel];
+    x += post_activation_bias[out_channel];
     return x;
   }
 };
 
 // Output transformation for bitpacked output
 template <typename AccumScalar>
-struct OutputTransform<AccumScalar, std::int32_t> {
+struct OutputTransform<AccumScalar, std::int32_t,
+                       OutputTransformDetails::Default> {
   const AccumScalar* thresholds = nullptr;
 
   bool Run(const AccumScalar accum, int out_channel) const {
@@ -73,7 +80,8 @@ struct OutputTransform<AccumScalar, std::int32_t> {
 // Output transformation for 8-bit quantization
 
 template <typename AccumScalar>
-struct OutputTransform<AccumScalar, std::int8_t>
+struct OutputTransform<AccumScalar, std::int8_t,
+                       OutputTransformDetails::Default>
     : OutputTransformBase<AccumScalar> {
   // These effective values are the post-activation multipliers and biases
   // divided by output_scale and including the output zero_point
@@ -81,6 +89,8 @@ struct OutputTransform<AccumScalar, std::int8_t>
   const float* effective_post_activation_bias = nullptr;
 
   std::int8_t Run(const AccumScalar accum, int out_channel) const {
+    TF_LITE_ASSERT(effective_post_activation_multiplier != nullptr);
+    TF_LITE_ASSERT(effective_post_activation_bias != nullptr);
     // First convert to full precision to do the linear transformation
     float result_fp = static_cast<float>(this->RunBase(accum));
     result_fp *= effective_post_activation_multiplier[out_channel];
