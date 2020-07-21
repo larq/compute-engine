@@ -419,7 +419,7 @@ void test_lce_op_output(const std::vector<TOutput>& lce_output_data,
                         const std::vector<int>& builtin_output_shape,
                         const std::vector<TOutput>& builtin_output_data,
                         std::int32_t zero_point) {
-  EXPECT_THAT(lce_output_data, ::testing::Pointwise(FloatNearPointwise(1e-4),
+  EXPECT_THAT(lce_output_data, ::testing::Pointwise(FloatNearPointwise(1e-3),
                                                     builtin_output_data));
 }
 
