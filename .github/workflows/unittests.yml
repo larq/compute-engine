@@ -73,7 +73,7 @@ jobs:
         run: ./configure.sh <<< $'n\n'
         shell: bash
       - name: Install pip dependencies
-        run: pip install tensorflow==2.1.0 larq~=0.9.4 larq_zoo==1.0.0 pytest tensorflow_datasets==3.1.0 --no-cache-dir
+        run: pip install tensorflow-cpu~=2.2.0 larq~=0.10.0 larq_zoo~=1.0.0 pytest tensorflow_datasets~=3.2.0 --no-cache-dir
       - name: Run FileCheck tests
         run: bazelisk test larq_compute_engine/mlir/tests:all --test_output=all --copt=-O2 --distinct_host_configuration=false $([ -z "$GOOGLE_APPLICATION_CREDENTIALS" ] || echo "--remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu --google_default_credentials")
       - name: Run End2End tests
@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        tf-version: [1.14.0, 1.15.2, 2.0.1, 2.1.0, 2.2.0]
+        tf-version: [1.14.0, 1.15.2, 2.0.1, 2.1.0, 2.2.0, 2.3.0rc2]
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
       - uses: actions/checkout@v2
@@ -91,7 +91,7 @@ jobs:
         with:
           python-version: 3.7
       - name: Install dependencies
-        run: pip install tensorflow==${{matrix.tf-version}} larq~=0.9.4 larq_zoo==1.0.0 tensorflow_datasets==1.3.2 packaging --no-cache
+        run: pip install tensorflow==${{matrix.tf-version}} larq~=0.10.0 larq_zoo~=1.0.0 tensorflow_datasets==1.3.2 packaging --no-cache
       - name: Run Converter test
         run: PYTHONPATH=./ python larq_compute_engine/mlir/python/converter_test.py
 
