@@ -34,26 +34,6 @@ test_suite(
     ],
 )
 
-# CC tests for ARM32 architecture
-cc_test(
-    name = "packbits_arm32_tests",
-    size = "small",
-    srcs = ["packbits_arm32_tests.cc"],
-    copts = ["-Iexternal/gtest/include"],
-    deps = [
-        "//larq_compute_engine/core:packbits",
-        "//larq_compute_engine/core:packbits_arm32",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-test_suite(
-    name = "cc_tests_arm32",
-    tests = [
-        "packbits_arm32_tests",
-    ],
-)
-
 cc_test(
     name = "packbits_aarch64_tests",
     size = "small",
