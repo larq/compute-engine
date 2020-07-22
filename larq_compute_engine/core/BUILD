@@ -28,12 +28,6 @@ cc_library(
         "//larq_compute_engine:aarch64_build": [
             "packbits_aarch64.h",
         ],
-        "//larq_compute_engine:arm32_build": [
-            "packbits_arm32.h",
-        ],
-        "@org_tensorflow//tensorflow:android_arm": [
-            "packbits_arm32.h",
-        ],
         "@org_tensorflow//tensorflow:android_arm64": [
             "packbits_aarch64.h",
         ],
@@ -54,13 +48,6 @@ cc_library(
 cc_library(
     name = "padding_functor",
     hdrs = ["padding_functor.h"],
-)
-
-cc_library(
-    name = "packbits_arm32",
-    hdrs = [
-        "packbits_arm32.h",
-    ],
 )
 
 cc_library(

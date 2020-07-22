@@ -48,7 +48,6 @@ test_suite(
 test_suite(
     name = "cc_tests_arm32",
     tests = [
-        "//larq_compute_engine/core/tests:cc_tests_arm32",
         "//larq_compute_engine/tflite/tests:cc_tests",
     ],
 )
