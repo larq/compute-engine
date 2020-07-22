@@ -49,6 +49,30 @@ struct BgemmKernel<ruy::Path::kNeonDotprod, LhsScalar, RhsScalar, DstScalar,
     TFLITE_DCHECK(false);
   }
 };
+#if RUY_PLATFORM_NEON && RUY_OPT(ASM) && RUY_PLATFORM_NEON_32
+// A BGEMM kernel for ARM32 Neon.
+#include "bgemm_kernels_arm32.h"
+template <>
+struct BgemmKernel<ruy::Path::kNeon, std::uint32_t, std::uint32_t, float,
+                   BinaryMulParams<std::int32_t, float>> {
+  Tuning tuning = Tuning::kAuto;
+  using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
+  using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
+  explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
+  void Run(const ruy::PMat<std::uint32_t>& lhs,
+           const ruy::PMat<std::uint32_t>& rhs,
+           const BinaryMulParams<std::int32_t /* accum. scalar */, float>&
+               mul_params,
+           int start_row, int start_col, int end_row, int end_col,
+           ruy::Mat<float>* dst) const {
+    BinaryKernelParams<LhsLayout::kCols, RhsLayout::kCols, std::uint32_t>
+        params;
+    MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
+                           end_col, dst, &params);
+    BinaryKernelNeonOutOfOrder32BP4x4(params);
+  }
+};
+#endif
 
 #if RUY_PLATFORM_NEON && RUY_OPT(ASM) && RUY_PLATFORM_NEON_64
 // A BGEMM kernel for ARM64 Neon.
