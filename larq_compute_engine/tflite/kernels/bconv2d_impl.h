@@ -17,20 +17,17 @@
 namespace tflite {
 namespace wip_ops {
 template <typename T>
-inline void ExtractPatchIntoBufferColumn(const RuntimeShape& input_shape, int w,
-                                         int h, int b, int kheight, int kwidth,
-                                         int stride_width, int stride_height,
-                                         int pad_width, int pad_height,
-                                         int in_width, int in_height,
-                                         int in_depth, int single_buffer_length,
-                                         int buffer_id, const T* in_data,
-                                         T* conv_buffer_data, uint8 zero_byte) {
+inline void ExtractPatchIntoBufferColumn(
+    const RuntimeShape& input_shape, int w, int h, int b, int kheight,
+    int kwidth, int stride_width, int stride_height, int pad_width,
+    int pad_height, int in_width, int in_height, int in_depth,
+    int kwidth_times_indepth, int inwidth_times_indepth,
+    int single_buffer_length, int buffer_id, const T* in_data,
+    T* conv_buffer_data, uint8 zero_byte) {
   ruy::profiler::ScopeLabel label("ExtractPatchIntoBufferColumn");
   TFLITE_DCHECK_EQ(input_shape.DimensionsCount(), 4);
   // This chunk of code reshapes all the inputs corresponding to
   // output (b, h, w) to a column vector in conv_buffer(:, buffer_id).
-  const int kwidth_times_indepth = kwidth * in_depth;     // Could be move out
-  const int inwidth_times_indepth = in_width * in_depth;  // Could be move out
   const int ih_ungated_start = h * stride_height - pad_height;
   const int ih_ungated_end = (ih_ungated_start + kheight);
   const int ih_end = std::min(ih_ungated_end, in_height);
@@ -146,6 +143,9 @@ void Im2col(const ConvParams& params, int kheight, int kwidth, uint8 zero_byte,
   const int output_width = output_shape.Dims(2);
   const int output_height = output_shape.Dims(1);
 
+  const int kwidth_times_indepth = kwidth * input_depth;
+  const int inwidth_times_indepth = input_width * input_depth;
+
   int buffer_id = 0;
   // Loop over the output nodes.
   for (int b = 0; b < batches; ++b) {
@@ -154,7 +154,8 @@ void Im2col(const ConvParams& params, int kheight, int kwidth, uint8 zero_byte,
         ExtractPatchIntoBufferColumn(
             input_shape, w, h, b, kheight, kwidth, stride_width, stride_height,
             pad_width, pad_height, input_width, input_height, input_depth,
-            output_depth, buffer_id, input_data, output_data, zero_byte);
+            kwidth_times_indepth, inwidth_times_indepth, output_depth,
+            buffer_id, input_data, output_data, zero_byte);
         ++buffer_id;
       }
     }
@@ -183,6 +184,9 @@ void Im2col(const ConvParams& params, int kheight, int kwidth,
   const int output_width = output_shape.Dims(2);
   const int output_height = output_shape.Dims(1);
 
+  const int kwidth_times_indepth = kwidth * input_depth;
+  const int inwidth_times_indepth = input_width * input_depth;
+
   int buffer_id = 0;
   // Loop over the output nodes.
   for (int b = 0; b < batches; ++b) {
@@ -192,7 +196,8 @@ void Im2col(const ConvParams& params, int kheight, int kwidth,
         ExtractPatchIntoBufferColumn(
             input_shape, w, h, b, kheight, kwidth, stride_width, stride_height,
             pad_width, pad_height, input_width, input_height, input_depth,
-            output_depth, buffer_id, input_data, output_data, zero_byte);
+            kwidth_times_indepth, inwidth_times_indepth, output_depth,
+            buffer_id, input_data, output_data, zero_byte);
         ++buffer_id;
       }
     }
