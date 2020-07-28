@@ -13,129 +13,100 @@ env:
   IMAGE_NAME: dev
 
 jobs:
-  benchmark-binaries:
-    name: Build Benchmark Binaries for AArch64 and Android
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2.1.1
-        with:
-          python-version: 3.8
-      - uses: actions/cache@v2
-        id: cache
-        with:
-          path: /tmp/lce_android
-          key: ${{ runner.os }}-${{ hashFiles('**/third_party/install_android.sh') }}
-      - name: Configure Bazel
-        run: ./configure.sh <<< $'n\n'
-        shell: bash
-      - name: Install pip dependencies
-        run: pip install numpy six --no-cache-dir
-      - name: Download and install Android NDK/SDK
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: ./third_party/install_android.sh
-      - run: mkdir benchmark-binaries
-      - name: Build Benchmark utility for AArch64
-        run: |
-          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model -c opt --config=aarch64
-          cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_aarch64
-      - name: Build Benchmark utility for Android
-        run: |
-          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model -c opt --config=android_arm64
-          cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_android_arm64
-      - uses: actions/upload-artifact@v2.1.2
-        with:
-          name: Benchmark-Binaries
-          path: benchmark-binaries
-
-  android-aar:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v2.1.1
-        with:
-          python-version: 3.8
-      - uses: actions/cache@v2
-        id: cache
-        with:
-          path: /tmp/lce_android
-          key: ${{ runner.os }}-${{ hashFiles('**/third_party/install_android.sh') }}
-      - name: Configure Bazel
-        run: ./configure.sh <<< $'n\n'
-        shell: bash
-      - name: Install pip dependencies
-        run: pip install numpy six --no-cache-dir
-      - name: Download and install Android NDK/SDK
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: ./third_party/install_android.sh
-      - name: Build LCE AAR
-        run: BUILDER=bazelisk ./larq_compute_engine/tflite/java/build_lce_aar.sh
-      - uses: actions/upload-artifact@v2.1.1
-        with:
-          name: Android-AAR
-          path: lce-lite-*.aar
-
-  macos-release-wheel:
-    name: Build release wheels for macOS
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        python-version: [3.6, 3.7, 3.8]
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2.1.1
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Build macOS wheels
-        run: |
-          python --version
-          python -m pip install delocate wheel setuptools numpy six --no-cache-dir
-
-          ./configure.sh
-
-          bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --distinct_host_configuration=false
-          bazel-bin/build_pip_pkg artifacts --plat-name macosx_10_13_x86_64
-
-          for f in artifacts/*.whl; do
-            delocate-wheel -w wheelhouse $f
-          done
-        shell: bash
-      - uses: actions/upload-artifact@v2.1.2
-        with:
-          name: ${{ runner.os }}-wheels
-          path: wheelhouse
-
-  manylinux-release-wheel:
-    name: Build release wheels for manylinux2010
-    runs-on: ubuntu-18.04
-    strategy:
-      matrix:
-        python-version: [3.6, 3.7, 3.8]
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2.1.1
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Build manylinux2010 wheels
-        run: |
-          docker run -e PYTHON_VERSION=${{ matrix.python-version }} -v ${PWD}:/compute-engine -w /compute-engine \
-            tensorflow/tensorflow:custom-op-ubuntu16 \
-            .github/tools/release_linux.sh
-
-          sudo apt-get -y -qq install patchelf --no-install-recommends
-          python -m pip install auditwheel --no-cache-dir
-
-          for f in artifacts/*.whl; do
-            auditwheel repair --plat manylinux2010_x86_64 $f
-          done
-
-          ls -al wheelhouse/
-      - uses: actions/upload-artifact@v2.1.2
-        with:
-          name: ${{ runner.os }}-wheels
-          path: wheelhouse
+  # benchmark-binaries:
+  #   name: Build Benchmark Binaries for AArch64 and Android
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: actions/setup-python@v2.1.1
+  #       with:
+  #         python-version: 3.8
+  #     - uses: actions/cache@v2
+  #       id: cache
+  #       with:
+  #         path: /tmp/lce_android
+  #         key: ${{ runner.os }}-${{ hashFiles('**/third_party/install_android.sh') }}
+  #     - name: Configure Bazel
+  #       run: ./configure.sh <<< $'n\n'
+  #       shell: bash
+  #     - name: Install pip dependencies
+  #       run: pip install numpy six --no-cache-dir
+  #     - name: Download and install Android NDK/SDK
+  #       if: steps.cache.outputs.cache-hit != 'true'
+  #       run: ./third_party/install_android.sh
+  #     - run: mkdir benchmark-binaries
+  #     - name: Build Benchmark utility for AArch64
+  #       run: |
+  #         bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model -c opt --config=aarch64
+  #         cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_aarch64
+  #     - name: Build Benchmark utility for Android
+  #       run: |
+  #         bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model -c opt --config=android_arm64
+  #         cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_android_arm64
+  #     - uses: actions/upload-artifact@v2.1.1
+  #       with:
+  #         name: Benchmark-Binaries
+  #         path: benchmark-binaries
+  #
+  # macos-release-wheel:
+  #   name: Build release wheels for macOS
+  #   runs-on: macos-latest
+  #   strategy:
+  #     matrix:
+  #       python-version: [3.6, 3.7, 3.8]
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: actions/setup-python@v2.1.1
+  #       with:
+  #         python-version: ${{ matrix.python-version }}
+  #     - name: Build macOS wheels
+  #       run: |
+  #         python --version
+  #         python -m pip install delocate wheel setuptools numpy six --no-cache-dir
+  #
+  #         ./configure.sh
+  #
+  #         bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --distinct_host_configuration=false
+  #         bazel-bin/build_pip_pkg artifacts --plat-name macosx_10_13_x86_64
+  #
+  #         for f in artifacts/*.whl; do
+  #           delocate-wheel -w wheelhouse $f
+  #         done
+  #       shell: bash
+  #     - uses: actions/upload-artifact@v2.1.1
+  #       with:
+  #         name: ${{ runner.os }}-wheels
+  #         path: wheelhouse
+  #
+  # manylinux-release-wheel:
+  #   name: Build release wheels for manylinux2010
+  #   runs-on: ubuntu-18.04
+  #   strategy:
+  #     matrix:
+  #       python-version: [3.6, 3.7, 3.8]
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: actions/setup-python@v2.1.1
+  #       with:
+  #         python-version: ${{ matrix.python-version }}
+  #     - name: Build manylinux2010 wheels
+  #       run: |
+  #         docker run -e PYTHON_VERSION=${{ matrix.python-version }} -v ${PWD}:/compute-engine -w /compute-engine \
+  #           tensorflow/tensorflow:custom-op-ubuntu16 \
+  #           .github/tools/release_linux.sh
+  #
+  #         sudo apt-get -y -qq install patchelf --no-install-recommends
+  #         python -m pip install auditwheel --no-cache-dir
+  #
+  #         for f in artifacts/*.whl; do
+  #           auditwheel repair --plat manylinux2010_x86_64 $f
+  #         done
+  #
+  #         ls -al wheelhouse/
+  #     - uses: actions/upload-artifact@v2.1.1
+  #       with:
+  #         name: ${{ runner.os }}-wheels
+  #         path: wheelhouse
 
   windows-release-wheel:
     name: Build release wheels for Windows
@@ -159,7 +130,7 @@ jobs:
 
           ./configure.sh
 
-          bazelisk --output_base=cache build :build_pip_pkg --copt=/arch:AVX --enable_runfiles --define=override_eigen_strong_inline=true
+          bazelisk --output_base=cache build :build_pip_pkg --copt=/arch:AVX --enable_runfiles --define=override_eigen_strong_inline=true --local_ram_resources=2048
           bazel-bin/build_pip_pkg wheelhouse
 
         shell: bash
@@ -167,66 +138,66 @@ jobs:
         with:
           name: ${{ runner.os }}-wheels
           path: wheelhouse
-
-  upload-wheels:
-    name: Publish wheels to PyPi
-    if: github.event_name != 'push'
-    needs: [manylinux-release-wheel, macos-release-wheel, windows-release-wheel]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v2
-        with:
-          name: Linux-wheels
-          path: Linux-wheels
-      - uses: actions/download-artifact@v2
-        with:
-          name: macOS-wheels
-          path: macOS-wheels
-      - uses: actions/download-artifact@v2
-        with:
-          name: Windows-wheels
-          path: Windows-wheels
-      - run: |
-          set -e -x
-          mkdir -p dist
-          cp Linux-wheels/*.whl dist/
-          cp macOS-wheels/*.whl dist/
-          cp Windows-wheels/*.whl dist/
-          ls -la dist/
-          sha256sum dist/*.whl
-      - uses: pypa/gh-action-pypi-publish@master
-        with:
-          user: __token__
-          password: ${{ secrets.pypi_token }}
-
-  push-docker-image:
-    name: Push Docker image to GitHub Package Registry
-    if: github.event_name == 'release'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Build image
-        run: docker build . --file Dockerfile --tag $IMAGE_NAME
-      - name: Log into registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
-      - name: Push image
-        run: |
-          IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
-
-          # Change all uppercase to lowercase
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-
-          # Strip git ref prefix from version
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-
-          # Strip "v" prefix from tag name
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-
-          # Use Docker `latest` tag convention
-          [ "$VERSION" == "master" ] && VERSION=latest
-
-          echo IMAGE_ID=$IMAGE_ID
-          echo VERSION=$VERSION
-
-          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
-          docker push $IMAGE_ID:$VERSION
+  #
+  # upload-wheels:
+  #   name: Publish wheels to PyPi
+  #   if: github.event_name != 'push'
+  #   needs: [manylinux-release-wheel, macos-release-wheel, windows-release-wheel]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/download-artifact@v2
+  #       with:
+  #         name: Linux-wheels
+  #         path: Linux-wheels
+  #     - uses: actions/download-artifact@v2
+  #       with:
+  #         name: macOS-wheels
+  #         path: macOS-wheels
+  #     - uses: actions/download-artifact@v2
+  #       with:
+  #         name: Windows-wheels
+  #         path: Windows-wheels
+  #     - run: |
+  #         set -e -x
+  #         mkdir -p dist
+  #         cp Linux-wheels/*.whl dist/
+  #         cp macOS-wheels/*.whl dist/
+  #         cp Windows-wheels/*.whl dist/
+  #         ls -la dist/
+  #         sha256sum dist/*.whl
+  #     - uses: pypa/gh-action-pypi-publish@master
+  #       with:
+  #         user: __token__
+  #         password: ${{ secrets.pypi_token }}
+  #
+  # push-docker-image:
+  #   name: Push Docker image to GitHub Package Registry
+  #   if: github.event_name == 'release'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Build image
+  #       run: docker build . --file Dockerfile --tag $IMAGE_NAME
+  #     - name: Log into registry
+  #       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+  #     - name: Push image
+  #       run: |
+  #         IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
+  #
+  #         # Change all uppercase to lowercase
+  #         IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+  #
+  #         # Strip git ref prefix from version
+  #         VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+  #
+  #         # Strip "v" prefix from tag name
+  #         [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+  #
+  #         # Use Docker `latest` tag convention
+  #         [ "$VERSION" == "master" ] && VERSION=latest
+  #
+  #         echo IMAGE_ID=$IMAGE_ID
+  #         echo VERSION=$VERSION
+  #
+  #         docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
+  #         docker push $IMAGE_ID:$VERSION
