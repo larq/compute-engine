@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        tf-version: [1.14.0, 1.15.2, 2.0.1, 2.1.0, 2.2.0, 2.3.0rc2]
+        tf-version: [1.14.0, 1.15.2, 2.0.1, 2.1.0, 2.2.0, 2.3.0]
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
       - uses: actions/checkout@v2
