@@ -43,7 +43,7 @@ jobs:
         run: |
           bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model -c opt --config=android_arm64
           cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_android_arm64
-      - uses: actions/upload-artifact@2.1.0
+      - uses: actions/upload-artifact@v2.1.1
         with:
           name: Benchmark-Binaries
           path: benchmark-binaries
@@ -73,7 +73,7 @@ jobs:
             delocate-wheel -w wheelhouse $f
           done
         shell: bash
-      - uses: actions/upload-artifact@2.1.0
+      - uses: actions/upload-artifact@v2.1.1
         with:
           name: ${{ runner.os }}-wheels
           path: wheelhouse
@@ -103,7 +103,7 @@ jobs:
           done
 
           ls -al wheelhouse/
-      - uses: actions/upload-artifact@2.1.0
+      - uses: actions/upload-artifact@v2.1.1
         with:
           name: ${{ runner.os }}-wheels
           path: wheelhouse
@@ -133,7 +133,7 @@ jobs:
           bazel-bin/build_pip_pkg wheelhouse
 
         shell: bash
-      - uses: actions/upload-artifact@2.1.0
+      - uses: actions/upload-artifact@v2.1.1
         with:
           name: ${{ runner.os }}-wheels
           path: wheelhouse
