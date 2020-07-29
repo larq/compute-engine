@@ -140,7 +140,7 @@ jobs:
 
           ./configure.sh
 
-          bazelisk --host_jvm_args=-Xmx1g --output_base="C:/bazel_cache" build :build_pip_pkg --copt=/arch:AVX --enable_runfiles --define=override_eigen_strong_inline=true --local_ram_resources=2048 --discard_analysis_cache --notrack_incremental_state --nokeep_state_after_build --jobs=1
+          bazelisk --host_jvm_args=-Xmx1g --output_base="C:/bazel_cache" build :build_pip_pkg --copt=/arch:AVX --enable_runfiles --define=override_eigen_strong_inline=true --local_ram_resources=2048 --discard_analysis_cache --notrack_incremental_state --nokeep_state_after_build
           bazel-bin/build_pip_pkg wheelhouse
 
         shell: bash
