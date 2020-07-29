@@ -129,15 +129,18 @@ jobs:
           rm -rf "C:/Program Files/Mozilla Firefox"
           rm -rf "C:/Program Files/Unity"
           rm -rf "C:/Program Files/dotnet"
+          rm -rf "C:/Program Files/Mercurial"
           rm -rf "C:/Program Files/Android"
           rm -rf "C:/Program Files/Microsoft Service Fabric"
+          rm -rf "C:/Program Files/Microsoft SQL Server"
+          rm -rf "C:/Program Files/Azure Cosmos DB Emulator"
 
           python --version
           python -m pip install wheel setuptools numpy six --no-cache-dir
 
           ./configure.sh
 
-          bazelisk --host_jvm_args=-Xmx1g --output_base=cache build :build_pip_pkg --copt=/arch:AVX --enable_runfiles --define=override_eigen_strong_inline=true --local_ram_resources=2048 --discard_analysis_cache --notrack_incremental_state --nokeep_state_after_build --jobs=1
+          bazelisk --host_jvm_args=-Xmx1g --output_base="C:/bazel_cache" build :build_pip_pkg --copt=/arch:AVX --enable_runfiles --define=override_eigen_strong_inline=true --local_ram_resources=2048 --discard_analysis_cache --notrack_incremental_state --nokeep_state_after_build --jobs=1
           bazel-bin/build_pip_pkg wheelhouse
 
         shell: bash
