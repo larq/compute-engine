@@ -105,18 +105,12 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int32_t,
     // We are writing 32-bit bitpacked output (where we bitpack along the
     // channel axis) and so we need to operate on blocks of 32 channels at a
     // time. As the destination is column major, this means blocks of 32 rows at
-    // a time. The blocks Ruy uses are always a power of two and are usually
-    // greater than 32. However, when running with multiple threads and a very
-    // large input size, Ruy may use blocks of fewer rows.
-    //     In this scenario, we round the start and end row down and up to the
-    // nearest multiple of 32 respectively. This is a thread-safe way to ensure
-    // that the result is correct, at the cost of some rare repeated
-    // computation, which is acceptable for this non-optimised kernel.
-    //
-    // Note that the rows in all these calculations are the *unpacked* rows.
+    // a time. Thus, we require the LHS layout columns to be a multiple of 32.
+    static_assert(LhsLayout::kCols % 32 == 0,
+                  "When writing bitpacked output, the LHS layout must have a "
+                  "multiple of 32 columns.");
 
-    start_row = 32 * (start_row / 32);
-    end_row = 32 * ((end_row + 31) / 32);
+    // Note that the rows in all these calculations are the *unpacked* rows.
 
     int clamped_end_row = std::min(end_row, dst->layout.rows);
     int clamped_end_col = std::min(end_col, dst->layout.cols);

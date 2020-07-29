@@ -25,6 +25,23 @@ struct BinaryMulParams {
   using StandardCppKernelRhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
 };
 
+// A specialisation for the writing-bitpacked-output case, where the C++ LHS
+// kernel layout must have 32 columns (for bitpacking a word of channels).
+template <typename tAccumScalar>
+struct BinaryMulParams<tAccumScalar, std::int32_t> {
+  using AccumScalar = tAccumScalar;
+  using DstScalar = std::int32_t;
+
+  OutputTransform<AccumScalar, DstScalar> output_transform;
+
+  static constexpr LoopStructure kLoopStructure = LoopStructure::kAuto;
+  static constexpr LayoutSupport kLayoutSupport = LayoutSupport::kGeneral;
+  static constexpr ZeroPointSupport kZeroPointSupport =
+      ZeroPointSupport::kGeneral;
+  using StandardCppKernelLhsLayout = FixedKernelLayout<Order::kColMajor, 1, 32>;
+  using StandardCppKernelRhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
+};
+
 template <int LhsCols, int RhsCols, class T>
 struct BinaryKernelParams {
   const T* lhs_base_ptr;
