@@ -427,7 +427,8 @@ template <typename TBitpacked, typename TUnpacked>
 inline void unpack_matrix(const TBitpacked* input_data,
                           const std::size_t num_rows,
                           const std::size_t num_cols, TUnpacked* output_data) {
-  constexpr std::size_t bitwidth = std::numeric_limits<TBitpacked>::digits;
+  constexpr std::size_t bitwidth = std::numeric_limits<
+      typename std::make_unsigned<TBitpacked>::type>::digits;
 
   const TBitpacked* in_ptr = input_data;
   TUnpacked* out_ptr = output_data;
