@@ -182,7 +182,7 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       // LHS and RHS data for. The RHS is stored in col-wise. Therefore, for 32-bit elements,
       // one register can hold 4 levels of depth.
       "mov r1, #4\n"
-#if 1
+
       // Main loop of the whole GEMM, over rows and columns of the
       // destination matrix.
       "1:\n"
@@ -493,7 +493,6 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "mov r1, #4\n"
 
       "ble 1b\n"
-#endif
 
       "add sp, sp, #" RUY_STR(RUY_STACK_OFFSET_SIZE) "\n"
 
