@@ -27,8 +27,8 @@ using namespace ruy;
   "vpadd.i8 d29, d30, d31\n"           \
   "vpadd.i8 d24, d24, d25\n"           \
   "vpadd.i8 d25, d28, d29\n"           \
-  "vpaddl.s8 q12, q12\n"               \
-  "vpadal.s16 " #Vd" , q12\n"
+  "vpaddl.u8 q12, q12\n"               \
+  "vpadal.u16 " #Vd" , q12\n"
 
 // clang-format on
 
