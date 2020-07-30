@@ -30,7 +30,6 @@ using namespace ruy;
   "vpaddl.s8 q12, q12\n"               \
   "vpadal.s16 " #Vd" , q12\n"
 
-
 // clang-format on
 
 #define RUY_OFFSET_LHS_BASE_PTR 0
@@ -59,7 +58,6 @@ using namespace ruy;
 #define RUY_STACK_OFFSET_COL 48
 #define RUY_STACK_OFFSET_LHS_COL_PTR 64
 #define RUY_STACK_OFFSET_RHS_COL_PTR 80
-
 
 template <typename Params>
 void CheckOffsetsInKernelParams32BP(const Params&) {
@@ -124,7 +122,8 @@ void CheckOffsetsInKernelParams32BP(const Params&) {
 
 // clang-format on
 
-void BinaryKernelNeonOutOfOrder32BP4x4(BinaryKernelParams<4, 4, std::uint32_t>& params) {
+void BinaryKernelNeonOutOfOrder32BP4x4(
+    BinaryKernelParams<4, 4, std::uint32_t>& params) {
   CheckOffsetsInKernelParams32BP(params);
   ruy::profiler::ScopeLabel label(
       "Binary Kernel (4x4) 32BP (kNeon, optimized for out-of-order cores)");
