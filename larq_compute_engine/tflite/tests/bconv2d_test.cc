@@ -276,9 +276,17 @@ struct TestParam {
 };
 
 const auto kKernelMap = new std::map<string, register_function>({
-    {"BConv2D32REF", compute_engine::tflite::Register_BCONV_2D32_REF},
-    {"BConv2D32OPT", compute_engine::tflite::Register_BCONV_2D32_OPT},
-    {"BConv2D64OPT", compute_engine::tflite::Register_BCONV_2D64_OPT},
+#if defined TFLITE_WITH_RUY
+#if RUY_PLATFORM(ARM_32)
+  {"BConv2D32OPT", compute_engine::tflite::Register_BCONV_2D32_OPT},
+#elif RUY_PLATFORM(ARM_64)
+  {"BConv2D64OPT", compute_engine::tflite::Register_BCONV_2D64_OPT},
+#else
+  {"BConv2D32REF", compute_engine::tflite::Register_BCONV_2D32_REF},
+#endif
+#else
+  {"BConv2D32REF", compute_engine::tflite::Register_BCONV_2D32_REF},
+#endif
 });
 
 class BConv2DOpTest : public ::testing::TestWithParam<TestParamTuple> {
