@@ -797,6 +797,7 @@ INSTANTIATE_TEST_SUITE_P(
         ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
     TestParam::TestNameSuffix);
 
+#if RUY_PLATFORM_ARM_64
 // Separately, for 64-bit optimised kernels only, test a very large input
 // channel and filter size combination that would overflow 16-bit accumulators
 // (to check that we successfully fall back to the 32-bit accumulator kernels).
@@ -814,6 +815,7 @@ INSTANTIATE_TEST_SUITE_P(
         Values(std::pair<std::string, register_function>{
             "BConv2D64OPT", compute_engine::tflite::Register_BCONV_2D64_OPT})),
     TestParam::TestNameSuffix);
+#endif
 
 // The BigTest suite will be skipped in the qemu CI runs as they take more than
 // an hour.
