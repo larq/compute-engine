@@ -49,6 +49,7 @@ struct BgemmKernel<ruy::Path::kNeonDotprod, LhsScalar, RhsScalar, DstScalar,
     TFLITE_DCHECK(false);
   }
 };
+
 #if RUY_PLATFORM_NEON && RUY_OPT(ASM) && RUY_PLATFORM_NEON_32
 // A BGEMM kernel for ARM32 Neon.
 #include "bgemm_kernels_arm32.h"
