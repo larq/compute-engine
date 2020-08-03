@@ -466,7 +466,6 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "20:\n"
       // Was already at end row.
       // Move back to first row.
-      //
       "str r6, [sp, #" RUY_STR(RUY_STACK_OFFSET_ROW) "]\n"
       // Move to the next column.
       "ldr r4, [sp, #" RUY_STR(RUY_STACK_OFFSET_COL) "]\n"
