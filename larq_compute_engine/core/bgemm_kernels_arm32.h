@@ -162,7 +162,7 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "ldr r1, [%[params], #" RUY_STR(RUY_OFFSET_LHS_BASE_PTR) "]\n"
       "str r1, [sp, #" RUY_STR(RUY_STACK_OFFSET_LHS_COL_PTR) "]\n"
 
-       //auto rhs_col_ptr = params.rhs_base_ptr
+      // auto rhs_col_ptr = params.rhs_base_ptr
       "ldr r2, [%[params], #" RUY_STR(RUY_OFFSET_RHS_BASE_PTR) "]\n"
       "str r2, [sp, #" RUY_STR(RUY_STACK_OFFSET_RHS_COL_PTR) "]\n"
 
