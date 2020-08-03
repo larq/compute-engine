@@ -150,7 +150,7 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       "ldr r2, [%[params], #" RUY_STR(RUY_OFFSET_DST_BASE_PTR) "]\n"
       "str r2, [sp, #" RUY_STR(RUY_STACK_OFFSET_DST_PTR) "]\n"
 
-       //auto row = params.start_row
+      // auto row = params.start_row
       "ldr r1, [%[params], #" RUY_STR(RUY_OFFSET_START_ROW) "]\n"
       "str r1, [sp, #" RUY_STR(RUY_STACK_OFFSET_ROW) "]\n"
 
