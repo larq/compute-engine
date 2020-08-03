@@ -142,7 +142,7 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
 #define RUY_MAKE_ZERO(reg) "vmov.i32 " #reg ", #0\n"
 
       "sub sp, sp, #" RUY_STR(RUY_STACK_OFFSET_SIZE) "\n"
-      //auto dst_col_ptr = params.dst_base_ptr;
+      // auto dst_col_ptr = params.dst_base_ptr;
       "ldr r1, [%[params], #" RUY_STR(RUY_OFFSET_DST_BASE_PTR) "]\n"
       "str r1, [sp, #" RUY_STR(RUY_STACK_OFFSET_DST_COL_PTR) "]\n"
 
