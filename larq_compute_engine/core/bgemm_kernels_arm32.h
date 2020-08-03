@@ -279,7 +279,6 @@ void BinaryKernelNeonOutOfOrder32BP4x4(
       // Offset these base pointers as needed given the current row, col.
       "ldr r8, [sp, #" RUY_STR(RUY_STACK_OFFSET_ROW) "]\n"
       "add r1, r1, r8, lsl #2\n"
-      //
       // Load 4 bias-multiplication values.
       "vld1.32 {d28, d29}, [r1]!\n"
 
