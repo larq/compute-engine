@@ -95,6 +95,7 @@ cc_library(
     name = "bgemm_kernels_arm",
     hdrs = [
         "bgemm_kernels_arm.h",
+        "bgemm_kernels_arm32.h",
         "bgemm_kernels_arm64.h",
     ],
     deps = [
