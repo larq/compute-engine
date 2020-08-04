@@ -82,7 +82,6 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
       quant_specs.input_ranges.push_back({-128.0, 127.0});
     }
     if (!default_ranges.is_none()) {
-      quant_specs.inference_input_type = tensorflow::DT_QINT8;
       quant_specs.default_ranges =
           default_ranges.cast<std::pair<double, double>>();
     }

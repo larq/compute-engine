@@ -143,6 +143,7 @@ def toy_model_int8(**kwargs):
     )(x)
     x = quant(x)
     x = tf.keras.layers.GlobalAveragePooling2D()(x)
+    x = quant(x)
     # We do not use a Dense layer or softmax here, because this introduces error,
     # and in this test we want to test the int8 part of our bconvs
     return tf.keras.Model(img, x)
@@ -190,6 +191,25 @@ def test_simple_model(model_cls):
     inputs = np.random.uniform(-1, 1, size=input_shape).astype(np.float32)
     outputs = model(inputs).numpy()
     assert_model_output(model_lce, inputs, outputs)
+
+
+@pytest.mark.parametrize("model_cls", [toy_model, toy_model_int8])
+@pytest.mark.parametrize("inference_input_type", [tf.int8, tf.float32])
+@pytest.mark.parametrize("inference_output_type", [tf.int8, tf.float32])
+def test_int8_input_output(model_cls, inference_input_type, inference_output_type):
+    model_lce = convert_keras_model(
+        model_cls(),
+        inference_input_type=inference_input_type,
+        inference_output_type=inference_output_type,
+        experimental_default_int8_range=(-6.0, 6.0) if model_cls == toy_model else None,
+    )
+    interpreter = tf.lite.Interpreter(model_content=model_lce)
+    input_details = interpreter.get_input_details()
+    assert len(input_details) == 1
+    assert input_details[0]["dtype"] == inference_input_type.as_numpy_dtype
+    output_details = interpreter.get_output_details()
+    assert len(output_details) == 1
+    assert output_details[0]["dtype"] == inference_output_type.as_numpy_dtype
 
 
 if __name__ == "__main__":
