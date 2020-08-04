@@ -69,6 +69,10 @@ def convert_keras_model(
 
     # Arguments
         model: The model to convert.
+        inference_input_type: Data type of the input layer. Defaults to `tf.float32`,
+            must be either `tf.float32` or `tf.int8`.
+        inference_output_type: Data type of the output layer. Defaults to `tf.float32`,
+            must be either `tf.float32` or `tf.int8`.
         experimental_default_int8_range: Tuple of integers representing `(min, max)`
             range values for all arrays without a specified range. Intended for
             experimenting with quantization via "dummy quantization". (default None)
