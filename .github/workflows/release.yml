@@ -140,7 +140,7 @@ jobs:
 
           ./configure.sh
 
-          bazelisk --output_base="C:/bazel_cache" build :build_pip_pkg --copt=/arch:AVX --enable_runfiles --define=override_eigen_strong_inline=true --local_ram_resources=2048
+          bazelisk --output_base="C:/bazel_cache" build :build_pip_pkg --copt=/arch:AVX --enable_runfiles --define=override_eigen_strong_inline=true --local_ram_resources=2048 --jobs=2
           bazel-bin/build_pip_pkg wheelhouse
 
         shell: bash
