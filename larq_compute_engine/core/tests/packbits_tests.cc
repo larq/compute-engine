@@ -4,8 +4,10 @@
 #include <cstdint>
 #include <vector>
 
-#include "larq_compute_engine/core/macros.h"
 #include "larq_compute_engine/core/packbits.h"
+
+// From @flatbuffers, used for the FLATBUFFERS_LITTLEENDIAN macro
+#include "flatbuffers/base.h"
 
 namespace compute_engine {
 namespace testing {
@@ -25,15 +27,14 @@ void test_bitpacking_nonuniform_input() {
   // expected output matrix after bitpacking
   const std::size_t expected_num_rows = 2, expected_num_cols = 1;
   std::vector<std::uint8_t> expected;
-  if (CE_IS_BIG_ENDIAN)
+  if (!FLATBUFFERS_LITTLEENDIAN)
     expected = {0b00101110, 0b01011100};
   else
     expected = {0b01110100, 0b00111010};
 
   std::vector<std::uint8_t> output(
       ce::core::GetPackedMatrixSize<std::uint8_t>(num_rows, num_cols));
-  ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
-      input.data(), num_rows, num_cols, output.data());
+  ce::core::packbits_matrix(input.data(), num_rows, num_cols, output.data());
 
   EXPECT_THAT(output, ::testing::ElementsAreArray(expected));
 }
@@ -49,8 +50,7 @@ void test_bitpacking(const std::size_t expected_num_rows,
 
   std::vector<TOut> output(
       ce::core::GetPackedMatrixSize<TOut>(num_rows, num_cols));
-  ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
-      input.data(), num_rows, num_cols, output.data());
+  ce::core::packbits_matrix(input.data(), num_rows, num_cols, output.data());
 
   TOut expected_value = std::numeric_limits<TOut>::max();
   const std::size_t num_elems_bp = num_elems / bitwidth;
@@ -85,15 +85,14 @@ TEST(BitpackingWithBitPaddingTests, RowMajorPadding) {
 
   // expected output matrix after bitpacking
   std::vector<std::uint8_t> expected;
-  if (CE_IS_BIG_ENDIAN)
+  if (!FLATBUFFERS_LITTLEENDIAN)
     expected = {0b11010001, 0b10000000, 0b10100011, 0b00000000};
   else
     expected = {0b10001011, 0b00000001, 0b11000101, 0b00000000};
 
   std::vector<std::uint8_t> output(
       ce::core::GetPackedMatrixSize<std::uint8_t>(num_rows, num_cols));
-  ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
-      input.data(), num_rows, num_cols, output.data());
+  ce::core::packbits_matrix(input.data(), num_rows, num_cols, output.data());
 
   EXPECT_THAT(output, ::testing::ElementsAreArray(expected));
 };

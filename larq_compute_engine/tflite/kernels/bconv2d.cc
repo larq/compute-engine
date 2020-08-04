@@ -28,7 +28,7 @@ namespace bconv2d {
 using ::compute_engine::core::Layout;
 
 enum class KernelType {
-  // kGenericRef: the impl. path using reference implementation without im2col
+  // kGenericRef: the reference implementation without im2col
   kGenericRef,
 
   // kGenericOptimized: the impl. path using reference BGEMM kernels in RUY.
@@ -635,15 +635,8 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
 
     std::vector<TBitpacked> filter_data_bp(
         ce::core::GetPackedMatrixSize<TBitpacked>(rows, cols));
-    if (std::is_same<SrcScalar, std::int32_t>::value) {
-      // If the input is already bitpacked, we require canonical order
-      ce::core::packbits_matrix<ce::core::BitpackOrder::Canonical>(
-          filter_unpacked, rows, cols, filter_data_bp.data());
-    } else {
-      // Input is int8 or float, use the optimized order
-      ce::core::packbits_matrix<ce::core::BitpackOrder::Optimized>(
-          filter_unpacked, rows, cols, filter_data_bp.data());
-    }
+    ce::core::packbits_matrix(filter_unpacked, rows, cols,
+                              filter_data_bp.data());
 
     std::size_t num_bytes = filter_data_bp.size() * sizeof(TBitpacked);
 
@@ -737,9 +730,9 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
     TfLiteTensor* packed_input =
         GetTemporary(context, node, params->packed_input_index);
     ruy::profiler::ScopeLabel label("Bitpack activations (EvalRef)");
-    ce::core::packbits_tensor<ce::core::BitpackOrder::Canonical>(
-        input_shape, input_data, input->params.zero_point, packed_input_shape,
-        GetTensorData<TBitpacked>(packed_input));
+    ce::core::packbits_tensor(input_shape, input_data, input->params.zero_point,
+                              packed_input_shape,
+                              GetTensorData<TBitpacked>(packed_input));
     packed_input_data = GetTensorData<TBitpacked>(packed_input);
   }
 
@@ -849,7 +842,7 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
 
 }  // namespace bconv2d
 
-TfLiteRegistration* Register_BCONV_2D32_REF() {
+TfLiteRegistration* Register_BCONV_2D_32_REF() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
       bconv2d::Prepare<bconv2d::KernelType::kGenericRef, 32>,
@@ -857,7 +850,7 @@ TfLiteRegistration* Register_BCONV_2D32_REF() {
   return &r;
 }
 
-TfLiteRegistration* Register_BCONV_2D32_OPT() {
+TfLiteRegistration* Register_BCONV_2D_32_OPT() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
       bconv2d::Prepare<bconv2d::KernelType::kRuyOptimized, 32>,
@@ -865,7 +858,7 @@ TfLiteRegistration* Register_BCONV_2D32_OPT() {
   return &r;
 }
 
-TfLiteRegistration* Register_BCONV_2D64_OPT() {
+TfLiteRegistration* Register_BCONV_2D_64_OPT() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
       bconv2d::Prepare<bconv2d::KernelType::kRuyOptimized, 64>,
@@ -873,21 +866,21 @@ TfLiteRegistration* Register_BCONV_2D64_OPT() {
   return &r;
 }
 
-// Use this registration wrapper to decide which impl. to use.
+// Use this registration wrapper to decide which implementation to use.
 TfLiteRegistration* Register_BCONV_2D() {
 #if defined TFLITE_WITH_RUY
 
 #if RUY_PLATFORM_ARM_32
-  return Register_BCONV_2D32_OPT();
+  return Register_BCONV_2D_32_OPT();
 #else  // ARM 64 and x86
-  return Register_BCONV_2D64_OPT();
+  return Register_BCONV_2D_64_OPT();
 #endif
 
 #else  // disabled TFLITE_WITH_RUY
 
   // When the RUY is disabled, we run the 32-bit reference implementation
   // on both 32-bit and 64-bit architectures.
-  return Register_BCONV_2D32_REF();
+  return Register_BCONV_2D_32_REF();
 
 #endif  // defined TFLITE_WITH_RUY
 }

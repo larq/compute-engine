@@ -7,11 +7,6 @@ namespace core {
 // defines the memory layout of the filter values
 enum class FilterFormat { Unknown, HWIO, OHWI, OHWI_PACKED };
 
-// defines the operating dimension
-enum class Axis { RowWise, ColWise };
-
-enum class BitpackOrder { Canonical, Optimized };
-
 }  // namespace core
 }  // namespace compute_engine
 

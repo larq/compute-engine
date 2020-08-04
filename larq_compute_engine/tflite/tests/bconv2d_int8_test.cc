@@ -21,7 +21,7 @@ TEST(BConv2DTests, Int8ErrorTest) {
   EXPECT_DEATH(
       {
         Int8_BConv2DOpModel m_lce(
-            compute_engine::tflite::Register_BCONV_2D64_OPT, input_tensor,
+            compute_engine::tflite::Register_BCONV_2D_64_OPT, input_tensor,
             packed_filter_tensor, output_tensor, post_tensor, post_tensor,
             threshold_tensor, 64, 1, 1, Padding_SAME, 0,
             ActivationFunctionType_NONE, 1, 1, 1);
@@ -47,11 +47,11 @@ TEST(BConv2DTests, Int8PostTest) {
   output_tensor.scale = 1.0f / 32.0f;
   output_tensor.zero_point = 0;
 
-  BConv2DOpModel<T, T, T> m_lce(compute_engine::tflite::Register_BCONV_2D64_OPT,
-                                input_tensor, packed_filter_tensor,
-                                output_tensor, post_tensor, post_tensor,
-                                threshold_tensor, 2, 1, 1, Padding_VALID, 0,
-                                ActivationFunctionType_NONE, 1, 1, 1);
+  BConv2DOpModel<T, T, T> m_lce(
+      compute_engine::tflite::Register_BCONV_2D_64_OPT, input_tensor,
+      packed_filter_tensor, output_tensor, post_tensor, post_tensor,
+      threshold_tensor, 2, 1, 1, Padding_VALID, 0, ActivationFunctionType_NONE,
+      1, 1, 1);
 
   m_lce.SetInput({
       1, 1,   // batch = 0, y = 0, x = 0

@@ -42,8 +42,8 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
   assert(i == num_rows * unpacked_channels);
 
   using namespace compute_engine::core;
-  packbits_matrix<BitpackOrder::Canonical>(
-      old_values.data(), num_rows, unpacked_channels, new_values.data());
+  packbits_matrix(old_values.data(), num_rows, unpacked_channels,
+                  new_values.data());
 
   RankedTensorType out_tensor_type =
       RankedTensorType::get({shape[0], shape[1], shape[2], packed_channels},

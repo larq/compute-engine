@@ -146,9 +146,8 @@ inline void BConv2D(
       // The input tensor has this shape which we bitpack along the channels
       // dimension [batch, input height, input width, channels].
       ruy::profiler::ScopeLabel label("Bitpack activations (before im2col)");
-      ce::core::packbits_tensor<ce::core::BitpackOrder::Optimized>(
-          input_shape, input_data, params.input_offset, packed_input_shape,
-          packed_input_data);
+      ce::core::packbits_tensor(input_shape, input_data, params.input_offset,
+                                packed_input_shape, packed_input_data);
       im2col_input_data = packed_input_data;
     }
     im2col<TBitpacked>(params, packed_input_shape, im2col_input_data,
@@ -170,9 +169,8 @@ inline void BConv2D(
     RuntimeShape packed_input_shape;
     {
       ruy::profiler::ScopeLabel label("Bitpack activations (after im2col)");
-      ce::core::packbits_tensor<ce::core::BitpackOrder::Optimized>(
-          result_shape, result_data, params.input_offset, packed_input_shape,
-          packed_input_data);
+      ce::core::packbits_tensor(result_shape, result_data, params.input_offset,
+                                packed_input_shape, packed_input_data);
     }
     rhs_data = packed_input_data;
 

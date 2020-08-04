@@ -1,5 +1,5 @@
-#ifndef LARQ_COMPUTE_ENGINE_TFLITE_TESTS_BCONV2d_OP
-#define LARQ_COMPUTE_ENGINE_TFLITE_TESTS_BCONV2d_OP
+#ifndef LARQ_COMPUTE_ENGINE_TFLITE_TESTS_BCONV2D_OP
+#define LARQ_COMPUTE_ENGINE_TFLITE_TESTS_BCONV2D_OP
 
 #include <vector>
 
@@ -12,7 +12,7 @@ using namespace tflite;
 namespace compute_engine {
 namespace tflite {
 
-TfLiteRegistration* Register_BCONV_2D64_OPT();
+TfLiteRegistration* Register_BCONV_2D_64_OPT();
 
 namespace testing {
 
@@ -107,4 +107,4 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
 }  // namespace tflite
 }  // namespace compute_engine
 
-#endif  // LARQ_COMPUTE_ENGINE_TFLITE_TESTS_BCONV2d_OP
+#endif  // LARQ_COMPUTE_ENGINE_TFLITE_TESTS_BCONV2D_OP
