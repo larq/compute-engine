@@ -185,9 +185,9 @@ using namespace tflite;
 namespace compute_engine {
 namespace tflite {
 
-TfLiteRegistration* Register_BCONV_2D32_REF();
-TfLiteRegistration* Register_BCONV_2D32_OPT();
-TfLiteRegistration* Register_BCONV_2D64_OPT();
+TfLiteRegistration* Register_BCONV_2D_32_REF();
+TfLiteRegistration* Register_BCONV_2D_32_OPT();
+TfLiteRegistration* Register_BCONV_2D_64_OPT();
 
 namespace testing {
 
@@ -272,13 +272,13 @@ struct TestParam {
 
   std::string kernel_name = "Unknown";
   register_function registration =
-      compute_engine::tflite::Register_BCONV_2D32_OPT;
+      compute_engine::tflite::Register_BCONV_2D_32_OPT;
 };
 
 const auto kKernelMap = new std::map<string, register_function>({
-    {"BConv2D32OPT", compute_engine::tflite::Register_BCONV_2D32_OPT},
-    {"BConv2D64OPT", compute_engine::tflite::Register_BCONV_2D64_OPT},
-    {"BConv2D32REF", compute_engine::tflite::Register_BCONV_2D32_REF},
+    {"BConv2D32REF", compute_engine::tflite::Register_BCONV_2D_32_REF},
+    {"BConv2D32OPT", compute_engine::tflite::Register_BCONV_2D_32_OPT},
+    {"BConv2D64OPT", compute_engine::tflite::Register_BCONV_2D_64_OPT},
 });
 
 class BConv2DOpTest : public ::testing::TestWithParam<TestParamTuple> {
@@ -383,9 +383,8 @@ void set_lce_op_input(const RuntimeShape& input_shape,
   std::vector<std::int32_t> input_data_bp(
       core::GetPackedTensorSize<std::int32_t>(input_shape));
   RuntimeShape output_shape;
-  core::packbits_tensor<ce::core::BitpackOrder::Canonical>(
-      input_shape, input_data.data(), zero_point, output_shape,
-      input_data_bp.data());
+  core::packbits_tensor(input_shape, input_data.data(), zero_point,
+                        output_shape, input_data_bp.data());
   m_lce.SetInput(input_data_bp);
 }
 
@@ -401,9 +400,8 @@ void test_lce_op_output(const std::vector<std::int32_t>& lce_output_data,
   std::vector<std::int32_t> builtin_output_data_bp(
       core::GetPackedTensorSize<std::int32_t>(out_shape));
   RuntimeShape packed_shape;
-  core::packbits_tensor<ce::core::BitpackOrder::Canonical>(
-      out_shape, builtin_output_data.data(), zero_point, packed_shape,
-      builtin_output_data_bp.data());
+  core::packbits_tensor(out_shape, builtin_output_data.data(), zero_point,
+                        packed_shape, builtin_output_data_bp.data());
 
   // We need the outputs here to be bit-exact, so don't allow for floating
   // point imprecision.
@@ -483,7 +481,7 @@ void runTest(const TestParam& param) {
 
   // the reference implementation only support one-padding
   const auto is_reference_registration =
-      (registration == compute_engine::tflite::Register_BCONV_2D32_REF);
+      (registration == compute_engine::tflite::Register_BCONV_2D_32_REF);
 
   if ((padding == Padding_SAME && pad_values == 0) &&
       is_reference_registration) {
@@ -593,9 +591,9 @@ void runTest(const TestParam& param) {
 
   // Bitpack filters
   using namespace compute_engine::core;
-  packbits_matrix<BitpackOrder::Canonical>(
-      filters_data.data(), filter_count * filter_height * filter_width,
-      input_depth, packed_filters_data.data());
+  packbits_matrix(filters_data.data(),
+                  filter_count * filter_height * filter_width, input_depth,
+                  packed_filters_data.data());
 
   int output_height, output_width;
   TfLitePaddingValues padding_values = ComputePaddingHeightWidth(
@@ -809,7 +807,7 @@ INSTANTIATE_TEST_SUITE_P(
                ActivationFunctionType_RELU),  // activation function
         Values(1, 2),                         // number of threads
         Values(std::pair<std::string, register_function>{
-            "BConv2D64OPT", compute_engine::tflite::Register_BCONV_2D64_OPT})),
+            "BConv2D64OPT", compute_engine::tflite::Register_BCONV_2D_64_OPT})),
     TestParam::TestNameSuffix);
 #endif
 
@@ -854,11 +852,11 @@ TEST(BConv2DTests, ReluErrorTest) {
   // Test if fused ReLu throws an error in combination with zero-padding
   EXPECT_DEATH(
       {
-        FP_BConv2DOpModel m_lce(compute_engine::tflite::Register_BCONV_2D64_OPT,
-                                input_tensor, packed_filter_tensor,
-                                output_tensor, post_tensor, post_tensor,
-                                threshold_tensor, 64, 1, 1, Padding_SAME, 0,
-                                ActivationFunctionType_RELU, 1, 1, 1);
+        FP_BConv2DOpModel m_lce(
+            compute_engine::tflite::Register_BCONV_2D_64_OPT, input_tensor,
+            packed_filter_tensor, output_tensor, post_tensor, post_tensor,
+            threshold_tensor, 64, 1, 1, Padding_SAME, 0,
+            ActivationFunctionType_RELU, 1, 1, 1);
       },
       "Fused activations are only supported with valid or one-padding.");
 
@@ -867,7 +865,7 @@ TEST(BConv2DTests, ReluErrorTest) {
   EXPECT_DEATH(
       {
         Bitpacked_BConv2DOpModel m_lce(
-            compute_engine::tflite::Register_BCONV_2D64_OPT, input_tensor,
+            compute_engine::tflite::Register_BCONV_2D_64_OPT, input_tensor,
             packed_filter_tensor, packed_output_tensor, post_tensor,
             post_tensor, threshold_tensor, 64, 1, 1, Padding_SAME, 0,
             ActivationFunctionType_NONE, 1, 1, 1);

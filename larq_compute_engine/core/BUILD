@@ -5,7 +5,6 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "utils",
     hdrs = [
-        "macros.h",
         "types.h",
     ],
 )
@@ -33,7 +32,10 @@ cc_library(
         ],
         "//conditions:default": [],
     }),
-    deps = [":utils"],
+    deps = [
+        ":utils",
+        "@flatbuffers",
+    ],
 )
 
 cc_library(

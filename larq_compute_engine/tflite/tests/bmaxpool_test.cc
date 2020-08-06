@@ -182,9 +182,8 @@ TEST_P(BMaxPoolOpTest, FloatAndBinaryInput) {
   input_tensor.GenerateSigns(gen, std::begin(input_data), std::end(input_data));
 
   // Bitpack the input
-  packbits_tensor<BitpackOrder::Canonical>(input_shape, input_data.data(), 0,
-                                           packed_input_shape,
-                                           input_data_bp.data());
+  packbits_tensor(input_shape, input_data.data(), 0, packed_input_shape,
+                  input_data_bp.data());
 
   // Our op with binary input
   BMaxPoolOpModel<TBitpacked> m_lce_binary(
@@ -215,9 +214,8 @@ TEST_P(BMaxPoolOpTest, FloatAndBinaryInput) {
   std::vector<TBitpacked> builtin_output_data_bp(
       GetPackedTensorSize<TBitpacked>(out_shape));
   RuntimeShape packed_out_shape;
-  packbits_tensor<BitpackOrder::Canonical>(
-      out_shape, m_builtin.GetOutput().data(), 0, packed_out_shape,
-      builtin_output_data_bp.data());
+  packbits_tensor(out_shape, m_builtin.GetOutput().data(), 0, packed_out_shape,
+                  builtin_output_data_bp.data());
 
   // Check our binary op
   EXPECT_EQ(m_lce_binary.GetOutputShape(), GetShape(packed_out_shape));
@@ -259,9 +257,8 @@ TEST_P(BMaxPoolOpTest, Int8Input) {
   input_tensor.GenerateSigns(gen, std::begin(input_data), std::end(input_data));
 
   // Bitpack the input
-  packbits_tensor<BitpackOrder::Canonical>(
-      input_shape, input_data.data(), input_tensor.zero_point,
-      packed_input_shape, input_data_bp.data());
+  packbits_tensor(input_shape, input_data.data(), input_tensor.zero_point,
+                  packed_input_shape, input_data_bp.data());
 
   // Our op with int8 input
   BMaxPoolOpModel<std::int8_t> m_lce(params.registration, input_tensor,
@@ -284,9 +281,9 @@ TEST_P(BMaxPoolOpTest, Int8Input) {
   std::vector<TBitpacked> builtin_output_data_bp(
       GetPackedTensorSize<TBitpacked>(out_shape));
   RuntimeShape packed_out_shape;
-  packbits_tensor<BitpackOrder::Canonical>(
-      out_shape, m_builtin.GetOutput().data(), output_tensor.zero_point,
-      packed_out_shape, builtin_output_data_bp.data());
+  packbits_tensor(out_shape, m_builtin.GetOutput().data(),
+                  output_tensor.zero_point, packed_out_shape,
+                  builtin_output_data_bp.data());
 
   EXPECT_EQ(m_lce.GetOutputShape(), GetShape(packed_out_shape));
   EXPECT_EQ(m_lce.GetOutput(), builtin_output_data_bp);

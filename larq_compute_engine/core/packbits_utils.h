@@ -23,7 +23,7 @@ int GetPackedTensorSize(const RuntimeShape& shape) {
 
 // Convenience function for bitpacking a tensor along its last dimension
 // and updating the tensor shape
-template <BitpackOrder bitpack_order, class T, class TBitpacked>
+template <class T, class TBitpacked>
 inline void packbits_tensor(const RuntimeShape& in_shape, const T* in_data,
                             const std::int32_t zero_point,
                             RuntimeShape& out_shape, TBitpacked* out_data) {
@@ -32,8 +32,7 @@ inline void packbits_tensor(const RuntimeShape& in_shape, const T* in_data,
   const int rows = FlatSizeSkipDim(in_shape, dims - 1);
   const int cols = in_shape.Dims(dims - 1);
 
-  ce::core::packbits_matrix<bitpack_order>(in_data, rows, cols, out_data,
-                                           zero_point);
+  ce::core::packbits_matrix(in_data, rows, cols, out_data, zero_point);
 
   out_shape.ReplaceWith(dims, in_shape.DimsData());
   out_shape.SetDim(dims - 1, GetPackedSize<TBitpacked>(cols));
