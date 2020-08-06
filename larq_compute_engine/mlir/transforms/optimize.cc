@@ -152,8 +152,7 @@ void ComputeWriteBitpackedOutputThresholds(
       continue;
     }
 
-    float effective_clamp_min;
-    float effective_clamp_max;
+    float effective_clamp_min, effective_clamp_max;
     if (mult > 0.0f) {
       effective_clamp_min = clamp_min;
       effective_clamp_max = clamp_max;
@@ -246,9 +245,7 @@ struct SetBitpackedActivations : public OpRewritePattern<TF::QuantizeOp> {
     // takes an `Attribute` as an argument. It tries to match a
     // constant-foldable `Value` and writes the value to the attribute if
     // the match succeeds.
-    DenseElementsAttr filters;
-    DenseElementsAttr multipliers;
-    DenseElementsAttr biases;
+    DenseElementsAttr filters, multipliers, biases;
     if (!matchPattern(bconv_op.filter(), m_Constant(&filters)) ||
         !matchPattern(bconv_op.post_activation_multiplier(),
                       m_Constant(&multipliers)) ||
@@ -256,8 +253,7 @@ struct SetBitpackedActivations : public OpRewritePattern<TF::QuantizeOp> {
       return failure();
     }
 
-    std::vector<std::int32_t> thresholds;
-    std::vector<std::int32_t> filter_per_channel_multipliers;
+    std::vector<std::int32_t> thresholds, filter_per_channel_multipliers;
     ComputeWriteBitpackedOutputThresholds(
         static_cast<float>(backtransform_add), static_cast<float>(clamp_min),
         static_cast<float>(clamp_max), multipliers, biases, thresholds,
