@@ -39,6 +39,10 @@ jobs:
         run: |
           bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model -c opt --config=aarch64
           cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_aarch64
+      - name: Build Benchmark utility for AArch32
+        run: |
+          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model -c opt --config=rpi3
+          cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_aarch32
       - name: Build Benchmark utility for Android
         run: |
           bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model -c opt --config=android_arm64
