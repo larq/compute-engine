@@ -6,6 +6,7 @@ import tensorflow as tf
 from larq_compute_engine.mlir._graphdef_tfl_flatbuffer import (
     convert_graphdef_to_tflite_flatbuffer,
 )
+from larq_compute_engine.mlir.python.util import modify_integer_quantized_model_io_type
 
 from tensorflow.core.framework.types_pb2 import DataType
 from tensorflow.lite.python.util import get_tensor_name
@@ -52,6 +53,8 @@ def _contains_training_quant_op(graph_def):
 def convert_keras_model(
     model: tf.keras.Model,
     *,  # Require remaining arguments to be keyword-only.
+    inference_input_type: tf.DType = tf.float32,
+    inference_output_type: tf.DType = tf.float32,
     experimental_default_int8_range: Optional[Tuple[float, float]] = None,
     experimental_enable_bitpacked_activations: bool = False,
 ) -> bytes:
@@ -66,6 +69,10 @@ def convert_keras_model(
 
     # Arguments
         model: The model to convert.
+        inference_input_type: Data type of the input layer. Defaults to `tf.float32`,
+            must be either `tf.float32` or `tf.int8`.
+        inference_output_type: Data type of the output layer. Defaults to `tf.float32`,
+            must be either `tf.float32` or `tf.int8`.
         experimental_default_int8_range: Tuple of integers representing `(min, max)`
             range values for all arrays without a specified range. Intended for
             experimenting with quantization via "dummy quantization". (default None)
@@ -81,6 +88,17 @@ def convert_keras_model(
         raise ValueError(
             f"Expected `model` argument to be a `tf.keras.Model` instance, got `{model}`."
         )
+    if inference_input_type not in (tf.float32, tf.int8):
+        raise ValueError(
+            "Expected `inference_input_type` to be either `tf.float32` or `tf.int8`, "
+            f"got {inference_input_type}."
+        )
+    if inference_output_type not in (tf.float32, tf.int8):
+        raise ValueError(
+            "Expected `inference_output_type` to be either `tf.float32` or `tf.int8`, "
+            f"got {inference_output_type}."
+        )
+
     if not tf.executing_eagerly():
         raise RuntimeError(
             "Graph mode is not supported. Please enable eager execution using "
@@ -122,7 +140,7 @@ def convert_keras_model(
             shape[0] = 1
             tensor.set_shape(shape)
 
-    return convert_graphdef_to_tflite_flatbuffer(
+    tflite_buffer = convert_graphdef_to_tflite_flatbuffer(
         graph_def.SerializeToString(),
         [get_tensor_name(tensor) for tensor in input_tensors],
         [DataType.Name(tensor.dtype.as_datatype_enum) for tensor in input_tensors],
@@ -132,3 +150,13 @@ def convert_keras_model(
         experimental_default_int8_range,
         experimental_enable_bitpacked_activations,
     )
+    if should_quantize and (
+        inference_input_type != tf.float32 or inference_output_type != tf.float32
+    ):
+        tflite_buffer = modify_integer_quantized_model_io_type(
+            tflite_buffer,
+            inference_input_type=inference_input_type,
+            inference_output_type=inference_output_type,
+        )
+
+    return tflite_buffer

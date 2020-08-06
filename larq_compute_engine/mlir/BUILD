@@ -293,7 +293,11 @@ pybind_extension(
 
 py_library(
     name = "converter",
-    srcs = ["python/converter.py"],
+    srcs = [
+        "python/converter.py",
+        "python/schema_py_generated.py",
+        "python/util.py",
+    ],
     deps = [
         ":_graphdef_tfl_flatbuffer",
     ],
@@ -301,6 +305,8 @@ py_library(
 
 exports_files([
     "python/converter.py",
+    "python/util.py",
+    "python/schema_py_generated.py",
     "__init__.py",
     "python/__init__.py",
 ])
