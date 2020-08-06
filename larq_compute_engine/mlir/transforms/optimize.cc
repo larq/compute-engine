@@ -199,153 +199,103 @@ llvm::Optional<RankedTensorType> maybeGetBitpackedType(
                                rewriter.getIntegerType(32));
 }
 
-template <typename BinaryOp>
-struct SetBitpackedActivations : public OpRewritePattern<BinaryOp> {
-  using OpRewritePattern<BinaryOp>::OpRewritePattern;
+// TODO: Move to TableGen once enabled by default
+struct SetBitpackedActivations : public OpRewritePattern<TF::QuantizeOp> {
+  using OpRewritePattern<TF::QuantizeOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(BinaryOp outer_binary_op,
+  LogicalResult matchAndRewrite(TF::QuantizeOp quantize_op,
                                 PatternRewriter& rewriter) const override {
-    Operation* input_op = outer_binary_op.input().getDefiningOp();
+    Operation* input_op = quantize_op.getOperand().getDefiningOp();
 
     // If the input op has more than one use, we can't apply an optimisation.
     if (!input_op || !input_op->hasOneUse()) return failure();
 
     // Try and match `input_op` to a binary convolution.
-    auto inner_bconv_op = dyn_cast_or_null<TF::Bconv2dOp>(input_op);
-    if (inner_bconv_op) {
-      // We can't apply this transform if the activation or filters are already
-      // bitpacked, or with 'same zero' padding.
-      const auto inner_type = inner_bconv_op.getType().cast<ShapedType>();
-      const auto filter_type =
-          inner_bconv_op.filter().getType().cast<ShapedType>();
-      if (!inner_type.getElementType().isF32() ||
-          !filter_type.getElementType().isF32() ||
-          (inner_bconv_op.padding() == "SAME" &&
-           inner_bconv_op.pad_values() != 1)) {
-        return failure();
-      }
+    auto bconv_op = dyn_cast_or_null<TF::Bconv2dOp>(input_op);
+    if (!bconv_op) return failure();
 
-      if (auto maybe_bitpacked_type = maybeGetBitpackedType(
-              rewriter, inner_bconv_op.getType().cast<ShapedType>())) {
-        // As the inner bconv op will be writing bitpacked output, we need to
-        // compute the thresholds for writing a 1-bit or a 0-bit.
-
-        // Compute the constants `backtransform_add` and `clamp_min/max`.
-        const auto filter_shape = filter_type.getShape();
-        const std::int32_t backtransform_add =
-            filter_shape[1] * filter_shape[2] * filter_shape[3];
-        const auto clamp_min_max =
-            llvm::StringSwitch<std::pair<std::int32_t, std::int32_t>>(
-                inner_bconv_op.fused_activation_function())
-                .Case("RELU", {0, backtransform_add})
-                .Case("RELU_N1_TO_1", {-1, 1})
-                .Case("RELU6", {0, 6})
-                .Default({-1 * backtransform_add, backtransform_add});
-        const std::int32_t clamp_min = std::get<0>(clamp_min_max);
-        const std::int32_t clamp_max = std::get<1>(clamp_min_max);
-
-        // This is a nice trick taken from TF code: the `m_Constant` pattern
-        // takes an `Attribute` as an argument. It tries to match a
-        // constant-foldable `Value` and writes the value to the attribute if
-        // the match succeeds.
-        DenseElementsAttr filters;
-        DenseElementsAttr multipliers;
-        DenseElementsAttr biases;
-        if (!matchPattern(inner_bconv_op.filter(), m_Constant(&filters)) ||
-            !matchPattern(inner_bconv_op.post_activation_multiplier(),
-                          m_Constant(&multipliers)) ||
-            !matchPattern(inner_bconv_op.post_activation_bias(),
-                          m_Constant(&biases))) {
-          return failure();
-        }
-
-        std::vector<std::int32_t> thresholds;
-        std::vector<std::int32_t> filter_per_channel_multipliers;
-        ComputeWriteBitpackedOutputThresholds(
-            static_cast<float>(backtransform_add),
-            static_cast<float>(clamp_min), static_cast<float>(clamp_max),
-            multipliers, biases, thresholds, filter_per_channel_multipliers);
-
-        // Compute new filter values by folding in the per-channel multipliers.
-        std::vector<float> new_filter_values(filter_shape[0] * filter_shape[1] *
-                                             filter_shape[2] * filter_shape[3]);
-        int i = 0;
-        for (float value : filters.getValues<float>()) {
-          float multiplier = filter_per_channel_multipliers
-              [i / (filter_shape[1] * filter_shape[2] * filter_shape[3])];
-          new_filter_values[i++] = value * multiplier;
-        }
-
-        // Create new inputs for the inner bconv op.
-        RankedTensorType filter_type =
-            RankedTensorType::get(filter_shape, rewriter.getF32Type());
-        Value filter_input = rewriter.create<ConstantOp>(
-            inner_bconv_op.filter().getLoc(),
-            DenseElementsAttr::get<float>(filter_type, new_filter_values));
-        RankedTensorType thresholds_type = RankedTensorType::get(
-            {filter_shape[0]}, rewriter.getIntegerType(32));
-        Value thresholds_input = rewriter.create<ConstantOp>(
-            inner_bconv_op.output_threshold().getLoc(),
-            DenseElementsAttr::get<std::int32_t>(thresholds_type, thresholds));
-
-        // We need an empty input with which to overwrite the
-        // `post_activation_multiplier` and `post_activation_bias` (which are no
-        // longer needed, having computed the thresholds).
-        Value empty_input = rewriter.create<ConstantOp>(inner_bconv_op.getLoc(),
-                                                        rewriter.getNoneType(),
-                                                        rewriter.getUnitAttr());
-
-        rewriter.replaceOpWithNewOp<TF::Bconv2dOp>(
-            inner_bconv_op, *maybe_bitpacked_type, inner_bconv_op.input(),
-            filter_input, empty_input, empty_input, thresholds_input,
-            rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                    inner_bconv_op.channels_in()),
-            rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                    inner_bconv_op.dilation_height_factor()),
-            rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                    inner_bconv_op.dilation_width_factor()),
-            rewriter.getStringAttr(inner_bconv_op.fused_activation_function()),
-            rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                    inner_bconv_op.pad_values()),
-            rewriter.getStringAttr(inner_bconv_op.padding()),
-            rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                    inner_bconv_op.stride_height()),
-            rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                    inner_bconv_op.stride_width()));
-
-        return success();
-      }
+    // We can't apply this transform if the activation or filters are already
+    // bitpacked, or with 'same zero' padding.
+    const auto bconv_type = bconv_op.getType().cast<ShapedType>();
+    const auto filter_type = bconv_op.filter().getType().cast<ShapedType>();
+    const auto bitpacked_type = maybeGetBitpackedType(rewriter, bconv_type);
+    if (!bconv_type.getElementType().isF32() ||
+        !filter_type.getElementType().isF32() || !bitpacked_type ||
+        (bconv_op.padding() == "SAME" && bconv_op.pad_values() != 1)) {
+      return failure();
     }
 
-    // Otherwise, try and match `input_op` to a maxpool.
-    auto maxpool_op = dyn_cast_or_null<TFL::MaxPool2DOp>(input_op);
-    if (maxpool_op) {
-      if (!maxpool_op.getType().cast<ShapedType>().getElementType().isF32()) {
-        return failure();
-      }
+    // As the inner bconv op will be writing bitpacked output, we need to
+    // compute the thresholds for writing a 1-bit or a 0-bit.
 
-      if (maxpool_op.fused_activation_function() != "NONE") {
-        return failure();
-      }
+    // Compute the constants `backtransform_add` and `clamp_min/max`.
+    const auto filter_shape = filter_type.getShape();
+    const std::int32_t backtransform_add =
+        filter_shape[1] * filter_shape[2] * filter_shape[3];
+    const auto clamp_min_max =
+        llvm::StringSwitch<std::pair<std::int32_t, std::int32_t>>(
+            bconv_op.fused_activation_function())
+            .Case("RELU", {0, backtransform_add})
+            .Case("RELU_N1_TO_1", {-1, 1})
+            .Case("RELU6", {0, 6})
+            .Default({-1 * backtransform_add, backtransform_add});
+    const std::int32_t clamp_min = std::get<0>(clamp_min_max);
+    const std::int32_t clamp_max = std::get<1>(clamp_min_max);
 
-      if (auto bitpacked_type = maybeGetBitpackedType(
-              rewriter, maxpool_op.getType().cast<ShapedType>())) {
-        rewriter.replaceOpWithNewOp<TF::BMaxPool2dOp>(
-            maxpool_op, *bitpacked_type, maxpool_op.input(),
-            rewriter.getStringAttr(maxpool_op.padding()),
-            rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                    maxpool_op.stride_w()),
-            rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                    maxpool_op.stride_h()),
-            rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                    maxpool_op.filter_width()),
-            rewriter.getIntegerAttr(rewriter.getIntegerType(32),
-                                    maxpool_op.filter_height()));
-        return success();
-      }
+    // This is a nice trick taken from TF code: the `m_Constant` pattern
+    // takes an `Attribute` as an argument. It tries to match a
+    // constant-foldable `Value` and writes the value to the attribute if
+    // the match succeeds.
+    DenseElementsAttr filters;
+    DenseElementsAttr multipliers;
+    DenseElementsAttr biases;
+    if (!matchPattern(bconv_op.filter(), m_Constant(&filters)) ||
+        !matchPattern(bconv_op.post_activation_multiplier(),
+                      m_Constant(&multipliers)) ||
+        !matchPattern(bconv_op.post_activation_bias(), m_Constant(&biases))) {
+      return failure();
     }
 
-    return failure();
+    std::vector<std::int32_t> thresholds;
+    std::vector<std::int32_t> filter_per_channel_multipliers;
+    ComputeWriteBitpackedOutputThresholds(
+        static_cast<float>(backtransform_add), static_cast<float>(clamp_min),
+        static_cast<float>(clamp_max), multipliers, biases, thresholds,
+        filter_per_channel_multipliers);
+
+    // Compute new filter values by folding in the per-channel multipliers.
+    std::vector<float> new_filter_values(filter_shape[0] * filter_shape[1] *
+                                         filter_shape[2] * filter_shape[3]);
+    int i = 0;
+    for (float value : filters.getValues<float>()) {
+      float multiplier = filter_per_channel_multipliers[i / (filter_shape[1] *
+                                                             filter_shape[2] *
+                                                             filter_shape[3])];
+      new_filter_values[i++] = value * multiplier;
+    }
+
+    // Create new inputs for the inner bconv op.
+    Value filter_input = rewriter.create<ConstantOp>(
+        bconv_op.filter().getLoc(),
+        DenseElementsAttr::get<float>(filter_type, new_filter_values));
+    RankedTensorType thresholds_type =
+        RankedTensorType::get({filter_shape[0]}, rewriter.getIntegerType(32));
+    Value thresholds_input = rewriter.create<ConstantOp>(
+        bconv_op.output_threshold().getLoc(),
+        DenseElementsAttr::get<std::int32_t>(thresholds_type, thresholds));
+
+    // We need an empty input with which to overwrite the
+    // `post_activation_multiplier` and `post_activation_bias` (which are no
+    // longer needed, having computed the thresholds).
+    Value empty_input = rewriter.create<ConstantOp>(
+        bconv_op.getLoc(), rewriter.getNoneType(), rewriter.getUnitAttr());
+
+    std::vector<Value> operands = {bconv_op.input(), filter_input, empty_input,
+                                   empty_input, thresholds_input};
+    rewriter.replaceOpWithNewOp<TF::Bconv2dOp>(quantize_op, *bitpacked_type,
+                                               operands, bconv_op.getAttrs());
+
+    return success();
   };
 };
 
@@ -356,8 +306,7 @@ void OptimizeLCE::runOnFunction() {
 
   TFL::populateWithGenerated(ctx, &patterns);
   if (experimental_enable_bitpacked_activations_) {
-    patterns.insert<SetBitpackedActivations<TF::Bconv2dOp>>(ctx);
-    patterns.insert<SetBitpackedActivations<TF::BMaxPool2dOp>>(ctx);
+    patterns.insert<SetBitpackedActivations>(ctx);
   }
   applyPatternsAndFoldGreedily(func, patterns);
 }

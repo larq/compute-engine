@@ -7,10 +7,10 @@ include "larq_compute_engine/mlir/transforms/op_removal_patterns.td"
 
 // This relies on implementation details of larq.math.sign. We should make
 // this more general in the future
-def : Pat<(TF_SignOp (TF_AddV2Op (TF_SignOp $arg), $c)), (LQ_BsignOp $arg),
-          [], (addBenefit 100)>;
-def : Pat<(TF_SignOp (TF_AddV2Op $c, (TF_SignOp $arg))), (LQ_BsignOp $arg),
-          [], (addBenefit 100)>;
+def : Pat<(TF_SignOp (TF_AddV2Op (TF_SignOp $arg), $c)),
+          (LQ_DequantizeOp (LQ_QuantizeOp $arg)), [], (addBenefit 100)>;
+def : Pat<(TF_SignOp (TF_AddV2Op $c, (TF_SignOp $arg))),
+          (LQ_DequantizeOp (LQ_QuantizeOp $arg)), [], (addBenefit 100)>;
 
 // Copied from legalize_patterns.td
 class I32VectorElementsAttr<int len> : ElementsAttrBase<
@@ -41,7 +41,7 @@ def IsDataFormatNHWC : ConstantAttr<TF_ConvnetDataFormatAttr, "NHWC">;
 def CreateNoneAttrValue : NativeCodeCall<"$_builder.getUnitAttr()">;
 
 def : Pat<(TF_Conv2DOp
-              (LQ_BsignOp $input),
+              (LQ_DequantizeOp: $dequantized_input $input),
               (ConstantOp $filter),
               IsIntList1XY1:$strides,
               $use_cudnn,
@@ -59,7 +59,7 @@ def : Pat<(TF_Conv2DOp
               (ConstantOp (GetScaleVector $filter)),
               (ConstantOp (GetConstantVector<"0.0f"> $filter)),
               (ConstantOp (CreateNoneAttrValue)),
-              (GetNumChannels $input),
+              (GetNumChannels $dequantized_input),
               ExtractI32At<1>:$dilations,
               ExtractI32At<2>:$dilations,
               TFL_AF_None,
@@ -79,7 +79,7 @@ def SamePadding : Constraint<CPred<"IsSamePadding($0, $1, $2, $3)">>;
 
 def : Pat<(TF_Conv2DOp:$output
               (TF_PadV2Op
-                  (LQ_BsignOp $input),
+                  (LQ_DequantizeOp: $dequantized_input $input),
                   (ConstantOp $paddings),
                   (ConstantOp $pad_values)),
               (ConstantOp $filter),
@@ -98,7 +98,7 @@ def : Pat<(TF_Conv2DOp:$output
               (ConstantOp (GetScaleVector $filter)),
               (ConstantOp (GetConstantVector<"0.0f"> $filter)),
               (ConstantOp (CreateNoneAttrValue)),
-              (GetNumChannels $input),
+              (GetNumChannels $dequantized_input),
               ExtractI32At<1>:$dilations,
               ExtractI32At<2>:$dilations,
               TFL_AF_None,

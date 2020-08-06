@@ -66,19 +66,39 @@ class LQ_Op<string mnemonic, list<OpTrait> traits = []> :
 class TensorOfOrNone<list<Type> allowedTypes, string description = ""> :
   AnyTypeOf<[TensorOf<allowedTypes>, NoneType], description>;
 
-def LQ_BsignOp : LQ_Op<"Bsign", [NoSideEffect, SameOperandsAndResultType]> {
-  let summary = "Returns an element-wise indication of the binary sign of a number.";
+def LQ_QuantizeOp : LQ_Op<"Quantize", [NoSideEffect]> {
+  let summary = "Binary quantize operator";
 
   let description = [{
 `y = sign(x) = -1` if `x < 0`; 1 if `x >= 0`.
   }];
 
   let arguments = (ins
-    TensorOf<[BF16, F16, F32, F64, I32, I64, TF_Complex128, TF_Complex64]>:$x
+    TensorOf<[BF16, F16, F32, F64, I32, I64, QI8, QI16]>:$x
   );
 
   let results = (outs
-    TensorOf<[BF16, F16, F32, F64, I32, I64, TF_Complex128, TF_Complex64]>:$y
+    TensorOf<[I32]>:$y
+  );
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &state, Value x"
+  >];
+}
+
+def LQ_DequantizeOp : LQ_Op<"Dequantize", [NoSideEffect]> {
+  let summary = "Binary dequantize operator";
+
+  let description = [{
+Converts binarized bitpacked tensors to floating point or integer tensors.
+  }];
+
+  let arguments = (ins
+    TensorOf<[I32]>:$x
+  );
+
+  let results = (outs
+    TensorOf<[BF16, F16, F32, F64, I32, I64, QI8, QI16]>:$y
   );
 }
 
@@ -92,7 +112,7 @@ TODO
   }];
 
   let arguments = (ins
-    TensorOf<[F32, I32, QI8]>:$input,
+    TensorOf<[I32]>:$input,
     TensorOf<[F32, I32]>:$filter,
     TensorOfOrNone<[F32]>:$post_activation_multiplier,
     TensorOfOrNone<[F32]>:$post_activation_bias,
@@ -123,7 +143,7 @@ Computes a MaxPool2D operation and outputs bitpacked binary values, for consumpt
   }];
 
   let arguments = (ins
-    TensorOf<[F32, I32, QI8]>:$input,
+    TensorOf<[I32]>:$input,
     TFL_PaddingAttr:$padding,
     I32Attr:$stride_width,
     I32Attr:$stride_height,
