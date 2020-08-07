@@ -1,4 +1,5 @@
 #include "larq_compute_engine/core/packbits.h"
+#include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
@@ -8,6 +9,9 @@ namespace mlir {
 namespace TFL {
 
 namespace {
+
+using compute_engine::core::bitpacking_bitwidth;
+using compute_engine::core::TBitpacked;
 
 struct BitpackWeightsLCE : public PassWrapper<BitpackWeightsLCE, FunctionPass> {
   void runOnFunction() override;
@@ -24,15 +28,12 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
   const auto& dense_elements_iter =
       x.cast<DenseElementsAttr>().getValues<float>();
 
-  using PackedType = std::uint32_t;
-  constexpr int bitwidth = std::numeric_limits<PackedType>::digits;
-
   auto shape = x.getType().cast<ShapedType>().getShape();
   int num_rows = shape[0] * shape[1] * shape[2];
   int unpacked_channels = shape[3];
-  int packed_channels = (unpacked_channels + bitwidth - 1) / bitwidth;
+  int packed_channels = compute_engine::core::GetPackedSize(unpacked_channels);
 
-  std::vector<PackedType> new_values(num_rows * packed_channels);
+  std::vector<TBitpacked> new_values(num_rows * packed_channels);
   std::vector<float> old_values(num_rows * unpacked_channels);
 
   int i = 0;
@@ -47,9 +48,9 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
 
   RankedTensorType out_tensor_type =
       RankedTensorType::get({shape[0], shape[1], shape[2], packed_channels},
-                            builder.getIntegerType(bitwidth));
+                            builder.getIntegerType(bitpacking_bitwidth));
 
-  return DenseElementsAttr::get<PackedType>(out_tensor_type, new_values);
+  return DenseElementsAttr::get<TBitpacked>(out_tensor_type, new_values);
 }
 
 #include "larq_compute_engine/mlir/transforms/generated_bitpack_weights.inc"

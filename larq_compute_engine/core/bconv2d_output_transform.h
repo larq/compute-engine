@@ -5,11 +5,15 @@
 #include <cstdint>
 #include <limits>
 
+#include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/kernels/internal/common.h"
 #include "tensorflow/lite/kernels/internal/cppmath.h"
 
 namespace compute_engine {
+
 namespace core {
+
+using compute_engine::core::TBitpacked;
 
 enum class OutputTransformDetails {
   Default,
@@ -17,13 +21,12 @@ enum class OutputTransformDetails {
   PreprocessedIntegerOnly
 };
 
-//
 // The `OutputTransform` struct describes what needs to be done to get from the
 // int32 accumulator value to the final result that is written back to memory.
 //
 // This transform depends on the destination type `DstScalar` which can be:
 // - float
-// - int32 (meaning bitpacked output)
+// - TBitpacked (i.e. int32_t, meaning bitpacked output)
 // - int8
 template <typename AccumScalar, typename DstScalar,
           OutputTransformDetails = OutputTransformDetails::Default>
@@ -67,7 +70,7 @@ struct OutputTransform<AccumScalar, float, OutputTransformDetails::Default>
 
 // Output transformation for bitpacked output
 template <typename AccumScalar>
-struct OutputTransform<AccumScalar, std::int32_t,
+struct OutputTransform<AccumScalar, TBitpacked,
                        OutputTransformDetails::Default> {
   const AccumScalar* thresholds = nullptr;
 
@@ -78,7 +81,6 @@ struct OutputTransform<AccumScalar, std::int32_t,
 };
 
 // Output transformation for 8-bit quantization
-
 template <typename AccumScalar>
 struct OutputTransform<AccumScalar, std::int8_t,
                        OutputTransformDetails::Default>
@@ -99,9 +101,9 @@ struct OutputTransform<AccumScalar, std::int8_t,
     AccumScalar result = tflite::TfLiteRound(result_fp);
     // Clamp to int8 range
     result =
-        std::min<std::int32_t>(result, std::numeric_limits<std::int8_t>::max());
-    result = std::max<std::int32_t>(result,
-                                    std::numeric_limits<std::int8_t>::lowest());
+        std::min<AccumScalar>(result, std::numeric_limits<std::int8_t>::max());
+    result = std::max<AccumScalar>(result,
+                                   std::numeric_limits<std::int8_t>::lowest());
     return static_cast<std::int8_t>(result);
   }
 };

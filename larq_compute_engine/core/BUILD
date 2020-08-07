@@ -3,24 +3,22 @@ licenses(["notice"])  # Apache 2.0
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "utils",
+    name = "types",
     hdrs = [
         "types.h",
     ],
 )
 
-# BUILDING BGEMM
 cc_library(
     name = "bgemm_functor",
     hdrs = [
         "bgemm_functor.h",
     ],
     deps = [
-        ":utils",
+        ":types",
     ],
 )
 
-# BUILDING PACKBITS
 cc_library(
     name = "packbits",
     hdrs = ["packbits.h"] + select({
@@ -33,7 +31,7 @@ cc_library(
         "//conditions:default": [],
     }),
     deps = [
-        ":utils",
+        ":types",
         "@flatbuffers",
     ],
 )
@@ -50,13 +48,6 @@ cc_library(
 cc_library(
     name = "padding_functor",
     hdrs = ["padding_functor.h"],
-)
-
-cc_library(
-    name = "packbits_aarch64",
-    hdrs = [
-        "packbits_aarch64.h",
-    ],
 )
 
 cc_library(
@@ -78,6 +69,7 @@ cc_library(
         "bconv2d_output_transform.h",
     ],
     deps = [
+        ":types",
         "@org_tensorflow//tensorflow/lite/kernels/internal:common",
         "@org_tensorflow//tensorflow/lite/kernels/internal:cppmath",
     ],
@@ -115,6 +107,7 @@ cc_library(
     ],
     deps = [
         ":bgemm_kernels_arm",
+        ":packbits",
         "//larq_compute_engine/core:bgemm_functor",
         "@ruy//ruy/profiler:instrumentation",
     ],
@@ -164,6 +157,7 @@ cc_library(
         "bmaxpool.h",
     ],
     deps = [
+        ":types",
         "@org_tensorflow//tensorflow/lite/kernels/internal:common",
         "@org_tensorflow//tensorflow/lite/kernels/internal:types",
     ],

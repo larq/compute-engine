@@ -31,7 +31,7 @@ cc_library(
         "bconv2d_params.h",
     ],
     deps = [
-        "//larq_compute_engine/core:utils",
+        "//larq_compute_engine/core:types",
     ],
 )
 
@@ -43,6 +43,7 @@ cc_library(
     deps = [
         ":bconv2d_params",
         "//larq_compute_engine/core:bconv2d_output_transform",
+        "//larq_compute_engine/core:types",
         "@org_tensorflow//tensorflow/lite/kernels/internal:tensor",
     ],
 )
@@ -64,6 +65,7 @@ cc_library(
         ":bconv2d_params",
         "//larq_compute_engine/core:bconv2d_impl_ref",
         "//larq_compute_engine/core:bmaxpool",
+        "//larq_compute_engine/core:packbits",
         "@flatbuffers",
         "@org_tensorflow//tensorflow/lite:framework",
         "@org_tensorflow//tensorflow/lite/c:c_api_internal",

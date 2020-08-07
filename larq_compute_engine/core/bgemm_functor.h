@@ -5,94 +5,39 @@
 #include <cstdint>
 #include <limits>
 
+#include "larq_compute_engine/core/types.h"
+
 namespace compute_engine {
 namespace core {
 
 enum class Layout { RowMajor, ColMajor };
 
-template <class TIn, class TOut>
-inline auto compute_binary_inner_prod(const TIn& a, const TIn& b) -> TOut {
-  static_assert(std::is_unsigned<TIn>::value,
-                "Input of binary inner product should be of an unsigned type.");
-  static_assert(std::is_signed<TOut>::value,
-                "Output of binary inner product should be of a signed type.");
+using compute_engine::core::bitpacking_bitwidth;
+using compute_engine::core::TBitpacked;
 
-  constexpr auto bitwidth = std::numeric_limits<TIn>::digits;
-  std::bitset<bitwidth> bs(a ^ b);
-  return bitwidth - 2 * static_cast<TOut>(bs.count());
-}
-
-template <>
-inline std::int32_t compute_binary_inner_prod<std::uint8_t, std::int32_t>(
-    const std::uint8_t& a, const std::uint8_t& b) {
+inline std::int32_t compute_binary_inner_prod(const TBitpacked& a,
+                                              const TBitpacked& b) {
   // TODO: __builtin_popcount works only with GCC compiler -> implement a
   // generalized version.
-  // TODO: SIMD optimization for popcount
-  constexpr auto bitwidth = std::numeric_limits<std::uint8_t>::digits;
-  return bitwidth - 2 * static_cast<std::int32_t>(__builtin_popcount(a ^ b));
+  return bitpacking_bitwidth -
+         2 * static_cast<std::int32_t>(__builtin_popcount(a ^ b));
 }
 
-template <>
-inline std::int32_t compute_binary_inner_prod<std::uint32_t, std::int32_t>(
-    const std::uint32_t& a, const std::uint32_t& b) {
-  // TODO: __builtin_popcount works only with GCC compiler -> implement a
-  // generalized version.
-  // TODO: SIMD optimization for popcount
-  constexpr auto bitwidth = std::numeric_limits<std::uint32_t>::digits;
-  return bitwidth - 2 * static_cast<std::int32_t>(__builtin_popcountl(a ^ b));
-}
-
-template <>
-inline std::int32_t compute_binary_inner_prod<std::uint64_t, std::int32_t>(
-    const std::uint64_t& a, const std::uint64_t& b) {
-  // TODO: __builtin_popcount works only with GCC compiler -> implement a
-  // generalized version.
-  // TODO: SIMD optimization for popcount
-  constexpr auto bitwidth = std::numeric_limits<std::uint64_t>::digits;
-  return bitwidth - 2 * static_cast<std::int32_t>(__builtin_popcountll(a ^ b));
-}
-
-template <class TIn, class TOut>
-inline auto xor_popcount(const TIn& a, const TIn& b) -> TOut {
-  static_assert(std::is_unsigned<TIn>::value,
-                "Input of binary inner product should be of an unsigned type.");
-  static_assert(std::is_signed<TOut>::value,
-                "Output of binary inner product should be of a signed type.");
-
-  constexpr auto bitwidth = std::numeric_limits<TIn>::digits;
-  return std::bitset<bitwidth>(a ^ b).count();
-}
-
-template <>
-inline std::int32_t xor_popcount<std::uint32_t, std::int32_t>(
-    const std::uint32_t& a, const std::uint32_t& b) {
-  return __builtin_popcountl(a ^ b);
-}
-
-template <>
-inline std::int32_t xor_popcount<std::uint64_t, std::int32_t>(
-    const std::uint64_t& a, const std::uint64_t& b) {
-  return __builtin_popcountll(a ^ b);
+inline std::int32_t xor_popcount(const TBitpacked& a, const TBitpacked& b) {
+  return __builtin_popcount(a ^ b);
 }
 
 // A naive implementation of binary matrix multiplication, useful for
 // debugging and understanding the algorithm.
-template <class TLhs = std::uint64_t, Layout LLhs = Layout::RowMajor,
-          class TRhs = std::uint64_t, Layout LRhs = Layout::RowMajor,
+template <Layout LLhs = Layout::RowMajor, Layout LRhs = Layout::RowMajor,
           class TOut = float, Layout LOut = Layout::RowMajor,
           class TAccum = std::int32_t>
 class ReferenceBGemmFunctor {
  public:
   void operator()(const std::size_t m, const std::size_t n, const std::size_t k,
-                  const TLhs* a, const std::size_t lda, const TRhs* b,
-                  const std::size_t ldb, TOut* c, const std::size_t ldc,
-                  const int bitpaddding = 0) {
-    // for now accept only unsigned {8,32,64}-bits values as input.
-    static_assert(std::is_same<TRhs, TLhs>::value,
-                  "Inputs to BGEMM should have the same type.");
-    static_assert(
-        std::is_unsigned<TLhs>::value && std::is_integral<TLhs>::value,
-        "Input to BGEMM should be of type unsigned integral.");
+                  const TBitpacked* a, const std::size_t lda,
+                  const TBitpacked* b, const std::size_t ldb, TOut* c,
+                  const std::size_t ldc, const int bitpaddding = 0) {
     static_assert(std::is_signed<TOut>::value,
                   "Output of BGEMM should be of a signed type.");
 
@@ -111,8 +56,7 @@ class ReferenceBGemmFunctor {
         for (l = 0; l < k; ++l) {
           const std::size_t a_index = ((i * a_i_stride) + (l * a_l_stride));
           const std::size_t b_index = ((j * b_j_stride) + (l * b_l_stride));
-          total +=
-              compute_binary_inner_prod<TLhs, TAccum>(a[a_index], b[b_index]);
+          total += compute_binary_inner_prod(a[a_index], b[b_index]);
         }
         const std::size_t c_index = ((i * c_i_stride) + (j * c_j_stride));
         c[c_index] = static_cast<TOut>(total - bitpaddding);

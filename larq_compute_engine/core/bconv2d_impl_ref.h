@@ -30,7 +30,10 @@ namespace compute_engine {
 namespace ce = compute_engine;
 namespace ref {
 
-template <typename TBitpacked, typename AccumScalar, typename DstScalar,
+using ce::core::bitpacking_bitwidth;
+using ce::core::TBitpacked;
+
+template <typename AccumScalar, typename DstScalar,
           ce::core::OutputTransformDetails details>
 inline void BConv2D(const ConvParams& params,
                     const RuntimeShape& packed_input_shape,
@@ -44,10 +47,10 @@ inline void BConv2D(const ConvParams& params,
                     bool bitpack_before_im2col, void* padding_buffer,
                     const int pad_value, void* cpu_backend_context) {
   static_assert(std::is_same<DstScalar, float>::value ||
-                    std::is_same<DstScalar, std::int32_t>::value ||
+                    std::is_same<DstScalar, TBitpacked>::value ||
                     std::is_same<DstScalar, std::int8_t>::value,
                 "The reference implementation supports either float "
-                "output, 32-bit bitpacked output or 8-bit quantized output.");
+                "output, bitpacked output or 8-bit quantized output.");
 
   const int stride_width = params.stride_width;
   const int stride_height = params.stride_height;
@@ -76,7 +79,7 @@ inline void BConv2D(const ConvParams& params,
     for (int out_y = 0; out_y < output_height; ++out_y) {
       for (int out_x = 0; out_x < output_width; ++out_x) {
         // This variable is only used if we are writing bitpacked output.
-        std::uint32_t bitpacked_column = 0;
+        TBitpacked bitpacked_column = 0;
         for (int out_channel = 0; out_channel < output_depth; ++out_channel) {
           const int in_x_origin = (out_x * stride_width) - pad_width;
           const int in_y_origin = (out_y * stride_height) - pad_height;
@@ -98,22 +101,25 @@ inline void BConv2D(const ConvParams& params,
                 TBitpacked filter_value =
                     packed_filter_data[Offset(packed_filter_shape, out_channel,
                                               filter_y, filter_x, in_channel)];
-                accum += ce::core::xor_popcount<TBitpacked, AccumScalar>(
-                    input_value, filter_value);
+                accum += ce::core::xor_popcount(input_value, filter_value);
               }
             }
           }
-          // If the destination scalar is int32, we're writing bitpacked output.
-          if (std::is_same<DstScalar, std::int32_t>::value) {
+          // Are we writing bitpacked output?
+          if (std::is_same<DstScalar, TBitpacked>::value) {
             bool bit = output_transform.Run(accum, out_channel);
-            if (bit) bitpacked_column |= 1ULL << (out_channel % 32);
+            if (bit) {
+              bitpacked_column |= TBitpacked(1)
+                                  << (out_channel % bitpacking_bitwidth);
+            }
 
-            // After we've 'filled' the `bitpacked_column` with 32 values, or
-            // reached the end of the channels, we write it to memory.
-            if ((out_channel + 1) % 32 == 0 ||
+            // After we've 'filled' the `bitpacked_column`, or reached the end
+            // of the channels, we write it to memory.
+            if ((out_channel + 1) % bitpacking_bitwidth == 0 ||
                 (out_channel + 1 == output_depth)) {
               output_data[Offset(output_shape, batch, out_y, out_x,
-                                 out_channel / 32)] = bitpacked_column;
+                                 out_channel / bitpacking_bitwidth)] =
+                  bitpacked_column;
               bitpacked_column = 0;
             }
           }

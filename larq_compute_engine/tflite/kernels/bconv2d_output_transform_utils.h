@@ -1,8 +1,9 @@
 #ifndef LARQ_COMPUTE_ENGINE_TFLITE_KERNELS_BCONV2D_OUTPUT_TRANSFORM_SETUP
 #define LARQ_COMPUTE_ENGINE_TFLITE_KERNELS_BCONV2D_OUTPUT_TRANSFORM_SETUP
 
-#include "bconv2d_params.h"
 #include "larq_compute_engine/core/bconv2d_output_transform.h"
+#include "larq_compute_engine/core/types.h"
+#include "larq_compute_engine/tflite/kernels/bconv2d_params.h"
 #include "tensorflow/lite/kernels/internal/tensor.h"
 #include "tensorflow/lite/kernels/kernel_util.h"
 
@@ -47,11 +48,11 @@ void GetOutputTransform(TfLiteContext* context, TfLiteNode* node,
       GetTensorData<float>(post_activation_bias);
 }
 
-// Fill the OutputTransform values for bitpacked int32 outputs
+// Fill the OutputTransform values for bitpacked outputs
 template <typename AccumScalar>
 void GetOutputTransform(
     TfLiteContext* context, TfLiteNode* node, TfLiteBConv2DParams* params,
-    OutputTransform<AccumScalar, std::int32_t>& output_transform) {
+    OutputTransform<AccumScalar, TBitpacked>& output_transform) {
   const auto* thresholds = GetInput(context, node, 4);
   output_transform.thresholds = GetTensorData<AccumScalar>(thresholds);
 }

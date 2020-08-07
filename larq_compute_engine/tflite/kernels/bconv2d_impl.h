@@ -20,6 +20,8 @@ namespace ce = compute_engine;
 
 namespace tflite {
 
+using ce::core::TBitpacked;
+
 template <class T>
 inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
                    const T* input_data, const RuntimeShape& filter_shape,
@@ -76,8 +78,7 @@ const float* GetPostActivationMultiplier(
   return output_transform.post_activation_multiplier;
 }
 
-template <typename SrcScalar, typename TBitpacked, typename AccumScalar,
-          typename DstScalar>
+template <typename SrcScalar, typename AccumScalar, typename DstScalar>
 inline void BConv2D(
     const ConvParams& params, const RuntimeShape& input_shape,
     const SrcScalar* input_data, TBitpacked* packed_input_data,
@@ -129,13 +130,12 @@ inline void BConv2D(
 
   if (bitpack_before_im2col) {
     // The filter tensor was already bitpacked. Only get the new shape.
-    RuntimeShape packed_filter_shape =
-        ce::core::packed_shape<TBitpacked>(filter_shape);
+    RuntimeShape packed_filter_shape = ce::core::packed_shape(filter_shape);
 
     // Get the im2col data buffer.
     TBitpacked* packed_im2col_data = reinterpret_cast<TBitpacked*>(im2col_data);
 
-    // We're already bitpacked, so im2col `zero_byte` is 0
+    // We're already bitpacked, so im2col `zero_byte` is 0.
     RuntimeShape result_shape;
 
     RuntimeShape packed_input_shape = input_shape;
@@ -195,15 +195,6 @@ inline void BConv2D(
   dst_params.order = cpu_backend_gemm::Order::kColMajor;
   dst_params.rows = n;
   dst_params.cols = m;
-
-  // #if defined(TF_LITE_USE_CBLAS) && defined(__APPLE__)
-
-  // TODO: TF lite, on devices which provide optimized BLAS library,
-  // uses BLAS instead of the RUY GEMM kernels. For benchmarking we
-  // should keep that in mind and also consider developing a
-  // BLAS-inspired binary GEMM
-
-  // #endif  //  defined(TF_LITE_USE_CBLAS) && defined(__APPLE__)
 
   BGemm(lhs_params, lhs_data, rhs_params, rhs_data, dst_params, output_data,
         output_transform, cpu_backend_context);

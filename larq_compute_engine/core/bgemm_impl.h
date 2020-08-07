@@ -20,21 +20,19 @@ namespace compute_engine {
 namespace tflite {
 
 #ifndef TFLITE_WITH_RUY
-template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
-          typename DstScalar>
+template <typename AccumScalar, typename DstScalar>
 struct BGemmImpl : BGemmImplRef<LhsScalar, RhsScalar, AccumScalar, DstScalar> {
 };
 #else
-template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
-          typename DstScalar>
-struct BGemmImpl
-    : BGemmImplUsingRuy<LhsScalar, RhsScalar, AccumScalar, DstScalar> {};
+template <typename AccumScalar, typename DstScalar>
+struct BGemmImpl : BGemmImplUsingRuy<AccumScalar, DstScalar> {};
 #endif
 
-template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
-          typename DstScalar>
-void BGemm(const MatrixParams<LhsScalar>& lhs_params, const LhsScalar* lhs_data,
-           const MatrixParams<RhsScalar>& rhs_params, const RhsScalar* rhs_data,
+template <typename AccumScalar, typename DstScalar>
+void BGemm(const MatrixParams<TBitpacked>& lhs_params,
+           const TBitpacked* lhs_data,
+           const MatrixParams<TBitpacked>& rhs_params,
+           const TBitpacked* rhs_data,
            const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
            const OutputTransform<AccumScalar, DstScalar>& params,
            CpuBackendContext* context) {
@@ -48,9 +46,9 @@ void BGemm(const MatrixParams<LhsScalar>& lhs_params, const LhsScalar* lhs_data,
   //   }
   // }
   ruy::profiler::ScopeLabel label2("BGemm/GeneralBGEMM");
-  BGemmImpl<LhsScalar, RhsScalar, AccumScalar, DstScalar>::Run(
-      lhs_params, lhs_data, rhs_params, rhs_data, dst_params, dst_data, params,
-      context);
+  BGemmImpl<AccumScalar, DstScalar>::Run(lhs_params, lhs_data, rhs_params,
+                                         rhs_data, dst_params, dst_data, params,
+                                         context);
 }
 
 }  // namespace tflite

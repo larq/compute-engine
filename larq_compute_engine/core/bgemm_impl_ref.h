@@ -15,34 +15,28 @@ namespace ce = compute_engine;
 
 namespace tflite {
 
-template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
-          typename DstScalar, QuantizationFlavor quantization_flavor>
+using ce::core::TBitpacked;
+
+template <typename AccumScalar, typename DstScalar,
+          QuantizationFlavor quantization_flavor>
 struct BGemmImplRef {
   static void Run(
-      const MatrixParams<LhsScalar>& lhs_params, const LhsScalar* lhs_data,
-      const MatrixParams<RhsScalar>& rhs_params, const RhsScalar* rhs_data,
+      const MatrixParams<TBitpacked>& lhs_params, const TBitpacked* lhs_data,
+      const MatrixParams<TBitpacked>& rhs_params, const TBitpacked* rhs_data,
       const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
       const GemmParams<AccumScalar, DstScalar, quantization_flavor>& params,
       CpuBackendContext* context) {
     ruy::profiler::ScopeLabel label("BGemmRef");
 
-    // these checkes will be also done in BGEMM functor but we do it here as
-    // well to be on the safe side.
-    static_assert(std::is_same<LhsScalar, RhsScalar>::value,
-                  "Inputs to BGEMM should have the same type.");
-    static_assert(std::is_unsigned<LhsScalar>::value &&
-                      std::is_integral<LhsScalar>::value,
-                  "Input to BGEMM should be of type unsigned integral.");
     static_assert(std::is_signed<DstScalar>::value,
                   "Output of BGEMM should be of a signed type.");
 
-    using TBitpacked = LhsScalar;
     // This code assumes specific memory layout
     // assert(rhs_params.order == cpu_backend_gemm::Order::kColMajor);
     using TBGemmFunctor =
-        ce::core::ReferenceBGemmFunctor<LhsScalar, ce::core::Layout::RowMajor,
-                                        RhsScalar, ce::core::Layout::ColMajor,
-                                        DstScalar, ce::core::Layout::ColMajor>;
+        ce::core::ReferenceBGemmFunctor<ce::core::Layout::RowMajor,
+                                        ce::core::Layout::ColMajor, DstScalar,
+                                        ce::core::Layout::ColMajor>;
 
     // LHS (n, k) -> RowMajor -> (n, k)
     // RHS (m, k) -> ColMajor -> (k, m)

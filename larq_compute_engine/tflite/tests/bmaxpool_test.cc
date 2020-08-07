@@ -2,6 +2,7 @@
 
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
 #include "larq_compute_engine/core/packbits_utils.h"
+#include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/tflite/tests/utils.h"
 #include "tensorflow/lite/kernels/test_util.h"
 
@@ -50,9 +51,6 @@ class PoolingOpModel : public BasePoolingOpModel {
   std::vector<T> GetOutput() { return ExtractVector<T>(output_); }
   std::vector<int> GetOutputShape() { return GetTensorShape(output_); }
 };
-
-// We cannot use `uint32` here because the tflite tenor type requires int32
-using TBitpacked = std::int32_t;
 
 typedef TfLiteRegistration* (*register_function)(void);
 
@@ -157,7 +155,7 @@ class BMaxPoolOpTest : public ::testing::TestWithParam<TestParamTuple> {};
 TEST_P(BMaxPoolOpTest, FloatAndBinaryInput) {
   TestParam params(GetParam());
 
-  int packed_input_depth = GetPackedSize<TBitpacked>(params.input_depth);
+  int packed_input_depth = GetPackedSize(params.input_depth);
 
   LceTensor<float> input_tensor({params.input_batch_count, params.input_height,
                                  params.input_width, params.input_depth});
@@ -212,7 +210,7 @@ TEST_P(BMaxPoolOpTest, FloatAndBinaryInput) {
   // Bitpack the tflite output
   RuntimeShape out_shape = GetShape(m_builtin.GetOutputShape());
   std::vector<TBitpacked> builtin_output_data_bp(
-      GetPackedTensorSize<TBitpacked>(out_shape));
+      GetPackedTensorSize(out_shape));
   RuntimeShape packed_out_shape;
   packbits_tensor(out_shape, m_builtin.GetOutput().data(), 0, packed_out_shape,
                   builtin_output_data_bp.data());
@@ -229,7 +227,7 @@ TEST_P(BMaxPoolOpTest, FloatAndBinaryInput) {
 TEST_P(BMaxPoolOpTest, Int8Input) {
   TestParam params(GetParam());
 
-  int packed_input_depth = GetPackedSize<TBitpacked>(params.input_depth);
+  int packed_input_depth = GetPackedSize(params.input_depth);
 
   LceTensor<std::int8_t> input_tensor({params.input_batch_count,
                                        params.input_height, params.input_width,
@@ -279,7 +277,7 @@ TEST_P(BMaxPoolOpTest, Int8Input) {
   // Bitpack the tflite output
   RuntimeShape out_shape = GetShape(m_builtin.GetOutputShape());
   std::vector<TBitpacked> builtin_output_data_bp(
-      GetPackedTensorSize<TBitpacked>(out_shape));
+      GetPackedTensorSize(out_shape));
   RuntimeShape packed_out_shape;
   packbits_tensor(out_shape, m_builtin.GetOutput().data(),
                   output_tensor.zero_point, packed_out_shape,

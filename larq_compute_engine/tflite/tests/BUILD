@@ -9,6 +9,7 @@ cc_library(
         "utils.h",
     ],
     deps = [
+        "//larq_compute_engine/core:types",
         "@org_tensorflow//tensorflow/lite/kernels/internal:types",
     ],
 )
