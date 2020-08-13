@@ -1,10 +1,10 @@
 #ifndef COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_TRMUL_PARAMS_H_
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_TRMUL_PARAMS_H_
 
-#include "bgemm_kernels_ruy.h"
+#include "larq_compute_engine/core/bgemm_kernels_ruy.h"
+#include "larq_compute_engine/core/ruy_pack.h"
 #include "ruy/dispatch.h"
 #include "ruy/mul_params.h"
-#include "ruy/pack_common.h"
 #include "ruy/path.h"
 #include "ruy/trmul_params.h"
 
@@ -35,21 +35,20 @@ void PopulateBinaryTrMulParams(ruy::TrMulParams* params) {
     return;
   }
 
-  using PackedTBitpacked = ruy::PackedType<ThePath, TBitpacked>;
   using Kernel = BgemmKernel<ThePath, DstScalar, MulParamsType>;
   using LhsKernelLayout = typename Kernel::LhsLayout;
   using RhsKernelLayout = typename Kernel::RhsLayout;
 
   params->path = ThePath;
 
-  CreatePackedMatrix<TBitpacked, PackedTBitpacked>(
+  CreatePackedMatrix<TBitpacked, TBitpacked>(
       Side::kLhs, ToKernelLayout<LhsKernelLayout>(), params);
-  CreatePackedMatrix<TBitpacked, PackedTBitpacked>(
+  CreatePackedMatrix<TBitpacked, TBitpacked>(
       Side::kRhs, ToKernelLayout<RhsKernelLayout>(), params);
   params->run_pack[Side::kLhs] =
-      &RunPack<ThePath, LhsKernelLayout, TBitpacked, PackedTBitpacked>;
+      &compute_engine::tflite::RunPack<ThePath, LhsKernelLayout>;
   params->run_pack[Side::kRhs] =
-      &RunPack<ThePath, RhsKernelLayout, TBitpacked, PackedTBitpacked>;
+      &compute_engine::tflite::RunPack<ThePath, RhsKernelLayout>;
   params->run_kernel = &RunBgemmKernel<ThePath, DstScalar, MulParamsType>;
 }
 

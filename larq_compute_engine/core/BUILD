@@ -118,6 +118,7 @@ cc_library(
     hdrs = [
         "bgemm_impl_ruy.h",
         "bgemm_trmul_params.h",
+        "ruy_pack.h",
     ],
     deps = [
         ":bgemm_kernels_ruy",
