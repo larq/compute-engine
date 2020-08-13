@@ -20,13 +20,13 @@ cc_library(
 )
 
 cc_library(
-    name = "packbits",
-    hdrs = ["packbits.h"] + select({
+    name = "bitpack",
+    hdrs = ["bitpack.h"] + select({
         "//larq_compute_engine:aarch64_build": [
-            "packbits_aarch64.h",
+            "bitpack_aarch64.h",
         ],
         "@org_tensorflow//tensorflow:android_arm64": [
-            "packbits_aarch64.h",
+            "bitpack_aarch64.h",
         ],
         "//conditions:default": [],
     }),
@@ -37,10 +37,10 @@ cc_library(
 )
 
 cc_library(
-    name = "packbits_utils",
-    hdrs = ["packbits_utils.h"],
+    name = "bitpack_utils",
+    hdrs = ["bitpack_utils.h"],
     deps = [
-        ":packbits",
+        ":bitpack",
         "@ruy//ruy/profiler:instrumentation",
     ],
 )
@@ -107,7 +107,7 @@ cc_library(
     ],
     deps = [
         ":bgemm_kernels_arm",
-        ":packbits",
+        ":bitpack",
         "//larq_compute_engine/core:bgemm_functor",
         "@ruy//ruy/profiler:instrumentation",
     ],

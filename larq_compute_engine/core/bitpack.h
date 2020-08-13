@@ -1,5 +1,5 @@
-#ifndef COMPUTE_ENGINE_KERNELS_PACKBITS_H_
-#define COMPUTE_ENGINE_KERNELS_PACKBITS_H_
+#ifndef COMPUTE_ENGINE_KERNELS_BITPACK_H_
+#define COMPUTE_ENGINE_KERNELS_BITPACK_H_
 
 #include <array>
 #include <cstdint>
@@ -8,7 +8,7 @@
 
 #include "larq_compute_engine/core/types.h"
 #ifdef __aarch64__
-#include "larq_compute_engine/core/packbits_aarch64.h"
+#include "larq_compute_engine/core/bitpack_aarch64.h"
 #endif
 
 // From @flatbuffers, used for the FLATBUFFERS_LITTLEENDIAN macro
@@ -133,9 +133,9 @@ inline void pack_bitfield(const TIn* in, TBitpacked* out,
 }
 
 template <class TIn>
-inline void packbits_array(const TIn* input_array, const std::size_t n,
-                           TBitpacked* bitpacked_array,
-                           const std::int32_t zero_point) {
+inline void bitpack_array(const TIn* input_array, const std::size_t n,
+                          TBitpacked* bitpacked_array,
+                          const std::int32_t zero_point) {
   int num_packed_elems = n / bitpacking_bitwidth;
   int elements_left = n - bitpacking_bitwidth * num_packed_elems;
 
@@ -146,8 +146,8 @@ inline void packbits_array(const TIn* input_array, const std::size_t n,
   if (FLATBUFFERS_LITTLEENDIAN && std::is_same<TIn, float>::value &&
       zero_point == 0) {
     const int num_4x32_blocks = num_packed_elems / 4;
-    packbits_aarch64_4x32(reinterpret_cast<const float*>(in), num_4x32_blocks,
-                          out);
+    bitpack_aarch64_4x32(reinterpret_cast<const float*>(in), num_4x32_blocks,
+                         out);
     in += bitpacking_bitwidth * 4 * num_4x32_blocks;
     out += 4 * num_4x32_blocks;
     num_packed_elems %= 4;
@@ -173,14 +173,13 @@ inline void packbits_array(const TIn* input_array, const std::size_t n,
 
 // Bitpacks each row of a row-major matrix
 template <class TIn>
-inline void packbits_matrix(const TIn* input, const std::size_t input_num_rows,
-                            const std::size_t input_num_cols,
-                            TBitpacked* output,
-                            const std::int32_t zero_point = 0) {
+inline void bitpack_matrix(const TIn* input, const std::size_t input_num_rows,
+                           const std::size_t input_num_cols, TBitpacked* output,
+                           const std::int32_t zero_point = 0) {
   if (input_num_cols % bitpacking_bitwidth == 0) {
     // If each row can be bitpacked without any padding, then we can treat
     // the matrix as one flat array and bitpack it all in one go.
-    packbits_array(input, input_num_cols * input_num_rows, output, zero_point);
+    bitpack_array(input, input_num_cols * input_num_rows, output, zero_point);
   } else {
     // Calculate the size of the bitpacked rows
     const std::size_t output_num_cols = GetPackedSize(input_num_cols);
@@ -188,7 +187,7 @@ inline void packbits_matrix(const TIn* input, const std::size_t input_num_rows,
     // Iterate through each row of the input matrix and bitpack the row into the
     // corresponding memory location of the output matrix
     for (size_t row_index = 0; row_index < input_num_rows; ++row_index) {
-      packbits_array(input, input_num_cols, output, zero_point);
+      bitpack_array(input, input_num_cols, output, zero_point);
       input += input_num_cols;
       output += output_num_cols;
     }
@@ -230,4 +229,4 @@ inline void unpack_matrix(const TBitpacked* input_data,
 }  // namespace core
 }  // namespace compute_engine
 
-#endif  // COMPUTE_ENGINE_KERNELS_PACKBITS_H_
+#endif  // COMPUTE_ENGINE_KERNELS_BITPACK_H_

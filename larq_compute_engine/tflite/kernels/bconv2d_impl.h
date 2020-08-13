@@ -2,8 +2,8 @@
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BCONV_2D_IMPL_H_
 
 #include "larq_compute_engine/core/bgemm_impl.h"
-#include "larq_compute_engine/core/packbits.h"
-#include "larq_compute_engine/core/packbits_utils.h"
+#include "larq_compute_engine/core/bitpack.h"
+#include "larq_compute_engine/core/bitpack_utils.h"
 #include "larq_compute_engine/core/padding_functor.h"
 #include "ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
@@ -146,8 +146,8 @@ inline void BConv2D(
       // The input tensor has this shape which we bitpack along the channels
       // dimension [batch, input height, input width, channels].
       ruy::profiler::ScopeLabel label("Bitpack activations (before im2col)");
-      ce::core::packbits_tensor(input_shape, input_data, params.input_offset,
-                                packed_input_shape, packed_input_data);
+      ce::core::bitpack_tensor(input_shape, input_data, params.input_offset,
+                               packed_input_shape, packed_input_data);
       im2col_input_data = packed_input_data;
     }
     im2col<TBitpacked>(params, packed_input_shape, im2col_input_data,
@@ -169,8 +169,8 @@ inline void BConv2D(
     RuntimeShape packed_input_shape;
     {
       ruy::profiler::ScopeLabel label("Bitpack activations (after im2col)");
-      ce::core::packbits_tensor(result_shape, result_data, params.input_offset,
-                                packed_input_shape, packed_input_data);
+      ce::core::bitpack_tensor(result_shape, result_data, params.input_offset,
+                               packed_input_shape, packed_input_data);
     }
     rhs_data = packed_input_data;
 

@@ -1,5 +1,5 @@
-#ifndef COMPUTE_ENGINE_AARCH64_PACKBITS_H
-#define COMPUTE_ENGINE_AARCH64_PACKBITS_H
+#ifndef COMPUTE_ENGINE_AARCH64_BITPACK_H
+#define COMPUTE_ENGINE_AARCH64_BITPACK_H
 
 #ifndef __aarch64__
 #pragma GCC error "ERROR: This file should only be compiled for Aarch64."
@@ -13,8 +13,8 @@ namespace compute_engine {
 namespace core {
 
 // Bitpack an array of `4 * 32 * num_blocks` floats.
-inline void packbits_aarch64_4x32(const float* input, std::size_t num_blocks,
-                                  TBitpacked* output) {
+inline void bitpack_aarch64_4x32(const float* input, std::size_t num_blocks,
+                                 TBitpacked* output) {
   static_assert(sizeof(TBitpacked) == 4,
                 "Correctness of this function relies on the size of TBitpacked "
                 "being 4 bytes.");

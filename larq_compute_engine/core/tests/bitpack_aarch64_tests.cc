@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <vector>
 
-#include "larq_compute_engine/core/packbits.h"
-#include "larq_compute_engine/core/packbits_aarch64.h"
+#include "larq_compute_engine/core/bitpack.h"
+#include "larq_compute_engine/core/bitpack_aarch64.h"
 #include "larq_compute_engine/core/types.h"
 
 namespace compute_engine {
@@ -28,7 +28,7 @@ void test_bitpacking(int num_4x32_blocks) {
         input[j] = 1.2345f;
     }
     // Run bitpacking
-    packbits_aarch64_4x32(input, num_blocks, output);
+    bitpack_aarch64_4x32(input, num_blocks, output);
     // See where in the output the bit has popped up
     int bit_index = -1;
     int bits_found = 0;
