@@ -13,9 +13,9 @@ cc_test(
 )
 
 cc_test(
-    name = "packbits_tests",
+    name = "bitpack_tests",
     size = "small",
-    srcs = ["packbits_tests.cc"],
+    srcs = ["bitpack_tests.cc"],
     linkopts = select({
         "@org_tensorflow//tensorflow:windows": [],
         "//conditions:default": [
@@ -24,7 +24,7 @@ cc_test(
         ],
     }),
     deps = [
-        "//larq_compute_engine/core:packbits",
+        "//larq_compute_engine/core:bitpack",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
@@ -36,16 +36,16 @@ test_suite(
     name = "cc_tests",
     tests = [
         "bgemm_tests",
-        "packbits_tests",
+        "bitpack_tests",
     ],
 )
 
 cc_test(
-    name = "packbits_aarch64_tests",
+    name = "bitpack_aarch64_tests",
     size = "small",
-    srcs = ["packbits_aarch64_tests.cc"],
+    srcs = ["bitpack_aarch64_tests.cc"],
     deps = [
-        "//larq_compute_engine/core:packbits",
+        "//larq_compute_engine/core:bitpack",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -53,7 +53,7 @@ cc_test(
 test_suite(
     name = "cc_tests_aarch64",
     tests = [
-        ":packbits_aarch64_tests",
-        ":packbits_tests",
+        ":bitpack_aarch64_tests",
+        ":bitpack_tests",
     ],
 )

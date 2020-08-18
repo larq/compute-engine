@@ -6,7 +6,7 @@
 #include "bconv2d_params.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
 #include "larq_compute_engine/core/bconv2d_impl_ref.h"
-#include "larq_compute_engine/core/packbits.h"
+#include "larq_compute_engine/core/bitpack.h"
 #include "larq_compute_engine/core/padding_functor.h"
 #include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
@@ -600,8 +600,8 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
 
     std::vector<TBitpacked> filter_data_bp(
         ce::core::GetPackedMatrixSize(rows, cols));
-    ce::core::packbits_matrix(filter_unpacked, rows, cols,
-                              filter_data_bp.data());
+    ce::core::bitpack_matrix(filter_unpacked, rows, cols,
+                             filter_data_bp.data());
 
     std::size_t num_bytes = filter_data_bp.size() * sizeof(TBitpacked);
 
@@ -694,9 +694,9 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
     TfLiteTensor* packed_input =
         GetTemporary(context, node, params->packed_input_index);
     ruy::profiler::ScopeLabel label("Bitpack activations (EvalRef)");
-    ce::core::packbits_tensor(input_shape, input_data, input->params.zero_point,
-                              packed_input_shape,
-                              GetTensorData<TBitpacked>(packed_input));
+    ce::core::bitpack_tensor(input_shape, input_data, input->params.zero_point,
+                             packed_input_shape,
+                             GetTensorData<TBitpacked>(packed_input));
     packed_input_data = GetTensorData<TBitpacked>(packed_input);
   }
 

@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "absl/strings/str_cat.h"
-#include "larq_compute_engine/core/packbits.h"
+#include "larq_compute_engine/core/bitpack.h"
 
 namespace compute_engine {
 namespace testing {
@@ -41,8 +41,8 @@ void runBitpackingTest(const int num_rows, const int num_cols,
   });
 
   // Perform the bitpacking.
-  ce::core::packbits_matrix(input_matrix.data(), num_rows, num_cols,
-                            output_matrix.data(), zero_point);
+  ce::core::bitpack_matrix(input_matrix.data(), num_rows, num_cols,
+                           output_matrix.data(), zero_point);
 
   // Verify correctness of the results.
   for (auto i = 0; i < num_rows; i++) {

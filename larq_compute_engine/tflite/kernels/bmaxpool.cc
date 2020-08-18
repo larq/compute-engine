@@ -2,7 +2,7 @@
 #include "larq_compute_engine/core/bmaxpool.h"
 
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
-#include "larq_compute_engine/core/packbits_utils.h"
+#include "larq_compute_engine/core/bitpack_utils.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/c/c_api_internal.h"
 #include "tensorflow/lite/kernels/internal/tensor.h"
@@ -129,16 +129,16 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   // Optimized
   if (input->type == kTfLiteFloat32) {
     TfLiteTensor* packed_input = GetTemporary(context, node, 0);
-    ce::core::packbits_tensor(
-        GetTensorShape(input), GetTensorData<float>(input), 0,
-        packed_input_shape, GetTensorData<TBitpacked>(packed_input));
+    ce::core::bitpack_tensor(GetTensorShape(input), GetTensorData<float>(input),
+                             0, packed_input_shape,
+                             GetTensorData<TBitpacked>(packed_input));
     packed_input_data = GetTensorData<TBitpacked>(packed_input);
   } else if (input->type == kTfLiteInt8) {
     TfLiteTensor* packed_input = GetTemporary(context, node, 0);
-    ce::core::packbits_tensor(GetTensorShape(input),
-                              GetTensorData<std::int8_t>(input),
-                              input->params.zero_point, packed_input_shape,
-                              GetTensorData<TBitpacked>(packed_input));
+    ce::core::bitpack_tensor(GetTensorShape(input),
+                             GetTensorData<std::int8_t>(input),
+                             input->params.zero_point, packed_input_shape,
+                             GetTensorData<TBitpacked>(packed_input));
     packed_input_data = GetTensorData<TBitpacked>(packed_input);
   } else {
     TF_LITE_ENSURE_EQ(context, input->type, kTfLiteInt32);

@@ -2,7 +2,7 @@
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_RUY_H_
 
 #include "larq_compute_engine/core/bgemm_functor.h"
-#include "larq_compute_engine/core/packbits_utils.h"
+#include "larq_compute_engine/core/bitpack_utils.h"
 #include "ruy/platform.h"
 #include "ruy/profiler/instrumentation.h"
 #include "ruy/ruy.h"

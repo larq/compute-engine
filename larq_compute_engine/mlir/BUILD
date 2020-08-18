@@ -195,7 +195,7 @@ cc_library(
     ],
     deps = [
         ":larq_compute_engine",
-        "//larq_compute_engine/core:packbits",
+        "//larq_compute_engine/core:bitpack",
         "//larq_compute_engine/core:types",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
     ],

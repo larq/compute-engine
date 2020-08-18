@@ -27,8 +27,8 @@
 #include "absl/memory/memory.h"
 #include "absl/strings/substitute.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
-#include "larq_compute_engine/core/packbits.h"
-#include "larq_compute_engine/core/packbits_utils.h"
+#include "larq_compute_engine/core/bitpack.h"
+#include "larq_compute_engine/core/bitpack_utils.h"
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/tflite/tests/bconv2d_op_model.h"
 #include "larq_compute_engine/tflite/tests/utils.h"
@@ -384,8 +384,8 @@ void set_lce_op_input(const RuntimeShape& input_shape,
                       BConv2DOpModel<TBitpacked, PostType, TOutput>& m_lce) {
   std::vector<TBitpacked> input_data_bp(core::GetPackedTensorSize(input_shape));
   RuntimeShape output_shape;
-  core::packbits_tensor(input_shape, input_data.data(), zero_point,
-                        output_shape, input_data_bp.data());
+  core::bitpack_tensor(input_shape, input_data.data(), zero_point, output_shape,
+                       input_data_bp.data());
   m_lce.SetInput(input_data_bp);
 }
 
@@ -401,8 +401,8 @@ void test_lce_op_output(const std::vector<TBitpacked>& lce_output_data,
   std::vector<TBitpacked> builtin_output_data_bp(
       core::GetPackedTensorSize(out_shape));
   RuntimeShape packed_shape;
-  core::packbits_tensor(out_shape, builtin_output_data.data(), zero_point,
-                        packed_shape, builtin_output_data_bp.data());
+  core::bitpack_tensor(out_shape, builtin_output_data.data(), zero_point,
+                       packed_shape, builtin_output_data_bp.data());
 
   // We need the outputs here to be bit-exact, so don't allow for floating
   // point imprecision.
@@ -590,9 +590,9 @@ void runTest(const TestParam& param) {
 
   // Bitpack filters
   using namespace compute_engine::core;
-  packbits_matrix(filters_data.data(),
-                  filter_count * filter_height * filter_width, input_depth,
-                  packed_filters_data.data());
+  bitpack_matrix(filters_data.data(),
+                 filter_count * filter_height * filter_width, input_depth,
+                 packed_filters_data.data());
 
   int output_height, output_width;
   TfLitePaddingValues padding_values = ComputePaddingHeightWidth(

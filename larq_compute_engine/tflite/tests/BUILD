@@ -33,8 +33,8 @@ cc_test(
     deps = [
         ":bconv2d_op_model",
         ":utils",
-        "//larq_compute_engine/core:packbits",
-        "//larq_compute_engine/core:packbits_utils",
+        "//larq_compute_engine/core:bitpack",
+        "//larq_compute_engine/core:bitpack_utils",
         "@com_google_googletest//:gtest",
         "@flatbuffers",
         "@org_tensorflow//tensorflow/lite:framework",
@@ -64,7 +64,7 @@ cc_test(
     srcs = ["bmaxpool_test.cc"],
     deps = [
         ":utils",
-        "//larq_compute_engine/core:packbits_utils",
+        "//larq_compute_engine/core:bitpack_utils",
         "//larq_compute_engine/tflite/kernels:lce_ops",
         "@com_google_googletest//:gtest",
         "@flatbuffers",
