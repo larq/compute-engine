@@ -51,6 +51,36 @@ jobs:
         with:
           name: Benchmark-Binaries
           path: benchmark-binaries
+      - name: Upload Release Asset AArch64
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+            upload_url: ${{ github.event.release.upload_url }}
+            asset_path: benchmark-binaries/lce_benchmark_model_aarch64
+            asset_name: lce_benchmark_model_aarch64
+            asset_content_type: application/octet-stream
+      - name: Upload Release Asset AArch32
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+            upload_url: ${{ github.event.release.upload_url }}
+            asset_path: benchmark-binaries/lce_benchmark_model_aarch32
+            asset_name: lce_benchmark_model_aarch32
+            asset_content_type: application/octet-stream
+      - name: Upload Release Asset Android
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+            upload_url: ${{ github.event.release.upload_url }}
+            asset_path: benchmark-binaries/lce_benchmark_model_android_arm64
+            asset_name: lce_benchmark_model_android_arm64
+            asset_content_type: application/octet-stream
 
   android-aar:
     runs-on: ubuntu-latest
