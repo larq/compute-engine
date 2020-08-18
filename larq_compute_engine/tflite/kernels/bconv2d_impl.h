@@ -185,11 +185,16 @@ inline void BConv2D(
   lhs_params.order = cpu_backend_gemm::Order::kRowMajor;
   lhs_params.rows = n;
   lhs_params.cols = k;
+  // The LHS is the weights, which are static, so caching is prefered.
+  lhs_params.cache_policy = cpu_backend_gemm::CachePolicy::kAlwaysCache;
 
   cpu_backend_gemm::MatrixParams<TBitpacked> rhs_params;
   rhs_params.order = cpu_backend_gemm::Order::kColMajor;
   rhs_params.rows = k;
   rhs_params.cols = m;
+  // The RHS is the input activations, which change every inference, so there's
+  // no advantage from caching.
+  rhs_params.cache_policy = cpu_backend_gemm::CachePolicy::kNeverCache;
 
   cpu_backend_gemm::MatrixParams<DstScalar> dst_params;
   dst_params.order = cpu_backend_gemm::Order::kColMajor;
