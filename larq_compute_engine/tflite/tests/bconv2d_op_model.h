@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
+#include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/tflite/tests/utils.h"
 #include "tensorflow/lite/kernels/test_util.h"
 
@@ -12,15 +13,11 @@ using namespace tflite;
 namespace compute_engine {
 namespace tflite {
 
-TfLiteRegistration* Register_BCONV_2D_64_OPT();
+TfLiteRegistration* Register_BCONV_2D_OPT();
 
 namespace testing {
 
-// Use the same bitwidth as the MLIR converter
-// Since tflite does not have an unsigned 32-bit int type
-// we have to use the signed type here or it will throw errors.
-using PackedFilterType = std::int32_t;
-constexpr std::size_t packed_bitwidth = 32;
+using compute_engine::core::TBitpacked;
 
 typedef TfLiteRegistration* (*register_function)(void);
 
@@ -79,7 +76,7 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
  public:
   using BaseBConv2DOpModel::BaseBConv2DOpModel;
 
-  void SetFilter(const std::vector<PackedFilterType>& f) {
+  void SetFilter(const std::vector<TBitpacked>& f) {
     PopulateTensor(filter_, f);
   }
 

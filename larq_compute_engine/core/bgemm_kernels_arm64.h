@@ -1,17 +1,12 @@
-/**
- * All optimised Arm64 kernels assume that the input datatype is uint64, i.e.
- * that the LHS and RHS have been 64-bit bitpacked. However, they can still be
- * used with uint32 (32-bit bitpacked) input data as long as the parameters
- * `depth`, `lhs_stride`, and `rhs_stride` are adjusted appropriately. We
- * delegate that responsibility to the `MakeBinaryKernelParams` function.
- */
-
 #include <cstdint>
 
-#include "bgemm_kernels_common.h"
+#include "larq_compute_engine/core/bgemm_kernels_common.h"
+#include "larq_compute_engine/core/types.h"
 #include "ruy/profiler/instrumentation.h"
 
 using namespace ruy;
+
+using compute_engine::core::TBitpacked;
 
 #if RUY_PLATFORM_NEON_64 && RUY_OPT(ASM)
 
@@ -39,7 +34,7 @@ using namespace ruy;
   "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"              \
   "eor v30.16b, " #Vr".16b, " #Vl3".16b\n"              \
   "eor v31.16b, " #Vr".16b, " #Vl4".16b\n"              \
-  "ld1 {"#Vr".2d}, [%[rhs_ptr]], #16\n"                 \
+  "ld1 {"#Vr".4s}, [%[rhs_ptr]], #16\n"                 \
   "cnt v28.16b, v28.16b\n"                              \
   "cnt v29.16b, v29.16b\n"                              \
   "cnt v30.16b, v30.16b\n"                              \
@@ -56,20 +51,20 @@ using namespace ruy;
   "eor v29.16b, " #Vr".16b, " #Vl2".16b\n"              \
   "eor v30.16b, " #Vr".16b, " #Vl3".16b\n"              \
   "eor v31.16b, " #Vr".16b, " #Vl4".16b\n"              \
-  "ld1 {"#Vr".2d}, [%[rhs_ptr]], #16\n"                 \
+  "ld1 {"#Vr".4s}, [%[rhs_ptr]], #16\n"                 \
   "cnt v28.16b, v28.16b\n"                              \
   "cnt v29.16b, v29.16b\n"                              \
-  "ld1 {"#Vl1".2d}, [%[lhs_ptr]], #16\n"                \
+  "ld1 {"#Vl1".4s}, [%[lhs_ptr]], #16\n"                \
   "cnt v30.16b, v30.16b\n"                              \
   "cnt v31.16b, v31.16b\n"                              \
-  "ld1 {"#Vl2".2d}, [%[lhs_ptr]], #16\n"                \
+  "ld1 {"#Vl2".4s}, [%[lhs_ptr]], #16\n"                \
   "addp v28.16b, v28.16b, v29.16b\n"                    \
-  "ld1 {"#Vl3".2d}, [%[lhs_ptr]], #16\n"                \
+  "ld1 {"#Vl3".4s}, [%[lhs_ptr]], #16\n"                \
   "addp v30.16b, v30.16b, v31.16b\n"                    \
   "addp v28.16b, v28.16b, v30.16b\n"                    \
   "uaddlp v28.8h, v28.16b\n"                            \
   "uadalp " #Vd".4s, v28.8h\n"                          \
-  "ld1 {"#Vl4".2d}, [%[lhs_ptr]], #16\n"
+  "ld1 {"#Vl4".4s}, [%[lhs_ptr]], #16\n"
 
 // clang-format on
 
@@ -123,18 +118,19 @@ void CheckOffsetsInKernelParams(const Params&) {
 // During accumulation, v0 -- v3 are used to load data from LHS and
 // v4 -- v7 from RHS:
 //
-//                                    int64 RHS 2x4 block
-//                          /--------------------------------------\
-//                          |v4.d[0]         ...          v7.d[0]  |
-//                          |v4.d[1]         ...          v7.d[1]  |
-//                          \--------------------------------------/
-//     int64 LHS 4x2 block
-//      /----------------\  /--------------------------------------\
-//      |v0.d[0] v0.d[1] |  |v24.s[0]        ...         v27.s[0]  |
-//      |v1.d[0] v1.d[1] |  |v24.s[1]        ...         v27.s[1]  |
-//      |v2.d[0] v2.d[1] |  |v24.s[2]        ...         v27.s[2]  |
-//      |v3.d[0] v3.d[1] |  |v24.s[3]        ...         v27.s[3]  |
-//      \----------------/  \--------------------------------------/
+//                                      int32 RHS 4x4 block
+//                            /--------------------------------------\
+//                            | v4.s[0]         ...          v7.s[0] |
+//                            |   ...           ...            ...   |
+//                            | v4.s[3]         ...          v7.s[3] |
+//                            \--------------------------------------/
+//     int32 LHS 4x2 block
+//   /---------------------\  /--------------------------------------\
+//   | v0.s[0] ... v0.s[3] |  | v24.s[0]        ...         v27.s[0] |
+//   | v1.s[0] ... v1.s[3] |  | v24.s[1]        ...         v27.s[1] |
+//   | v2.s[0] ... v2.s[3] |  | v24.s[2]        ...         v27.s[2] |
+//   | v3.s[0] ... v3.s[3] |  | v24.s[3]        ...         v27.s[3] |
+//   \---------------------/  \--------------------------------------/
 //                                  int32 accumulators 4x4 block
 //
 // In the MAX_STREAMING part of the kernel, this elementary step
@@ -142,16 +138,19 @@ void CheckOffsetsInKernelParams(const Params&) {
 
 // clang-format on
 
-void BinaryKernelNeonOutOfOrder4x4(
-    const BinaryKernelParams<4, 4, std::uint64_t>& params) {
+void BinaryKernelNeonOutOfOrder4x4(const BinaryKernelParams<4, 4>& params) {
   CheckOffsetsInKernelParams(params);
   ruy::profiler::ScopeLabel label(
-      "Binary Kernel (4x4) 64BP (kNeon, optimized for out-of-order cores)");
+      "Binary Kernel (4x4) (kNeon, optimized for out-of-order cores)");
 
-  std::uint64_t* lhs_col_ptr = const_cast<std::uint64_t*>(params.lhs_base_ptr);
-  std::uint64_t* rhs_col_ptr = const_cast<std::uint64_t*>(params.rhs_base_ptr);
-  std::uint64_t* lhs_ptr = lhs_col_ptr;
-  std::uint64_t* rhs_ptr = rhs_col_ptr;
+  static_assert(sizeof(TBitpacked) == 4,
+                "Correctness of this function relies on the size of TBitpacked "
+                "being 4 bytes.");
+
+  TBitpacked* lhs_col_ptr = const_cast<TBitpacked*>(params.lhs_base_ptr);
+  TBitpacked* rhs_col_ptr = const_cast<TBitpacked*>(params.rhs_base_ptr);
+  TBitpacked* lhs_ptr = lhs_col_ptr;
+  TBitpacked* rhs_ptr = rhs_col_ptr;
 
   float* dst_col_ptr = params.dst_base_ptr;
   float* dst_ptr = dst_col_ptr;
@@ -178,14 +177,14 @@ void BinaryKernelNeonOutOfOrder4x4(
       RUY_MAKE_ZERO(v27)
 
       // Load the first 64 bytes of LHS and RHS data.
-      "ld1 {v0.2d, v1.2d, v2.2d, v3.2d}, [%[lhs_ptr]], #64\n"
-      "ld1 {v4.2d, v5.2d, v6.2d, v7.2d}, [%[rhs_ptr]], #64\n"
+      "ld1 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[lhs_ptr]], #64\n"
+      "ld1 {v4.4s, v5.4s, v6.4s, v7.4s}, [%[rhs_ptr]], #64\n"
 
       // w1 is the number of levels of depth that we have already loaded
       // LHS and RHS data for.
-      // The RHS is stored in col-wise. Therefore, for 64-bit elements,
-      // one register can hold 2 levels of depth.
-      "mov w1, #2\n"
+      // The RHS is stored in col-wise. Therefore, for 32-bit elements,
+      // one register can hold 4 levels of depth.
+      "mov w1, #4\n"
 
       // Main loop of the whole GEMM, over rows and columns of the
       // destination matrix.
@@ -199,15 +198,15 @@ void BinaryKernelNeonOutOfOrder4x4(
       "and w2, w12, #-4\n"
 
       // Load the next 64 bytes of LHS and RHS data.
-      "ld1 {v8.2d, v9.2d, v10.2d, v11.2d}, [%[lhs_ptr]], #64\n"
-      "ld1 {v12.2d, v13.2d, v14.2d, v15.2d}, [%[rhs_ptr]], #64\n"
+      "ld1 {v8.4s, v9.4s, v10.4s, v11.4s}, [%[lhs_ptr]], #64\n"
+      "ld1 {v12.4s, v13.4s, v14.4s, v15.4s}, [%[rhs_ptr]], #64\n"
 
-      "mov w1, #4\n"
+      "mov w1, #8\n"
 
       "80:\n"
 
       // loading v4
-      "ld1 {v4.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v4.4s}, [%[rhs_ptr]], #16\n"
 
       LCE_BMLA_LD_RHS(v25, v5, v0, v1, v2, v3)
       LCE_BMLA_LD_RHS(v26, v6, v0, v1, v2, v3)
@@ -219,7 +218,7 @@ void BinaryKernelNeonOutOfOrder4x4(
 
       LCE_BMLA(v24, v4, v0, v1, v2, v3)
 
-      "add w1, w1, #4\n"
+      "add w1, w1, #8\n"
       "cmp w1, w2\n"
       "blt 80b\n"
 
@@ -238,13 +237,13 @@ void BinaryKernelNeonOutOfOrder4x4(
       "2:\n"
 
       // loading v4
-      "ld1 {v4.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v4.4s}, [%[rhs_ptr]], #16\n"
 
       LCE_BMLA_LD_RHS(v25, v5, v0, v1, v2, v3)
       LCE_BMLA_LD_RHS(v26, v6, v0, v1, v2, v3)
       LCE_BMLA_LD_ALL(v27, v7, v0, v1, v2, v3)
 
-      "add w1, w1, #2\n"
+      "add w1, w1, #4\n"
       "cmp w1, w12\n"
 
       LCE_BMLA(v24, v4, v0, v1, v2, v3)
@@ -315,8 +314,8 @@ void BinaryKernelNeonOutOfOrder4x4(
       // main loop will need to load, we start loading the first 64 bytes of
       // each of LHS and RHS, into v0 -- v3 and v4 -- v7 as we don't need
       // them anymore in the rest of the work on the current block.
-      "ld1 {v0.2d, v1.2d, v2.2d, v3.2d}, [%[lhs_ptr]], #64\n"
-      "ld1 {v4.2d, v5.2d, v6.2d, v7.2d}, [%[rhs_ptr]], #64\n"
+      "ld1 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[lhs_ptr]], #64\n"
+      "ld1 {v4.4s, v5.4s, v6.4s, v7.4s}, [%[rhs_ptr]], #64\n"
 
       // Perform the backtransformation (in int32)
       "shl v24.4s, v24.4s, #1\n"
@@ -463,7 +462,7 @@ void BinaryKernelNeonOutOfOrder4x4(
 
       // w1 is the number of levels of depth that we have already loaded
       // LHS and RHS data for.
-      "mov w1, #2\n"
+      "mov w1, #4\n"
 
       "ble 1b\n"
 
@@ -544,7 +543,7 @@ void BinaryKernelNeonOutOfOrder4x4(
 
 // XOR-CNT registers: v12 -- v19. ACCUM registers: v20 -- v23.
 #define LCE_CNT_ACCUM_LD_RHS_XOR(Vd, Vr, Vl1, Vl2, Vl3, Vl4, Vl5, Vl6, Vl7, Vl8) \
-  "ld1 {"#Vr".2d}, [%[rhs_ptr]], #16\n"                                          \
+  "ld1 {"#Vr".4s}, [%[rhs_ptr]], #16\n"                                          \
   "cnt v12.16b, v12.16b\n"                                                       \
   "cnt v13.16b, v13.16b\n"                                                       \
   "cnt v14.16b, v14.16b\n"                                                       \
@@ -572,15 +571,15 @@ void BinaryKernelNeonOutOfOrder4x4(
 
 // XOR-CNT registers: v12 -- v19. ACCUM registers: v20 -- v23.
 #define LCE_CNT_ACCUM_LD_ALL_XOR(Vd, Vr, Vl1, Vl2, Vl3, Vl4, Vl5, Vl6, Vl7, Vl8) \
-  "ld1 {"#Vr".2d}, [%[rhs_ptr]], #16\n"                                          \
+  "ld1 {"#Vr".4s}, [%[rhs_ptr]], #16\n"                                          \
   "cnt v12.16b, v12.16b\n"                                                       \
   "cnt v13.16b, v13.16b\n"                                                       \
-  "ld1 {"#Vl1".2d, "#Vl2".2d, "#Vl3".2d, "#Vl4".2d}, [%[lhs_ptr]], #64\n"        \
+  "ld1 {"#Vl1".4s, "#Vl2".4s, "#Vl3".4s, "#Vl4".4s}, [%[lhs_ptr]], #64\n"        \
   "cnt v14.16b, v14.16b\n"                                                       \
   "cnt v15.16b, v15.16b\n"                                                       \
   "cnt v16.16b, v16.16b\n"                                                       \
   "cnt v17.16b, v17.16b\n"                                                       \
-  "ld1 {"#Vl5".2d, "#Vl6".2d, "#Vl7".2d, "#Vl8".2d}, [%[lhs_ptr]], #64\n"        \
+  "ld1 {"#Vl5".4s, "#Vl6".4s, "#Vl7".4s, "#Vl8".4s}, [%[lhs_ptr]], #64\n"        \
   "cnt v18.16b, v18.16b\n"                                                       \
   "cnt v19.16b, v19.16b\n"                                                       \
   "addp v20.16b, v12.16b, v13.16b\n"                                             \
@@ -626,23 +625,24 @@ void BinaryKernelNeonOutOfOrder4x4(
 // v24 -- v27 are int16 accumulators. During accumulation, v0 -- v7 are used to
 // load data from LHS and v8 -- v11 from RHS.
 //
-//                                     int64 RHS 2x4 block
-//                           /--------------------------------------\
-//                           | v8.d[0]         ...         v11.d[0] |
-//                           | v8.d[1]         ...         v11.d[1] |
-//                           \--------------------------------------/
-//      int64 LHS 8x2 block
-//      /-----------------\  /--------------------------------------\
-//      | v0.d[0] v0.d[1] |  | v24.h[0]        ...         v27.h[0] |
-//      | v1.d[0] v1.d[1] |  | v24.h[1]        ...         v27.h[1] |
-//      | v2.d[0] v2.d[1] |  | v24.h[2]        ...         v27.h[2] |
-//      | v3.d[0] v3.d[1] |  | v24.h[3]        ...         v27.h[3] |
-//      | v4.d[0] v4.d[1] |  | v24.h[4]        ...         v27.h[4] |
-//      | v5.d[0] v5.d[1] |  | v24.h[5]        ...         v27.h[5] |
-//      | v6.d[0] v6.d[1] |  | v24.h[6]        ...         v27.h[6] |
-//      | v7.d[0] v7.d[1] |  | v24.h[7]        ...         v27.h[7] |
-//      \-----------------/  \--------------------------------------/
-//                                 int16 accumulators 8x4 block
+//                                       int32 RHS 4x4 block
+//                             /--------------------------------------\
+//                             | v8.s[0]         ...         v11.s[0] |
+//                             |   ...           ...            ...   |
+//                             | v8.s[3]         ...         v11.s[3] |
+//                             \--------------------------------------/
+//      int32 LHS 8x4 block
+//    /---------------------\  /--------------------------------------\
+//    | v0.s[0] ... v0.s[3] |  | v24.h[0]        ...         v27.h[0] |
+//    | v1.s[0] ... v1.s[3] |  | v24.h[1]        ...         v27.h[1] |
+//    | v2.s[0] ... v2.s[3] |  | v24.h[2]        ...         v27.h[2] |
+//    | v3.s[0] ... v3.s[3] |  | v24.h[3]        ...         v27.h[3] |
+//    | v4.s[0] ... v4.s[3] |  | v24.h[4]        ...         v27.h[4] |
+//    | v5.s[0] ... v5.s[3] |  | v24.h[5]        ...         v27.h[5] |
+//    | v6.s[0] ... v6.s[3] |  | v24.h[6]        ...         v27.h[6] |
+//    | v7.s[0] ... v7.s[3] |  | v24.h[7]        ...         v27.h[7] |
+//    \---------------------/  \--------------------------------------/
+//                                   int16 accumulators 8x4 block
 //
 // During the computation, v12 -- v19 are used to store XOR and byte-level CNT
 // results. v20 -- v23 are used to combine the byte-level CNT results for
@@ -650,16 +650,19 @@ void BinaryKernelNeonOutOfOrder4x4(
 
 // clang-format on
 
-void BinaryKernelNeonOutOfOrder8x4(
-    const BinaryKernelParams<8, 4, std::uint64_t>& params) {
+void BinaryKernelNeonOutOfOrder8x4(const BinaryKernelParams<8, 4>& params) {
   CheckOffsetsInKernelParams(params);
   ruy::profiler::ScopeLabel label(
-      "Binary Kernel (8x4) 64BP (kNeon, optimized for out-of-order cores)");
+      "Binary Kernel (8x4) (kNeon, optimized for out-of-order cores)");
 
-  std::uint64_t* lhs_col_ptr = const_cast<std::uint64_t*>(params.lhs_base_ptr);
-  std::uint64_t* rhs_col_ptr = const_cast<std::uint64_t*>(params.rhs_base_ptr);
-  std::uint64_t* lhs_ptr = lhs_col_ptr;
-  std::uint64_t* rhs_ptr = rhs_col_ptr;
+  static_assert(sizeof(TBitpacked) == 4,
+                "Correctness of this function relies on the size of TBitpacked "
+                "being 4 bytes.");
+
+  TBitpacked* lhs_col_ptr = const_cast<TBitpacked*>(params.lhs_base_ptr);
+  TBitpacked* rhs_col_ptr = const_cast<TBitpacked*>(params.rhs_base_ptr);
+  TBitpacked* lhs_ptr = lhs_col_ptr;
+  TBitpacked* rhs_ptr = rhs_col_ptr;
 
   float* dst_col_ptr = params.dst_base_ptr;
   float* dst_ptr = dst_col_ptr;
@@ -686,15 +689,15 @@ void BinaryKernelNeonOutOfOrder8x4(
       RUY_MAKE_ZERO(v27)
 
       // Load the first 128 bytes of LHS and 16 bytes of RHS data.
-      "ld1 {v8.2d}, [%[rhs_ptr]], #16\n"
-      "ld1 {v0.2d, v1.2d, v2.2d, v3.2d}, [%[lhs_ptr]], #64\n"
-      "ld1 {v4.2d, v5.2d, v6.2d, v7.2d}, [%[lhs_ptr]], #64\n"
+      "ld1 {v8.4s}, [%[rhs_ptr]], #16\n"
+      "ld1 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[lhs_ptr]], #64\n"
+      "ld1 {v4.4s, v5.4s, v6.4s, v7.4s}, [%[lhs_ptr]], #64\n"
 
       // w1 is the number of levels of depth that we have already loaded
       // LHS and RHS data for.
-      // The RHS is stored in col-wise. Therefore, for 64-bit elements,
-      // one register can hold 2 levels of depth.
-      "mov w1, #2\n"
+      // The RHS is stored in col-wise. Therefore, for 32-bit elements,
+      // one register can hold 4 levels of depth.
+      "mov w1, #4\n"
 
       // Main loop of the whole GEMM, over rows and columns of the
       // destination matrix.
@@ -712,7 +715,7 @@ void BinaryKernelNeonOutOfOrder8x4(
       LCE_CNT_ACCUM_LD_RHS_XOR(v25, v10, v0, v1, v2, v3, v4, v5, v6, v7)
       LCE_CNT_ACCUM_LD_RHS_XOR(v26, v11, v0, v1, v2, v3, v4, v5, v6, v7)
 
-      "add w1, w1, #2\n"
+      "add w1, w1, #4\n"
       "cmp w1, w12\n"
 
       LCE_CNT_ACCUM_LD_ALL_XOR(v27, v8, v0, v1, v2, v3, v4, v5, v6, v7)
@@ -780,15 +783,15 @@ void BinaryKernelNeonOutOfOrder8x4(
       "ushll v20.4s, v24.4h, #1\n"
       "dup v28.4s, w1\n"  // In parallel, duplicate `backtransform_add` into v28.
       "ushll2 v21.4s, v24.8h, #1\n"
-      "ld1 {v8.2d}, [%[rhs_ptr]], #16\n"
+      "ld1 {v8.4s}, [%[rhs_ptr]], #16\n"
       "ushll v22.4s, v25.4h, #1\n"
       "ushll2 v23.4s, v25.8h, #1\n"
-      "ld1 {v0.2d, v1.2d, v2.2d, v3.2d}, [%[lhs_ptr]], #64\n"
+      "ld1 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[lhs_ptr]], #64\n"
       "ushll v24.4s, v26.4h, #1\n"
       "ushll2 v25.4s, v26.8h, #1\n"
       "ushll v26.4s, v27.4h, #1\n"
       "ushll2 v27.4s, v27.8h, #1\n"
-      "ld1 {v4.2d, v5.2d, v6.2d, v7.2d}, [%[lhs_ptr]], #64\n"
+      "ld1 {v4.4s, v5.4s, v6.4s, v7.4s}, [%[lhs_ptr]], #64\n"
 
       // Apply the back-transformation subtraction.
       "dup v29.4s, w2\n"  // In parallel, duplicate `clamp_min` into v29.
@@ -961,7 +964,7 @@ void BinaryKernelNeonOutOfOrder8x4(
 
       // w1 is the number of levels of depth that we have already loaded LHS and
       // RHS data for.
-      "mov w1, #2\n"
+      "mov w1, #4\n"
 
       "ble 1b\n"
 

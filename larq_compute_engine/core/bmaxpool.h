@@ -1,6 +1,7 @@
 #ifndef COMPUTE_ENGINE_CORE_BMAXPOOL_H_
 #define COMPUTE_ENGINE_CORE_BMAXPOOL_H_
 
+#include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/kernels/internal/common.h"
 #include "tensorflow/lite/kernels/internal/types.h"
 #include "tensorflow/lite/kernels/padding.h"
@@ -10,6 +11,8 @@ using namespace tflite;
 namespace compute_engine {
 namespace ce = compute_engine;
 namespace ref {
+
+using ce::core::TBitpacked;
 
 struct BMaxPoolParams {
   std::int32_t filter_height{0};
@@ -21,7 +24,6 @@ struct BMaxPoolParams {
 };
 
 // Effectively takes the AND of everything in the filter region
-template <typename TBitpacked>
 void BMaxPool(const BMaxPoolParams& params, const RuntimeShape& input_shape,
               const TBitpacked* input_data, const RuntimeShape& output_shape,
               TBitpacked* output_data) {

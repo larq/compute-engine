@@ -77,7 +77,6 @@ typedef struct {
   std::vector<std::uint8_t> filter_packed;
   bool is_filter_repacked = false;
 
-  int bitpacking_bitwidth;
   bool read_bitpacked_input = false;
   bool write_bitpacked_output = false;
 

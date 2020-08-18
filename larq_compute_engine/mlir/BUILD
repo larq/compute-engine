@@ -176,6 +176,7 @@ cc_library(
     ],
     deps = [
         ":larq_compute_engine",
+        "//larq_compute_engine/core:types",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
@@ -195,6 +196,7 @@ cc_library(
     deps = [
         ":larq_compute_engine",
         "//larq_compute_engine/core:packbits",
+        "//larq_compute_engine/core:types",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
     ],
     alwayslink = 1,

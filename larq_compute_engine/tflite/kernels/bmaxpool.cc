@@ -17,7 +17,7 @@ namespace compute_engine {
 namespace tflite {
 namespace bmaxpool {
 
-using TBitpacked = std::uint32_t;
+using ce::core::TBitpacked;
 
 void* Init(TfLiteContext* context, const char* buffer, size_t length) {
   auto* poolparams = new ce::ref::BMaxPoolParams{};
@@ -55,7 +55,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
 
   int channels_out = 0;
   if (input->type == kTfLiteFloat32 || input->type == kTfLiteInt8) {
-    channels_out = ce::core::GetPackedSize<TBitpacked>(input->dims->data[3]);
+    channels_out = ce::core::GetPackedSize(input->dims->data[3]);
   } else {
     TF_LITE_ENSURE_EQ(context, input->type, kTfLiteInt32);
     channels_out = input->dims->data[3];

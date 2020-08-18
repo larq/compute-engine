@@ -7,15 +7,23 @@
 
 #include <cstdint>
 
+#include "larq_compute_engine/core/types.h"
+
 namespace compute_engine {
 namespace core {
 
-// Bitpack an array of `64 * num_blocks` floats into uint64s.
-inline void packbits_aarch64_64(const float* input, std::size_t num_blocks,
-                                std::uint64_t* output) {
+// Bitpack an array of `4 * 32 * num_blocks` floats.
+inline void packbits_aarch64_4x32(const float* input, std::size_t num_blocks,
+                                  TBitpacked* output) {
+  static_assert(sizeof(TBitpacked) == 4,
+                "Correctness of this function relies on the size of TBitpacked "
+                "being 4 bytes.");
+
   if (num_blocks < 1) return;
 
   asm volatile(
+      // Load 128 floats into the registers.
+      //
       // These LD2 instructions load a sequence of pairs of two-byte half-words
       // from memory and de-interleave the pairs into two vector registers. This
       // means that the first vector register receives every even half-word, and
@@ -33,40 +41,32 @@ inline void packbits_aarch64_64(const float* input, std::size_t num_blocks,
       // Aarch64 CPUs (such as the Cortex A76) the execution throughput (and
       // latency) of using a sequence of LD4 instructions is significantly
       // higher than that of using a sequence of LD2 instructions.
-
-      // Load data into the first half of the registers.
       "ld2 {v0.8h, v1.8h}, [%[in_ptr]], #32\n"
       "ld2 {v2.8h, v3.8h}, [%[in_ptr]], #32\n"
       "ld2 {v4.8h, v5.8h}, [%[in_ptr]], #32\n"
       "ld2 {v6.8h, v7.8h}, [%[in_ptr]], #32\n"
-      "cmp %[n], #1\n"
       "ld2 {v8.8h, v9.8h}, [%[in_ptr]], #32\n"
       "ld2 {v10.8h, v11.8h}, [%[in_ptr]], #32\n"
       "ld2 {v12.8h, v13.8h}, [%[in_ptr]], #32\n"
       "ld2 {v14.8h, v15.8h}, [%[in_ptr]], #32\n"
-
-      "beq 1f\n"
-
-      // Load data into the second half of the registers.
+      "cmp %[n], #1\n"
       "ld2 {v16.8h, v17.8h}, [%[in_ptr]], #32\n"
       "ld2 {v18.8h, v19.8h}, [%[in_ptr]], #32\n"
       "ld2 {v20.8h, v21.8h}, [%[in_ptr]], #32\n"
       "ld2 {v22.8h, v23.8h}, [%[in_ptr]], #32\n"
-      "cmp %[n], #4\n"
       "ld2 {v24.8h, v25.8h}, [%[in_ptr]], #32\n"
       "ld2 {v26.8h, v27.8h}, [%[in_ptr]], #32\n"
       "ld2 {v28.8h, v29.8h}, [%[in_ptr]], #32\n"
       "ld2 {v30.8h, v31.8h}, [%[in_ptr]], #32\n"
-
-      "blt 3f\n"
+      "beq 1f\n"
 
       "2:\n"
 
       // This is the main loop.
-
-      // Here, n >= 4. We compute two values while re-loading data into both
-      // halves of the registers.
-
+      //
+      // Here, n >= 2. We compute four int32 bitpacked words (from 128 floats)
+      // while reloading data into the registers for the next iteration.
+      //
       // After the LD2 instructions, each odd register v1, v3, ..., v31 contains
       // 8 sign bits, in the high-bit of each half-word. Correct order is
       // preserved, in the sense that v1 contains the first 8 sign bits, et
@@ -120,7 +120,7 @@ inline void packbits_aarch64_64(const float* input, std::size_t num_blocks,
       "ld2 {v14.8h, v15.8h}, [%[in_ptr]], #32\n"
       "uzp1 v23.16b, v28.16b, v30.16b\n"
 
-      "sub %[n], %[n], #2\n"
+      "sub %[n], %[n], #1\n"
 
       // Now, we can combine the two unzip results for each register pair, with
       // 'shift right and insert' SRI instructions.
@@ -151,7 +151,7 @@ inline void packbits_aarch64_64(const float* input, std::size_t num_blocks,
       "ld2 {v22.8h, v23.8h}, [%[in_ptr]], #32\n"
       "uzp1 v31.16b, v4.16b, v6.16b\n"
 
-      "cmp %[n], #4\n"
+      "cmp %[n], #2\n"
 
       // ...and SRI instructions, so that after this block, v8 and v10 will
       // contain 64 sign-bits each, in the correct order, where each byte
@@ -173,129 +173,45 @@ inline void packbits_aarch64_64(const float* input, std::size_t num_blocks,
 
       "bge 2b\n"
 
-      "3:\n"
-
-      // Here, both halves of registers are loaded and either n = 2 or n = 3.
-
-      "cmp %[n], #3\n"
-      "beq 4f\n"
-
-      // Here, n = 2. We compute two values without re-loading any data into
-      // registers, then exit.
-
-      "uzp2 v16.16b, v1.16b, v3.16b\n"
-      "uzp2 v18.16b, v5.16b, v7.16b\n"
-      "uzp2 v20.16b, v9.16b, v11.16b\n"
-      "uzp2 v22.16b, v13.16b, v15.16b\n"
-      "uzp2 v24.16b, v17.16b, v19.16b\n"
-      "uzp2 v26.16b, v21.16b, v23.16b\n"
-      "uzp2 v28.16b, v25.16b, v27.16b\n"
-      "uzp2 v30.16b, v29.16b, v31.16b\n"
-
-      "uzp2 v0.16b, v16.16b, v18.16b\n"
-      "uzp1 v17.16b, v16.16b, v18.16b\n"
-      "uzp2 v2.16b, v20.16b, v22.16b\n"
-      "uzp1 v19.16b, v20.16b, v22.16b\n"
-      "uzp2 v4.16b, v24.16b, v26.16b\n"
-      "uzp1 v21.16b, v24.16b, v26.16b\n"
-      "uzp2 v6.16b, v28.16b, v30.16b\n"
-      "uzp1 v23.16b, v28.16b, v30.16b\n"
-      "sri v0.16b, v17.16b, #1\n"
-      "sri v2.16b, v19.16b, #1\n"
-      "sri v4.16b, v21.16b, #1\n"
-      "sri v6.16b, v23.16b, #1\n"
-
-      "uzp2 v8.16b, v0.16b, v2.16b\n"
-      "uzp1 v30.16b, v0.16b, v2.16b\n"
-      "uzp2 v10.16b, v4.16b, v6.16b\n"
-      "uzp1 v31.16b, v4.16b, v6.16b\n"
-      "sri v8.16b, v30.16b, #2\n"
-      "sri v10.16b, v31.16b, #2\n"
-
-      "uzp2 v0.16b, v8.16b, v10.16b\n"
-      "uzp1 v2.16b, v8.16b, v10.16b\n"
-      "sri v0.16b, v2.16b, #4\n"
-
-      "st1 {v0.2d}, [%[out_ptr]], #16\n"
-
-      "b 0f\n"
-
-      "4:\n"
-
-      // Here, n = 3. We compute two values while re-loading data into the first
-      // half of registers, then fall-through to the n = 1 case.
-
-      "uzp2 v16.16b, v1.16b, v3.16b\n"
-      "ld2 {v0.8h, v1.8h}, [%[in_ptr]], #32\n"
-      "uzp2 v18.16b, v5.16b, v7.16b\n"
-      "uzp2 v20.16b, v9.16b, v11.16b\n"
-      "ld2 {v2.8h, v3.8h}, [%[in_ptr]], #32\n"
-      "uzp2 v22.16b, v13.16b, v15.16b\n"
-      "uzp2 v24.16b, v17.16b, v19.16b\n"
-      "ld2 {v4.8h, v5.8h}, [%[in_ptr]], #32\n"
-      "uzp2 v26.16b, v21.16b, v23.16b\n"
-      "uzp2 v28.16b, v25.16b, v27.16b\n"
-      "ld2 {v6.8h, v7.8h}, [%[in_ptr]], #32\n"
-      "uzp2 v30.16b, v29.16b, v31.16b\n"
-
-      "uzp2 v0.16b, v16.16b, v18.16b\n"
-      "ld2 {v8.8h, v9.8h}, [%[in_ptr]], #32\n"
-      "uzp1 v17.16b, v16.16b, v18.16b\n"
-      "uzp2 v2.16b, v20.16b, v22.16b\n"
-      "ld2 {v10.8h, v11.8h}, [%[in_ptr]], #32\n"
-      "uzp1 v19.16b, v20.16b, v22.16b\n"
-      "uzp2 v4.16b, v24.16b, v26.16b\n"
-      "ld2 {v12.8h, v13.8h}, [%[in_ptr]], #32\n"
-      "uzp1 v21.16b, v24.16b, v26.16b\n"
-      "uzp2 v6.16b, v28.16b, v30.16b\n"
-      "ld2 {v14.8h, v15.8h}, [%[in_ptr]], #32\n"
-      "uzp1 v23.16b, v28.16b, v30.16b\n"
-      "sri v0.16b, v17.16b, #1\n"
-      "sri v2.16b, v19.16b, #1\n"
-      "sri v4.16b, v21.16b, #1\n"
-      "sri v6.16b, v23.16b, #1\n"
-
-      "uzp2 v8.16b, v0.16b, v2.16b\n"
-      "uzp1 v30.16b, v0.16b, v2.16b\n"
-      "uzp2 v10.16b, v4.16b, v6.16b\n"
-      "uzp1 v31.16b, v4.16b, v6.16b\n"
-      "sri v8.16b, v30.16b, #2\n"
-      "sri v10.16b, v31.16b, #2\n"
-
-      "uzp2 v0.16b, v8.16b, v10.16b\n"
-      "uzp1 v2.16b, v8.16b, v10.16b\n"
-      "sri v0.16b, v2.16b, #4\n"
-
-      "st1 {v0.2d}, [%[out_ptr]], #16\n"
-
       "1:\n"
 
-      // Here, n = 1. We compute a single value without any register re-loading,
-      // then exit.
+      // Here, n = 1, so we compute four int32 bitpacked words (from 128
+      // floats) without any data reloading and then exit.
 
       "uzp2 v16.16b, v1.16b, v3.16b\n"
       "uzp2 v18.16b, v5.16b, v7.16b\n"
       "uzp2 v20.16b, v9.16b, v11.16b\n"
       "uzp2 v22.16b, v13.16b, v15.16b\n"
+      "uzp2 v24.16b, v17.16b, v19.16b\n"
+      "uzp2 v26.16b, v21.16b, v23.16b\n"
+      "uzp2 v28.16b, v25.16b, v27.16b\n"
+      "uzp2 v30.16b, v29.16b, v31.16b\n"
 
       "uzp2 v0.16b, v16.16b, v18.16b\n"
       "uzp1 v17.16b, v16.16b, v18.16b\n"
       "uzp2 v2.16b, v20.16b, v22.16b\n"
       "uzp1 v19.16b, v20.16b, v22.16b\n"
+      "uzp2 v4.16b, v24.16b, v26.16b\n"
+      "uzp1 v21.16b, v24.16b, v26.16b\n"
+      "uzp2 v6.16b, v28.16b, v30.16b\n"
+      "uzp1 v23.16b, v28.16b, v30.16b\n"
       "sri v0.16b, v17.16b, #1\n"
       "sri v2.16b, v19.16b, #1\n"
+      "sri v4.16b, v21.16b, #1\n"
+      "sri v6.16b, v23.16b, #1\n"
 
       "uzp2 v8.16b, v0.16b, v2.16b\n"
       "uzp1 v30.16b, v0.16b, v2.16b\n"
+      "uzp2 v10.16b, v4.16b, v6.16b\n"
+      "uzp1 v31.16b, v4.16b, v6.16b\n"
       "sri v8.16b, v30.16b, #2\n"
+      "sri v10.16b, v31.16b, #2\n"
 
-      "uzp2 v0.16b, v8.16b, v8.16b\n"
-      "uzp1 v2.16b, v8.16b, v8.16b\n"
+      "uzp2 v0.16b, v8.16b, v10.16b\n"
+      "uzp1 v2.16b, v8.16b, v10.16b\n"
       "sri v0.16b, v2.16b, #4\n"
 
-      "st1 {v0.1d}, [%[out_ptr]], #8\n"
-
-      "0:\n"
+      "st1 {v0.2d}, [%[out_ptr]], #16\n"
 
       : [ in_ptr ] "+r"(input), [ n ] "+r"(num_blocks), [ out_ptr ] "+r"(output)
       :

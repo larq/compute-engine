@@ -3,10 +3,13 @@
 
 #include <cstdint>
 
-#include "bgemm_kernels_common.h"
+#include "larq_compute_engine/core/bgemm_kernels_common.h"
+#include "larq_compute_engine/core/types.h"
 #include "ruy/profiler/instrumentation.h"
 
 using namespace ruy;
+
+using compute_engine::core::TBitpacked;
 
 #if RUY_PLATFORM_NEON && RUY_OPT(ASM) && RUY_PLATFORM_NEON_32
 
@@ -60,7 +63,7 @@ using namespace ruy;
 #define RUY_STACK_OFFSET_RHS_COL_PTR 80
 
 template <typename Params>
-void CheckOffsetsInKernelParams32BP(const Params&) {
+void CheckOffsetsInKernelParams(const Params&) {
   static_assert(offsetof(Params, lhs_base_ptr) == RUY_OFFSET_LHS_BASE_PTR, "");
   static_assert(offsetof(Params, rhs_base_ptr) == RUY_OFFSET_RHS_BASE_PTR, "");
   static_assert(offsetof(Params, dst_base_ptr) == RUY_OFFSET_DST_BASE_PTR, "");
@@ -122,16 +125,19 @@ void CheckOffsetsInKernelParams32BP(const Params&) {
 
 // clang-format on
 
-void BinaryKernelNeonOutOfOrder32BP4x4(
-    BinaryKernelParams<4, 4, std::uint32_t>& params) {
-  CheckOffsetsInKernelParams32BP(params);
+void BinaryKernelNeonOutOfOrder4x4(BinaryKernelParams<4, 4>& params) {
+  CheckOffsetsInKernelParams(params);
   ruy::profiler::ScopeLabel label(
-      "Binary Kernel (4x4) 32BP (kNeon, optimized for out-of-order cores)");
+      "Binary Kernel (4x4) (kNeon, optimized for out-of-order cores)");
 
-  std::uint32_t* lhs_col_ptr = const_cast<std::uint32_t*>(params.lhs_base_ptr);
-  std::uint32_t* rhs_col_ptr = const_cast<std::uint32_t*>(params.rhs_base_ptr);
-  std::uint32_t* lhs_ptr = lhs_col_ptr;
-  std::uint32_t* rhs_ptr = rhs_col_ptr;
+  static_assert(sizeof(TBitpacked) == 4,
+                "Correctness of this function relies on the size of TBitpacked "
+                "being 4 bytes.");
+
+  TBitpacked* lhs_col_ptr = const_cast<TBitpacked*>(params.lhs_base_ptr);
+  TBitpacked* rhs_col_ptr = const_cast<TBitpacked*>(params.rhs_base_ptr);
+  TBitpacked* lhs_ptr = lhs_col_ptr;
+  TBitpacked* rhs_ptr = rhs_col_ptr;
 
   float* dst_col_ptr = params.dst_base_ptr;
   float* dst_ptr = dst_col_ptr;

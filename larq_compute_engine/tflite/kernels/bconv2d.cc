@@ -6,6 +6,7 @@
 #include "bconv2d_params.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
 #include "larq_compute_engine/core/bconv2d_impl_ref.h"
+#include "larq_compute_engine/core/packbits.h"
 #include "larq_compute_engine/core/padding_functor.h"
 #include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
@@ -25,7 +26,9 @@ namespace compute_engine {
 namespace tflite {
 namespace bconv2d {
 
-using ::compute_engine::core::Layout;
+using ce::core::bitpacking_bitwidth;
+using ce::core::Layout;
+using ce::core::TBitpacked;
 
 enum class KernelType {
   // kGenericRef: the reference implementation without im2col
@@ -45,7 +48,7 @@ inline void decide_bitpack_before_im2col(KernelType kernel_type,
                                          TfLiteBConv2DParams* conv_params) {
   if (kernel_type == KernelType::kGenericRef ||
       conv_params->read_bitpacked_input ||
-      conv_params->channels_in >= conv_params->bitpacking_bitwidth / 4) {
+      conv_params->channels_in >= bitpacking_bitwidth / 4) {
     conv_params->bitpack_before_im2col = true;
   } else {
     conv_params->bitpack_before_im2col = false;
@@ -121,9 +124,8 @@ void Free(TfLiteContext* context, void* buffer) {
   delete reinterpret_cast<TfLiteBConv2DParams*>(buffer);
 }
 
-TfLiteStatus Prepare(KernelType kernel_type,
-                     const int default_bitpacking_bitwidth,
-                     TfLiteContext* context, TfLiteNode* node) {
+template <KernelType kernel_type>
+TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   auto* conv_params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
 
   // If an error happened in Init, then report an error message
@@ -197,10 +199,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
     }
   }
 
-  if (conv_params->read_bitpacked_input) {
-    // The kernels support only 32-bit bitpacking when reading bitpacked input.
-    conv_params->bitpacking_bitwidth = 32;
-  } else {
+  if (!conv_params->read_bitpacked_input) {
     TF_LITE_ENSURE(context,
                    input->type == kTfLiteInt8 || input->type == kTfLiteFloat32);
 
@@ -213,10 +212,9 @@ TfLiteStatus Prepare(KernelType kernel_type,
       return kTfLiteError;
     }
 
-    // TODO: more intelligent selection of the parameters `bitpacking_bitwidth`
-    //       and `bitpack_before_im2col` based on benchmarking results
-    //       (as in https://github.com/larq/compute-engine/issues/290).
-    conv_params->bitpacking_bitwidth = default_bitpacking_bitwidth;
+    // TODO: more intelligent selection of the parameter `bitpack_before_im2col`
+    //       based on benchmarking results (as in
+    //       https://github.com/larq/compute-engine/issues/290).
     conv_params->channels_in = input->dims->data[3];
   }
 
@@ -296,7 +294,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
   output_shape->data[2] = conv_params->out_width;
   if (conv_params->write_bitpacked_output) {
     // If we write bitpacked output, we use 32-bit bitpacking
-    output_shape->data[3] = (conv_params->channels_out + 31) / 32;
+    output_shape->data[3] = ce::core::GetPackedSize(conv_params->channels_out);
   } else {
     output_shape->data[3] = conv_params->channels_out;
   }
@@ -309,8 +307,6 @@ TfLiteStatus Prepare(KernelType kernel_type,
   decide_bitpack_before_im2col(kernel_type, conv_params);
 
   if (kernel_type == KernelType::kGenericRef) {
-    // We require 32-bit bitpacking in the reference implementation
-    TF_LITE_ENSURE_EQ(context, conv_params->bitpacking_bitwidth, 32);
     // We only support one-padding or valid-padding in the reference
     // implementation.
     TF_LITE_ENSURE(context, !(conv_params->pad_value == 0 &&
@@ -354,9 +350,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
 
     // Resize the im2col tensor
     int channels_in = conv_params->bitpack_before_im2col
-                          ? ((conv_params->channels_in +
-                              conv_params->bitpacking_bitwidth - 1) /
-                             conv_params->bitpacking_bitwidth)
+                          ? ce::core::GetPackedSize(conv_params->channels_in)
                           : conv_params->channels_in;
 
     // determine the im2col buffer size
@@ -373,17 +367,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
 
     // Determine the type
     if (conv_params->bitpack_before_im2col) {
-      switch (conv_params->bitpacking_bitwidth) {
-        case 32:
-          im2col->type = kTfLiteInt32;
-          break;
-        case 64:
-          im2col->type = kTfLiteInt64;
-          break;
-        default:
-          TF_LITE_ENSURE(context, false);
-          break;
-      }
+      im2col->type = kTfLiteInt32;
     } else {
       // im2col before bitpacking so use the same type as the input
       im2col->type = input->type;
@@ -403,16 +387,13 @@ TfLiteStatus Prepare(KernelType kernel_type,
     int flat_size = 0;
     if (conv_params->bitpack_before_im2col) {
       const int packed_channels =
-          ((conv_params->channels_in + conv_params->bitpacking_bitwidth - 1) /
-           conv_params->bitpacking_bitwidth);
+          ce::core::GetPackedSize(conv_params->channels_in);
       flat_size = conv_params->batch * conv_params->input_height *
                   conv_params->input_width * packed_channels;
     } else {
-      const int packed_depth =
-          (conv_params->channels_in * conv_params->filter_height *
-               conv_params->filter_width +
-           conv_params->bitpacking_bitwidth - 1) /
-          conv_params->bitpacking_bitwidth;
+      const int packed_depth = ce::core::GetPackedSize(
+          conv_params->channels_in * conv_params->filter_height *
+          conv_params->filter_width);
 
       flat_size = conv_params->batch * conv_params->out_height *
                   conv_params->out_width * packed_depth;
@@ -426,17 +407,7 @@ TfLiteStatus Prepare(KernelType kernel_type,
         GetTemporary(context, node, conv_params->packed_input_index);
 
     // Set its type
-    switch (conv_params->bitpacking_bitwidth) {
-      case 32:
-        packed_input->type = kTfLiteInt32;
-        break;
-      case 64:
-        packed_input->type = kTfLiteInt64;
-        break;
-      default:
-        TF_LITE_ENSURE(context, false);
-        break;
-    }
+    packed_input->type = kTfLiteInt32;
     packed_input->allocation_type = kTfLiteArenaRw;
     // Request a resize
     TF_LITE_ENSURE_OK(context, context->ResizeTensor(context, packed_input,
@@ -450,11 +421,6 @@ TfLiteStatus Prepare(KernelType kernel_type,
   conv_params->is_filter_repacked = false;
 
   return kTfLiteOk;
-}
-
-template <KernelType kernel_type, int default_bitpacking_bitwidth>
-TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
-  return Prepare(kernel_type, default_bitpacking_bitwidth, context, node);
 }
 
 inline PaddingType RuntimePaddingType(TfLitePadding padding) {
@@ -550,7 +516,7 @@ struct GetUnpackType<float> {
 };
 
 template <>
-struct GetUnpackType<std::int32_t> {
+struct GetUnpackType<TBitpacked> {
   using type = float;
 };
 
@@ -559,15 +525,14 @@ struct GetUnpackType<std::int8_t> {
   using type = std::int8_t;
 };
 
-template <class SrcScalar, class TBitpacked>
+template <class SrcScalar>
 void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
                   TfLiteBConv2DParams* params) {
   if (!params->is_filter_repacked || !params->is_padding_correction_cached) {
     const auto* filter = GetInput(context, node, 1);
     const auto* post_activation_multiplier = GetInput(context, node, 2);
 
-    const std::uint32_t* filter_flatbuffer =
-        GetTensorData<std::uint32_t>(filter);
+    const TBitpacked* filter_flatbuffer = GetTensorData<TBitpacked>(filter);
 
     using UnpackType = typename GetUnpackType<SrcScalar>::type;
 
@@ -634,7 +599,7 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
     }
 
     std::vector<TBitpacked> filter_data_bp(
-        ce::core::GetPackedMatrixSize<TBitpacked>(rows, cols));
+        ce::core::GetPackedMatrixSize(rows, cols));
     ce::core::packbits_matrix(filter_unpacked, rows, cols,
                               filter_data_bp.data());
 
@@ -651,11 +616,10 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
   }
 }
 
-template <typename SrcScalar, typename TBitpacked, typename AccumScalar,
-          typename DstScalar>
+template <typename SrcScalar, typename AccumScalar, typename DstScalar>
 void EvalOpt(TfLiteContext* context, TfLiteNode* node,
              TfLiteBConv2DParams* params) {
-  OneTimeSetup<SrcScalar, TBitpacked>(context, node, params);
+  OneTimeSetup<SrcScalar>(context, node, params);
 
   const auto* input = GetInput(context, node, 0);
   const auto* filter = GetInput(context, node, 1);
@@ -693,7 +657,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   // weights data.
   //     Likewise, we pass the original output shape even if we are going to
   // write bitpacked output directly.
-  BConv2D<SrcScalar, TBitpacked, AccumScalar, DstScalar>(
+  BConv2D<SrcScalar, AccumScalar, DstScalar>(
       op_params, GetTensorShape(input), GetTensorData<SrcScalar>(input),
       packed_input_data, unpacked_filter_shape,
       reinterpret_cast<TBitpacked*>(params->filter_packed.data()),
@@ -704,7 +668,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
       CpuBackendContext::GetFromContext(context));
 }
 
-template <typename SrcScalar, typename TBitpacked, typename DstScalar>
+template <typename SrcScalar, typename DstScalar>
 void EvalRef(TfLiteContext* context, TfLiteNode* node,
              TfLiteBConv2DParams* params) {
   const auto* input = GetInput(context, node, 0);
@@ -747,7 +711,7 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   GetOutputTransform(context, node, params, output_transform);
 
   TfLiteTensor* im2col = nullptr;
-  ce::ref::BConv2D<TBitpacked, std::int32_t, DstScalar>(
+  ce::ref::BConv2D<std::int32_t, DstScalar>(
       op_params, packed_input_shape, packed_input_data, packed_filter_shape,
       GetTensorData<TBitpacked>(packed_filter), output_transform,
       GetTensorShape(output), GetTensorData<DstScalar>(output),
@@ -756,10 +720,10 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
       params->pad_value, nullptr /*cpu backend context*/);
 }
 
-template <KernelType kernel_type, typename SrcScalar, typename DstScalar,
-          typename TBitpacked>
-TfLiteStatus EvalChooseKernelType(TfLiteContext* context, TfLiteNode* node,
-                                  TfLiteBConv2DParams* params) {
+template <KernelType kernel_type, typename SrcScalar, typename DstScalar>
+inline TfLiteStatus EvalChooseKernelType(TfLiteContext* context,
+                                         TfLiteNode* node,
+                                         TfLiteBConv2DParams* params) {
   if (kernel_type == KernelType::kRuyOptimized) {
 #if RUY_PLATFORM_ARM_64
     // On 64 bit Arm only there is an optimised kernel for 16-bit accumulators
@@ -771,56 +735,42 @@ TfLiteStatus EvalChooseKernelType(TfLiteContext* context, TfLiteNode* node,
     const int depth =
         params->filter_height * params->filter_width * params->channels_in;
     if (std::is_same<DstScalar, float>::value && depth + 512 < 1 << 16) {
-      EvalOpt<SrcScalar, TBitpacked, std::int16_t, DstScalar>(context, node,
-                                                              params);
+      EvalOpt<SrcScalar, std::int16_t, DstScalar>(context, node, params);
       return kTfLiteOk;
     }
 #endif
     // In all other cases, use 32-bit accumulators.
-    EvalOpt<SrcScalar, TBitpacked, std::int32_t, DstScalar>(context, node,
-                                                            params);
+    EvalOpt<SrcScalar, std::int32_t, DstScalar>(context, node, params);
     return kTfLiteOk;
   } else if (kernel_type == KernelType::kGenericRef) {
-    EvalRef<SrcScalar, TBitpacked, DstScalar>(context, node, params);
+    EvalRef<SrcScalar, DstScalar>(context, node, params);
     return kTfLiteOk;
   }
   return kTfLiteError;
 }
 
-template <KernelType kernel_type, typename SrcScalar, typename DstScalar>
-TfLiteStatus EvalChooseBitpackType(TfLiteContext* context, TfLiteNode* node,
-                                   TfLiteBConv2DParams* params) {
-  switch (params->bitpacking_bitwidth) {
-    case 32:
-      return EvalChooseKernelType<kernel_type, SrcScalar, DstScalar,
-                                  std::uint32_t>(context, node, params);
-    case 64:
-      return EvalChooseKernelType<kernel_type, SrcScalar, DstScalar,
-                                  std::uint64_t>(context, node, params);
-  };
-  return kTfLiteError;
-}
-
 template <KernelType kernel_type, typename SrcScalar>
-TfLiteStatus EvalChooseOutputType(TfLiteContext* context, TfLiteNode* node,
-                                  TfLiteBConv2DParams* params) {
+inline TfLiteStatus EvalChooseOutputType(TfLiteContext* context,
+                                         TfLiteNode* node,
+                                         TfLiteBConv2DParams* params) {
   const TfLiteType output_type = GetOutput(context, node, 0)->type;
   if (output_type == kTfLiteFloat32) {
-    return EvalChooseBitpackType<kernel_type, SrcScalar, float>(context, node,
-                                                                params);
+    return EvalChooseKernelType<kernel_type, SrcScalar, float>(context, node,
+                                                               params);
   } else if (output_type == kTfLiteInt8) {
-    return EvalChooseBitpackType<kernel_type, SrcScalar, std::int8_t>(
+    return EvalChooseKernelType<kernel_type, SrcScalar, std::int8_t>(
         context, node, params);
   } else if (params->write_bitpacked_output && output_type == kTfLiteInt32) {
-    return EvalChooseBitpackType<kernel_type, SrcScalar, std::int32_t>(
+    return EvalChooseKernelType<kernel_type, SrcScalar, TBitpacked>(
         context, node, params);
   }
   return kTfLiteError;
 }
 
 template <KernelType kernel_type>
-TfLiteStatus EvalChooseInputType(TfLiteContext* context, TfLiteNode* node,
-                                 TfLiteBConv2DParams* params) {
+inline TfLiteStatus EvalChooseInputType(TfLiteContext* context,
+                                        TfLiteNode* node,
+                                        TfLiteBConv2DParams* params) {
   const TfLiteType input_type = GetInput(context, node, 0)->type;
   if (input_type == kTfLiteFloat32) {
     return EvalChooseOutputType<kernel_type, float>(context, node, params);
@@ -828,8 +778,7 @@ TfLiteStatus EvalChooseInputType(TfLiteContext* context, TfLiteNode* node,
     return EvalChooseOutputType<kernel_type, std::int8_t>(context, node,
                                                           params);
   } else if (params->read_bitpacked_input && input_type == kTfLiteInt32) {
-    return EvalChooseOutputType<kernel_type, std::int32_t>(context, node,
-                                                           params);
+    return EvalChooseOutputType<kernel_type, TBitpacked>(context, node, params);
   }
   return kTfLiteError;
 }
@@ -842,26 +791,18 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
 
 }  // namespace bconv2d
 
-TfLiteRegistration* Register_BCONV_2D_32_REF() {
+TfLiteRegistration* Register_BCONV_2D_REF() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kGenericRef, 32>,
+      bconv2d::Prepare<bconv2d::KernelType::kGenericRef>,
       bconv2d::Eval<bconv2d::KernelType::kGenericRef>};
   return &r;
 }
 
-TfLiteRegistration* Register_BCONV_2D_32_OPT() {
+TfLiteRegistration* Register_BCONV_2D_OPT() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kRuyOptimized, 32>,
-      bconv2d::Eval<bconv2d::KernelType::kRuyOptimized>};
-  return &r;
-}
-
-TfLiteRegistration* Register_BCONV_2D_64_OPT() {
-  static TfLiteRegistration r = {
-      bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kRuyOptimized, 64>,
+      bconv2d::Prepare<bconv2d::KernelType::kRuyOptimized>,
       bconv2d::Eval<bconv2d::KernelType::kRuyOptimized>};
   return &r;
 }
@@ -869,20 +810,10 @@ TfLiteRegistration* Register_BCONV_2D_64_OPT() {
 // Use this registration wrapper to decide which implementation to use.
 TfLiteRegistration* Register_BCONV_2D() {
 #if defined TFLITE_WITH_RUY
-
-#if RUY_PLATFORM_ARM_32
-  return Register_BCONV_2D_32_OPT();
-#else  // ARM 64 and x86
-  return Register_BCONV_2D_64_OPT();
+  return Register_BCONV_2D_OPT();
+#else
+  return Register_BCONV_2D_REF();
 #endif
-
-#else  // disabled TFLITE_WITH_RUY
-
-  // When the RUY is disabled, we run the 32-bit reference implementation
-  // on both 32-bit and 64-bit architectures.
-  return Register_BCONV_2D_32_REF();
-
-#endif  // defined TFLITE_WITH_RUY
 }
 
 }  // namespace tflite

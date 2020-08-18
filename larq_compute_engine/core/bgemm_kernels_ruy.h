@@ -2,6 +2,7 @@
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_RUY_H_
 
 #include "larq_compute_engine/core/bgemm_functor.h"
+#include "larq_compute_engine/core/packbits_utils.h"
 #include "ruy/platform.h"
 #include "ruy/profiler/instrumentation.h"
 #include "ruy/ruy.h"
@@ -11,8 +12,10 @@ namespace tflite {
 
 namespace ce = compute_engine;
 
-template <ruy::Path ThePath, typename LhsScalar, typename RhsScalar,
-          typename DstScalar, typename Spec>
+using ce::core::bitpacking_bitwidth;
+using ce::core::TBitpacked;
+
+template <ruy::Path ThePath, typename DstScalar, typename Spec>
 struct BgemmKernel {};
 
 // TODO: this is hacky
@@ -22,28 +25,15 @@ struct BgemmKernel {};
 #include "bgemm_kernels_x86.h"
 #endif
 
-template <typename LhsScalar, typename RhsScalar, typename DstScalar,
-          typename Spec>
-struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
-                   Spec> {
+template <typename DstScalar, typename Spec>
+struct BgemmKernel<ruy::Path::kStandardCpp, DstScalar, Spec> {
   using AccumScalar = typename Spec::AccumScalar;
   using LhsLayout = typename Spec::StandardCppKernelLhsLayout;
   using RhsLayout = typename Spec::StandardCppKernelRhsLayout;
   explicit BgemmKernel(ruy::Tuning) {}
-  void Run(const ruy::PMat<LhsScalar>& lhs, const ruy::PMat<RhsScalar>& rhs,
+  void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
            const Spec& spec, int start_row, int start_col, int end_row,
            int end_col, ruy::Mat<DstScalar>* dst) const {
-    static_assert(std::is_same<LhsScalar, RhsScalar>::value,
-                  "Inputs to binary kernel should have the same type.");
-    static_assert(
-        std::is_unsigned<LhsScalar>::value &&
-            std::is_integral<LhsScalar>::value,
-        "Input to binary kernel should be of type unsigned integral.");
-    static_assert(std::is_signed<DstScalar>::value,
-                  "Output of binary kernel should be of a signed type.");
-
-    using TBitpacked = LhsScalar;
-
     const OutputTransform<AccumScalar, DstScalar>& output_transform =
         spec.output_transform;
 
@@ -69,8 +59,7 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
         for (int k = 0; k < depth; k++) {
           TBitpacked lhs_val = Element(lhs, k, i);
           TBitpacked rhs_val = Element(rhs, k, j);
-          accum +=
-              ce::core::xor_popcount<TBitpacked, AccumScalar>(lhs_val, rhs_val);
+          accum += ce::core::xor_popcount(lhs_val, rhs_val);
         }
         // Post-process the accumulated value and store the result
         *ElementPtr(dst, i, j) = output_transform.Run(accum, i);
@@ -79,36 +68,27 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, DstScalar,
   }
 };
 
-// A template specialisation for writing 32-bit bitpacked output.
-template <typename LhsScalar, typename RhsScalar, typename Spec>
-struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int32_t,
-                   Spec> {
+// A template specialisation for writing bitpacked output.
+template <typename Spec>
+struct BgemmKernel<ruy::Path::kStandardCpp, TBitpacked, Spec> {
   using AccumScalar = typename Spec::AccumScalar;
   using LhsLayout = typename Spec::StandardCppKernelLhsLayout;
   using RhsLayout = typename Spec::StandardCppKernelRhsLayout;
   explicit BgemmKernel(ruy::Tuning) {}
-  void Run(const ruy::PMat<LhsScalar>& lhs, const ruy::PMat<RhsScalar>& rhs,
+  void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
            const Spec& spec, int start_row, int start_col, int end_row,
-           int end_col, ruy::Mat<std::int32_t>* dst) const {
-    static_assert(std::is_same<LhsScalar, RhsScalar>::value,
-                  "Inputs to binary kernel should have the same type.");
-    static_assert(
-        std::is_unsigned<LhsScalar>::value &&
-            std::is_integral<LhsScalar>::value,
-        "Input to binary kernel should be of type unsigned integral.");
-
-    using TBitpacked = LhsScalar;
-
-    const OutputTransform<AccumScalar, std::int32_t>& output_transform =
+           int end_col, ruy::Mat<TBitpacked>* dst) const {
+    const OutputTransform<AccumScalar, TBitpacked>& output_transform =
         spec.output_transform;
 
-    // We are writing 32-bit bitpacked output (where we bitpack along the
-    // channel axis) and so we need to operate on blocks of 32 channels at a
-    // time. As the destination is column major, this means blocks of 32 rows at
-    // a time. Thus, we require the LHS layout columns to be a multiple of 32.
-    static_assert(LhsLayout::kCols % 32 == 0,
+    // We are writing bitpacked output (where we bitpack along the channel axis)
+    // and so we need to operate on blocks of `bitwidth` channels at a time. As
+    // the destination is column major, this means blocks of `bitwidth` rows at
+    // a time. Thus, we require the LHS layout columns to be a multiple of
+    // `bitwidth`.
+    static_assert(LhsLayout::kCols % bitpacking_bitwidth == 0,
                   "When writing bitpacked output, the LHS layout must have a "
-                  "multiple of 32 columns.");
+                  "multiple of `bitwidth` columns.");
 
     // Note that the rows in all these calculations are the *unpacked* rows.
 
@@ -130,28 +110,30 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int32_t,
         "Binary Kernel (Standard Cpp) Bitpacked Output.");
 
     const int depth = lhs.layout.rows;
-    const int dst_stride_bitpacked = (dst->layout.stride + 31) / 32;
+    const int dst_stride_bitpacked =
+        ce::core::GetPackedSize(dst->layout.stride);
 
     // The destination is column major and we need to bitpack along the row
     // (channels) axis so we need to loop over column index then row index.
     for (int j = start_col; j < clamped_end_col; j++) {
-      std::uint32_t bitpacked_column = 0;
+      TBitpacked bitpacked_column = 0;
       for (int i = start_row; i < clamped_end_row; i++) {
         using AccumScalar = typename Spec::AccumScalar;
         AccumScalar accum = 0;
         for (int k = 0; k < depth; k++) {
           TBitpacked lhs_val = Element(lhs, k, i);
           TBitpacked rhs_val = Element(rhs, k, j);
-          accum +=
-              ce::core::xor_popcount<TBitpacked, AccumScalar>(lhs_val, rhs_val);
+          accum += ce::core::xor_popcount(lhs_val, rhs_val);
         }
         bool bit = output_transform.Run(accum, i);
         if (bit) {
-          bitpacked_column |= 1ULL << ((i - start_row) % 32);
+          bitpacked_column |= TBitpacked(1)
+                              << ((i - start_row) % bitpacking_bitwidth);
         }
-        if (((i - start_row + 1) % 32 == 0) || (i + 1 == clamped_end_row)) {
-          *(dst->data.get() + i / 32 + j * dst_stride_bitpacked) =
-              bitpacked_column;
+        if (((i - start_row + 1) % bitpacking_bitwidth == 0) ||
+            (i + 1 == clamped_end_row)) {
+          *(dst->data.get() + i / bitpacking_bitwidth +
+            j * dst_stride_bitpacked) = bitpacked_column;
           bitpacked_column = 0;
         }
       }
@@ -159,13 +141,12 @@ struct BgemmKernel<ruy::Path::kStandardCpp, LhsScalar, RhsScalar, std::int32_t,
   }
 };
 
-template <ruy::Path ThePath, typename LhsScalar, typename RhsScalar,
-          typename DstScalar, typename Spec>
-void RunBgemmKernelTyped(ruy::Tuning tuning, const ruy::PMat<LhsScalar>& lhs,
-                         const ruy::PMat<RhsScalar>& rhs, const Spec& spec,
+template <ruy::Path ThePath, typename DstScalar, typename Spec>
+void RunBgemmKernelTyped(ruy::Tuning tuning, const ruy::PMat<TBitpacked>& lhs,
+                         const ruy::PMat<TBitpacked>& rhs, const Spec& spec,
                          int start_row, int start_col, int end_row, int end_col,
                          ruy::Mat<DstScalar>* dst) {
-  using BKernel = BgemmKernel<ThePath, LhsScalar, RhsScalar, DstScalar, Spec>;
+  using BKernel = BgemmKernel<ThePath, DstScalar, Spec>;
   BKernel kernel(tuning);
   using LhsLayout = typename BKernel::LhsLayout;
   using RhsLayout = typename BKernel::RhsLayout;
@@ -196,15 +177,14 @@ void RunBgemmKernelTyped(ruy::Tuning tuning, const ruy::PMat<LhsScalar>& lhs,
 #endif
 }
 
-template <ruy::Path ThePath, typename LhsScalar, typename RhsScalar,
-          typename DstScalar, typename Spec>
+template <ruy::Path ThePath, typename DstScalar, typename Spec>
 void RunBgemmKernel(ruy::Tuning tuning, const ruy::SidePair<ruy::PEMat>& src,
                     void* spec, const ruy::SidePair<int>& start,
                     const ruy::SidePair<int>& end, ruy::EMat* dst) {
   ruy::Mat<DstScalar> mdst = ruy::UneraseType<DstScalar>(*dst);
-  RunBgemmKernelTyped<ThePath, LhsScalar, RhsScalar, DstScalar, Spec>(
-      tuning, ruy::UneraseType<LhsScalar>(src[ruy::Side::kLhs]),
-      ruy::UneraseType<RhsScalar>(src[ruy::Side::kRhs]),
+  RunBgemmKernelTyped<ThePath, DstScalar, Spec>(
+      tuning, ruy::UneraseType<TBitpacked>(src[ruy::Side::kLhs]),
+      ruy::UneraseType<TBitpacked>(src[ruy::Side::kRhs]),
       *static_cast<const Spec*>(spec), start[ruy::Side::kLhs],
       start[ruy::Side::kRhs], end[ruy::Side::kLhs], end[ruy::Side::kRhs],
       &mdst);

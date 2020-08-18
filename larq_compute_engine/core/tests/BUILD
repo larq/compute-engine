@@ -6,7 +6,6 @@ cc_test(
     name = "bgemm_tests",
     size = "small",
     srcs = ["bgemm_tests.cc"],
-    copts = ["-Iext/gtest/include"],
     deps = [
         "//larq_compute_engine/core:bgemm_functor",
         "@com_google_googletest//:gtest_main",
@@ -17,9 +16,16 @@ cc_test(
     name = "packbits_tests",
     size = "small",
     srcs = ["packbits_tests.cc"],
-    copts = ["-Iext/gtest/include"],
+    linkopts = select({
+        "@org_tensorflow//tensorflow:windows": [],
+        "//conditions:default": [
+            "-lm",
+            "-lrt",
+        ],
+    }),
     deps = [
         "//larq_compute_engine/core:packbits",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -38,7 +44,6 @@ cc_test(
     name = "packbits_aarch64_tests",
     size = "small",
     srcs = ["packbits_aarch64_tests.cc"],
-    copts = ["-Iexternal/gtest/include"],
     deps = [
         "//larq_compute_engine/core:packbits",
         "@com_google_googletest//:gtest_main",

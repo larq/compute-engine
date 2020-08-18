@@ -5,10 +5,13 @@
 #include <random>
 #include <string>
 
+#include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/kernels/internal/types.h"
 #include "tensorflow/lite/kernels/test_util.h"
 
 namespace tflite {
+
+using compute_engine::core::TBitpacked;
 
 constexpr int Padding_ONE = Padding_MAX + 1;
 
@@ -38,6 +41,8 @@ TfLitePadding GetTfLitePadding(enum Padding padding) {
       return kTfLitePaddingValid;
     case Padding_SAME:
       return kTfLitePaddingSame;
+    default:
+      return kTfLitePaddingUnknown;
   };
 }
 
@@ -48,6 +53,8 @@ TfLiteFusedActivation GetTfLiteActivation(
   } else if (activation == ActivationFunctionType_NONE) {
     return kTfLiteActNone;
   }
+  TFLITE_DCHECK(false);
+  return kTfLiteActNone;
 }
 
 // Helper for determining the type for the builtin convolution that we are
@@ -61,17 +68,17 @@ struct GetBuiltinType<float, float> {
 };
 
 template <>
-struct GetBuiltinType<std::int32_t, float> {
+struct GetBuiltinType<TBitpacked, float> {
   using type = float;
 };
 
 template <>
-struct GetBuiltinType<float, std::int32_t> {
+struct GetBuiltinType<float, TBitpacked> {
   using type = float;
 };
 
 template <>
-struct GetBuiltinType<std::int32_t, std::int32_t> {
+struct GetBuiltinType<TBitpacked, TBitpacked> {
   using type = float;
 };
 
@@ -81,12 +88,12 @@ struct GetBuiltinType<std::int8_t, std::int8_t> {
 };
 
 template <>
-struct GetBuiltinType<std::int8_t, std::int32_t> {
+struct GetBuiltinType<std::int8_t, TBitpacked> {
   using type = std::int8_t;
 };
 
 template <>
-struct GetBuiltinType<std::int32_t, std::int8_t> {
+struct GetBuiltinType<TBitpacked, std::int8_t> {
   using type = std::int8_t;
 };
 

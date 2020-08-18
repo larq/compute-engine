@@ -15,24 +15,21 @@ using namespace tflite;
 using namespace tflite::cpu_backend_gemm;
 
 namespace compute_engine {
+
 namespace tflite {
 
-template <typename LhsScalar, typename RhsScalar, typename AccumScalar,
-          typename DstScalar>
+using compute_engine::core::TBitpacked;
+
+template <typename AccumScalar, typename DstScalar>
 struct BGemmImplUsingRuy {
   static void Run(
-      const MatrixParams<LhsScalar>& lhs_params, const LhsScalar* lhs_data,
-      const MatrixParams<RhsScalar>& rhs_params, const RhsScalar* rhs_data,
+      const MatrixParams<TBitpacked>& lhs_params, const TBitpacked* lhs_data,
+      const MatrixParams<TBitpacked>& rhs_params, const TBitpacked* rhs_data,
       const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
       const OutputTransform<AccumScalar, DstScalar>& output_transform,
       CpuBackendContext* context) {
     ruy::profiler::ScopeLabel label("BGemmRuy");
 
-    static_assert(std::is_same<LhsScalar, RhsScalar>::value,
-                  "Inputs to BGEMM should have the same type.");
-    static_assert(std::is_unsigned<LhsScalar>::value &&
-                      std::is_integral<LhsScalar>::value,
-                  "Input to BGEMM should be of type unsigned integral.");
     static_assert(std::is_signed<DstScalar>::value,
                   "Output of BGEMM should be of a signed type.");
 
@@ -40,10 +37,10 @@ struct BGemmImplUsingRuy {
     auto ruy_ctx = get_ctx(context->ruy_context());
 
     // Set up the matrix layouts and mul_params.
-    ruy::Matrix<LhsScalar> lhs;
+    ruy::Matrix<TBitpacked> lhs;
     ruy::MakeSimpleLayout(lhs_params.rows, lhs_params.cols,
                           ruy::Order::kRowMajor, lhs.mutable_layout());
-    ruy::Matrix<RhsScalar> rhs;
+    ruy::Matrix<TBitpacked> rhs;
     ruy::MakeSimpleLayout(rhs_params.rows, rhs_params.cols,
                           ruy::Order::kColMajor, rhs.mutable_layout());
     ruy::Matrix<DstScalar> dst;
@@ -55,10 +52,10 @@ struct BGemmImplUsingRuy {
 
     // We have to make this a `const` matrix because otherwise gcc will try to
     // use the non-const versions of `matrix.data()`
-    ruy::Mat<LhsScalar> internal_lhs =
-        ruy::ToInternal((const ruy::Matrix<LhsScalar>)lhs);
-    ruy::Mat<RhsScalar> internal_rhs =
-        ruy::ToInternal((const ruy::Matrix<RhsScalar>)rhs);
+    ruy::Mat<TBitpacked> internal_lhs =
+        ruy::ToInternal((const ruy::Matrix<TBitpacked>)lhs);
+    ruy::Mat<TBitpacked> internal_rhs =
+        ruy::ToInternal((const ruy::Matrix<TBitpacked>)rhs);
     ruy::Mat<DstScalar> internal_dst = ruy::ToInternal(dst);
 
     BinaryMulParams<AccumScalar, DstScalar> mul_params;
@@ -76,15 +73,6 @@ struct BGemmImplUsingRuy {
 #if RUY_PLATFORM_ARM
     if (bgemm_runtime_path == ruy::Path::kNeonDotprod)
       bgemm_runtime_path = ruy::Path::kNeon;
-#if RUY_PLATFORM_NEON_32
-    if (!std::is_same<LhsScalar, std::uint32_t>::value) {
-      bgemm_runtime_path = ruy::Path::kStandardCpp;
-    }
-#endif
-    // Currently we only have 32-bit and 64-bit optimized kernels.
-    // For 8-bit, fall back to the standard cpp kernel.
-    if (std::is_same<LhsScalar, std::uint8_t>::value)
-      bgemm_runtime_path = ruy::Path::kStandardCpp;
 #elif RUY_PLATFORM_X86
     if (bgemm_runtime_path == ruy::Path::kAvx2 ||
         bgemm_runtime_path == ruy::Path::kAvx512)
@@ -92,16 +80,16 @@ struct BGemmImplUsingRuy {
 #endif
 
     // For writing bitpacked output, fallback to the standard C++ kernel.
-    if (std::is_same<DstScalar, std::int32_t>::value) {
+    if (std::is_same<DstScalar, TBitpacked>::value) {
       bgemm_runtime_path = ruy::Path::kStandardCpp;
     }
 
-    // For now, int8 only has a C++ implementation
+    // For now, int8 only has a C++ implementation.
     if (std::is_same<DstScalar, std::int8_t>::value) {
       bgemm_runtime_path = ruy::Path::kStandardCpp;
     }
 
-    ruy::Mat<LhsScalar> transposed_lhs(internal_lhs);
+    ruy::Mat<TBitpacked> transposed_lhs(internal_lhs);
     Transpose(&transposed_lhs);
 
     ruy::TrMulParams binary_trmul_params;

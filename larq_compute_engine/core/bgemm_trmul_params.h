@@ -16,8 +16,7 @@ namespace tflite {
 // This file is entirely copied from TF lite RUY codebase. The only difference
 // is that we populate the TrMulParams with our bgemm kernel.
 
-template <ruy::Path ThePath, typename LhsScalar, typename RhsScalar,
-          typename DstScalar, typename MulParamsType>
+template <ruy::Path ThePath, typename DstScalar, typename MulParamsType>
 void PopulateBinaryTrMulParams(ruy::TrMulParams* params) {
   // The optimized code paths don't handle the full generality of Ruy's API.
   // Fall back to Path::kStandardCpp if necessary.
@@ -31,32 +30,27 @@ void PopulateBinaryTrMulParams(ruy::TrMulParams* params) {
   }
 
   if (fallback_to_standard_cpp) {
-    PopulateBinaryTrMulParams<ruy::Path::kStandardCpp, LhsScalar, RhsScalar,
-                              DstScalar, MulParamsType>(params);
+    PopulateBinaryTrMulParams<ruy::Path::kStandardCpp, DstScalar,
+                              MulParamsType>(params);
     return;
   }
 
-  // TODO: why packed values type is different than LhsScalar
-  using PackedLhsScalar = ruy::PackedType<ThePath, LhsScalar>;
-  using PackedRhsScalar = ruy::PackedType<ThePath, RhsScalar>;
-  using Kernel = BgemmKernel<ThePath, PackedLhsScalar, PackedRhsScalar,
-                             DstScalar, MulParamsType>;
+  using PackedTBitpacked = ruy::PackedType<ThePath, TBitpacked>;
+  using Kernel = BgemmKernel<ThePath, DstScalar, MulParamsType>;
   using LhsKernelLayout = typename Kernel::LhsLayout;
   using RhsKernelLayout = typename Kernel::RhsLayout;
 
   params->path = ThePath;
 
-  CreatePackedMatrix<LhsScalar, PackedLhsScalar>(
+  CreatePackedMatrix<TBitpacked, PackedTBitpacked>(
       Side::kLhs, ToKernelLayout<LhsKernelLayout>(), params);
-  CreatePackedMatrix<RhsScalar, PackedRhsScalar>(
+  CreatePackedMatrix<TBitpacked, PackedTBitpacked>(
       Side::kRhs, ToKernelLayout<RhsKernelLayout>(), params);
   params->run_pack[Side::kLhs] =
-      &RunPack<ThePath, LhsKernelLayout, LhsScalar, PackedLhsScalar>;
+      &RunPack<ThePath, LhsKernelLayout, TBitpacked, PackedTBitpacked>;
   params->run_pack[Side::kRhs] =
-      &RunPack<ThePath, RhsKernelLayout, RhsScalar, PackedRhsScalar>;
-  params->run_kernel =
-      &RunBgemmKernel<ThePath, PackedLhsScalar, PackedRhsScalar, DstScalar,
-                      MulParamsType>;
+      &RunPack<ThePath, RhsKernelLayout, TBitpacked, PackedTBitpacked>;
+  params->run_kernel = &RunBgemmKernel<ThePath, DstScalar, MulParamsType>;
 }
 
 // PopulateTrMulParamsAllCompiledPaths calls into one of multiple
@@ -102,75 +96,68 @@ void PopulateBinaryTrMulParams(ruy::TrMulParams* params) {
 // - PopulateTrMulParamsAllCompiledPaths must not instantiate
 // inner loops for paths that are not in CompiledPaths, since that can result in
 // bogus instantiations which cause a compile time failure.
-template <ruy::Path CompiledPaths, int BitNumber, typename LhsScalar,
-          typename RhsScalar, typename DstScalar, typename MulParamsType>
+template <ruy::Path CompiledPaths, int BitNumber, typename DstScalar,
+          typename MulParamsType>
 struct PathSearchCountdown;
 
 template <ruy::Path CompiledPaths, bool InCompiledPaths, int BitNumber,
-          typename LhsScalar, typename RhsScalar, typename DstScalar,
-          typename MulParamsType>
+          typename DstScalar, typename MulParamsType>
 struct PathSearchOnlyCompiledPaths {
   static constexpr ruy::Path kCurrentPath =
       static_cast<ruy::Path>(1 << BitNumber);
   static void Search(ruy::Path the_path, ruy::TrMulParams* params) {
     if (kCurrentPath == the_path) {
-      PopulateBinaryTrMulParams<kCurrentPath, LhsScalar, RhsScalar, DstScalar,
-                                MulParamsType>(params);
+      PopulateBinaryTrMulParams<kCurrentPath, DstScalar, MulParamsType>(params);
       return;
     }
-    PathSearchCountdown<CompiledPaths, BitNumber - 1, LhsScalar, RhsScalar,
-                        DstScalar, MulParamsType>::Search(the_path, params);
+    PathSearchCountdown<CompiledPaths, BitNumber - 1, DstScalar,
+                        MulParamsType>::Search(the_path, params);
   }
 };
 
 // Skip this iteration if CompiledPaths doesn't contain the specified path.
-template <ruy::Path CompiledPaths, int BitNumber, typename LhsScalar,
-          typename RhsScalar, typename DstScalar, typename MulParamsType>
-struct PathSearchOnlyCompiledPaths<CompiledPaths, false, BitNumber, LhsScalar,
-                                   RhsScalar, DstScalar, MulParamsType> {
+template <ruy::Path CompiledPaths, int BitNumber, typename DstScalar,
+          typename MulParamsType>
+struct PathSearchOnlyCompiledPaths<CompiledPaths, false, BitNumber, DstScalar,
+                                   MulParamsType> {
   static void Search(ruy::Path the_path, ruy::TrMulParams* params) {
-    PathSearchCountdown<CompiledPaths, BitNumber - 1, LhsScalar, RhsScalar,
-                        DstScalar, MulParamsType>::Search(the_path, params);
+    PathSearchCountdown<CompiledPaths, BitNumber - 1, DstScalar,
+                        MulParamsType>::Search(the_path, params);
   }
 };
 
-template <ruy::Path CompiledPaths, int BitNumber, typename LhsScalar,
-          typename RhsScalar, typename DstScalar, typename MulParamsType>
+template <ruy::Path CompiledPaths, int BitNumber, typename DstScalar,
+          typename MulParamsType>
 struct PathSearchCountdown {
   static constexpr ruy::Path kCurrentPath =
       static_cast<ruy::Path>(1 << BitNumber);
   static void Search(ruy::Path the_path, ruy::TrMulParams* params) {
     PathSearchOnlyCompiledPaths<
         CompiledPaths, (CompiledPaths & kCurrentPath) != ruy::Path::kNone,
-        BitNumber, LhsScalar, RhsScalar, DstScalar,
-        MulParamsType>::Search(the_path, params);
+        BitNumber, DstScalar, MulParamsType>::Search(the_path, params);
   }
 };
 
 // Termination of the countdown. If the counter reaches -1, then we haven't
 // found the specified path.
-template <ruy::Path CompiledPaths, typename LhsScalar, typename RhsScalar,
-          typename DstScalar, typename MulParamsType>
-struct PathSearchCountdown<CompiledPaths, -1, LhsScalar, RhsScalar, DstScalar,
-                           MulParamsType> {
+template <ruy::Path CompiledPaths, typename DstScalar, typename MulParamsType>
+struct PathSearchCountdown<CompiledPaths, -1, DstScalar, MulParamsType> {
   static void Search(ruy::Path the_path, ruy::TrMulParams* params) {
     RUY_DCHECK(false);
   }
 };
 
-template <ruy::Path CompiledPaths, typename LhsScalar, typename RhsScalar,
-          typename DstScalar, typename MulParamsType>
+template <ruy::Path CompiledPaths, typename DstScalar, typename MulParamsType>
 void PopulateBinaryTrMulParamsAllCompiledPaths(ruy::Path the_path,
                                                ruy::TrMulParams* params) {
   return PathSearchCountdown<CompiledPaths, 8 * sizeof(ruy::Path) - 1,
-                             LhsScalar, RhsScalar, DstScalar,
-                             MulParamsType>::Search(the_path, params);
+                             DstScalar, MulParamsType>::Search(the_path,
+                                                               params);
 }
 
-template <ruy::Path CompiledPaths, typename LhsScalar, typename RhsScalar,
-          typename DstScalar, typename MulParamsType>
-void CreateBinaryTrMulParams(const Mat<LhsScalar>& lhs,
-                             const Mat<RhsScalar>& rhs,
+template <ruy::Path CompiledPaths, typename DstScalar, typename MulParamsType>
+void CreateBinaryTrMulParams(const Mat<TBitpacked>& lhs,
+                             const Mat<TBitpacked>& rhs,
                              const MulParamsType& mul_params, Ctx* ctx,
                              Mat<DstScalar>* dst, Path the_path,
                              TrMulParams* params) {
@@ -181,9 +168,8 @@ void CreateBinaryTrMulParams(const Mat<LhsScalar>& lhs,
   params->mul_params = ToVoidPtr(&mul_params);
 
   // Create inner loops and packed matrices based on the Path.
-  PopulateBinaryTrMulParamsAllCompiledPaths<CompiledPaths, LhsScalar, RhsScalar,
-                                            DstScalar, MulParamsType>(the_path,
-                                                                      params);
+  PopulateBinaryTrMulParamsAllCompiledPaths<CompiledPaths, DstScalar,
+                                            MulParamsType>(the_path, params);
 }
 
 }  // namespace tflite

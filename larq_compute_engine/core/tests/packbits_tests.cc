@@ -1,101 +1,109 @@
-#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include <array>
 #include <cstdint>
+#include <random>
 #include <vector>
 
+#include "absl/strings/str_cat.h"
 #include "larq_compute_engine/core/packbits.h"
-
-// From @flatbuffers, used for the FLATBUFFERS_LITTLEENDIAN macro
-#include "flatbuffers/base.h"
 
 namespace compute_engine {
 namespace testing {
 
 namespace ce = compute_engine;
 
-// tests with non-uniform data verify the correctness of the bitpacking
-// operation itself while the uniform tests are used to verify the bitpacking
-// with different bitwidths
-template <class TIn>
-void test_bitpacking_nonuniform_input() {
-  // input matrix (row-major memory laytout)
-  const std::size_t num_rows = 2, num_cols = 8;
-  std::array<TIn, 16> input{1, 1,  -1, 1,  -1, -1, -1, 1,
-                            1, -1, 1,  -1, -1, -1, 1,  1};
+using ce::core::bitpacking_bitwidth;
+using ce::core::TBitpacked;
 
-  // expected output matrix after bitpacking
-  const std::size_t expected_num_rows = 2, expected_num_cols = 1;
-  std::vector<std::uint8_t> expected;
-  if (!FLATBUFFERS_LITTLEENDIAN)
-    expected = {0b00101110, 0b01011100};
-  else
-    expected = {0b01110100, 0b00111010};
+class BitpackingTest
+    : public ::testing::TestWithParam<std::tuple<int, int, std::int32_t>> {};
 
-  std::vector<std::uint8_t> output(
-      ce::core::GetPackedMatrixSize<std::uint8_t>(num_rows, num_cols));
-  ce::core::packbits_matrix(input.data(), num_rows, num_cols, output.data());
+template <typename TIn>
+void runBitpackingTest(const int num_rows, const int num_cols,
+                       const std::int32_t zero_point) {
+  if (std::is_same<TIn, float>::value && zero_point != 0) {
+    GTEST_SKIP();
+  }
 
-  EXPECT_THAT(output, ::testing::ElementsAreArray(expected));
+  const int num_packed_cols = ce::core::GetPackedSize(num_cols);
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+
+  std::vector<TIn> input_matrix(num_rows * num_cols);
+  std::vector<TBitpacked> output_matrix(
+      ce::core::GetPackedMatrixSize(num_rows, num_cols));
+
+  // Generate some random data for the input.
+  std::generate(std::begin(input_matrix), std::end(input_matrix), [&gen]() {
+    return std::uniform_real_distribution<>(-1.5, 1.5)(gen);
+  });
+
+  // Perform the bitpacking.
+  ce::core::packbits_matrix(input_matrix.data(), num_rows, num_cols,
+                            output_matrix.data(), zero_point);
+
+  // Verify correctness of the results.
+  for (auto i = 0; i < num_rows; i++) {
+    for (auto j = 0; j < bitpacking_bitwidth * num_packed_cols; j++) {
+      const bool packed_bit =
+          output_matrix.at(i * num_packed_cols + j / bitpacking_bitwidth) &
+          (TBitpacked(1) << (j % bitpacking_bitwidth));
+
+      if (j < num_cols) {
+        // If this bit position corresponds to an actual value, compare against
+        // the sign of that value...
+        bool expected_bit;
+        if (std::is_same<TIn, float>::value) {
+          assert(zero_point == 0);
+          expected_bit = input_matrix.at(i * num_cols + j) < 0;
+        } else {
+          expected_bit = static_cast<std::int32_t>(
+                             input_matrix.at(i * num_cols + j)) < zero_point;
+        }
+        EXPECT_EQ(packed_bit, expected_bit);
+      } else {
+        // ...otherwise it's a 'padding' bit, and we expect it to be zero.
+        EXPECT_EQ(packed_bit, 0);
+      }
+    }
+  }
 }
 
-template <class TIn, class TOut, std::size_t num_rows, std::size_t num_cols>
-void test_bitpacking(const std::size_t expected_num_rows,
-                     const std::size_t expected_num_cols) {
-  const std::size_t bitwidth = std::numeric_limits<TOut>::digits;
-
-  const std::size_t num_elems = num_rows * num_cols;
-  std::array<TIn, num_elems> input;
-  input.fill(-1);
-
-  std::vector<TOut> output(
-      ce::core::GetPackedMatrixSize<TOut>(num_rows, num_cols));
-  ce::core::packbits_matrix(input.data(), num_rows, num_cols, output.data());
-
-  TOut expected_value = std::numeric_limits<TOut>::max();
-  const std::size_t num_elems_bp = num_elems / bitwidth;
-  std::array<TOut, num_elems_bp> expected;
-  expected.fill(expected_value);
-
-  EXPECT_THAT(output, ::testing::ElementsAreArray(expected));
+TEST_P(BitpackingTest, BitpackFloats) {
+  runBitpackingTest<float>(std::get<0>(GetParam()), std::get<1>(GetParam()),
+                           std::get<2>(GetParam()));
 }
 
-TEST(BitpackingTests, BitpackingRowMajorUInt8NonUniformInput) {
-  test_bitpacking_nonuniform_input<float>();
+TEST_P(BitpackingTest, BitpackInt8) {
+  runBitpackingTest<std::int8_t>(std::get<0>(GetParam()),
+                                 std::get<1>(GetParam()),
+                                 std::get<2>(GetParam()));
 }
 
-TEST(BitpackingTests, BitpackingRowMajorUInt8) {
-  test_bitpacking<float, std::uint8_t, 2, 128>(2, 16);
+std::string TestName(
+    const ::testing::TestParamInfo<BitpackingTest::ParamType>& info) {
+  // We have to treat the zero point specially, because we can't have a
+  // hyphen in the name, and so can't naturally represent negative numbers.
+  std::string param_zp_value_str =
+      absl::StrCat(std::get<2>(info.param) >= 0 ? "Pos" : "Neg",
+                   std::abs(std::get<2>(info.param)));
+  return absl::StrCat("Rows_", std::get<0>(info.param), "__Cols_",
+                      std::get<1>(info.param), "__ZeroPoint_",
+                      param_zp_value_str);
 }
 
-TEST(BitpackingTests, BitpackingRowMajorUInt32) {
-  test_bitpacking<float, std::uint32_t, 2, 128>(2, 4);
-}
-
-TEST(BitpackingTests, BitpackingRowMajorUInt64) {
-  test_bitpacking<float, std::uint64_t, 2, 128>(2, 2);
-}
-
-TEST(BitpackingWithBitPaddingTests, RowMajorPadding) {
-  // input matrix
-  const int num_rows = 2;
-  const int num_cols = 9;
-  std::vector<float> input{-1, -1, 1,  -1, 1, 1, 1,  -1, -1,
-                           -1, 1,  -1, 1,  1, 1, -1, -1, 1};
-
-  // expected output matrix after bitpacking
-  std::vector<std::uint8_t> expected;
-  if (!FLATBUFFERS_LITTLEENDIAN)
-    expected = {0b11010001, 0b10000000, 0b10100011, 0b00000000};
-  else
-    expected = {0b10001011, 0b00000001, 0b11000101, 0b00000000};
-
-  std::vector<std::uint8_t> output(
-      ce::core::GetPackedMatrixSize<std::uint8_t>(num_rows, num_cols));
-  ce::core::packbits_matrix(input.data(), num_rows, num_cols, output.data());
-
-  EXPECT_THAT(output, ::testing::ElementsAreArray(expected));
-};
+INSTANTIATE_TEST_SUITE_P(
+    Bitpacking, BitpackingTest,
+    ::testing::Combine(
+        // num_rows
+        ::testing::Values(1, 2, 3, 4, 5, 6, 7, 8, 10, 15, 250),
+        // num_cols
+        ::testing::Values(1, 3, 16, 32, 33, 63, 64, 65, 96, 256),
+        // zero_point
+        ::testing::Values(-1000, -1, 0, 1, 127)),
+    TestName);
 
 }  // end namespace testing
-}  // end namespace compute_engine
+}  // namespace compute_engine
