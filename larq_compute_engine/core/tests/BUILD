@@ -18,6 +18,9 @@ cc_test(
     srcs = ["bitpack_tests.cc"],
     linkopts = select({
         "@org_tensorflow//tensorflow:windows": [],
+        "@org_tensorflow//tensorflow:macos": [
+            "-lm",
+        ],
         "//conditions:default": [
             "-lm",
             "-lrt",
