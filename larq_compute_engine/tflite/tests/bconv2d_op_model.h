@@ -50,10 +50,9 @@ class BaseBConv2DOpModel : public SingleOpModel {
       fbb.Int("stride_width", stride_width);
       fbb.Int("dilation_height_factor", dilation_height_factor);
       fbb.Int("dilation_width_factor", dilation_width_factor);
-      fbb.Int("padding", (int)GetTfLitePadding(padding));
+      fbb.Int("padding", (int)padding);
       fbb.Int("pad_values", pad_values);
-      fbb.Int("fused_activation_function",
-              (int)GetTfLiteActivation(activation));
+      fbb.Int("fused_activation_function", (int)activation);
     });
     fbb.Finish();
     SetCustomOp("LceBconv2d", fbb.GetBuffer(), registration);
