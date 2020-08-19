@@ -86,15 +86,13 @@ inline void BConv2D(
     const OutputTransform<AccumScalar, DstScalar>& output_transform,
     const RuntimeShape& output_shape, DstScalar* output_data,
     const RuntimeShape& im2col_shape, SrcScalar* im2col_data,
-    bool bitpack_before_im2col, const float* padding_buffer,
-    const int pad_value, const bool read_bitpacked_input,
-    CpuBackendContext* cpu_backend_context) {
+    const float* padding_buffer, const int pad_value,
+    const bool read_bitpacked_input, CpuBackendContext* cpu_backend_context) {
   TF_LITE_ASSERT_EQ(input_shape.DimensionsCount(), 4);
   TF_LITE_ASSERT_EQ(filter_shape.DimensionsCount(), 4);
   TF_LITE_ASSERT_EQ(output_shape.DimensionsCount(), 4);
   TF_LITE_ASSERT(read_bitpacked_input ||
                  input_shape.Dims(3) == filter_shape.Dims(3));
-  TF_LITE_ASSERT(!read_bitpacked_input || bitpack_before_im2col);
 
   ruy::profiler::ScopeLabel label("BConv2D");
 
@@ -116,10 +114,7 @@ inline void BConv2D(
   //
   // Storage order is shown in the matrices
   //
-  // bitpack_before_im2col
-  //    inputs and filters are packed along the `channels_in` dimension.
-  // else
-  //    inputs and filters are packed along the k-dimension
+  // inputs and filters are packed along the `channels_in` dimension.
   //
   const TBitpacked* lhs_data = packed_filter_data;
   const TBitpacked* rhs_data = nullptr;
@@ -128,55 +123,33 @@ inline void BConv2D(
   int m = 0;
   int k = 0;
 
-  if (bitpack_before_im2col) {
-    // The filter tensor was already bitpacked. Only get the new shape.
-    RuntimeShape packed_filter_shape = ce::core::packed_shape(filter_shape);
+  // The filter tensor was already bitpacked. Only get the new shape.
+  RuntimeShape packed_filter_shape = ce::core::packed_shape(filter_shape);
 
-    // Get the im2col data buffer.
-    TBitpacked* packed_im2col_data = reinterpret_cast<TBitpacked*>(im2col_data);
+  // Get the im2col data buffer.
+  TBitpacked* packed_im2col_data = reinterpret_cast<TBitpacked*>(im2col_data);
 
-    // We're already bitpacked, so im2col `zero_byte` is 0.
-    RuntimeShape result_shape;
+  // We're already bitpacked, so im2col `zero_byte` is 0.
+  RuntimeShape result_shape;
 
-    RuntimeShape packed_input_shape = input_shape;
-    const TBitpacked* im2col_input_data;
-    if (read_bitpacked_input) {
-      im2col_input_data = reinterpret_cast<const TBitpacked*>(input_data);
-    } else {
-      // The input tensor has this shape which we bitpack along the channels
-      // dimension [batch, input height, input width, channels].
-      ruy::profiler::ScopeLabel label("Bitpack activations (before im2col)");
-      ce::core::bitpack_tensor(input_shape, input_data, params.input_offset,
-                               packed_input_shape, packed_input_data);
-      im2col_input_data = packed_input_data;
-    }
-    im2col<TBitpacked>(params, packed_input_shape, im2col_input_data,
-                       packed_filter_shape, output_shape, im2col_shape,
-                       packed_im2col_data, result_shape, &rhs_data, 0);
-
-    k = result_shape.Dims(3);
-    m = FlatSizeSkipDim(result_shape, 3);
-  } else {  // Bitpack after im2col.
-    // We need to pad with the correct zero_byte
-    RuntimeShape result_shape;
-    const SrcScalar* result_data;
-    im2col<SrcScalar>(params, input_shape, input_data, filter_shape,
-                      output_shape, im2col_shape, im2col_data, result_shape,
-                      &result_data, params.input_offset);
-
-    // The RHS tensor has this shape which we bitpack along the last dimension
-    //  [batch, output_height, output_width, k * bitwidth]
-    RuntimeShape packed_input_shape;
-    {
-      ruy::profiler::ScopeLabel label("Bitpack activations (after im2col)");
-      ce::core::bitpack_tensor(result_shape, result_data, params.input_offset,
-                               packed_input_shape, packed_input_data);
-    }
-    rhs_data = packed_input_data;
-
-    k = packed_input_shape.Dims(3);
-    m = FlatSizeSkipDim(packed_input_shape, 3);
+  RuntimeShape packed_input_shape = input_shape;
+  const TBitpacked* im2col_input_data;
+  if (read_bitpacked_input) {
+    im2col_input_data = reinterpret_cast<const TBitpacked*>(input_data);
+  } else {
+    // The input tensor has this shape which we bitpack along the channels
+    // dimension [batch, input height, input width, channels].
+    ruy::profiler::ScopeLabel label("Bitpack activations (before im2col)");
+    ce::core::bitpack_tensor(input_shape, input_data, params.input_offset,
+                             packed_input_shape, packed_input_data);
+    im2col_input_data = packed_input_data;
   }
+  im2col<TBitpacked>(params, packed_input_shape, im2col_input_data,
+                     packed_filter_shape, output_shape, im2col_shape,
+                     packed_im2col_data, result_shape, &rhs_data, 0);
+
+  k = result_shape.Dims(3);
+  m = FlatSizeSkipDim(result_shape, 3);
 
   // LHS (n, k/bitwidth) -> RowMajor -> (n, k/bitwidth)
   // RHS (m, k/bitwidth) -> ColMajor -> (k/bitwidth, m)

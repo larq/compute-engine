@@ -56,7 +56,6 @@ typedef struct {
   std::vector<float> scaled_post_activation_bias;
   bool is_quantization_initialized = false;
 
-  bool bitpack_before_im2col = false;
   bool need_im2col = false;
   // IDs are the arbitrary identifiers used by TF Lite to identify and access
   // memory buffers. They are unique in the entire TF Lite context.
