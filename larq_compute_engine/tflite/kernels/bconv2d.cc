@@ -419,25 +419,6 @@ void SetupQuantization(TfLiteContext* context, TfLiteNode* node,
   }
 }
 
-// Helper to get the type to unpack to
-template <typename SrcScalar>
-struct GetUnpackType {};
-
-template <>
-struct GetUnpackType<float> {
-  using type = float;
-};
-
-template <>
-struct GetUnpackType<TBitpacked> {
-  using type = float;
-};
-
-template <>
-struct GetUnpackType<std::int8_t> {
-  using type = std::int8_t;
-};
-
 void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
                   TfLiteBConv2DParams* params) {
   if (!params->is_filter_repacked || !params->is_padding_correction_cached) {
@@ -446,9 +427,7 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
 
     const TBitpacked* filter_flatbuffer = GetTensorData<TBitpacked>(filter);
 
-    using UnpackType = typename GetUnpackType<TBitpacked>::type;
-
-    const UnpackType* filter_unpacked = nullptr;
+    const float* filter_unpacked = nullptr;
 
     if (params->filter_format == ce::core::FilterFormat::OHWI_PACKED) {
       // First unpack the filter to TBitpacked
@@ -457,7 +436,7 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
           params->channels_out * params->filter_height * params->filter_width;
 
       // This vector is declared static, so that it will be shared by all nodes.
-      static std::vector<UnpackType> unpacked_weights;
+      static std::vector<float> unpacked_weights;
       unpacked_weights.resize(rows * cols);
 
       ce::core::unpack_matrix(filter_flatbuffer, rows, cols,
@@ -466,7 +445,7 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
       filter_unpacked = unpacked_weights.data();
     } else {
       // Filter was already unpacked
-      filter_unpacked = GetTensorData<UnpackType>(filter);
+      filter_unpacked = GetTensorData<float>(filter);
     }
 
     // Fill the zero-padding cache
@@ -474,7 +453,7 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
         (params->padding_type == kTfLitePaddingSame &&
          params->pad_value == 0)) {
       using PaddingFunctor =
-          ce::core::PaddingFunctor<float, UnpackType, float, float,
+          ce::core::PaddingFunctor<float, float, float, float,
                                    ce::core::FilterFormat::OHWI>;
       PaddingFunctor padding_functor;
 
