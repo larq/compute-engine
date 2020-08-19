@@ -3,7 +3,6 @@
 
 #include "flatbuffers/flexbuffers.h"
 #include "larq_compute_engine/core/bconv2d_impl_ref.h"
-#include "larq_compute_engine/core/bitpack.h"
 #include "larq_compute_engine/core/padding_functor.h"
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/tflite/kernels/bconv2d_impl.h"
@@ -11,12 +10,10 @@
 #include "larq_compute_engine/tflite/kernels/bconv2d_params.h"
 #include "larq_compute_engine/tflite/kernels/utils.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
-#include "tensorflow/lite/c/c_api_internal.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/internal/quantization_util.h"
-#include "tensorflow/lite/kernels/internal/tensor.h"
+#include "tensorflow/lite/kernels/internal/tensor_ctypes.h"
 #include "tensorflow/lite/kernels/kernel_util.h"
-#include "tensorflow/lite/kernels/op_macros.h"
 #include "tensorflow/lite/kernels/padding.h"
 
 using namespace tflite;
@@ -27,8 +24,6 @@ namespace compute_engine {
 namespace tflite {
 namespace bconv2d {
 
-using ce::core::bitpacking_bitwidth;
-using ce::core::Layout;
 using ce::core::TBitpacked;
 
 enum class KernelType {
