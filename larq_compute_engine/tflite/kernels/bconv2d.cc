@@ -558,16 +558,6 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
     params->is_quantization_initialized = true;
   }
 
-  auto input_shape = GetTensorShape(input);
-  const auto packed_filter_shape = GetTensorShape(packed_filter);
-
-  // Bitpack the input data, unless we're reading bitpacked input.
-  auto input_data = GetTensorData<TBitpacked>(input);
-  RuntimeShape packed_input_shape;
-  packed_input_shape.ReplaceWith(4, input_shape.DimsData());
-  const TBitpacked* packed_input_data =
-      reinterpret_cast<const TBitpacked*>(input_data);
-
   // Using the standard TF Lite ConvParams struct.
   // This requires extra step of converting the TfLiteBConv2DParams
   // but unifies the interface with the default TF lite API for CONV params
@@ -580,12 +570,12 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
 
   TfLiteTensor* im2col = nullptr;
   ce::ref::BConv2D<std::int32_t, DstScalar>(
-      op_params, packed_input_shape, packed_input_data, packed_filter_shape,
-      GetTensorData<TBitpacked>(packed_filter), output_transform,
-      GetTensorShape(output), GetTensorData<DstScalar>(output),
-      GetTensorShape(im2col), GetTensorData<TBitpacked>(im2col),
-      nullptr /*padding buffer*/, params->pad_value,
-      nullptr /*cpu backend context*/);
+      op_params, GetTensorShape(input), GetTensorData<TBitpacked>(input),
+      GetTensorShape(packed_filter), GetTensorData<TBitpacked>(packed_filter),
+      output_transform, GetTensorShape(output),
+      GetTensorData<DstScalar>(output), GetTensorShape(im2col),
+      GetTensorData<TBitpacked>(im2col), nullptr /*padding buffer*/,
+      params->pad_value, nullptr /*cpu backend context*/);
 }
 
 template <KernelType kernel_type, typename DstScalar>
