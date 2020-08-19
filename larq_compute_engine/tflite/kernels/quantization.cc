@@ -24,9 +24,9 @@ TfLiteStatus QuantizePrepare(TfLiteContext* context, TfLiteNode* node) {
                  input->type == kTfLiteFloat32 || input->type == kTfLiteInt8);
   TF_LITE_ENSURE_EQ(context, output->type, kTfLiteInt32);
 
-  TF_LITE_ENSURE_EQ(context, NumDimensions(input), NumDimensions(output));
-
   int num_dims = NumDimensions(input);
+
+  TF_LITE_ENSURE_EQ(context, num_dims, NumDimensions(output));
 
   TfLiteIntArray* output_dims = TfLiteIntArrayCreate(num_dims);
   // The first n-1 dimensions are equal
@@ -51,9 +51,9 @@ TfLiteStatus DequantizePrepare(TfLiteContext* context, TfLiteNode* node) {
   TF_LITE_ENSURE(context,
                  output->type == kTfLiteFloat32 || output->type == kTfLiteInt8);
 
-  TF_LITE_ENSURE_EQ(context, NumDimensions(input), NumDimensions(output));
-
   int num_dims = NumDimensions(input);
+
+  TF_LITE_ENSURE_EQ(context, num_dims, NumDimensions(output));
 
   // The first n-1 dimensions are equal
   for (int i = 0; i < num_dims - 1; ++i) {
