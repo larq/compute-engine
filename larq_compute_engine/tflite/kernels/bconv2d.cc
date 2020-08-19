@@ -1,14 +1,15 @@
 #include <cmath>
 #include <cstdint>
 
-#include "bconv2d_impl.h"
-#include "bconv2d_output_transform_utils.h"
-#include "bconv2d_params.h"
-#include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
+#include "flatbuffers/flexbuffers.h"
 #include "larq_compute_engine/core/bconv2d_impl_ref.h"
 #include "larq_compute_engine/core/bitpack.h"
 #include "larq_compute_engine/core/padding_functor.h"
 #include "larq_compute_engine/core/types.h"
+#include "larq_compute_engine/tflite/kernels/bconv2d_impl.h"
+#include "larq_compute_engine/tflite/kernels/bconv2d_output_transform_utils.h"
+#include "larq_compute_engine/tflite/kernels/bconv2d_params.h"
+#include "larq_compute_engine/tflite/kernels/utils.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/c/c_api_internal.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
@@ -86,9 +87,9 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
   conv_params->dilation_height_factor = m["dilation_height_factor"].AsInt32();
   conv_params->dilation_width_factor = m["dilation_width_factor"].AsInt32();
 
-  conv_params->padding_type = (TfLitePadding)m["padding"].AsInt32();
-  conv_params->fused_activation_function =
-      (TfLiteFusedActivation)m["fused_activation_function"].AsInt32();
+  conv_params->padding_type = ConvertPadding((Padding)m["padding"].AsInt32());
+  conv_params->fused_activation_function = ConvertActivation(
+      (ActivationFunctionType)m["fused_activation_function"].AsInt32());
 
   conv_params->pad_value =
       m["pad_values"].IsNull() ? 0 : m["pad_values"].AsInt32();

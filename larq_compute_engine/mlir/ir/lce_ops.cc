@@ -1,24 +1,24 @@
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 
 #include "flatbuffers/flexbuffers.h"
-#include "tensorflow/lite/c/builtin_op_data.h"
+#include "tensorflow/lite/schema/schema_generated.h"
 
 namespace mlir {
 namespace TF {
 
-static TfLitePadding ConvertTfLitePaddingAttr(llvm::StringRef str) {
-  return llvm::StringSwitch<TfLitePadding>(str)
-      .Case("SAME", kTfLitePaddingSame)
-      .Case("VALID", kTfLitePaddingValid);
+static tflite::Padding ConvertPaddingAttr(llvm::StringRef str) {
+  return llvm::StringSwitch<tflite::Padding>(str)
+      .Case("SAME", tflite::Padding_SAME)
+      .Case("VALID", tflite::Padding_VALID);
 }
 
-static TfLiteFusedActivation ConvertTfLiteFusedActivationAttr(
+static tflite::ActivationFunctionType ConvertActivationAttr(
     llvm::StringRef str) {
-  return llvm::StringSwitch<TfLiteFusedActivation>(str)
-      .Case("NONE", kTfLiteActNone)
-      .Case("RELU", kTfLiteActRelu)
-      .Case("RELU_N1_TO_1", kTfLiteActReluN1To1)
-      .Case("RELU6", kTfLiteActRelu6);
+  return llvm::StringSwitch<tflite::ActivationFunctionType>(str)
+      .Case("NONE", tflite::ActivationFunctionType_NONE)
+      .Case("RELU", tflite::ActivationFunctionType_RELU)
+      .Case("RELU_N1_TO_1", tflite::ActivationFunctionType_RELU_N1_TO_1)
+      .Case("RELU6", tflite::ActivationFunctionType_RELU6);
 }
 
 #define GET_OP_CLASSES
@@ -33,9 +33,9 @@ std::vector<uint8_t> Bconv2dOp::buildCustomOptions() {
     fbb.Int("dilation_height_factor", dilation_height_factor().getSExtValue());
     fbb.Int("dilation_width_factor", dilation_width_factor().getSExtValue());
     fbb.Int("fused_activation_function",
-            (int)ConvertTfLiteFusedActivationAttr(fused_activation_function()));
+            (int)ConvertActivationAttr(fused_activation_function()));
     fbb.Int("pad_values", pad_values().getSExtValue());
-    fbb.Int("padding", (int)ConvertTfLitePaddingAttr(padding()));
+    fbb.Int("padding", (int)ConvertPaddingAttr(padding()));
     fbb.Int("stride_height", stride_height().getSExtValue());
     fbb.Int("stride_width", stride_width().getSExtValue());
   });
@@ -46,7 +46,7 @@ std::vector<uint8_t> Bconv2dOp::buildCustomOptions() {
 std::vector<uint8_t> BMaxPool2dOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() {
-    fbb.Int("padding", (int)ConvertTfLitePaddingAttr(padding()));
+    fbb.Int("padding", (int)ConvertPaddingAttr(padding()));
     fbb.Int("stride_width", stride_width().getSExtValue());
     fbb.Int("stride_height", stride_height().getSExtValue());
     fbb.Int("filter_width", filter_width().getSExtValue());

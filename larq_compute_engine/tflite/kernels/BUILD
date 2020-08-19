@@ -49,6 +49,20 @@ cc_library(
 )
 
 cc_library(
+    name = "utils",
+    srcs = [
+        "utils.cc",
+    ],
+    hdrs = [
+        "utils.h",
+    ],
+    deps = [
+        "@org_tensorflow//tensorflow/lite/c:common",
+        "@org_tensorflow//tensorflow/lite/schema:schema_fbs",
+    ],
+)
+
+cc_library(
     name = "lce_op_kernels",
     srcs = [
         "bconv2d.cc",
@@ -63,6 +77,7 @@ cc_library(
         ":bconv2d_impl",
         ":bconv2d_output_transform_utils",
         ":bconv2d_params",
+        ":utils",
         "//larq_compute_engine/core:bconv2d_impl_ref",
         "//larq_compute_engine/core:bitpack",
         "//larq_compute_engine/core:bmaxpool",

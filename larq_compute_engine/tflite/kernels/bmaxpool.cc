@@ -3,6 +3,7 @@
 
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
 #include "larq_compute_engine/core/bitpack_utils.h"
+#include "larq_compute_engine/tflite/kernels/utils.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/c/c_api_internal.h"
 #include "tensorflow/lite/kernels/internal/tensor.h"
@@ -29,7 +30,7 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
   poolparams->filter_width = m["filter_width"].AsInt32();
   poolparams->stride_height = m["stride_height"].AsInt32();
   poolparams->stride_width = m["stride_width"].AsInt32();
-  poolparams->padding_type = (TfLitePadding)m["padding"].AsInt32();
+  poolparams->padding_type = ConvertPadding((Padding)m["padding"].AsInt32());
 
   return poolparams;
 }

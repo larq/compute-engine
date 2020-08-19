@@ -35,28 +35,6 @@ std::string getActivationString(const enum ActivationFunctionType activation) {
   return "UNKOWN";
 }
 
-TfLitePadding GetTfLitePadding(enum Padding padding) {
-  switch (padding) {
-    case Padding_VALID:
-      return kTfLitePaddingValid;
-    case Padding_SAME:
-      return kTfLitePaddingSame;
-    default:
-      return kTfLitePaddingUnknown;
-  };
-}
-
-TfLiteFusedActivation GetTfLiteActivation(
-    const enum ActivationFunctionType activation) {
-  if (activation == ActivationFunctionType_RELU) {
-    return kTfLiteActRelu;
-  } else if (activation == ActivationFunctionType_NONE) {
-    return kTfLiteActNone;
-  }
-  TFLITE_DCHECK(false);
-  return kTfLiteActNone;
-}
-
 // Helper for determining the type for the builtin convolution that we are
 // comparing with
 template <typename TInput, typename TOutput>
