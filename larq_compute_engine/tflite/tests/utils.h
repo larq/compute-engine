@@ -37,41 +37,21 @@ std::string getActivationString(const enum ActivationFunctionType activation) {
 
 // Helper for determining the type for the builtin convolution that we are
 // comparing with
-template <typename TInput, typename TOutput>
+template <typename TOutput>
 struct GetBuiltinType {};
 
 template <>
-struct GetBuiltinType<float, float> {
+struct GetBuiltinType<float> {
   using type = float;
 };
 
 template <>
-struct GetBuiltinType<TBitpacked, float> {
+struct GetBuiltinType<TBitpacked> {
   using type = float;
 };
 
 template <>
-struct GetBuiltinType<float, TBitpacked> {
-  using type = float;
-};
-
-template <>
-struct GetBuiltinType<TBitpacked, TBitpacked> {
-  using type = float;
-};
-
-template <>
-struct GetBuiltinType<std::int8_t, std::int8_t> {
-  using type = std::int8_t;
-};
-
-template <>
-struct GetBuiltinType<std::int8_t, TBitpacked> {
-  using type = std::int8_t;
-};
-
-template <>
-struct GetBuiltinType<TBitpacked, std::int8_t> {
+struct GetBuiltinType<std::int8_t> {
   using type = std::int8_t;
 };
 
