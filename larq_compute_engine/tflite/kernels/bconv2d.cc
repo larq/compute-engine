@@ -133,7 +133,6 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   TF_LITE_ENSURE_EQ(context, NumDimensions(input), 4);
   TF_LITE_ENSURE_EQ(context, NumDimensions(filter), 4);
 
-  conv_params->read_bitpacked_input = input->type == kTfLiteInt32;
   conv_params->write_bitpacked_output = output->type == kTfLiteInt32;
 
   if (conv_params->write_bitpacked_output) {
@@ -156,9 +155,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   conv_params->batch = input->dims->data[0];
   conv_params->input_height = input->dims->data[1];
   conv_params->input_width = input->dims->data[2];
-  if (!conv_params->read_bitpacked_input) {
-    TF_LITE_ENSURE_EQ(context, conv_params->channels_in, input->dims->data[3]);
-  } else if (conv_params->channels_in == 0) {
+  if (conv_params->channels_in == 0) {
     // We don't expect this branch to ever be taken because the `channels_in`
     // attribute was added to the converter at the same time that support for
     // bitpacked activations was added, but just in case we don't have a value
@@ -198,23 +195,9 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     return kTfLiteError;
   }
 
-  if (!conv_params->read_bitpacked_input) {
-    TF_LITE_ENSURE(context,
-                   input->type == kTfLiteInt8 || input->type == kTfLiteFloat32);
-
-    conv_params->channels_in = input->dims->data[3];
-  }
-
   if (!conv_params->write_bitpacked_output) {
-    if (conv_params->read_bitpacked_input) {
-      TF_LITE_ENSURE(context, output->type == kTfLiteInt8 ||
-                                  output->type == kTfLiteFloat32);
-
-    } else {
-      // We're not reading or writing bitpacked output, so if the input is
-      // float, so should the output, and likewise for int8.
-      TF_LITE_ENSURE_EQ(context, output->type, input->type);
-    }
+    TF_LITE_ENSURE(
+        context, output->type == kTfLiteInt8 || output->type == kTfLiteFloat32);
   }
 
   // reading the filter dimensions
@@ -313,11 +296,6 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     }
   }
 
-  // See if we need a temporary buffer for bitpacked activations
-  if (!conv_params->read_bitpacked_input) {
-    conv_params->packed_input_index = temporaries_count++;
-  }
-
   if (temporaries_count != 0) {
     // Allocate int array of that size
     TfLiteIntArrayFree(node->temporaries);
@@ -352,34 +330,6 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     im2col->allocation_type = kTfLiteArenaRw;
     TF_LITE_ENSURE_OK(context,
                       context->ResizeTensor(context, im2col, im2col_size));
-  }
-
-  if (!conv_params->read_bitpacked_input) {
-    if (conv_params->packed_input_id == kTensorNotAllocated) {
-      context->AddTensors(context, 1, &conv_params->packed_input_id);
-      node->temporaries->data[conv_params->packed_input_index] =
-          conv_params->packed_input_id;
-    }
-    // Determine the size
-    int flat_size = 0;
-    const int packed_channels =
-        ce::core::GetPackedSize(conv_params->channels_in);
-    flat_size = conv_params->batch * conv_params->input_height *
-                conv_params->input_width * packed_channels;
-    // We will simply request a flat tensor
-    TfLiteIntArray* packed_input_size = TfLiteIntArrayCreate(1);
-    packed_input_size->data[0] = flat_size;
-
-    // Get the newly created tensor
-    TfLiteTensor* packed_input =
-        GetTemporary(context, node, conv_params->packed_input_index);
-
-    // Set its type
-    packed_input->type = kTfLiteInt32;
-    packed_input->allocation_type = kTfLiteArenaRw;
-    // Request a resize
-    TF_LITE_ENSURE_OK(context, context->ResizeTensor(context, packed_input,
-                                                     packed_input_size));
   }
 
   // Prepare could be called multiple times, when the input tensor is resized,
@@ -590,12 +540,6 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
                              ? GetTemporary(context, node, params->im2col_index)
                              : nullptr;
 
-  TBitpacked* packed_input_data =
-      !params->read_bitpacked_input
-          ? GetTensorData<TBitpacked>(
-                GetTemporary(context, node, params->packed_input_index))
-          : nullptr;
-
   // Using the standard TF Lite ConvParams struct.
   // This requires extra step of converting the TfLiteBConv2DParams
   // but unifies the interface with the default TF lite API for CONV params
@@ -620,12 +564,12 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   // write bitpacked output directly.
   BConv2D<AccumScalar, DstScalar>(
       op_params, GetTensorShape(input), GetTensorData<TBitpacked>(input),
-      packed_input_data, unpacked_filter_shape,
+      unpacked_filter_shape,
       reinterpret_cast<TBitpacked*>(params->filter_packed.data()),
       output_transform, unpacked_output_shape, GetTensorData<DstScalar>(output),
       GetTensorShape(im2col), GetTensorData<TBitpacked>(im2col),
       params->padding_buffer.data(), params->pad_value,
-      params->read_bitpacked_input, CpuBackendContext::GetFromContext(context));
+      CpuBackendContext::GetFromContext(context));
 }
 
 template <typename DstScalar>

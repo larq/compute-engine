@@ -81,18 +81,16 @@ const float* GetPostActivationMultiplier(
 template <typename AccumScalar, typename DstScalar>
 inline void BConv2D(
     const ConvParams& params, const RuntimeShape& input_shape,
-    const TBitpacked* input_data, TBitpacked* packed_input_data,
-    const RuntimeShape& filter_shape, const TBitpacked* packed_filter_data,
+    const TBitpacked* input_data, const RuntimeShape& filter_shape,
+    const TBitpacked* packed_filter_data,
     const OutputTransform<AccumScalar, DstScalar>& output_transform,
     const RuntimeShape& output_shape, DstScalar* output_data,
     const RuntimeShape& im2col_shape, TBitpacked* im2col_data,
     const float* padding_buffer, const int pad_value,
-    const bool read_bitpacked_input, CpuBackendContext* cpu_backend_context) {
+    CpuBackendContext* cpu_backend_context) {
   TF_LITE_ASSERT_EQ(input_shape.DimensionsCount(), 4);
   TF_LITE_ASSERT_EQ(filter_shape.DimensionsCount(), 4);
   TF_LITE_ASSERT_EQ(output_shape.DimensionsCount(), 4);
-  TF_LITE_ASSERT(read_bitpacked_input ||
-                 input_shape.Dims(3) == filter_shape.Dims(3));
 
   ruy::profiler::ScopeLabel label("BConv2D");
 
@@ -133,17 +131,8 @@ inline void BConv2D(
   RuntimeShape result_shape;
 
   RuntimeShape packed_input_shape = input_shape;
-  const TBitpacked* im2col_input_data;
-  if (read_bitpacked_input) {
-    im2col_input_data = reinterpret_cast<const TBitpacked*>(input_data);
-  } else {
-    // The input tensor has this shape which we bitpack along the channels
-    // dimension [batch, input height, input width, channels].
-    ruy::profiler::ScopeLabel label("Bitpack activations (before im2col)");
-    ce::core::bitpack_tensor(input_shape, input_data, params.input_offset,
-                             packed_input_shape, packed_input_data);
-    im2col_input_data = packed_input_data;
-  }
+  const TBitpacked* im2col_input_data =
+      reinterpret_cast<const TBitpacked*>(input_data);
   im2col<TBitpacked>(params, packed_input_shape, im2col_input_data,
                      packed_filter_shape, output_shape, im2col_shape,
                      packed_im2col_data, result_shape, &rhs_data, 0);
