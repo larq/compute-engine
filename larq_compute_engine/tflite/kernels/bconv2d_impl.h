@@ -78,14 +78,14 @@ const float* GetPostActivationMultiplier(
   return output_transform.post_activation_multiplier;
 }
 
-template <typename SrcScalar, typename AccumScalar, typename DstScalar>
+template <typename AccumScalar, typename DstScalar>
 inline void BConv2D(
     const ConvParams& params, const RuntimeShape& input_shape,
-    const SrcScalar* input_data, TBitpacked* packed_input_data,
+    const TBitpacked* input_data, TBitpacked* packed_input_data,
     const RuntimeShape& filter_shape, const TBitpacked* packed_filter_data,
     const OutputTransform<AccumScalar, DstScalar>& output_transform,
     const RuntimeShape& output_shape, DstScalar* output_data,
-    const RuntimeShape& im2col_shape, SrcScalar* im2col_data,
+    const RuntimeShape& im2col_shape, TBitpacked* im2col_data,
     const float* padding_buffer, const int pad_value,
     const bool read_bitpacked_input, CpuBackendContext* cpu_backend_context) {
   TF_LITE_ASSERT_EQ(input_shape.DimensionsCount(), 4);

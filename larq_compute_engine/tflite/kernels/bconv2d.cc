@@ -493,7 +493,6 @@ struct GetUnpackType<std::int8_t> {
   using type = std::int8_t;
 };
 
-template <class SrcScalar>
 void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
                   TfLiteBConv2DParams* params) {
   if (!params->is_filter_repacked || !params->is_padding_correction_cached) {
@@ -502,12 +501,12 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
 
     const TBitpacked* filter_flatbuffer = GetTensorData<TBitpacked>(filter);
 
-    using UnpackType = typename GetUnpackType<SrcScalar>::type;
+    using UnpackType = typename GetUnpackType<TBitpacked>::type;
 
     const UnpackType* filter_unpacked = nullptr;
 
     if (params->filter_format == ce::core::FilterFormat::OHWI_PACKED) {
-      // First unpack the filter to SrcScalar
+      // First unpack the filter to TBitpacked
       int cols = params->channels_in;
       int rows =
           params->channels_out * params->filter_height * params->filter_width;
@@ -578,10 +577,10 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
   }
 }
 
-template <typename SrcScalar, typename AccumScalar, typename DstScalar>
+template <typename AccumScalar, typename DstScalar>
 void EvalOpt(TfLiteContext* context, TfLiteNode* node,
              TfLiteBConv2DParams* params) {
-  OneTimeSetup<SrcScalar>(context, node, params);
+  OneTimeSetup(context, node, params);
 
   const auto* input = GetInput(context, node, 0);
   const auto* filter = GetInput(context, node, 1);
@@ -619,17 +618,17 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   // weights data.
   //     Likewise, we pass the original output shape even if we are going to
   // write bitpacked output directly.
-  BConv2D<SrcScalar, AccumScalar, DstScalar>(
-      op_params, GetTensorShape(input), GetTensorData<SrcScalar>(input),
+  BConv2D<AccumScalar, DstScalar>(
+      op_params, GetTensorShape(input), GetTensorData<TBitpacked>(input),
       packed_input_data, unpacked_filter_shape,
       reinterpret_cast<TBitpacked*>(params->filter_packed.data()),
       output_transform, unpacked_output_shape, GetTensorData<DstScalar>(output),
-      GetTensorShape(im2col), GetTensorData<SrcScalar>(im2col),
+      GetTensorShape(im2col), GetTensorData<TBitpacked>(im2col),
       params->padding_buffer.data(), params->pad_value,
       params->read_bitpacked_input, CpuBackendContext::GetFromContext(context));
 }
 
-template <typename SrcScalar, typename DstScalar>
+template <typename DstScalar>
 void EvalRef(TfLiteContext* context, TfLiteNode* node,
              TfLiteBConv2DParams* params) {
   const auto* input = GetInput(context, node, 0);
@@ -645,7 +644,7 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   const auto packed_filter_shape = GetTensorShape(packed_filter);
 
   // Bitpack the input data, unless we're reading bitpacked input.
-  auto input_data = GetTensorData<SrcScalar>(input);
+  auto input_data = GetTensorData<TBitpacked>(input);
   RuntimeShape packed_input_shape;
   packed_input_shape.ReplaceWith(4, input_shape.DimsData());
   const TBitpacked* packed_input_data =
@@ -671,7 +670,7 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
       nullptr /*cpu backend context*/);
 }
 
-template <KernelType kernel_type, typename SrcScalar, typename DstScalar>
+template <KernelType kernel_type, typename DstScalar>
 inline TfLiteStatus EvalChooseKernelType(TfLiteContext* context,
                                          TfLiteNode* node,
                                          TfLiteBConv2DParams* params) {
@@ -686,58 +685,33 @@ inline TfLiteStatus EvalChooseKernelType(TfLiteContext* context,
     const int depth =
         params->filter_height * params->filter_width * params->channels_in;
     if (std::is_same<DstScalar, float>::value && depth + 512 < 1 << 16) {
-      EvalOpt<SrcScalar, std::int16_t, DstScalar>(context, node, params);
+      EvalOpt<std::int16_t, DstScalar>(context, node, params);
       return kTfLiteOk;
     }
 #endif
     // In all other cases, use 32-bit accumulators.
-    EvalOpt<SrcScalar, std::int32_t, DstScalar>(context, node, params);
+    EvalOpt<std::int32_t, DstScalar>(context, node, params);
     return kTfLiteOk;
   } else if (kernel_type == KernelType::kGenericRef) {
-    EvalRef<SrcScalar, DstScalar>(context, node, params);
+    EvalRef<DstScalar>(context, node, params);
     return kTfLiteOk;
-  }
-  return kTfLiteError;
-}
-
-template <KernelType kernel_type, typename SrcScalar>
-inline TfLiteStatus EvalChooseOutputType(TfLiteContext* context,
-                                         TfLiteNode* node,
-                                         TfLiteBConv2DParams* params) {
-  const TfLiteType output_type = GetOutput(context, node, 0)->type;
-  if (output_type == kTfLiteFloat32) {
-    return EvalChooseKernelType<kernel_type, SrcScalar, float>(context, node,
-                                                               params);
-  } else if (output_type == kTfLiteInt8) {
-    return EvalChooseKernelType<kernel_type, SrcScalar, std::int8_t>(
-        context, node, params);
-  } else if (params->write_bitpacked_output && output_type == kTfLiteInt32) {
-    return EvalChooseKernelType<kernel_type, SrcScalar, TBitpacked>(
-        context, node, params);
-  }
-  return kTfLiteError;
-}
-
-template <KernelType kernel_type>
-inline TfLiteStatus EvalChooseInputType(TfLiteContext* context,
-                                        TfLiteNode* node,
-                                        TfLiteBConv2DParams* params) {
-  const TfLiteType input_type = GetInput(context, node, 0)->type;
-  if (input_type == kTfLiteFloat32) {
-    return EvalChooseOutputType<kernel_type, float>(context, node, params);
-  } else if (input_type == kTfLiteInt8) {
-    return EvalChooseOutputType<kernel_type, std::int8_t>(context, node,
-                                                          params);
-  } else if (params->read_bitpacked_input && input_type == kTfLiteInt32) {
-    return EvalChooseOutputType<kernel_type, TBitpacked>(context, node, params);
   }
   return kTfLiteError;
 }
 
 template <KernelType kernel_type>
 TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
+  const TfLiteType output_type = GetOutput(context, node, 0)->type;
   auto* params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
-  return EvalChooseInputType<kernel_type>(context, node, params);
+  if (output_type == kTfLiteFloat32) {
+    return EvalChooseKernelType<kernel_type, float>(context, node, params);
+  } else if (output_type == kTfLiteInt8) {
+    return EvalChooseKernelType<kernel_type, std::int8_t>(context, node,
+                                                          params);
+  } else if (params->write_bitpacked_output && output_type == kTfLiteInt32) {
+    return EvalChooseKernelType<kernel_type, TBitpacked>(context, node, params);
+  }
+  return kTfLiteError;
 }
 
 }  // namespace bconv2d
