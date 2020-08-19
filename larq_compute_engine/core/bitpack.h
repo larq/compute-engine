@@ -199,7 +199,7 @@ void unpack_bitfield(const TBitpacked in, TUnpacked*& out,
                      std::size_t num_elements, const TUnpacked zero_bit_result,
                      const TUnpacked one_bit_result) {
   for (size_t i = 0; i < num_elements; ++i) {
-    *out++ = (in & (1ULL << i)) ? one_bit_result : zero_bit_result;
+    *out++ = (in & (TBitpacked(1) << i)) ? one_bit_result : zero_bit_result;
   }
 }
 
