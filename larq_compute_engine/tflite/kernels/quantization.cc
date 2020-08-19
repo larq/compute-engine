@@ -1,0 +1,138 @@
+#include "larq_compute_engine/core/bitpack_utils.h"
+#include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/kernels/internal/cppmath.h"
+#include "tensorflow/lite/kernels/internal/tensor.h"
+#include "tensorflow/lite/kernels/kernel_util.h"
+
+using namespace tflite;
+
+namespace ce = compute_engine;
+
+namespace compute_engine {
+namespace tflite {
+
+using ce::core::TBitpacked;
+
+TfLiteStatus QuantizePrepare(TfLiteContext* context, TfLiteNode* node) {
+  TF_LITE_ENSURE_EQ(context, NumInputs(node), 1);
+  TF_LITE_ENSURE_EQ(context, NumOutputs(node), 1);
+
+  const TfLiteTensor* input = GetInput(context, node, 0);
+  TfLiteTensor* output = GetOutput(context, node, 0);
+
+  TF_LITE_ENSURE(context,
+                 input->type == kTfLiteFloat32 || input->type == kTfLiteInt8);
+  TF_LITE_ENSURE_EQ(context, output->type, kTfLiteInt32);
+
+  TF_LITE_ENSURE_EQ(context, NumDimensions(input), NumDimensions(output));
+
+  int num_dims = NumDimensions(input);
+
+  TfLiteIntArray* output_dims = TfLiteIntArrayCreate(num_dims);
+  // The first n-1 dimensions are equal
+  for (int i = 0; i < num_dims - 1; ++i) {
+    output_dims->data[i] = input->dims->data[i];
+  }
+  // The last dimension is bitpacked
+  output_dims->data[num_dims - 1] =
+      ce::core::GetPackedSize(input->dims->data[num_dims - 1]);
+
+  return context->ResizeTensor(context, output, output_dims);
+}
+
+TfLiteStatus DequantizePrepare(TfLiteContext* context, TfLiteNode* node) {
+  TF_LITE_ENSURE_EQ(context, NumInputs(node), 1);
+  TF_LITE_ENSURE_EQ(context, NumOutputs(node), 1);
+
+  const TfLiteTensor* input = GetInput(context, node, 0);
+  TfLiteTensor* output = GetOutput(context, node, 0);
+
+  TF_LITE_ENSURE_EQ(context, input->type, kTfLiteInt32);
+  TF_LITE_ENSURE(context,
+                 output->type == kTfLiteFloat32 || output->type == kTfLiteInt8);
+
+  TF_LITE_ENSURE_EQ(context, NumDimensions(input), NumDimensions(output));
+
+  int num_dims = NumDimensions(input);
+
+  // The first n-1 dimensions are equal
+  for (int i = 0; i < num_dims - 1; ++i) {
+    TF_LITE_ENSURE_EQ(context, output->dims->data[i], input->dims->data[i]);
+  }
+  // The last dimension is bitpacked
+  int packed_channels = input->dims->data[num_dims - 1];
+  int unpacked_channels = output->dims->data[num_dims - 1];
+  TF_LITE_ENSURE_EQ(context, packed_channels,
+                    ce::core::GetPackedSize(unpacked_channels));
+
+  // We don't support resizing here, because we can not know the number of
+  // output channels based on the number of input channels
+
+  return kTfLiteOk;
+}
+
+TfLiteStatus QuantizeEval(TfLiteContext* context, TfLiteNode* node) {
+  const TfLiteTensor* input = GetInput(context, node, 0);
+  TfLiteTensor* output = GetOutput(context, node, 0);
+
+  RuntimeShape packed_input_shape;
+  if (input->type == kTfLiteFloat32) {
+    ce::core::bitpack_tensor(GetTensorShape(input), GetTensorData<float>(input),
+                             0, packed_input_shape,
+                             GetTensorData<TBitpacked>(output));
+  } else if (input->type == kTfLiteInt8) {
+    ce::core::bitpack_tensor(GetTensorShape(input),
+                             GetTensorData<std::int8_t>(input),
+                             input->params.zero_point, packed_input_shape,
+                             GetTensorData<TBitpacked>(output));
+  } else {
+    return kTfLiteError;
+  }
+
+  return kTfLiteOk;
+}
+
+TfLiteStatus DequantizeEval(TfLiteContext* context, TfLiteNode* node) {
+  const TfLiteTensor* input = GetInput(context, node, 0);
+  TfLiteTensor* output = GetOutput(context, node, 0);
+
+  auto out_shape = GetTensorShape(output);
+  int dims = out_shape.DimensionsCount();
+  int num_rows = FlatSizeSkipDim(out_shape, dims - 1);
+  int num_cols = out_shape.Dims(dims - 1);
+
+  if (output->type == kTfLiteFloat32) {
+    ce::core::unpack_matrix(GetTensorData<TBitpacked>(input), num_rows,
+                            num_cols, GetTensorData<float>(output));
+  } else if (output->type == kTfLiteInt8) {
+    int offset = TfLiteRound(1.0f / output->params.scale);
+    std::int8_t zero_bit_result =
+        std::min(127, output->params.zero_point + offset);
+    std::int8_t one_bit_result =
+        std::max(-128, output->params.zero_point - offset);
+
+    ce::core::unpack_matrix(GetTensorData<TBitpacked>(input), num_rows,
+                            num_cols, GetTensorData<std::int8_t>(output),
+                            zero_bit_result, one_bit_result);
+
+  } else {
+    return kTfLiteError;
+  }
+
+  return kTfLiteOk;
+}
+
+TfLiteRegistration* Register_QUANTIZE() {
+  static TfLiteRegistration r = {nullptr, nullptr, QuantizePrepare,
+                                 QuantizeEval};
+  return &r;
+}
+
+TfLiteRegistration* Register_DEQUANTIZE() {
+  static TfLiteRegistration r = {nullptr, nullptr, DequantizePrepare,
+                                 DequantizeEval};
+  return &r;
+}
+
+}  // namespace tflite
+}  // namespace compute_engine

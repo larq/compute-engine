@@ -67,7 +67,7 @@ cc_library(
     srcs = [
         "bconv2d.cc",
         "bmaxpool.cc",
-        "sign.cc",
+        "quantization.cc",
     ],
     hdrs = [
         "lce_ops_register.h",

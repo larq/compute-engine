@@ -196,9 +196,10 @@ inline void bitpack_matrix(const TIn* input, const std::size_t input_num_rows,
 
 template <typename TUnpacked>
 void unpack_bitfield(const TBitpacked in, TUnpacked*& out,
-                     std::size_t num_elements) {
+                     std::size_t num_elements, const TUnpacked zero_bit_result,
+                     const TUnpacked one_bit_result) {
   for (size_t i = 0; i < num_elements; ++i) {
-    *out++ = (in & (1ULL << i)) ? TUnpacked(-1) : TUnpacked(1);
+    *out++ = (in & (1ULL << i)) ? one_bit_result : zero_bit_result;
   }
 }
 
@@ -209,7 +210,9 @@ void unpack_bitfield(const TBitpacked in, TUnpacked*& out,
 template <typename TUnpacked>
 inline void unpack_matrix(const TBitpacked* input_data,
                           const std::size_t num_rows,
-                          const std::size_t num_cols, TUnpacked* output_data) {
+                          const std::size_t num_cols, TUnpacked* output_data,
+                          const TUnpacked zero_bit_result = TUnpacked(+1),
+                          const TUnpacked one_bit_result = TUnpacked(-1)) {
   const TBitpacked* in_ptr = input_data;
   TUnpacked* out_ptr = output_data;
   for (size_t row_index = 0; row_index < num_rows; ++row_index) {
@@ -217,11 +220,13 @@ inline void unpack_matrix(const TBitpacked* input_data,
     int elements_left = num_cols - bitpacking_bitwidth * num_full_blocks;
 
     while (num_full_blocks--) {
-      unpack_bitfield(*in_ptr++, out_ptr, bitpacking_bitwidth);
+      unpack_bitfield(*in_ptr++, out_ptr, bitpacking_bitwidth, zero_bit_result,
+                      one_bit_result);
     }
 
     if (elements_left != 0) {
-      unpack_bitfield(*in_ptr++, out_ptr, elements_left);
+      unpack_bitfield(*in_ptr++, out_ptr, elements_left, zero_bit_result,
+                      one_bit_result);
     }
   }
 }
