@@ -179,7 +179,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
 
     // In case that our network is not 8-bit quantized, we do require float
     // values
-    if (input->type == kTfLiteFloat32 || output->type == kTfLiteFloat32) {
+    if (output->type == kTfLiteFloat32) {
       TF_LITE_ENSURE_EQ(context, post_activation_multiplier->type,
                         kTfLiteFloat32);
       TF_LITE_ENSURE_EQ(context, post_activation_bias->type, kTfLiteFloat32);
@@ -241,11 +241,6 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
                            &conv_params->output_activation_min,
                            &conv_params->output_activation_max);
 
-  if (input->type == kTfLiteInt8) {
-    // 8-bit quantized input and output
-    TF_LITE_ENSURE_EQ(context, input->quantization.type,
-                      kTfLiteAffineQuantization);
-  }
   if (output->type == kTfLiteInt8) {
     TF_LITE_ENSURE_EQ(context, output->quantization.type,
                       kTfLiteAffineQuantization);
