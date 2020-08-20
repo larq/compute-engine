@@ -135,9 +135,7 @@ class ConvolutionOpModel : public BaseConvolutionOpModel {
 
   void SetInput(std::vector<T>& data) { PopulateTensor(input_, data); }
 
-  void SetBias(std::vector<typename GetBiasType<T>::type>& f) {
-    PopulateTensor(bias_, f);
-  }
+  void SetBias(std::vector<float>& f) { PopulateTensor(bias_, f); }
 
   std::vector<T> GetOutput() { return ExtractVector<T>(output_); }
   std::vector<int> GetOutputShape() { return GetTensorShape(output_); }
@@ -362,26 +360,19 @@ void ComputeThresholds(int input_depth, int filter_height, int filter_width,
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 
-// TODO: there might be a better way to define this matcher
-MATCHER_P(FloatNearPointwise, tol, "Out of range") {
-  return (std::get<0>(arg) > std::get<1>(arg) - tol &&
-          std::get<0>(arg) < std::get<1>(arg) + tol);
-}
-
 // Output test for writing bitpacked output
-template <typename BuiltinType>
 void test_lce_op_output(const std::vector<TBitpacked>& lce_output_data,
                         const std::vector<int>& builtin_output_shape,
-                        const std::vector<BuiltinType>& builtin_output_data,
-                        std::int32_t zero_point) {
+                        const std::vector<float>& builtin_output_data,
+                        std::int32_t zero_point, float scale) {
   // Apply bitpacking to the builtin output.
   RuntimeShape out_shape;
   out_shape.BuildFrom(builtin_output_shape);
   std::vector<TBitpacked> builtin_output_data_bp(
       core::GetPackedTensorSize(out_shape));
   RuntimeShape packed_shape;
-  core::bitpack_tensor(out_shape, builtin_output_data.data(), zero_point,
-                       packed_shape, builtin_output_data_bp.data());
+  core::bitpack_tensor(out_shape, builtin_output_data.data(), 0, packed_shape,
+                       builtin_output_data_bp.data());
 
   // We need the outputs here to be bit-exact, so don't allow for floating
   // point imprecision.
@@ -391,14 +382,33 @@ void test_lce_op_output(const std::vector<TBitpacked>& lce_output_data,
   EXPECT_EQ(lce_output_data, builtin_output_data_bp);
 }
 
-// Output test for 8-bit quantized or float output
-template <typename TOutput>
-void test_lce_op_output(const std::vector<TOutput>& lce_output_data,
+// Output test for float output
+void test_lce_op_output(const std::vector<float>& lce_output_data,
                         const std::vector<int>& builtin_output_shape,
-                        const std::vector<TOutput>& builtin_output_data,
-                        std::int32_t zero_point) {
-  EXPECT_THAT(lce_output_data, ::testing::Pointwise(FloatNearPointwise(1e-3),
+                        const std::vector<float>& builtin_output_data,
+                        std::int32_t zero_point, float scale) {
+  EXPECT_THAT(lce_output_data, ::testing::Pointwise(::testing::FloatNear(1e-3),
                                                     builtin_output_data));
+}
+
+// Output test for int8 output (compared to builtin float output)
+void test_lce_op_output(const std::vector<std::int8_t>& lce_output_data,
+                        const std::vector<int>& builtin_output_shape,
+                        const std::vector<float>& builtin_output_data,
+                        std::int32_t zero_point, float scale) {
+  // Convert builtin float output to int8, but leave it unrounded.
+  // This way, we can spot rounding errors in our int8 implementation.
+  std::vector<float> unrounded_builtin_output(builtin_output_data.size());
+  for (size_t i = 0; i < builtin_output_data.size(); ++i) {
+    float builtin_output = builtin_output_data[i];
+    float unrounded_int8_output = (builtin_output / scale) + zero_point;
+    unrounded_int8_output = std::min(unrounded_int8_output, 127.0f);
+    unrounded_int8_output = std::max(unrounded_int8_output, -128.0f);
+    unrounded_builtin_output[i] = unrounded_int8_output;
+  }
+
+  EXPECT_THAT(lce_output_data, ::testing::Pointwise(::testing::FloatNear(0.501),
+                                                    unrounded_builtin_output));
 }
 
 template <typename TOutput>
@@ -408,9 +418,7 @@ void runTest(const TestParam& param) {
                     std::is_same<TOutput, TBitpacked>::value,
                 "The LCE op output type must be float or int8 or TBitpacked.");
 
-  using BuiltinType = typename GetBuiltinType<TOutput>::type;
-  using BuiltinBiasType = typename GetBiasType<BuiltinType>::type;
-  using PostType = typename GetPostType<BuiltinType>::type;
+  using PostType = float;
 
   const register_function registration = param.registration;
   const int input_batch_count = param.input_batch_count;
@@ -430,9 +438,6 @@ void runTest(const TestParam& param) {
   constexpr bool write_bitpacked_output =
       std::is_same<TOutput, TBitpacked>::value;
   constexpr bool int8_output = std::is_same<TOutput, std::int8_t>::value;
-
-  // 8-bit quantization if and only if the builtin type is int8
-  static_assert(int8_output == std::is_same<BuiltinType, std::int8_t>::value);
 
   const Padding builtin_padding =
       (padding == Padding_ONE ? Padding_VALID : padding);
@@ -465,17 +470,17 @@ void runTest(const TestParam& param) {
   std::random_device rd;
   std::mt19937 gen(rd());
 
-  LceTensor<BuiltinType> input_tensor(
+  LceTensor<float> input_tensor(
       {input_batch_count, input_height, input_width, input_depth});
 
   // Shape will be changed later if padding is required
-  LceTensor<BuiltinType> padded_input_tensor(
+  LceTensor<float> padded_input_tensor(
       {input_batch_count, input_height, input_width, input_depth});
 
   LceTensor<TBitpacked> packed_input_tensor(
       {input_batch_count, input_height, input_width, packed_channels});
 
-  LceTensor<BuiltinType> filter_tensor(
+  LceTensor<float> filter_tensor(
       {filter_count, filter_height, filter_width, input_depth});
 
   LceTensor<TBitpacked> packed_filter_tensor(
@@ -488,39 +493,28 @@ void runTest(const TestParam& param) {
   LceTensor<std::int32_t> threshold_tensor({filter_count});
 
   LceTensor<TOutput> output_tensor;
-  LceTensor<BuiltinType> builtin_output_tensor;
+  LceTensor<float> builtin_output_tensor;
 
   if (int8_output) {
-    // When the output is int8, the builtin op also has int8 input
-    input_tensor.GenerateQuantizationParams(gen);
-    // Use the same quantization parameters for the padded tensor
-    padded_input_tensor.SetQuantizationParams(input_tensor);
-    filter_tensor.GenerateQuantizationParamsPerChannel(gen);
-    builtin_output_tensor.GenerateQuantizationParams(gen);
-
-    output_tensor.SetQuantizationParams(builtin_output_tensor);
+    output_tensor.GenerateQuantizationParams(gen);
 
     if (std::is_same<PostType, std::int8_t>::value) {
       post_tensor.GenerateQuantizationParams(gen);
     }
   }
 
-  std::vector<BuiltinType> input_data, padded_input_data, filters_data;
+  std::vector<float> input_data, padded_input_data, filters_data, bias_data;
   std::vector<TBitpacked> packed_input_data;
   std::vector<PostType> post_activation_multiplier_data,
       post_activation_bias_data;
   std::vector<std::int32_t> threshold_data;
-  std::vector<BuiltinBiasType> bias_data;
-
   std::vector<TBitpacked> packed_filters_data;
 
   input_data.resize(input_num_elem);
   filters_data.resize(filters_num_elem);
   packed_filters_data.resize(packed_filters_num_elem);
   packed_input_data.resize(packed_input_num_elem);
-  bias_data.resize(
-      filter_count,
-      0);  // bias always has zero_point = 0, scale = input * filter
+  bias_data.resize(filter_count, 0.0f);
   post_activation_multiplier_data.resize(filter_count, 1);
   post_activation_bias_data.resize(filter_count, 0);
   threshold_data.resize(filter_count);
@@ -530,31 +524,19 @@ void runTest(const TestParam& param) {
   filter_tensor.GenerateSigns(gen, std::begin(filters_data),
                               std::end(filters_data));
 
-  if (int8_output) {
-    // Set the post_activation_ step to identity, to make sure
-    // the Conv2D and BConv2D kernel are clamping at the same point.
-    // We have a separate test for non-identity post_activation_
-    for (int i = 0; i < filter_count; ++i) {
-      post_activation_multiplier_data[i] = post_tensor.Quantize(1);
-      post_activation_bias_data[i] = post_tensor.Quantize(0);
-    }
+  auto float_generator = [&gen]() {
+    return std::uniform_real_distribution<>(0.01, 1.5)(gen);
+  };
 
-  } else {  // Bitpacked output or float output
+  std::generate(std::begin(post_activation_multiplier_data),
+                std::end(post_activation_multiplier_data), float_generator);
+  std::generate(std::begin(post_activation_bias_data),
+                std::end(post_activation_bias_data), float_generator);
 
-    auto float_generator = [&gen]() {
-      return std::uniform_real_distribution<>(0.01, 1.5)(gen);
-    };
-
-    std::generate(std::begin(post_activation_multiplier_data),
-                  std::end(post_activation_multiplier_data), float_generator);
-    std::generate(std::begin(post_activation_bias_data),
-                  std::end(post_activation_bias_data), float_generator);
-
-    if (write_bitpacked_output) {
-      ComputeThresholds(input_depth, filter_height, filter_width,
-                        post_activation_multiplier_data,
-                        post_activation_bias_data, activation, threshold_data);
-    }
+  if (write_bitpacked_output) {
+    ComputeThresholds(input_depth, filter_height, filter_width,
+                      post_activation_multiplier_data,
+                      post_activation_bias_data, activation, threshold_data);
   }
 
   // Bitpack input and filters
@@ -591,11 +573,11 @@ void runTest(const TestParam& param) {
 
     // The parameter {4,2} means that the paddings array is four pairs.
     // The four pairs correspond to: Batch, Height, Width, Channels
-    const BuiltinType pad_value = input_tensor.Quantize(1);
-    PadOpModel<BuiltinType> padop(input_tensor, {4, 2},
-                                  {0, 0, overflow_top, overflow_bottom,
-                                   overflow_left, overflow_right, 0, 0},
-                                  pad_value, padded_input_tensor);
+    const float pad_value = input_tensor.Quantize(1);
+    PadOpModel<float> padop(input_tensor, {4, 2},
+                            {0, 0, overflow_top, overflow_bottom, overflow_left,
+                             overflow_right, 0, 0},
+                            pad_value, padded_input_tensor);
 
     padop.SetInput(input_data);
     padop.Invoke();
@@ -611,9 +593,8 @@ void runTest(const TestParam& param) {
     padded_input_data = input_data;
   }
 
-  if (padding == Padding_SAME &&
-      (activation == ActivationFunctionType_RELU || write_bitpacked_output ||
-       std::is_same<BuiltinType, std::int8_t>::value)) {
+  if (padding == Padding_SAME && (activation == ActivationFunctionType_RELU ||
+                                  write_bitpacked_output || int8_output)) {
     // Neither fused ReLu nor writing bitpacked output nor int8 is supported
     // with zero-padding. We could use `EXPECT_DEATH` here but it is extremely
     // slow. Therefore we have a separate test below, and here we just skip.
@@ -625,7 +606,7 @@ void runTest(const TestParam& param) {
     Run built-in op.
    -----------------*/
 
-  ConvolutionOpModel<BuiltinType> m_builtin(
+  ConvolutionOpModel<float> m_builtin(
       ::tflite::ops::builtin::Register_CONVOLUTION_GENERIC_OPT(),
       padded_input_tensor, filter_tensor, builtin_output_tensor, stride_width,
       stride_height, builtin_padding, activation, dilation_width_factor,
@@ -656,16 +637,14 @@ void runTest(const TestParam& param) {
   //
   // Therefore we simply set the post_mul and post_add to identity in this
   // test, and we have a separate test below to test a non-identity version
-  if (std::is_same<BuiltinType, float>::value) {
-    BuiltinType* out_ptr = builtin_output.data();
-    for (int batch = 0; batch < input_batch_count; ++batch) {
-      for (int out_y = 0; out_y < output_width; ++out_y) {
-        for (int out_x = 0; out_x < output_height; ++out_x) {
-          for (int out_c = 0; out_c < filter_count; ++out_c) {
-            *out_ptr *= post_activation_multiplier_data[out_c];
-            *out_ptr += post_activation_bias_data[out_c];
-            ++out_ptr;
-          }
+  float* out_ptr = builtin_output.data();
+  for (int batch = 0; batch < input_batch_count; ++batch) {
+    for (int out_y = 0; out_y < output_width; ++out_y) {
+      for (int out_x = 0; out_x < output_height; ++out_x) {
+        for (int out_c = 0; out_c < filter_count; ++out_c) {
+          *out_ptr *= post_activation_multiplier_data[out_c];
+          *out_ptr += post_activation_bias_data[out_c];
+          ++out_ptr;
         }
       }
     }
@@ -695,7 +674,8 @@ void runTest(const TestParam& param) {
   // Invoke the op and test that the output is correct.
   m_lce.Invoke();
   test_lce_op_output(m_lce.GetOutput(), m_builtin.GetOutputShape(),
-                     builtin_output, builtin_output_tensor.zero_point);
+                     builtin_output, output_tensor.zero_point,
+                     output_tensor.scale);
 }
 
 TEST_P(BConv2DOpTest, Bitpacked) { runTest<TBitpacked>(TestParam(GetParam())); }
