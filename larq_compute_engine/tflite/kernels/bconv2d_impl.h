@@ -22,12 +22,12 @@ namespace tflite {
 
 using ce::core::TBitpacked;
 
-template <class T>
 inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
-                   const T* input_data, const RuntimeShape& filter_shape,
+                   const TBitpacked* input_data,
+                   const RuntimeShape& filter_shape,
                    const RuntimeShape& output_shape,
-                   const RuntimeShape& im2col_shape, T* im2col_data,
-                   RuntimeShape& result_shape, const T** result_data,
+                   const RuntimeShape& im2col_shape, TBitpacked* im2col_data,
+                   RuntimeShape& result_shape, const TBitpacked** result_data,
                    const std::int32_t zero_point) {
   const int stride_width = params.stride_width;
   const int stride_height = params.stride_height;
@@ -46,15 +46,16 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
   const RuntimeShape* shape = nullptr;
   if (need_dilated_im2col) {
     TF_LITE_ASSERT(im2col_data);
-    optimized_ops::DilatedIm2col<T>(params, zero_byte, input_shape, input_data,
-                                    filter_shape, output_shape, im2col_data);
+    optimized_ops::DilatedIm2col<TBitpacked>(params, zero_byte, input_shape,
+                                             input_data, filter_shape,
+                                             output_shape, im2col_data);
     *result_data = im2col_data;
     shape = &im2col_shape;
   } else if (need_im2col) {
     TF_LITE_ASSERT(im2col_data);
-    optimized_ops::Im2col<T>(params, filter_height, filter_width, zero_byte,
-                             input_shape, input_data, im2col_shape,
-                             im2col_data);
+    optimized_ops::Im2col<TBitpacked>(params, filter_height, filter_width,
+                                      zero_byte, input_shape, input_data,
+                                      im2col_shape, im2col_data);
     *result_data = im2col_data;
     shape = &im2col_shape;
   } else {
@@ -124,18 +125,11 @@ inline void BConv2D(
   // The filter tensor was already bitpacked. Only get the new shape.
   RuntimeShape packed_filter_shape = ce::core::packed_shape(filter_shape);
 
-  // Get the im2col data buffer.
-  TBitpacked* packed_im2col_data = reinterpret_cast<TBitpacked*>(im2col_data);
-
   // We're already bitpacked, so im2col `zero_byte` is 0.
   RuntimeShape result_shape;
 
-  RuntimeShape packed_input_shape = input_shape;
-  const TBitpacked* im2col_input_data =
-      reinterpret_cast<const TBitpacked*>(input_data);
-  im2col<TBitpacked>(params, packed_input_shape, im2col_input_data,
-                     packed_filter_shape, output_shape, im2col_shape,
-                     packed_im2col_data, result_shape, &rhs_data, 0);
+  im2col(params, input_shape, input_data, packed_filter_shape, output_shape,
+         im2col_shape, im2col_data, result_shape, &rhs_data, 0);
 
   k = result_shape.Dims(3);
   m = FlatSizeSkipDim(result_shape, 3);
