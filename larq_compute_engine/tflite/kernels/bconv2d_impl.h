@@ -161,9 +161,6 @@ inline void BConv2D(
         output_transform, cpu_backend_context);
 
   if (params.padding_type == PaddingType::kSame && pad_value == 0) {
-    using PaddingFunctor =
-        ce::core::PaddingFunctor<DstScalar, float, float, float>;
-
     const int stride_width = params.stride_width;
     const int stride_height = params.stride_height;
     const int dilation_width_factor = params.dilation_width_factor;
@@ -178,14 +175,14 @@ inline void BConv2D(
     const int output_width = output_shape.Dims(2);
     const int output_height = output_shape.Dims(1);
 
-    PaddingFunctor padding_functor;
+    ce::core::PaddingFunctor padding_functor;
     {
       ruy::profiler::ScopeLabel label3("ZeroPaddingCorrection");
       padding_functor(
           batches, input_height, input_width, input_depth, nullptr,
           filter_height, filter_width, output_depth, stride_height,
           stride_width, dilation_height_factor, dilation_width_factor,
-          output_data, output_height, output_width,
+          reinterpret_cast<float*>(output_data), output_height, output_width,
           GetPostActivationMultiplier(output_transform), padding_buffer);
     }
   }

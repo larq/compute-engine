@@ -317,7 +317,6 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   // so we always reset these flags
   conv_params->is_quantization_initialized = false;
   conv_params->is_padding_correction_cached = false;
-  conv_params->is_filter_repacked = false;
 
   return kTfLiteOk;
 }
@@ -407,70 +406,28 @@ void SetupQuantization(TfLiteContext* context, TfLiteNode* node,
 
 void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
                   TfLiteBConv2DParams* params) {
-  if (!params->is_filter_repacked || !params->is_padding_correction_cached) {
+  if (!params->is_padding_correction_cached &&
+      (params->padding_type == kTfLitePaddingSame && params->pad_value == 0)) {
     const auto* filter = GetInput(context, node, 1);
     const auto* post_activation_multiplier = GetInput(context, node, 2);
 
-    const TBitpacked* filter_flatbuffer = GetTensorData<TBitpacked>(filter);
-
-    const float* filter_unpacked = nullptr;
-
-    // First unpack the filter to TBitpacked
-    int cols = params->channels_in;
-    int rows =
-        params->channels_out * params->filter_height * params->filter_width;
-
-    // This vector is declared static, so that it will be shared by all nodes.
-    static std::vector<float> unpacked_weights;
-    unpacked_weights.resize(rows * cols);
-
-    ce::core::unpack_matrix(filter_flatbuffer, rows, cols,
-                            unpacked_weights.data());
-
-    filter_unpacked = unpacked_weights.data();
-
     // Fill the zero-padding cache
-    if (!params->is_padding_correction_cached &&
-        (params->padding_type == kTfLitePaddingSame &&
-         params->pad_value == 0)) {
-      using PaddingFunctor =
-          ce::core::PaddingFunctor<float, float, float, float>;
-      PaddingFunctor padding_functor;
+    ce::core::PaddingFunctor padding_functor;
 
-      std::size_t padding_cache_size = padding_functor.get_cache_size(
-          params->filter_height, params->filter_width, params->channels_out,
-          params->dilation_height_factor, params->dilation_width_factor);
+    std::size_t padding_cache_size = padding_functor.get_cache_size(
+        params->filter_height, params->filter_width, params->channels_out,
+        params->dilation_height_factor, params->dilation_width_factor);
 
-      params->padding_buffer.resize(padding_cache_size);
+    params->padding_buffer.resize(padding_cache_size);
 
-      padding_functor.cache_correction_values(
-          filter_unpacked, params->filter_height, params->filter_width,
-          params->channels_out, params->channels_in,
-          params->dilation_height_factor, params->dilation_width_factor,
-          GetTensorData<float>(post_activation_multiplier),
-          params->padding_buffer.data());
-    }
-    params->is_padding_correction_cached = true;
-
-    // Repack the filters. They have shape
-    // [output channels, height, width, input channels]
-    // and we now view it as a matrix of shape
-    // bitpack first: [output channels * height * width, input_channels]
-    // im2col first:  [output channels, height * width * input_channels]
-    // and bitpack it along the last dimension
-
-    std::vector<TBitpacked> filter_data_bp(
-        ce::core::GetPackedMatrixSize(rows, cols));
-    ce::core::bitpack_matrix(filter_unpacked, rows, cols,
-                             filter_data_bp.data());
-
-    std::size_t num_bytes = filter_data_bp.size() * sizeof(TBitpacked);
-
-    params->filter_packed.resize(num_bytes);
-    memcpy(params->filter_packed.data(), filter_data_bp.data(), num_bytes);
-
-    params->is_filter_repacked = true;
+    padding_functor.cache_correction_values(
+        GetTensorData<TBitpacked>(filter), params->filter_height,
+        params->filter_width, params->channels_out, params->channels_in,
+        params->dilation_height_factor, params->dilation_width_factor,
+        GetTensorData<float>(post_activation_multiplier),
+        params->padding_buffer.data());
   }
+  params->is_padding_correction_cached = true;
   if (!params->is_quantization_initialized) {
     SetupQuantization(context, node, params);
     params->is_quantization_initialized = true;
@@ -514,8 +471,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   // write bitpacked output directly.
   BConv2D<AccumScalar, DstScalar>(
       op_params, GetTensorShape(input), GetTensorData<TBitpacked>(input),
-      unpacked_filter_shape,
-      reinterpret_cast<TBitpacked*>(params->filter_packed.data()),
+      unpacked_filter_shape, GetTensorData<TBitpacked>(filter),
       output_transform, unpacked_output_shape, GetTensorData<DstScalar>(output),
       GetTensorShape(im2col), GetTensorData<TBitpacked>(im2col),
       params->padding_buffer.data(), params->pad_value,

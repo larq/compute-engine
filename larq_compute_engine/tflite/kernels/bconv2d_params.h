@@ -64,11 +64,6 @@ typedef struct {
   std::vector<float> padding_buffer;
   bool is_padding_correction_cached = false;
 
-  // Weights in the flatbuffer file are bitpacked in a different
-  // order than what is expected by the kernels, so we repack the weights
-  std::vector<std::uint8_t> filter_packed;
-  bool is_filter_repacked = false;
-
   bool write_bitpacked_output = false;
 
   bool conv_params_initialized = false;
