@@ -461,8 +461,16 @@ void runTest(const TestParam& param) {
   const auto is_reference_registration =
       (registration == compute_engine::tflite::Register_BCONV_2D_REF);
 
-  if ((padding == Padding_SAME && pad_values == 0) &&
-      is_reference_registration) {
+  if (padding == Padding_SAME &&
+      (is_reference_registration || activation == ActivationFunctionType_RELU ||
+       write_bitpacked_output || int8_output)) {
+    // Zero-padding is not supported in combination with:
+    // - The reference implementation
+    // - Fused ReLu
+    // - Writing bitpacked output
+    // - Int8 output
+    // We could use `EXPECT_DEATH` here but it is extremely slow. Therefore we
+    // have a separate test below, and here we just skip.
     GTEST_SKIP();
     return;
   }
@@ -593,15 +601,6 @@ void runTest(const TestParam& param) {
     padded_input_data = input_data;
   }
 
-  if (padding == Padding_SAME && (activation == ActivationFunctionType_RELU ||
-                                  write_bitpacked_output || int8_output)) {
-    // Neither fused ReLu nor writing bitpacked output nor int8 is supported
-    // with zero-padding. We could use `EXPECT_DEATH` here but it is extremely
-    // slow. Therefore we have a separate test below, and here we just skip.
-    GTEST_SKIP();
-    return;
-  }
-
   /*-----------------
     Run built-in op.
    -----------------*/
@@ -621,22 +620,6 @@ void runTest(const TestParam& param) {
   // Apply the post multiply and add to the TFLite model.
   // We cannot fuse it into the tflite bias because it should happen *after*
   // the activation function.
-  //
-  // The bitpacked-output case does not require such processing.
-  // The 8-bit quantized case:
-  //
-  // BConv: clamp(Scale&Round(post_add) + Scale&Round(post_mul * accumulator))
-  // Conv:  clamp(Scale&Round( accumulator ))
-  //
-  // There are several ways in which we can have a *legitimate* mismatch
-  // between the BConv and Conv outputs:
-  // - conv output got clamped
-  // - bconv output got clamped
-  // - scale&round rounding effect of conv
-  // - scale&round rounding effect of post_add or post_mul etc
-  //
-  // Therefore we simply set the post_mul and post_add to identity in this
-  // test, and we have a separate test below to test a non-identity version
   float* out_ptr = builtin_output.data();
   for (int batch = 0; batch < input_batch_count; ++batch) {
     for (int out_y = 0; out_y < output_width; ++out_y) {
@@ -678,11 +661,15 @@ void runTest(const TestParam& param) {
                      output_tensor.scale);
 }
 
-TEST_P(BConv2DOpTest, Bitpacked) { runTest<TBitpacked>(TestParam(GetParam())); }
+TEST_P(BConv2DOpTest, BitpackedOutput) {
+  runTest<TBitpacked>(TestParam(GetParam()));
+}
 
-TEST_P(BConv2DOpTest, Float) { runTest<float>(TestParam(GetParam())); }
+TEST_P(BConv2DOpTest, FloatOutput) { runTest<float>(TestParam(GetParam())); }
 
-TEST_P(BConv2DOpTest, Int8) { runTest<std::int8_t>(TestParam(GetParam())); }
+TEST_P(BConv2DOpTest, Int8Output) {
+  runTest<std::int8_t>(TestParam(GetParam()));
+}
 
 using ::testing::Values;
 using ::testing::ValuesIn;
