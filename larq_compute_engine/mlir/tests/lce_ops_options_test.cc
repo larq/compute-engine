@@ -13,13 +13,22 @@ IntegerAttr getIntegerAttr(Builder builder, int value) {
   return builder.getIntegerAttr(builder.getIntegerType(32), value);
 }
 
-TEST(LCEOpsSerializationTest, BsignTest) {
+TEST(LCEOpsSerializationTest, QuantizeTest) {
   MLIRContext context;
-  auto* op = Operation::create(UnknownLoc::get(&context),
-                               OperationName("lq.Bsign", &context), llvm::None,
-                               llvm::None, llvm::None, llvm::None, 0);
+  auto* op = Operation::create(
+      UnknownLoc::get(&context), OperationName("lq.Quantize", &context),
+      llvm::None, llvm::None, llvm::None, llvm::None, 0);
 
-  ASSERT_EQ(cast<TF::BsignOp>(op).buildCustomOptions().size(), 0);
+  ASSERT_EQ(cast<TF::QuantizeOp>(op).buildCustomOptions().size(), 0);
+}
+
+TEST(LCEOpsSerializationTest, DequantizeTest) {
+  MLIRContext context;
+  auto* op = Operation::create(
+      UnknownLoc::get(&context), OperationName("lq.Dequantize", &context),
+      llvm::None, llvm::None, llvm::None, llvm::None, 0);
+
+  ASSERT_EQ(cast<TF::DequantizeOp>(op).buildCustomOptions().size(), 0);
 }
 
 TEST(LCEOpsSerializationTest, BConv2dTest) {

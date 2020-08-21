@@ -159,3 +159,18 @@ foreach actFnPair = [[TFL_ReluOp, TFL_AF_Relu],
                      [TFL_Relu1Op, TFL_AF_Relu1],
                      [TFL_Relu6Op, TFL_AF_Relu6]] in
   defm : FuseActFnIntoConvOpPat<actFnPair[0], actFnPair[1]>;
+
+def : Pat<(LQ_QuantizeOp (TFL_MaxPool2DOp: $pool_output $input,
+                                           $padding,
+                                           $stride_w,
+                                           $stride_h,
+                                           $filter_width,
+                                           $filter_height,
+                                           $fused_activation_function)),
+          (LQ_BMaxPool2dOp (LQ_QuantizeOp $input),
+                           $padding,
+                           $stride_w,
+                           $stride_h,
+                           $filter_width,
+                           $filter_height),
+          [(HasOneUse $pool_output)]>;

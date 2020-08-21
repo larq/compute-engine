@@ -1,6 +1,6 @@
 #include <random>
 
-#include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
+#include "flatbuffers/flexbuffers.h"
 #include "larq_compute_engine/core/bitpack_utils.h"
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/tflite/tests/utils.h"
@@ -18,9 +18,9 @@ namespace testing {
 
 // We compare against TFLite's maxpool
 // This is copied from pooling_test.cc
-class BasePoolingOpModel : public SingleOpModel {
+class PoolingOpModel : public SingleOpModel {
  public:
-  BasePoolingOpModel(
+  PoolingOpModel(
       BuiltinOperator type, const TensorData& input, int filter_width,
       int filter_height, const TensorData& output,
       Padding padding = Padding_VALID, int stride_w = 2, int stride_h = 2,
@@ -36,31 +36,24 @@ class BasePoolingOpModel : public SingleOpModel {
     BuildInterpreter({GetShape(input_)});
   }
 
+  void SetInput(std::vector<float> data) { PopulateTensor(input_, data); }
+
+  std::vector<float> GetOutput() { return ExtractVector<float>(output_); }
+  std::vector<int> GetOutputShape() { return GetTensorShape(output_); }
+
  protected:
   int input_;
   int output_;
 };
 
-template <typename T>
-class PoolingOpModel : public BasePoolingOpModel {
- public:
-  using BasePoolingOpModel::BasePoolingOpModel;
-
-  void SetInput(std::vector<T> data) { PopulateTensor(input_, data); }
-
-  std::vector<T> GetOutput() { return ExtractVector<T>(output_); }
-  std::vector<int> GetOutputShape() { return GetTensorShape(output_); }
-};
-
 typedef TfLiteRegistration* (*register_function)(void);
 
-class BaseBMaxPoolOpModel : public SingleOpModel {
+class BMaxPoolOpModel : public SingleOpModel {
  public:
-  BaseBMaxPoolOpModel(register_function registration, const TensorData& input,
-                      const TensorData& output, int filter_height = 2,
-                      int filter_width = 2, int stride_height = 1,
-                      int stride_width = 1,
-                      enum Padding padding = Padding_SAME) {
+  BMaxPoolOpModel(register_function registration, const TensorData& input,
+                  const TensorData& output, int filter_height = 2,
+                  int filter_width = 2, int stride_height = 1,
+                  int stride_width = 1, enum Padding padding = Padding_SAME) {
     input_ = AddInput(input);
     output_ = AddOutput(output);
 
@@ -78,17 +71,7 @@ class BaseBMaxPoolOpModel : public SingleOpModel {
                      /*apply_delegate=*/true);
   }
 
- protected:
-  int input_;
-  int output_;
-};
-
-template <typename TInput>
-class BMaxPoolOpModel : public BaseBMaxPoolOpModel {
- public:
-  using BaseBMaxPoolOpModel::BaseBMaxPoolOpModel;
-
-  void SetInput(const std::vector<TInput>& data) {
+  void SetInput(const std::vector<TBitpacked>& data) {
     PopulateTensor(input_, data);
   }
 
@@ -96,6 +79,10 @@ class BMaxPoolOpModel : public BaseBMaxPoolOpModel {
     return ExtractVector<TBitpacked>(output_);
   }
   std::vector<int> GetOutputShape() { return GetTensorShape(output_); }
+
+ protected:
+  int input_;
+  int output_;
 };
 
 typedef std::tuple<std::array<int, 4>,  // input shape [BHWI]
@@ -152,7 +139,7 @@ struct TestParam {
 
 class BMaxPoolOpTest : public ::testing::TestWithParam<TestParamTuple> {};
 
-TEST_P(BMaxPoolOpTest, FloatAndBinaryInput) {
+TEST_P(BMaxPoolOpTest, BinaryInput) {
   TestParam params(GetParam());
 
   int packed_input_depth = GetPackedSize(params.input_depth);
@@ -184,26 +171,18 @@ TEST_P(BMaxPoolOpTest, FloatAndBinaryInput) {
                  input_data_bp.data());
 
   // Our op with binary input
-  BMaxPoolOpModel<TBitpacked> m_lce_binary(
-      params.registration, packed_input_tensor, packed_output_tensor,
-      params.filter_height, params.filter_width, params.stride_height,
-      params.stride_width, params.padding);
+  BMaxPoolOpModel m_lce_binary(params.registration, packed_input_tensor,
+                               packed_output_tensor, params.filter_height,
+                               params.filter_width, params.stride_height,
+                               params.stride_width, params.padding);
   m_lce_binary.SetInput(input_data_bp);
   m_lce_binary.Invoke();
 
-  // Our op with float input
-  BMaxPoolOpModel<float> m_lce_float(params.registration, input_tensor,
-                                     packed_output_tensor, params.filter_height,
-                                     params.filter_width, params.stride_height,
-                                     params.stride_width, params.padding);
-  m_lce_float.SetInput(input_data);
-  m_lce_float.Invoke();
-
   // Builtin op with float input
-  PoolingOpModel<float> m_builtin(BuiltinOperator_MAX_POOL_2D, input_tensor,
-                                  params.filter_width, params.filter_height,
-                                  output_tensor, params.padding,
-                                  params.stride_width, params.stride_height);
+  PoolingOpModel m_builtin(BuiltinOperator_MAX_POOL_2D, input_tensor,
+                           params.filter_width, params.filter_height,
+                           output_tensor, params.padding, params.stride_width,
+                           params.stride_height);
   m_builtin.SetInput(input_data);
   m_builtin.Invoke();
 
@@ -218,73 +197,6 @@ TEST_P(BMaxPoolOpTest, FloatAndBinaryInput) {
   // Check our binary op
   EXPECT_EQ(m_lce_binary.GetOutputShape(), GetShape(packed_out_shape));
   EXPECT_EQ(m_lce_binary.GetOutput(), builtin_output_data_bp);
-
-  // Check our float op
-  EXPECT_EQ(m_lce_float.GetOutputShape(), GetShape(packed_out_shape));
-  EXPECT_EQ(m_lce_float.GetOutput(), builtin_output_data_bp);
-}
-
-TEST_P(BMaxPoolOpTest, Int8Input) {
-  TestParam params(GetParam());
-
-  int packed_input_depth = GetPackedSize(params.input_depth);
-
-  LceTensor<std::int8_t> input_tensor({params.input_batch_count,
-                                       params.input_height, params.input_width,
-                                       params.input_depth});
-  LceTensor<TBitpacked> packed_input_tensor(
-      {params.input_batch_count, params.input_height, params.input_width,
-       packed_input_depth});
-
-  LceTensor<std::int8_t> output_tensor;
-  LceTensor<TBitpacked> packed_output_tensor;
-
-  RuntimeShape input_shape = GetShape(input_tensor.shape);
-  RuntimeShape packed_input_shape = GetShape(packed_input_tensor.shape);
-
-  std::vector<std::int8_t> input_data;
-  std::vector<TBitpacked> input_data_bp;
-
-  input_data.resize(input_shape.FlatSize());
-  input_data_bp.resize(packed_input_shape.FlatSize());
-
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  input_tensor.GenerateQuantizationParams(gen);
-  output_tensor.SetQuantizationParams(input_tensor);  // Required by tflite spec
-  input_tensor.GenerateSigns(gen, std::begin(input_data), std::end(input_data));
-
-  // Bitpack the input
-  bitpack_tensor(input_shape, input_data.data(), input_tensor.zero_point,
-                 packed_input_shape, input_data_bp.data());
-
-  // Our op with int8 input
-  BMaxPoolOpModel<std::int8_t> m_lce(params.registration, input_tensor,
-                                     packed_output_tensor, params.filter_height,
-                                     params.filter_width, params.stride_height,
-                                     params.stride_width, params.padding);
-  m_lce.SetInput(input_data);
-  m_lce.Invoke();
-
-  // Builtin op with int8 input
-  PoolingOpModel<std::int8_t> m_builtin(
-      BuiltinOperator_MAX_POOL_2D, input_tensor, params.filter_width,
-      params.filter_height, output_tensor, params.padding, params.stride_width,
-      params.stride_height);
-  m_builtin.SetInput(input_data);
-  m_builtin.Invoke();
-
-  // Bitpack the tflite output
-  RuntimeShape out_shape = GetShape(m_builtin.GetOutputShape());
-  std::vector<TBitpacked> builtin_output_data_bp(
-      GetPackedTensorSize(out_shape));
-  RuntimeShape packed_out_shape;
-  bitpack_tensor(out_shape, m_builtin.GetOutput().data(),
-                 output_tensor.zero_point, packed_out_shape,
-                 builtin_output_data_bp.data());
-
-  EXPECT_EQ(m_lce.GetOutputShape(), GetShape(packed_out_shape));
-  EXPECT_EQ(m_lce.GetOutput(), builtin_output_data_bp);
 }
 
 using ::testing::Values;

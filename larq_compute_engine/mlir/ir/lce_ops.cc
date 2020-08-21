@@ -1,6 +1,7 @@
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 
 #include "flatbuffers/flexbuffers.h"
+#include "larq_compute_engine/core/bitpack.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
 namespace mlir {
@@ -24,7 +25,8 @@ static tflite::ActivationFunctionType ConvertActivationAttr(
 #define GET_OP_CLASSES
 #include "larq_compute_engine/mlir/ir/lce_ops.cc.inc"
 
-std::vector<uint8_t> BsignOp::buildCustomOptions() { return {}; }
+std::vector<uint8_t> QuantizeOp::buildCustomOptions() { return {}; }
+std::vector<uint8_t> DequantizeOp::buildCustomOptions() { return {}; }
 
 std::vector<uint8_t> Bconv2dOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
@@ -54,6 +56,15 @@ std::vector<uint8_t> BMaxPool2dOp::buildCustomOptions() {
   });
   fbb.Finish();
   return fbb.GetBuffer();
+}
+
+void QuantizeOp::build(OpBuilder& builder, OperationState& state, Value x) {
+  state.addOperands(x);
+  const auto existing_shape = x.getType().cast<ShapedType>().getShape();
+  const auto channels = existing_shape[existing_shape.size() - 1];
+  std::vector<int64_t> shape = existing_shape.drop_back();
+  shape.push_back(compute_engine::core::GetPackedSize(channels));
+  state.addTypes(RankedTensorType::get(shape, builder.getIntegerType(32)));
 }
 
 LarqDialect::LarqDialect(MLIRContext* context)

@@ -70,7 +70,7 @@ class BaseBConv2DOpModel : public SingleOpModel {
   int thresholds_;
 };
 
-template <typename TInput, typename PostType, typename TOutput>
+template <typename PostType, typename TOutput>
 class BConv2DOpModel : public BaseBConv2DOpModel {
  public:
   using BaseBConv2DOpModel::BaseBConv2DOpModel;
@@ -79,7 +79,7 @@ class BConv2DOpModel : public BaseBConv2DOpModel {
     PopulateTensor(filter_, f);
   }
 
-  void SetInput(const std::vector<TInput>& data) {
+  void SetInput(const std::vector<TBitpacked>& data) {
     PopulateTensor(input_, data);
   }
 

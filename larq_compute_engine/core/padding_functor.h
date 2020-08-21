@@ -1,6 +1,7 @@
 #ifndef COMPUTE_ENGINE_KERNELS_PADDING_H_
 #define COMPUTE_ENGINE_KERNELS_PADDING_H_
 
+#include "larq_compute_engine/core/bitpack.h"
 #include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/kernels/op_macros.h"
 
@@ -9,47 +10,11 @@ namespace core {
 
 namespace ce = compute_engine;
 
-// For non-float types, the padding functor does nothing
-template <class Tdata, class Tfilter, class Tpost, class Tcache,
-          FilterFormat filter_format>
-class PaddingFunctor {
- public:
-  static std::size_t get_cache_size(const int filter_height,
-                                    const int filter_width,
-                                    const int filter_count,
-                                    const int dilation_rows,
-                                    const int dilation_cols) {
-    TF_LITE_ASSERT(false);
-    return 0;
-  }
-  static void cache_correction_values(
-      const Tfilter* filter_data, const int filter_height,
-      const int filter_width, const int filter_count, const int input_channels,
-      const int dilation_rows, const int dilation_cols,
-      const Tpost* post_activation_multiplier_data, Tcache* output_cache) {
-    TF_LITE_ASSERT(false);
-  }
-
-  void operator()(const int input_batches, const int input_height,
-                  const int input_width, const int input_channels,
-                  const Tfilter* filter_data, const int filter_height,
-                  const int filter_width, const int filter_count,
-                  const int stride_rows, const int stride_cols,
-                  const int dilation_rows, const int dilation_cols,
-                  Tdata* output_data, const int output_height,
-                  const int output_width,
-                  const Tpost* post_activation_multiplier_data = nullptr,
-                  const Tcache* padding_cache = nullptr) {
-    TF_LITE_ASSERT(false);
-  }
-};
-
 //
 // Applies (in-place) corrections for zero-padding
 // Assumes that padding type is 'SAME'.
 //
-template <FilterFormat filter_format>
-class PaddingFunctor<float, float, float, float, filter_format> {
+class PaddingFunctor {
  public:
   static std::size_t get_cache_size(const int filter_height,
                                     const int filter_width,
@@ -63,10 +28,10 @@ class PaddingFunctor<float, float, float, float, filter_format> {
   }
 
   static void cache_correction_values(
-      const float* filter_data, const int filter_height, const int filter_width,
-      const int filter_count, const int input_channels, const int dilation_rows,
-      const int dilation_cols, const float* post_activation_multiplier_data,
-      float* output_cache) {
+      const TBitpacked* filter_data, const int filter_height,
+      const int filter_width, const int filter_count, const int input_channels,
+      const int dilation_rows, const int dilation_cols,
+      const float* post_activation_multiplier_data, float* output_cache) {
     const int effective_filter_width = (filter_width - 1) * dilation_cols + 1;
     const int effective_filter_height = (filter_height - 1) * dilation_rows + 1;
 
@@ -143,30 +108,22 @@ class PaddingFunctor<float, float, float, float, filter_format> {
           for (int filter_y = 0; filter_y < filter_height; ++filter_y) {
             for (int filter_x = 0; filter_x < filter_width; ++filter_x) {
               // Sum over input channels
-              float cur_correction = 0;
-              for (int in_c = 0; in_c < input_channels; ++in_c) {
+              int popcount = 0;
+              int packed_channels = GetPackedSize(input_channels);
+              for (int in_c = 0; in_c < packed_channels; ++in_c) {
                 int filter_idx;
-                if (filter_format == FilterFormat::HWIO) {
-                  // filter_data has shape
-                  // [height, width, in_channels, out_channels]
-                  filter_idx = filter_y * (filter_width * input_channels *
-                                           filter_count) +
-                               filter_x * (input_channels * filter_count) +
-                               in_c * filter_count + out_c;
-                  cur_correction -= filter_data[filter_idx];
-                } else {
-                  // filter_data has shape
-                  // [out_channels, height, width, in_channels]
-                  filter_idx =
-                      out_c * (filter_height * filter_width * input_channels) +
-                      filter_y * (filter_width * input_channels) +
-                      filter_x * input_channels + in_c;
-                  if (filter_data[filter_idx] >= 0)
-                    cur_correction += 1;
-                  else
-                    cur_correction -= 1;
-                }
+                // filter_data has shape
+                // [out_channels, height, width, packed_in_channels]
+                filter_idx =
+                    out_c * (filter_height * filter_width * packed_channels) +
+                    filter_y * (filter_width * packed_channels) +
+                    filter_x * packed_channels + in_c;
+
+                // filter = +1.0 --> bit = 0 ; correction += +1.0
+                // filter = -1.0 --> bit = 1 ; correction += -1.0
+                popcount += __builtin_popcount(filter_data[filter_idx]);
               }
+              float cur_correction = input_channels - 2 * popcount;
 
               const int effective_filter_x = dilation_cols * filter_x;
               const int effective_filter_y = dilation_rows * filter_y;
@@ -211,7 +168,7 @@ class PaddingFunctor<float, float, float, float, filter_format> {
 
   void operator()(const int input_batches, const int input_height,
                   const int input_width, const int input_channels,
-                  const float* filter_data, const int filter_height,
+                  const TBitpacked* filter_data, const int filter_height,
                   const int filter_width, const int filter_count,
                   const int stride_rows, const int stride_cols,
                   const int dilation_rows, const int dilation_cols,
@@ -229,17 +186,7 @@ class PaddingFunctor<float, float, float, float, filter_format> {
                                    effective_filter_height - input_height) /
                                   2;
 
-    std::vector<float> temp_cache;
-    if (padding_cache == nullptr) {
-      temp_cache.resize(get_cache_size(filter_height, filter_width,
-                                       filter_count, dilation_rows,
-                                       dilation_cols));
-      cache_correction_values(filter_data, filter_height, filter_width,
-                              filter_count, input_channels, dilation_rows,
-                              dilation_cols, post_activation_multiplier_data,
-                              temp_cache.data());
-      padding_cache = temp_cache.data();
-    }
+    TFLITE_DCHECK(padding_cache != nullptr);
 
     // We assume that the input numbers are correct because they
     // are already checked by the bconv functor

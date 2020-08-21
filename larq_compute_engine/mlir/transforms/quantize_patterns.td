@@ -35,35 +35,6 @@ def : Pat<(LQ_Bconv2dOp
 // Checks if the value has only one user.
 def HasOneUse : Constraint<CPred<"$0.hasOneUse()">>;
 
-def : Pat<(LQ_Bconv2dOp
-              (TFL_DequantizeOp $input),
-              $filter,
-              $post_activation_multiplier,
-              $post_activation_bias,
-              $output_threshold,
-              $channels_in,
-              $dilation_height_factor,
-              $dilation_width_factor,
-              $fused_activation_function,
-              $pad_values,
-              $padding,
-              $stride_height,
-              $stride_width),
-          (LQ_Bconv2dOp $input,
-              $filter,
-              $post_activation_multiplier,
-              $post_activation_bias,
-              $output_threshold,
-              $channels_in,
-              $dilation_height_factor,
-              $dilation_width_factor,
-              $fused_activation_function,
-              $pad_values,
-              $padding,
-              $stride_height,
-              $stride_width),
-          [(HasOneUse $input)]>;
-
 def : Pat<(TFL_QuantizeOp
             (LQ_Bconv2dOp:$output
               $input,
