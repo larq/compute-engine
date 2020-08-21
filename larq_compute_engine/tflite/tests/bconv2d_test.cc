@@ -726,8 +726,6 @@ INSTANTIATE_TEST_SUITE_P(
 
 // The BigTest suite will be skipped in the qemu CI runs as they take more than
 // an hour.
-// This test does not include zero-padding because it will be skipped in most
-// configurations
 INSTANTIATE_TEST_SUITE_P(
     BigTest, BConv2DOpTest,
     ::testing::Combine(
@@ -743,40 +741,12 @@ INSTANTIATE_TEST_SUITE_P(
         Values(std::array<int, 2>{1, 1},
                std::array<int, 2>{2, 3}),  // strides height/width
         Values(std::array<int, 2>{1, 1},
-               std::array<int, 2>{3, 2}),    // dilation height/width
-        Values(Padding_VALID, Padding_ONE),  // padding
+               std::array<int, 2>{3, 2}),  // dilation height/width
+        Values(Padding_VALID, Padding_SAME, Padding_ONE),  // padding
         Values(ActivationFunctionType_NONE,
                ActivationFunctionType_RELU),  // activation function
         Values(1, 2),                         // number of threads
         ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
-    TestParam::TestNameSuffix);
-
-// This is the same test as above but now only with zero-padding.
-// Since zero-padding is not supported in combination with ReLu or with the
-// reference implementation (or bitpacked output or int8 output), we only use
-// ActivationFunctionType_NONE and the OPT implementation here,
-// to avoid all the 'SKIPPED' tests.
-INSTANTIATE_TEST_SUITE_P(
-    BigTestSamePadding, BConv2DOpTest,
-    ::testing::Combine(
-        Values(std::array<int, 4>{1, 7, 7, 1}, std::array<int, 4>{1, 8, 5, 1},
-               std::array<int, 4>{1, 7, 7, 64}, std::array<int, 4>{1, 8, 5, 64},
-               std::array<int, 4>{1, 7, 7, 130},
-               std::array<int, 4>{1, 8, 5, 130}),  // input shape [BHWI]
-        Values(std::array<int, 3>{1, 1, 1}, std::array<int, 3>{3, 3, 1},
-               std::array<int, 3>{2, 3, 1}, std::array<int, 3>{1, 1, 4},
-               std::array<int, 3>{3, 3, 4}, std::array<int, 3>{2, 3, 4},
-               std::array<int, 3>{1, 1, 64}, std::array<int, 3>{3, 3, 64},
-               std::array<int, 3>{2, 3, 64}),  // filter shape [HWO]
-        Values(std::array<int, 2>{1, 1},
-               std::array<int, 2>{2, 3}),  // strides height/width
-        Values(std::array<int, 2>{1, 1},
-               std::array<int, 2>{3, 2}),     // dilation height/width
-        Values(Padding_SAME),                 // padding
-        Values(ActivationFunctionType_NONE),  // activation function
-        Values(1, 2),                         // number of threads
-        Values(std::pair<std::string, register_function>{
-            "BConv2DOPT", compute_engine::tflite::Register_BCONV_2D_OPT})),
     TestParam::TestNameSuffix);
 
 TEST(BConv2DTests, ReluErrorDeathTest) {
