@@ -44,8 +44,8 @@ inline void BConv2D(const ConvParams& params,
                                                     details>& output_transform,
                     const RuntimeShape& output_shape, DstScalar* output_data,
                     const RuntimeShape& im2col_shape, TBitpacked* im2col_data,
-                    bool bitpack_before_im2col, void* padding_buffer,
-                    const int pad_value, void* cpu_backend_context) {
+                    void* padding_buffer, const int pad_value,
+                    void* cpu_backend_context) {
   static_assert(std::is_same<DstScalar, float>::value ||
                     std::is_same<DstScalar, TBitpacked>::value ||
                     std::is_same<DstScalar, std::int8_t>::value,

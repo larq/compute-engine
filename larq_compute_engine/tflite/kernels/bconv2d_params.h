@@ -3,7 +3,6 @@
 
 #include <vector>
 
-#include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 
 namespace compute_engine {
@@ -41,9 +40,6 @@ typedef struct {
   std::int32_t out_width{0};
   std::int32_t out_height{0};
 
-  compute_engine::core::FilterFormat filter_format{
-      compute_engine::core::FilterFormat::Unknown};
-
   TfLiteFusedActivation fused_activation_function = kTfLiteActNone;
   // These min,max take care of a Relu.
   // Later they will *also* do the clamping in order to go from int32 to int8
@@ -56,7 +52,6 @@ typedef struct {
   std::vector<float> scaled_post_activation_bias;
   bool is_quantization_initialized = false;
 
-  bool bitpack_before_im2col = false;
   bool need_im2col = false;
   // IDs are the arbitrary identifiers used by TF Lite to identify and access
   // memory buffers. They are unique in the entire TF Lite context.
@@ -66,18 +61,9 @@ typedef struct {
   // So in pseudo-code: `node->temporaries[index] = id;`
   std::int32_t im2col_index;
 
-  int packed_input_id = kTensorNotAllocated;
-  std::int32_t packed_input_index;
-
   std::vector<float> padding_buffer;
   bool is_padding_correction_cached = false;
 
-  // Weights in the flatbuffer file are bitpacked in a different
-  // order than what is expected by the kernels, so we repack the weights
-  std::vector<std::uint8_t> filter_packed;
-  bool is_filter_repacked = false;
-
-  bool read_bitpacked_input = false;
   bool write_bitpacked_output = false;
 
   bool conv_params_initialized = false;

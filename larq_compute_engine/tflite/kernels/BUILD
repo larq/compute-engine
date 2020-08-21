@@ -30,9 +30,6 @@ cc_library(
     hdrs = [
         "bconv2d_params.h",
     ],
-    deps = [
-        "//larq_compute_engine/core:types",
-    ],
 )
 
 cc_library(
@@ -83,8 +80,6 @@ cc_library(
         "//larq_compute_engine/core:bmaxpool",
         "@flatbuffers",
         "@org_tensorflow//tensorflow/lite:framework",
-        "@org_tensorflow//tensorflow/lite/c:c_api_internal",
-        "@org_tensorflow//tensorflow/lite/kernels:op_macros",
         "@org_tensorflow//tensorflow/lite/kernels/internal:kernel_utils",
         "@org_tensorflow//tensorflow/lite/kernels/internal:tensor",
     ],

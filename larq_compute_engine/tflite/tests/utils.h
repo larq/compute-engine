@@ -11,8 +11,6 @@
 
 namespace tflite {
 
-using compute_engine::core::TBitpacked;
-
 constexpr int Padding_ONE = Padding_MAX + 1;
 
 const char* GetPaddingName(enum Padding padding) {

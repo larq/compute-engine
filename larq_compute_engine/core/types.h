@@ -13,9 +13,6 @@ using TBitpacked = std::int32_t;
 constexpr std::size_t bitpacking_bitwidth =
     std::numeric_limits<typename std::make_unsigned<TBitpacked>::type>::digits;
 
-// defines the memory layout of the filter values
-enum class FilterFormat { Unknown, HWIO, OHWI, OHWI_PACKED };
-
 }  // namespace core
 }  // namespace compute_engine
 
