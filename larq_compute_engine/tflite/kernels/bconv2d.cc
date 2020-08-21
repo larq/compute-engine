@@ -200,18 +200,18 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     }
   }
 
+  if (output->type == kTfLiteInt8 &&
+      conv_params->padding_type == kTfLitePaddingSame &&
+      conv_params->pad_value != 1) {
+    TF_LITE_KERNEL_LOG(
+        context,
+        "8-bit quantization is only supported with valid or one-padding");
+    return kTfLiteError;
+  }
+
   if (!conv_params->read_bitpacked_input) {
     TF_LITE_ENSURE(context,
                    input->type == kTfLiteInt8 || input->type == kTfLiteFloat32);
-
-    if (input->type == kTfLiteInt8 &&
-        conv_params->padding_type == kTfLitePaddingSame &&
-        conv_params->pad_value != 1) {
-      TF_LITE_KERNEL_LOG(
-          context,
-          "8-bit quantization is only supported with valid or one-padding");
-      return kTfLiteError;
-    }
 
     // TODO: more intelligent selection of the parameter `bitpack_before_im2col`
     //       based on benchmarking results (as in
