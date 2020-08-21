@@ -10,7 +10,6 @@ namespace core {
 
 namespace ce = compute_engine;
 
-
 //
 // Applies (in-place) corrections for zero-padding
 // Assumes that padding type is 'SAME'.
