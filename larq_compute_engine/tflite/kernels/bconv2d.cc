@@ -315,7 +315,6 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     TfLiteTensor* im2col =
         GetTemporary(context, node, conv_params->im2col_index);
 
-    // Determine the type
     im2col->type = kTfLiteInt32;
     im2col->allocation_type = kTfLiteArenaRw;
     TF_LITE_ENSURE_OK(context,
