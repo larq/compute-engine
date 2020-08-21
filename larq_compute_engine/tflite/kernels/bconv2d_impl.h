@@ -162,8 +162,7 @@ inline void BConv2D(
 
   if (params.padding_type == PaddingType::kSame && pad_value == 0) {
     using PaddingFunctor =
-        ce::core::PaddingFunctor<DstScalar, float, float, float,
-                                 ce::core::FilterFormat::OHWI>;
+        ce::core::PaddingFunctor<DstScalar, float, float, float>;
 
     const int stride_width = params.stride_width;
     const int stride_height = params.stride_height;

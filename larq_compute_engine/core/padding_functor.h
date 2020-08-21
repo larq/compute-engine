@@ -1,7 +1,6 @@
 #ifndef COMPUTE_ENGINE_KERNELS_PADDING_H_
 #define COMPUTE_ENGINE_KERNELS_PADDING_H_
 
-#include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/kernels/op_macros.h"
 
 namespace compute_engine {
@@ -10,8 +9,7 @@ namespace core {
 namespace ce = compute_engine;
 
 // For non-float types, the padding functor does nothing
-template <class Tdata, class Tfilter, class Tpost, class Tcache,
-          FilterFormat filter_format>
+template <class Tdata, class Tfilter, class Tpost, class Tcache>
 class PaddingFunctor {
  public:
   static std::size_t get_cache_size(const int filter_height,
@@ -48,8 +46,8 @@ class PaddingFunctor {
 // Applies (in-place) corrections for zero-padding
 // Assumes that padding type is 'SAME'.
 //
-template <FilterFormat filter_format>
-class PaddingFunctor<float, float, float, float, filter_format> {
+template <>
+class PaddingFunctor<float, float, float, float> {
  public:
   static std::size_t get_cache_size(const int filter_height,
                                     const int filter_width,
@@ -145,27 +143,16 @@ class PaddingFunctor<float, float, float, float, filter_format> {
               // Sum over input channels
               float cur_correction = 0;
               for (int in_c = 0; in_c < input_channels; ++in_c) {
-                int filter_idx;
-                if (filter_format == FilterFormat::HWIO) {
-                  // filter_data has shape
-                  // [height, width, in_channels, out_channels]
-                  filter_idx = filter_y * (filter_width * input_channels *
-                                           filter_count) +
-                               filter_x * (input_channels * filter_count) +
-                               in_c * filter_count + out_c;
-                  cur_correction -= filter_data[filter_idx];
-                } else {
-                  // filter_data has shape
-                  // [out_channels, height, width, in_channels]
-                  filter_idx =
-                      out_c * (filter_height * filter_width * input_channels) +
-                      filter_y * (filter_width * input_channels) +
-                      filter_x * input_channels + in_c;
-                  if (filter_data[filter_idx] >= 0)
-                    cur_correction += 1;
-                  else
-                    cur_correction -= 1;
-                }
+                // filter_data has shape
+                // [out_channels, height, width, in_channels]
+                int filter_idx =
+                    out_c * (filter_height * filter_width * input_channels) +
+                    filter_y * (filter_width * input_channels) +
+                    filter_x * input_channels + in_c;
+                if (filter_data[filter_idx] >= 0)
+                  cur_correction += 1;
+                else
+                  cur_correction -= 1;
               }
 
               const int effective_filter_x = dilation_cols * filter_x;

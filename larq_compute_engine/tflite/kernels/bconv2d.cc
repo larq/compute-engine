@@ -200,15 +200,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   conv_params->filter_height = filter->dims->data[1];
   conv_params->filter_width = filter->dims->data[2];
 
-  if (filter->type == kTfLiteFloat32) {
-    conv_params->filter_format = ce::core::FilterFormat::OHWI;
-    TF_LITE_ENSURE_EQ(context, conv_params->channels_in, filter->dims->data[3]);
-  } else if (filter->type == kTfLiteInt32) {
-    conv_params->filter_format = ce::core::FilterFormat::OHWI_PACKED;
-  } else {
-    TF_LITE_KERNEL_LOG(context, "Invalid filter format.");
-    return kTfLiteError;
-  }
+  TF_LITE_ENSURE_EQ(context, filter->type, kTfLiteInt32);
 
   if (conv_params->write_bitpacked_output) {
     TF_LITE_ENSURE_EQ(context, thresholds->dims->data[0],
@@ -423,32 +415,26 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
 
     const float* filter_unpacked = nullptr;
 
-    if (params->filter_format == ce::core::FilterFormat::OHWI_PACKED) {
-      // First unpack the filter to TBitpacked
-      int cols = params->channels_in;
-      int rows =
-          params->channels_out * params->filter_height * params->filter_width;
+    // First unpack the filter to TBitpacked
+    int cols = params->channels_in;
+    int rows =
+        params->channels_out * params->filter_height * params->filter_width;
 
-      // This vector is declared static, so that it will be shared by all nodes.
-      static std::vector<float> unpacked_weights;
-      unpacked_weights.resize(rows * cols);
+    // This vector is declared static, so that it will be shared by all nodes.
+    static std::vector<float> unpacked_weights;
+    unpacked_weights.resize(rows * cols);
 
-      ce::core::unpack_matrix(filter_flatbuffer, rows, cols,
-                              unpacked_weights.data());
+    ce::core::unpack_matrix(filter_flatbuffer, rows, cols,
+                            unpacked_weights.data());
 
-      filter_unpacked = unpacked_weights.data();
-    } else {
-      // Filter was already unpacked
-      filter_unpacked = GetTensorData<float>(filter);
-    }
+    filter_unpacked = unpacked_weights.data();
 
     // Fill the zero-padding cache
     if (!params->is_padding_correction_cached &&
         (params->padding_type == kTfLitePaddingSame &&
          params->pad_value == 0)) {
       using PaddingFunctor =
-          ce::core::PaddingFunctor<float, float, float, float,
-                                   ce::core::FilterFormat::OHWI>;
+          ce::core::PaddingFunctor<float, float, float, float>;
       PaddingFunctor padding_functor;
 
       std::size_t padding_cache_size = padding_functor.get_cache_size(
@@ -472,10 +458,6 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
     // bitpack first: [output channels * height * width, input_channels]
     // im2col first:  [output channels, height * width * input_channels]
     // and bitpack it along the last dimension
-
-    int cols = params->channels_in;
-    int rows =
-        params->channels_out * params->filter_height * params->filter_width;
 
     std::vector<TBitpacked> filter_data_bp(
         ce::core::GetPackedMatrixSize(rows, cols));

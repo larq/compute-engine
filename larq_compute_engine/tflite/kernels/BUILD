@@ -30,9 +30,6 @@ cc_library(
     hdrs = [
         "bconv2d_params.h",
     ],
-    deps = [
-        "//larq_compute_engine/core:types",
-    ],
 )
 
 cc_library(

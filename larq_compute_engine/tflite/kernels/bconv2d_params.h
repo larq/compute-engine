@@ -3,7 +3,6 @@
 
 #include <vector>
 
-#include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 
 namespace compute_engine {
@@ -40,9 +39,6 @@ typedef struct {
   // output tensor dimensions
   std::int32_t out_width{0};
   std::int32_t out_height{0};
-
-  compute_engine::core::FilterFormat filter_format{
-      compute_engine::core::FilterFormat::Unknown};
 
   TfLiteFusedActivation fused_activation_function = kTfLiteActNone;
   // These min,max take care of a Relu.
