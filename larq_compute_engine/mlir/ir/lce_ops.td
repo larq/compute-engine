@@ -70,7 +70,7 @@ def LQ_QuantizeOp : LQ_Op<"Quantize", [NoSideEffect]> {
   let summary = "Binary quantize operator";
 
   let description = [{
-`y = sign(x) = -1` if `x < 0`; 1 if `x >= 0`.
+Converts floating point or integer tensors to binarized bitpacked tensors.
   }];
 
   let arguments = (ins
