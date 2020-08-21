@@ -1,6 +1,7 @@
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 
 #include "flatbuffers/flexbuffers.h"
+#include "larq_compute_engine/core/bitpack.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
 namespace mlir {
@@ -61,9 +62,8 @@ void QuantizeOp::build(OpBuilder& builder, OperationState& state, Value x) {
   state.addOperands(x);
   const auto existing_shape = x.getType().cast<ShapedType>().getShape();
   const auto channels = existing_shape[existing_shape.size() - 1];
-  const auto packed_channels = (channels + 32 - 1) / 32;
   std::vector<int64_t> shape = existing_shape.drop_back();
-  shape.push_back(packed_channels);
+  shape.push_back(compute_engine::core::GetPackedSize(channels));
   state.addTypes(RankedTensorType::get(shape, builder.getIntegerType(32)));
 }
 

@@ -1,5 +1,6 @@
 #include <cmath>
 
+#include "larq_compute_engine/core/bitpack.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -191,8 +192,8 @@ llvm::Optional<RankedTensorType> maybeGetBitpackedType(
   const auto existing_shape = existing_type.getShape();
   if (existing_shape.size() != 4) return llvm::None;
 
-  const auto channels = existing_shape[3];
-  const auto packed_channels = (channels + 32 - 1) / 32;
+  const auto packed_channels =
+      compute_engine::core::GetPackedSize(existing_shape[3]);
   return RankedTensorType::get({existing_shape[0], existing_shape[1],
                                 existing_shape[2], packed_channels},
                                rewriter.getIntegerType(32));

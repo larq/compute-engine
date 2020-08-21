@@ -108,6 +108,7 @@ cc_library(
         "transforms/passes.h",
     ],
     deps = [
+        "//larq_compute_engine/core:bitpack",
         "@flatbuffers",
         "@llvm-project//mlir:QuantOps",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
@@ -176,7 +177,7 @@ cc_library(
     ],
     deps = [
         ":larq_compute_engine",
-        "//larq_compute_engine/core:types",
+        "//larq_compute_engine/core:bitpack",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
