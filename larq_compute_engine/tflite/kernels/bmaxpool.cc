@@ -3,6 +3,7 @@
 
 #include "flatbuffers/flexbuffers.h"
 #include "larq_compute_engine/tflite/kernels/utils.h"
+#include "ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/kernels/internal/tensor_ctypes.h"
 #include "tensorflow/lite/kernels/kernel_util.h"
@@ -72,6 +73,8 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
 }
 
 TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
+  ruy::profiler::ScopeLabel label("Binary MaxPool");
+
   ce::ref::BMaxPoolParams* poolparams =
       reinterpret_cast<ce::ref::BMaxPoolParams*>(node->user_data);
 

@@ -26,14 +26,14 @@ void runBitpackingTest(const int num_rows, const int num_cols,
     GTEST_SKIP();
   }
 
-  const int num_packed_cols = ce::core::GetPackedSize(num_cols);
+  const int num_packed_cols = ce::core::GetBitpackedSize(num_cols);
 
   std::random_device rd;
   std::mt19937 gen(rd());
 
   std::vector<TIn> input_matrix(num_rows * num_cols);
   std::vector<TBitpacked> output_matrix(
-      ce::core::GetPackedMatrixSize(num_rows, num_cols));
+      ce::core::GetBitpackedMatrixSize(num_rows, num_cols));
 
   // Generate some random data for the input.
   std::generate(std::begin(input_matrix), std::end(input_matrix), [&gen]() {

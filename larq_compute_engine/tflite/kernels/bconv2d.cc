@@ -238,7 +238,8 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   output_shape->data[2] = out_width;
   if (conv_params->write_bitpacked_output) {
     // If we write bitpacked output, we use 32-bit bitpacking
-    output_shape->data[3] = ce::core::GetPackedSize(conv_params->channels_out);
+    output_shape->data[3] =
+        ce::core::GetBitpackedSize(conv_params->channels_out);
   } else {
     output_shape->data[3] = conv_params->channels_out;
   }
@@ -285,7 +286,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     }
 
     // Resize the im2col tensor
-    int channels_in = ce::core::GetPackedSize(conv_params->channels_in);
+    int channels_in = ce::core::GetBitpackedSize(conv_params->channels_in);
 
     // determine the im2col buffer size
     TfLiteIntArray* im2col_size = TfLiteIntArrayCopy(output_shape);

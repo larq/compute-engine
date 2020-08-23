@@ -193,7 +193,7 @@ llvm::Optional<RankedTensorType> maybeGetBitpackedType(
   if (existing_shape.size() != 4) return llvm::None;
 
   const auto packed_channels =
-      compute_engine::core::GetPackedSize(existing_shape[3]);
+      compute_engine::core::GetBitpackedSize(existing_shape[3]);
   return RankedTensorType::get({existing_shape[0], existing_shape[1],
                                 existing_shape[2], packed_channels},
                                rewriter.getIntegerType(32));

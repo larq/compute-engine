@@ -81,6 +81,7 @@ cc_library(
         "@org_tensorflow//tensorflow/lite:framework",
         "@org_tensorflow//tensorflow/lite/kernels/internal:kernel_utils",
         "@org_tensorflow//tensorflow/lite/kernels/internal:tensor",
+        "@ruy//ruy/profiler:instrumentation",
     ],
     alwayslink = 1,
 )

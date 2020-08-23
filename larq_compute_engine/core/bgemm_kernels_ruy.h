@@ -111,7 +111,7 @@ struct BgemmKernel<ruy::Path::kStandardCpp, TBitpacked, Spec> {
 
     const int depth = lhs.layout.rows;
     const int dst_stride_bitpacked =
-        ce::core::GetPackedSize(dst->layout.stride);
+        ce::core::GetBitpackedSize(dst->layout.stride);
 
     // The destination is column major and we need to bitpack along the row
     // (channels) axis so we need to loop over column index then row index.
