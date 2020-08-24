@@ -122,13 +122,10 @@ inline void BConv2D(
   int m = 0;
   int k = 0;
 
-  // The filter tensor was already bitpacked. Only get the new shape.
-  RuntimeShape packed_filter_shape = ce::core::packed_shape(filter_shape);
-
   // We're already bitpacked, so im2col `zero_byte` is 0.
   RuntimeShape result_shape;
 
-  im2col(params, input_shape, input_data, packed_filter_shape, output_shape,
+  im2col(params, input_shape, input_data, filter_shape, output_shape,
          im2col_shape, im2col_data, result_shape, &rhs_data, 0);
 
   k = result_shape.Dims(3);
