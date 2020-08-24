@@ -147,9 +147,9 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
 
   // Read the input dimensions. TF Lite has the same input format as TensorFlow:
   // (B, H, W, Ci).
-  conv_params->batch = input->dims->data[0];
-  conv_params->input_height = input->dims->data[1];
-  conv_params->input_width = input->dims->data[2];
+  conv_params->batch = SizeOfDimension(input, 0);
+  conv_params->input_height = SizeOfDimension(input, 1);
+  conv_params->input_width = SizeOfDimension(input, 2);
   if (conv_params->channels_in == 0) {
     // We don't expect this branch to ever be taken because the `channels_in`
     // attribute was added to the converter at the same time that support for
@@ -196,19 +196,19 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   }
 
   // reading the filter dimensions
-  conv_params->channels_out = filter->dims->data[0];
-  conv_params->filter_height = filter->dims->data[1];
-  conv_params->filter_width = filter->dims->data[2];
+  conv_params->channels_out = SizeOfDimension(filter, 0);
+  conv_params->filter_height = SizeOfDimension(filter, 1);
+  conv_params->filter_width = SizeOfDimension(filter, 2);
 
   TF_LITE_ENSURE_EQ(context, filter->type, kTfLiteInt32);
 
   if (conv_params->write_bitpacked_output) {
-    TF_LITE_ENSURE_EQ(context, thresholds->dims->data[0],
+    TF_LITE_ENSURE_EQ(context, SizeOfDimension(thresholds, 0),
                       conv_params->channels_out);
   } else {
-    TF_LITE_ENSURE_EQ(context, post_activation_multiplier->dims->data[0],
+    TF_LITE_ENSURE_EQ(context, SizeOfDimension(post_activation_multiplier, 0),
                       conv_params->channels_out);
-    TF_LITE_ENSURE_EQ(context, post_activation_bias->dims->data[0],
+    TF_LITE_ENSURE_EQ(context, SizeOfDimension(post_activation_bias, 0),
                       conv_params->channels_out);
   }
 
