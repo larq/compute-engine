@@ -72,16 +72,13 @@ TfLiteStatus QuantizeEval(TfLiteContext* context, TfLiteNode* node) {
   const TfLiteTensor* input = GetInput(context, node, 0);
   TfLiteTensor* output = GetOutput(context, node, 0);
 
-  RuntimeShape packed_input_shape;
   if (input->type == kTfLiteFloat32) {
     ce::core::bitpack_tensor(GetTensorShape(input), GetTensorData<float>(input),
-                             0, packed_input_shape,
-                             GetTensorData<TBitpacked>(output));
+                             0, GetTensorData<TBitpacked>(output));
   } else if (input->type == kTfLiteInt8) {
-    ce::core::bitpack_tensor(GetTensorShape(input),
-                             GetTensorData<std::int8_t>(input),
-                             input->params.zero_point, packed_input_shape,
-                             GetTensorData<TBitpacked>(output));
+    ce::core::bitpack_tensor(
+        GetTensorShape(input), GetTensorData<std::int8_t>(input),
+        input->params.zero_point, GetTensorData<TBitpacked>(output));
   } else {
     return kTfLiteError;
   }
