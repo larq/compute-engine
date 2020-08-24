@@ -458,9 +458,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   OutputTransform<AccumScalar, DstScalar> output_transform;
   GetOutputTransform(context, node, params, output_transform);
 
-  // `BConv2D` wants the *unpacked* filter and output shape.
-  auto unpacked_filter_shape = GetTensorShape(filter);
-  unpacked_filter_shape.SetDim(3, params->channels_in);
+  // `BConv2D` wants the *unpacked* output shape.
   auto unpacked_output_shape = GetTensorShape(output);
   unpacked_output_shape.SetDim(3, params->channels_out);
 
@@ -471,7 +469,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   // write bitpacked output directly.
   BConv2D<AccumScalar, DstScalar>(
       op_params, GetTensorShape(input), GetTensorData<TBitpacked>(input),
-      unpacked_filter_shape, GetTensorData<TBitpacked>(filter),
+      GetTensorShape(filter), GetTensorData<TBitpacked>(filter),
       output_transform, unpacked_output_shape, GetTensorData<DstScalar>(output),
       GetTensorShape(im2col), GetTensorData<TBitpacked>(im2col),
       params->padding_buffer.data(), params->pad_value,
