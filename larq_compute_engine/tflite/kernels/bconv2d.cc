@@ -458,7 +458,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   OutputTransform<AccumScalar, DstScalar> output_transform;
   GetOutputTransform(context, node, params, output_transform);
 
-  // `BConv2D` wants the *unpacked* filter and output shape.
+  // `BConv2D` wants the *unpacked* output shape.
   auto unpacked_output_shape = GetTensorShape(output);
   unpacked_output_shape.SetDim(3, params->channels_out);
 
