@@ -370,8 +370,7 @@ void test_lce_op_output(const std::vector<TBitpacked>& lce_output_data,
   out_shape.BuildFrom(builtin_output_shape);
   std::vector<TBitpacked> builtin_output_data_bp(
       core::GetPackedTensorSize(out_shape));
-  RuntimeShape packed_shape;
-  core::bitpack_tensor(out_shape, builtin_output_data.data(), 0, packed_shape,
+  core::bitpack_tensor(out_shape, builtin_output_data.data(), 0,
                        builtin_output_data_bp.data());
 
   // We need the outputs here to be bit-exact, so don't allow for floating

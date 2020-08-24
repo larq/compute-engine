@@ -23,16 +23,13 @@ inline int GetPackedTensorSize(const RuntimeShape& shape) {
 template <class T>
 inline void bitpack_tensor(const RuntimeShape& in_shape, const T* in_data,
                            const std::int32_t zero_point,
-                           RuntimeShape& out_shape, TBitpacked* out_data) {
+                           TBitpacked* out_data) {
   const int dims = in_shape.DimensionsCount();
   // Pack the tensor along the last dimension
   const int rows = FlatSizeSkipDim(in_shape, dims - 1);
   const int cols = in_shape.Dims(dims - 1);
 
   ce::core::bitpack_matrix(in_data, rows, cols, out_data, zero_point);
-
-  out_shape.ReplaceWith(dims, in_shape.DimsData());
-  out_shape.SetDim(dims - 1, GetPackedSize(cols));
 }
 
 // Convenience function for going from a shape to the packed shape

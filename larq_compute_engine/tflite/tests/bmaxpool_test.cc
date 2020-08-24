@@ -167,8 +167,7 @@ TEST_P(BMaxPoolOpTest, BinaryInput) {
   input_tensor.GenerateSigns(gen, std::begin(input_data), std::end(input_data));
 
   // Bitpack the input
-  bitpack_tensor(input_shape, input_data.data(), 0, packed_input_shape,
-                 input_data_bp.data());
+  bitpack_tensor(input_shape, input_data.data(), 0, input_data_bp.data());
 
   // Our op with binary input
   BMaxPoolOpModel m_lce_binary(params.registration, packed_input_tensor,
@@ -190,12 +189,11 @@ TEST_P(BMaxPoolOpTest, BinaryInput) {
   RuntimeShape out_shape = GetShape(m_builtin.GetOutputShape());
   std::vector<TBitpacked> builtin_output_data_bp(
       GetPackedTensorSize(out_shape));
-  RuntimeShape packed_out_shape;
-  bitpack_tensor(out_shape, m_builtin.GetOutput().data(), 0, packed_out_shape,
+  bitpack_tensor(out_shape, m_builtin.GetOutput().data(), 0,
                  builtin_output_data_bp.data());
 
   // Check our binary op
-  EXPECT_EQ(m_lce_binary.GetOutputShape(), GetShape(packed_out_shape));
+  EXPECT_EQ(m_lce_binary.GetOutputShape(), GetShape(packed_shape(out_shape)));
   EXPECT_EQ(m_lce_binary.GetOutput(), builtin_output_data_bp);
 }
 
