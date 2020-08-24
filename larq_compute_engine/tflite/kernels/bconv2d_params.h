@@ -12,11 +12,6 @@ namespace bconv2d {
 const int kTensorNotAllocated = -1;
 
 typedef struct {
-  // input tensor dimensions
-  std::int32_t batch{0};
-  std::int32_t input_width{0};
-  std::int32_t input_height{0};
-
   // filters tensor dimensions
   std::int32_t filter_width{0};
   std::int32_t filter_height{0};
@@ -35,10 +30,6 @@ typedef struct {
   TfLitePadding padding_type{};
   TfLitePaddingValues padding_values{};
   int pad_value = 0;  // Must be 0 or 1
-
-  // output tensor dimensions
-  std::int32_t out_width{0};
-  std::int32_t out_height{0};
 
   TfLiteFusedActivation fused_activation_function = kTfLiteActNone;
   // These min,max take care of a Relu.

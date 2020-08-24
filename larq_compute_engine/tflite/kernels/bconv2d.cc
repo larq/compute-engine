@@ -145,11 +145,6 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     return kTfLiteError;
   }
 
-  // Read the input dimensions. TF Lite has the same input format as TensorFlow:
-  // (B, H, W, Ci).
-  conv_params->batch = SizeOfDimension(input, 0);
-  conv_params->input_height = SizeOfDimension(input, 1);
-  conv_params->input_width = SizeOfDimension(input, 2);
   if (conv_params->channels_in == 0) {
     // We don't expect this branch to ever be taken because the `channels_in`
     // attribute was added to the converter at the same time that support for
@@ -217,12 +212,9 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   conv_params->padding_values = ComputePaddingHeightWidth(
       conv_params->stride_height, conv_params->stride_width,
       conv_params->dilation_height_factor, conv_params->dilation_width_factor,
-      conv_params->input_height, conv_params->input_width,
+      SizeOfDimension(input, 1), SizeOfDimension(input, 2),
       conv_params->filter_height, conv_params->filter_width,
       conv_params->padding_type, &out_height, &out_width);
-
-  conv_params->out_width = out_width;
-  conv_params->out_height = out_height;
 
   CalculateActivationRange(conv_params->fused_activation_function,
                            &conv_params->output_activation_min,
@@ -241,9 +233,9 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
 
   // determine the output dimensions
   TfLiteIntArray* output_shape = TfLiteIntArrayCreate(4);
-  output_shape->data[0] = conv_params->batch;
-  output_shape->data[1] = conv_params->out_height;
-  output_shape->data[2] = conv_params->out_width;
+  output_shape->data[0] = SizeOfDimension(input, 0);
+  output_shape->data[1] = out_height;
+  output_shape->data[2] = out_width;
   if (conv_params->write_bitpacked_output) {
     // If we write bitpacked output, we use 32-bit bitpacking
     output_shape->data[3] = ce::core::GetPackedSize(conv_params->channels_out);
@@ -296,10 +288,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     int channels_in = ce::core::GetPackedSize(conv_params->channels_in);
 
     // determine the im2col buffer size
-    TfLiteIntArray* im2col_size = TfLiteIntArrayCreate(4);
-    im2col_size->data[0] = conv_params->batch;
-    im2col_size->data[1] = conv_params->out_height;
-    im2col_size->data[2] = conv_params->out_width;
+    TfLiteIntArray* im2col_size = TfLiteIntArrayCopy(output_shape);
     im2col_size->data[3] =
         channels_in * conv_params->filter_height * conv_params->filter_width;
 
