@@ -25,17 +25,13 @@ TfLiteStatus QuantizePrepare(TfLiteContext* context, TfLiteNode* node) {
   TF_LITE_ENSURE_EQ(context, output->type, kTfLiteInt32);
 
   int num_dims = NumDimensions(input);
-
   TF_LITE_ENSURE_EQ(context, num_dims, NumDimensions(output));
 
-  TfLiteIntArray* output_dims = TfLiteIntArrayCreate(num_dims);
-  // The first n-1 dimensions are equal
-  for (int i = 0; i < num_dims - 1; ++i) {
-    output_dims->data[i] = input->dims->data[i];
-  }
+  TfLiteIntArray* output_dims = TfLiteIntArrayCopy(input->dims);
+
   // The last dimension is bitpacked
   output_dims->data[num_dims - 1] =
-      ce::core::GetPackedSize(input->dims->data[num_dims - 1]);
+      ce::core::GetPackedSize(SizeOfDimension(input, num_dims - 1));
 
   return context->ResizeTensor(context, output, output_dims);
 }
@@ -57,11 +53,12 @@ TfLiteStatus DequantizePrepare(TfLiteContext* context, TfLiteNode* node) {
 
   // The first n-1 dimensions are equal
   for (int i = 0; i < num_dims - 1; ++i) {
-    TF_LITE_ENSURE_EQ(context, output->dims->data[i], input->dims->data[i]);
+    TF_LITE_ENSURE_EQ(context, SizeOfDimension(output, i),
+                      SizeOfDimension(input, i));
   }
   // The last dimension is bitpacked
-  int packed_channels = input->dims->data[num_dims - 1];
-  int unpacked_channels = output->dims->data[num_dims - 1];
+  int packed_channels = SizeOfDimension(input, num_dims - 1);
+  int unpacked_channels = SizeOfDimension(output, num_dims - 1);
   TF_LITE_ENSURE_EQ(context, packed_channels,
                     ce::core::GetPackedSize(unpacked_channels));
 

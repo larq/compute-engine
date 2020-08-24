@@ -52,8 +52,8 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   TF_LITE_ENSURE(context, poolparams->filter_height != 0);
   TF_LITE_ENSURE(context, poolparams->filter_width != 0);
 
-  int height = input->dims->data[1];
-  int width = input->dims->data[2];
+  int height = SizeOfDimension(input, 1);
+  int width = SizeOfDimension(input, 2);
 
   // Matching GetWindowedOutputSize in TensorFlow.
   int out_width, out_height;
@@ -64,10 +64,10 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
       poolparams->padding_type, &out_height, &out_width);
 
   TfLiteIntArray* output_size = TfLiteIntArrayCreate(4);
-  output_size->data[0] = input->dims->data[0];
+  output_size->data[0] = SizeOfDimension(input, 0);
   output_size->data[1] = out_height;
   output_size->data[2] = out_width;
-  output_size->data[3] = input->dims->data[3];
+  output_size->data[3] = SizeOfDimension(input, 3);
   return context->ResizeTensor(context, output, output_size);
 }
 
