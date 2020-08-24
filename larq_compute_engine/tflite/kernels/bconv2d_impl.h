@@ -2,8 +2,6 @@
 #define COMPUTE_EGNINE_TFLITE_KERNELS_BCONV_2D_IMPL_H_
 
 #include "larq_compute_engine/core/bgemm_impl.h"
-#include "larq_compute_engine/core/bitpack.h"
-#include "larq_compute_engine/core/bitpack_utils.h"
 #include "larq_compute_engine/core/padding_functor.h"
 #include "ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"

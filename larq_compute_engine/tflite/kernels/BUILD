@@ -14,8 +14,6 @@ cc_library(
     ],
     deps = [
         "//larq_compute_engine/core:bgemm_impl",
-        "//larq_compute_engine/core:bitpack",
-        "//larq_compute_engine/core:bitpack_utils",
         "//larq_compute_engine/core:padding_functor",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
@@ -77,6 +75,7 @@ cc_library(
         ":utils",
         "//larq_compute_engine/core:bconv2d_impl_ref",
         "//larq_compute_engine/core:bitpack",
+        "//larq_compute_engine/core:bitpack_utils",
         "//larq_compute_engine/core:bmaxpool",
         "@flatbuffers",
         "@org_tensorflow//tensorflow/lite:framework",
