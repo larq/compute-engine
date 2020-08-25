@@ -142,7 +142,7 @@ class BMaxPoolOpTest : public ::testing::TestWithParam<TestParamTuple> {};
 TEST_P(BMaxPoolOpTest, BinaryInput) {
   TestParam params(GetParam());
 
-  int packed_input_depth = GetPackedSize(params.input_depth);
+  int packed_input_depth = GetBitpackedSize(params.input_depth);
 
   LceTensor<float> input_tensor({params.input_batch_count, params.input_height,
                                  params.input_width, params.input_depth});
@@ -188,7 +188,7 @@ TEST_P(BMaxPoolOpTest, BinaryInput) {
   // Bitpack the tflite output
   RuntimeShape out_shape = GetShape(m_builtin.GetOutputShape());
   std::vector<TBitpacked> builtin_output_data_bp(
-      GetPackedTensorSize(out_shape));
+      GetBitpackedTensorSize(out_shape));
   bitpack_tensor(out_shape, m_builtin.GetOutput().data(), 0,
                  builtin_output_data_bp.data());
 

@@ -33,6 +33,8 @@ cc_library(
     deps = [
         ":types",
         "@flatbuffers",
+        "@org_tensorflow//tensorflow/lite/kernels/internal:types",
+        "@ruy//ruy/profiler:instrumentation",
     ],
 )
 
@@ -41,7 +43,6 @@ cc_library(
     hdrs = ["bitpack_utils.h"],
     deps = [
         ":bitpack",
-        "@ruy//ruy/profiler:instrumentation",
     ],
 )
 

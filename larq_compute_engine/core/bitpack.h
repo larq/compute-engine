@@ -11,25 +11,28 @@
 #include "larq_compute_engine/core/bitpack_aarch64.h"
 #endif
 
-// From @flatbuffers, used for the FLATBUFFERS_LITTLEENDIAN macro
-#include "flatbuffers/base.h"
+#include "flatbuffers/base.h"  // Used for the FLATBUFFERS_LITTLEENDIAN macro
+#include "ruy/profiler/instrumentation.h"
+#include "tensorflow/lite/kernels/internal/types.h"
 
 namespace compute_engine {
 namespace core {
 
 // Utility functions
 
-constexpr int GetPackedSize(int unpacked_elements) {
+constexpr int GetBitpackedSize(int unpacked_elements) {
   return (unpacked_elements + bitpacking_bitwidth - 1) / bitpacking_bitwidth;
 }
 
-constexpr int GetPackedMatrixSize(int rows, int cols) {
-  return rows * GetPackedSize(cols);
+constexpr int GetBitpackedMatrixSize(int rows, int cols) {
+  return rows * GetBitpackedSize(cols);
 }
 
 template <class TIn>
-inline void pack_quantized(const TIn* in, TBitpacked* out,
-                           const std::int32_t zero_point) {
+inline void bitpack_bitfield_quantized(const TIn* in, TBitpacked* out,
+                                       const std::int32_t zero_point) {
+  ruy::profiler::ScopeLabel label(
+      "Bitpack bitfield (quantized input, unoptimised)");
   *out = 0;
   for (size_t i = 0; i < bitpacking_bitwidth; ++i) {
     // Note: uint8 to int32 will set the top 24 bits to 0
@@ -40,7 +43,10 @@ inline void pack_quantized(const TIn* in, TBitpacked* out,
 }
 
 template <class T>
-inline void pack(const T* fptr, TBitpacked* buf) {
+inline void bitpack_bitfield(const T* fptr, TBitpacked* buf) {
+  ruy::profiler::ScopeLabel label(
+      "Bitpack bitfield (non-quantized input, unoptimised)");
+
   struct bf {
     unsigned int b0 : 1;
     unsigned int b1 : 1;
@@ -121,15 +127,17 @@ inline void pack(const T* fptr, TBitpacked* buf) {
 
 // Helper function
 template <class TIn>
-inline void pack_bitfield(const TIn* in, TBitpacked* out,
-                          const std::int32_t zero_point) {
+inline void bitpack_bitfield(const TIn* in, TBitpacked* out,
+                             const std::int32_t zero_point) {
   // Note: The expressions in these if-statements are known at compile-time so
   // they are all optimied away
   constexpr bool is_quantized = !std::is_floating_point<TIn>::value;
-  if (is_quantized)
-    pack_quantized(in, out, zero_point);
-  else
-    pack(in, out);
+  if (is_quantized) {
+    bitpack_bitfield_quantized(in, out, zero_point);
+  } else {
+    TFLITE_DCHECK_EQ(zero_point, 0);
+    bitpack_bitfield(in, out);
+  }
 }
 
 template <class TIn>
@@ -154,7 +162,7 @@ inline void bitpack_array(const TIn* input_array, const std::size_t n,
   }
 #endif
   while (num_packed_elems--) {
-    pack_bitfield(in, out++, zero_point);
+    bitpack_bitfield(in, out++, zero_point);
     in += bitpacking_bitwidth;
   }
 
@@ -167,7 +175,7 @@ inline void bitpack_array(const TIn* input_array, const std::size_t n,
     memcpy(padding_buffer.data(), in, elements_left * sizeof(TIn));
     for (size_t i = elements_left; i < bitpacking_bitwidth; ++i)
       padding_buffer[i] = zero_point;
-    pack_bitfield(padding_buffer.data(), out, zero_point);
+    bitpack_bitfield(padding_buffer.data(), out, zero_point);
   }
 }
 
@@ -182,7 +190,7 @@ inline void bitpack_matrix(const TIn* input, const std::size_t input_num_rows,
     bitpack_array(input, input_num_cols * input_num_rows, output, zero_point);
   } else {
     // Calculate the size of the bitpacked rows
-    const std::size_t output_num_cols = GetPackedSize(input_num_cols);
+    const std::size_t output_num_cols = GetBitpackedSize(input_num_cols);
 
     // Iterate through each row of the input matrix and bitpack the row into the
     // corresponding memory location of the output matrix
@@ -198,6 +206,7 @@ template <typename TUnpacked>
 void unpack_bitfield(const TBitpacked in, TUnpacked*& out,
                      std::size_t num_elements, const TUnpacked zero_bit_result,
                      const TUnpacked one_bit_result) {
+  ruy::profiler::ScopeLabel label("Unpack bitfield (unoptimised)");
   for (size_t i = 0; i < num_elements; ++i) {
     *out++ = (in & (TBitpacked(1) << i)) ? one_bit_result : zero_bit_result;
   }

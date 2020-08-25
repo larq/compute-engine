@@ -31,7 +31,8 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
   auto shape = x.getType().cast<ShapedType>().getShape();
   int num_rows = shape[0] * shape[1] * shape[2];
   int unpacked_channels = shape[3];
-  int packed_channels = compute_engine::core::GetPackedSize(unpacked_channels);
+  int packed_channels =
+      compute_engine::core::GetBitpackedSize(unpacked_channels);
 
   std::vector<TBitpacked> new_values(num_rows * packed_channels);
   std::vector<float> old_values(num_rows * unpacked_channels);

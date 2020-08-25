@@ -8,6 +8,7 @@
 #include <cstdint>
 
 #include "larq_compute_engine/core/types.h"
+#include "ruy/profiler/instrumentation.h"
 
 namespace compute_engine {
 namespace core {
@@ -18,6 +19,8 @@ inline void bitpack_aarch64_4x32(const float* input, std::size_t num_blocks,
   static_assert(sizeof(TBitpacked) == 4,
                 "Correctness of this function relies on the size of TBitpacked "
                 "being 4 bytes.");
+
+  ruy::profiler::ScopeLabel label("Bitpack 4x32 floats (optimised)");
 
   if (num_blocks < 1) return;
 

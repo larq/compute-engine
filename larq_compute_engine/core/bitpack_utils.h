@@ -10,12 +10,12 @@ namespace compute_engine {
 namespace ce = compute_engine;
 namespace core {
 
-inline int GetPackedTensorSize(const RuntimeShape& shape) {
+inline int GetBitpackedTensorSize(const RuntimeShape& shape) {
   const int dims = shape.DimensionsCount();
   // Pack the tensor along the last dimension
   const int rows = FlatSizeSkipDim(shape, dims - 1);
   const int cols = shape.Dims(dims - 1);
-  return ce::core::GetPackedMatrixSize(rows, cols);
+  return ce::core::GetBitpackedMatrixSize(rows, cols);
 }
 
 // Convenience function for bitpacking a tensor along its last dimension
@@ -36,7 +36,7 @@ inline void bitpack_tensor(const RuntimeShape& in_shape, const T* in_data,
 inline RuntimeShape packed_shape(const RuntimeShape& in_shape) {
   const int dims = in_shape.DimensionsCount();
   RuntimeShape out_shape(in_shape);
-  out_shape.SetDim(dims - 1, GetPackedSize(in_shape.Dims(dims - 1)));
+  out_shape.SetDim(dims - 1, GetBitpackedSize(in_shape.Dims(dims - 1)));
   return out_shape;
 }
 

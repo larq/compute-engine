@@ -369,7 +369,7 @@ void test_lce_op_output(const std::vector<TBitpacked>& lce_output_data,
   RuntimeShape out_shape;
   out_shape.BuildFrom(builtin_output_shape);
   std::vector<TBitpacked> builtin_output_data_bp(
-      core::GetPackedTensorSize(out_shape));
+      core::GetBitpackedTensorSize(out_shape));
   core::bitpack_tensor(out_shape, builtin_output_data.data(), 0,
                        builtin_output_data_bp.data());
 
@@ -444,7 +444,7 @@ void runTest(const TestParam& param) {
       (padding == Padding_ONE ? Padding_SAME : padding);
   const int pad_values = (padding == Padding_ONE ? 1 : 0);
 
-  const int packed_channels = core::GetPackedSize(input_depth);
+  const int packed_channels = core::GetBitpackedSize(input_depth);
 
   const int input_num_elem =
       input_batch_count * input_height * input_width * input_depth;

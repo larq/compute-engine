@@ -1,4 +1,5 @@
 #include "larq_compute_engine/core/bitpack_utils.h"
+#include "ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/kernels/internal/cppmath.h"
 #include "tensorflow/lite/kernels/internal/tensor.h"
@@ -31,7 +32,7 @@ TfLiteStatus QuantizePrepare(TfLiteContext* context, TfLiteNode* node) {
 
   // The last dimension is bitpacked
   output_dims->data[num_dims - 1] =
-      ce::core::GetPackedSize(SizeOfDimension(input, num_dims - 1));
+      ce::core::GetBitpackedSize(SizeOfDimension(input, num_dims - 1));
 
   return context->ResizeTensor(context, output, output_dims);
 }
@@ -60,7 +61,7 @@ TfLiteStatus DequantizePrepare(TfLiteContext* context, TfLiteNode* node) {
   int packed_channels = SizeOfDimension(input, num_dims - 1);
   int unpacked_channels = SizeOfDimension(output, num_dims - 1);
   TF_LITE_ENSURE_EQ(context, packed_channels,
-                    ce::core::GetPackedSize(unpacked_channels));
+                    ce::core::GetBitpackedSize(unpacked_channels));
 
   // We don't support resizing here, because we can not know the number of
   // output channels based on the number of input channels
@@ -69,6 +70,8 @@ TfLiteStatus DequantizePrepare(TfLiteContext* context, TfLiteNode* node) {
 }
 
 TfLiteStatus QuantizeEval(TfLiteContext* context, TfLiteNode* node) {
+  ruy::profiler::ScopeLabel label("Binary Quantize");
+
   const TfLiteTensor* input = GetInput(context, node, 0);
   TfLiteTensor* output = GetOutput(context, node, 0);
 
@@ -87,6 +90,8 @@ TfLiteStatus QuantizeEval(TfLiteContext* context, TfLiteNode* node) {
 }
 
 TfLiteStatus DequantizeEval(TfLiteContext* context, TfLiteNode* node) {
+  ruy::profiler::ScopeLabel label("Binary Dequantize");
+
   const TfLiteTensor* input = GetInput(context, node, 0);
   TfLiteTensor* output = GetOutput(context, node, 0);
 
@@ -104,11 +109,9 @@ TfLiteStatus DequantizeEval(TfLiteContext* context, TfLiteNode* node) {
         std::min(127, output->params.zero_point + offset);
     std::int8_t one_bit_result =
         std::max(-128, output->params.zero_point - offset);
-
     ce::core::unpack_matrix(GetTensorData<TBitpacked>(input), num_rows,
                             num_cols, GetTensorData<std::int8_t>(output),
                             zero_bit_result, one_bit_result);
-
   } else {
     return kTfLiteError;
   }

@@ -109,7 +109,7 @@ class PaddingFunctor {
             for (int filter_x = 0; filter_x < filter_width; ++filter_x) {
               // Sum over input channels
               int popcount = 0;
-              int packed_channels = GetPackedSize(input_channels);
+              int packed_channels = GetBitpackedSize(input_channels);
               for (int in_c = 0; in_c < packed_channels; ++in_c) {
                 int filter_idx;
                 // filter_data has shape
