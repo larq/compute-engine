@@ -50,12 +50,12 @@ and a Raspberry Pi 4 Model B ([BCM2711](https://www.raspberrypi.org/documentatio
 
 | Model                                                                                                                                                                      | Top-1 Accuracy | RPi 4 B, ms (1 thread) | Pixel 1, ms (1 thread) |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------: | :--------------------: | :--------------------: |
-| [QuickNet](https://docs.larq.dev/zoo/api/sota/#quicknet) ([.h5](https://github.com/larq/zoo/releases/download/quicknet-v0.2.0/quicknet_weights.h5))                        |     58.6 %     |          34.9          |          18.3          |
-| [QuickNet-Large](https://docs.larq.dev/zoo/api/sota/#quicknetlarge) ([.h5](https://github.com/larq/zoo/releases/download/quicknet_large-v0.2.0/quicknet_large_weights.h5)) |     62.7 %     |          52.7          |          27.6          |
-| [QuickNet-XL](https://docs.larq.dev/zoo/api/sota/#quicknetxl) ([.h5](https://github.com/larq/zoo/releases/download/quicknet_xl-v0.1.0/quicknet_xl_weights.h5))             |     67.0 %     |          92.0          |          48.1          |
+| [QuickNet](https://docs.larq.dev/zoo/api/sota/#quicknet) ([.h5](https://github.com/larq/zoo/releases/download/quicknet-v0.2.0/quicknet_weights.h5))                        |     58.6 %     |          31.4          |          16.8          |
+| [QuickNet-Large](https://docs.larq.dev/zoo/api/sota/#quicknetlarge) ([.h5](https://github.com/larq/zoo/releases/download/quicknet_large-v0.2.0/quicknet_large_weights.h5)) |     62.7 %     |          48.7          |          25.5          |
+| [QuickNet-XL](https://docs.larq.dev/zoo/api/sota/#quicknetxl) ([.h5](https://github.com/larq/zoo/releases/download/quicknet_xl-v0.1.0/quicknet_xl_weights.h5))             |     67.0 %     |          82.9          |          44.2          |
 
 For reference, [dabnn](https://github.com/JDAI-CV/dabnn) (the other main BNN library) reports an inference time of 61.3 ms for [Bi-RealNet](https://docs.larq.dev/zoo/api/literature/#birealnet) (56.4% accuracy) on the Pixel 1 phone,
-while LCE achieves an inference time of 43.7 ms for Bi-RealNet on the same device.
+while LCE achieves an inference time of 41.6 ms for Bi-RealNet on the same device.
 They furthermore present a modified version, BiRealNet-Stem, which achieves the same accuracy of 56.4% in 43.2 ms.
 
 The following table presents **multi-threaded** performance of Larq Compute Engine on
@@ -64,11 +64,11 @@ board:
 
 | Model                                                                                                                                                                      | Top-1 Accuracy | RPi 4 B, ms (4 threads) | Pixel 1, ms (4 threads) |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------: | :---------------------: | :---------------------: |
-| [QuickNet](https://docs.larq.dev/zoo/api/sota/#quicknet) ([.h5](https://github.com/larq/zoo/releases/download/quicknet-v0.2.0/quicknet_weights.h5))                        |     58.6 %     |          17.2           |          10.9           |
-| [QuickNet-Large](https://docs.larq.dev/zoo/api/sota/#quicknetlarge) ([.h5](https://github.com/larq/zoo/releases/download/quicknet_large-v0.2.0/quicknet_large_weights.h5)) |     62.7 %     |          25.7           |          15.8           |
-| [QuickNet-XL](https://docs.larq.dev/zoo/api/sota/#quicknetxl) ([.h5](https://github.com/larq/zoo/releases/download/quicknet_xl-v0.1.0/quicknet_xl_weights.h5))             |     67.0 %     |          41.7           |          27.5           |
+| [QuickNet](https://docs.larq.dev/zoo/api/sota/#quicknet) ([.h5](https://github.com/larq/zoo/releases/download/quicknet-v0.2.0/quicknet_weights.h5))                        |     58.6 %     |          16.1           |           8.9           |
+| [QuickNet-Large](https://docs.larq.dev/zoo/api/sota/#quicknetlarge) ([.h5](https://github.com/larq/zoo/releases/download/quicknet_large-v0.2.0/quicknet_large_weights.h5)) |     62.7 %     |          24.7           |          12.6           |
+| [QuickNet-XL](https://docs.larq.dev/zoo/api/sota/#quicknetxl) ([.h5](https://github.com/larq/zoo/releases/download/quicknet_xl-v0.1.0/quicknet_xl_weights.h5))             |     67.0 %     |          37.9           |          22.8           |
 
-Benchmarked on May 12th, 2020 with LCE custom
+Benchmarked on August 21th, 2020 with LCE custom
 [TFLite Model Benchmark Tool](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/tools/benchmark)
 (see [here](https://github.com/larq/compute-engine/tree/master/larq_compute_engine/tflite/benchmark))
 and BNN models with randomized weights and inputs.
