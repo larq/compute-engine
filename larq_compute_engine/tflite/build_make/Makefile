@@ -32,7 +32,7 @@ HOST_ARCH := $(shell if uname -m | grep -q i[345678]86; then echo x86_32; else u
 TARGET := $(HOST_OS)
 TARGET_ARCH := $(HOST_ARCH)
 
-#LQCE: Removed the following includes. It is unclear what they were for.
+#LCE: Removed the following includes. It is unclear what they were for.
 #-I$(TF_MAKEFILE_DIR)/../../../../../ \
 #-I$(TF_MAKEFILE_DIR)/../../../../../../ \
 #-I$(OBJDIR)
@@ -54,18 +54,49 @@ INCLUDES := \
 # override local versions in the source tree.
 INCLUDES += -I/usr/local/include
 
+# These are the default libraries needed, but they can be added to or
+# overridden by the platform-specific settings in target makefiles.
+LIBS := \
+-lstdc++ \
+-lpthread \
+-lm \
+-lz \
+-ldl
+
 # There are no rules for compiling objects for the host system (since we don't
 # generate things like the protobuf compiler that require that), so all of
 # these settings are for the target compiler.
-CFLAGS := -O3 -DNDEBUG -fPIC
+CFLAGS := -O3 -DNDEBUG -fPIC $(EXTRA_CFLAGS)
 CXXFLAGS := $(CFLAGS) --std=c++11 $(EXTRA_CXXFLAGS)
 LDOPTS := -L/usr/local/lib
 ARFLAGS := -r
 TARGET_TOOLCHAIN_PREFIX :=
 CC_PREFIX :=
 
+# Added by LCE:
+CXXFLAGS += -DTFLITE_WITH_RUY
+BUILD_WITH_RUY_PROFILER ?= false
+ifeq ($(BUILD_WITH_RUY_PROFILER),true)
+  CXXFLAGS += -DRUY_PROFILER
+endif
+
 ifeq ($(HOST_OS),windows)
 CXXFLAGS += -fext-numeric-literals -D__LITTLE_ENDIAN__
+endif
+
+# Auto-detect optimization opportunity if building natively.
+ifeq ($(HOST_OS),$(TARGET))
+ifeq ($(HOST_ARCH),$(TARGET_ARCH))
+ifeq ($(TARGET_ARCH),armv7l)
+ifneq ($(shell cat /proc/cpuinfo | grep Features | grep neon),)
+  ifneq ($(shell cat /proc/cpuinfo | grep Features | grep vfpv4),)
+    CXXFLAGS += -mfpu=neon-vfpv4
+  else
+    CXXFLAGS += -mfpu=neon
+  endif
+endif # ifeq ($(TARGET_ARCH),armv7l)
+endif # ifeq ($(HOST_ARCH),$(TARGET_ARCH))
+endif # ifeq ($(HOST_OS),$(TARGET))
 endif
 
 # This library is the main target for this makefile. It will contain a minimal
@@ -76,15 +107,17 @@ BENCHMARK_LIB_NAME := benchmark-lib.a
 # What sources we want to compile, must be kept in sync with the main Bazel
 # build files.
 
-LQCE_ALL_SRCS := \
-$(wildcard larq_compute_engine/tflite/*.cc) \
+LCE_ALL_SRCS := \
 $(wildcard larq_compute_engine/tflite/kernels/*.cc) \
 
-LQCE_EXAMPLE_SRCS := \
+LCE_EXAMPLE_SRCS := \
 	examples/lce_minimal.cc
 
+LCE_BENCHMARK_SRCS := \
+	larq_compute_engine/tflite/benchmark/lce_benchmark_main.cc
+
 # These target-specific makefiles should modify or replace options like
-# CXXFLAGS or LIBS to work for a specific targetted architecture. All logic
+# CXXFLAGS or LIBS to work for a specific targeted architecture. All logic
 # based on platforms or architectures should happen within these files, to
 # keep this main makefile focused on the sources and dependencies.
 include $(wildcard $(TF_MAKEFILE_DIR)/targets/*_makefile.inc)
@@ -98,17 +131,22 @@ BINDIR := $(GENDIR)bin/
 
 LIB_PATH := $(LIBDIR)$(LIB_NAME)
 BENCHMARK_LIB := $(LIBDIR)$(BENCHMARK_LIB_NAME)
-LQCE_EXAMPLE_BINARY := $(BINDIR)lce_minimal
+LCE_EXAMPLE_BINARY := $(BINDIR)lce_minimal
+LCE_BENCHMARK_BINARY := $(BINDIR)lce_benchmark
 
 CXX := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}g++
 CC := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}gcc
 AR := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}ar
 
 LIB_OBJS := $(addprefix $(OBJDIR), \
-$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LQCE_ALL_SRCS)))))
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LCE_ALL_SRCS)))))
 
-LQCE_EXAMPLE_OBJS := $(addprefix $(OBJDIR), \
-$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LQCE_EXAMPLE_SRCS))))
+LCE_EXAMPLE_OBJS := $(addprefix $(OBJDIR), \
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LCE_EXAMPLE_SRCS))))
+
+LCE_BENCHMARK_OBJS := $(addprefix $(OBJDIR), \
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LCE_BENCHMARK_SRCS))))
+
 
 # For normal manually-created TensorFlow Lite C++ source files.
 $(OBJDIR)%.o: %.cpp
@@ -118,6 +156,7 @@ $(OBJDIR)%.o: %.cpp
 $(OBJDIR)%.o: %.cc
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
 # For normal manually-created TensorFlow Lite C source files.
 $(OBJDIR)%.o: %.c
 	@mkdir -p $(dir $@)
@@ -127,7 +166,7 @@ $(OBJDIR)%.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 # The target that's compiled if there's no command-line arguments.
-all: $(LIB_PATH) $(BENCHMARK_LIB) $(LQCE_EXAMPLE_BINARY)
+all: $(LIB_PATH) $(BENCHMARK_LIB) $(LCE_EXAMPLE_BINARY) $(LCE_BENCHMARK_BINARY)
 
 # Add together all the objects we've compiled to the '.a' archive.
 $(LIB_PATH): $(LIB_OBJS)
@@ -145,11 +184,17 @@ $(BENCHMARK_LIB): $(LIB_PATH) $(LIB_OBJS)
 	# Move the original register.o to the end
 	$(AR) -d $(BENCHMARK_LIB) register.o
 
-$(LQCE_EXAMPLE_BINARY): $(LQCE_EXAMPLE_OBJS) $(LIB_PATH)
+$(LCE_EXAMPLE_BINARY): $(LCE_EXAMPLE_OBJS) $(LIB_PATH)
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) \
-	-o $(LQCE_EXAMPLE_BINARY) $(LQCE_EXAMPLE_OBJS) \
+	-o $(LCE_EXAMPLE_BINARY) $(LCE_EXAMPLE_OBJS) \
 	$(LIBFLAGS) $(LIB_PATH) $(LDFLAGS) $(LIBS)
+
+$(LCE_BENCHMARK_BINARY): $(LCE_BENCHMARK_OBJS) $(BENCHMARK_LIB)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) \
+	-o $(LCE_BENCHMARK_BINARY) $(LCE_BENCHMARK_OBJS) \
+	$(LIBFLAGS) $(BENCHMARK_LIB) $(LDFLAGS) $(LIBS)
 
 lib: $(LIB_PATH)
 
