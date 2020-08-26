@@ -25,14 +25,13 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
                    const RuntimeShape& filter_shape,
                    const RuntimeShape& output_shape,
                    const RuntimeShape& im2col_shape, TBitpacked* im2col_data,
-                   RuntimeShape& result_shape, const TBitpacked** result_data,
-                   const std::int32_t zero_point) {
+                   RuntimeShape& result_shape, const TBitpacked** result_data) {
   const int stride_width = params.stride_width;
   const int stride_height = params.stride_height;
   const int dilation_width_factor = params.dilation_width_factor;
   const int dilation_height_factor = params.dilation_height_factor;
 
-  const std::uint8_t zero_byte = (std::uint8_t)zero_point;
+  const std::uint8_t zero_byte = 0;
   const int filter_height = filter_shape.Dims(1);
   const int filter_width = filter_shape.Dims(2);
 
@@ -120,11 +119,9 @@ inline void BConv2D(
   int m = 0;
   int k = 0;
 
-  // We're already bitpacked, so im2col `zero_byte` is 0.
   RuntimeShape result_shape;
-
   im2col(params, input_shape, input_data, filter_shape, output_shape,
-         im2col_shape, im2col_data, result_shape, &rhs_data, 0);
+         im2col_shape, im2col_data, result_shape, &rhs_data);
 
   k = result_shape.Dims(3);
   m = FlatSizeSkipDim(result_shape, 3);
