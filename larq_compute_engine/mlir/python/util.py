@@ -166,7 +166,9 @@ def _find_int8_quantized_inputs_outputs(model):
 
 
 def modify_integer_quantized_model_io_type(
-    model, inference_input_type=tf.float32, inference_output_type=tf.float32,
+    model,
+    inference_input_type=tf.float32,
+    inference_output_type=tf.float32,
 ):
     """Modify the float input/output type of an integer quantized model."""
     # Convert the model to an object
