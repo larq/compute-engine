@@ -6,11 +6,11 @@ usage()
     echo "Usage: build_lqce.sh [--native] [--rpi] [--ios] [--aarch64] [--benchmark] [--clean]
 
 --native        Build for the host platform
---rpi           Cross-compile for Raspberry Pi (32-bit armv7)
---ios           Cross-compile for iOS
---aarch64       Cross-compile for Aarch64 (e.g. 64-bit Raspberry Pi)
+--rpi           Compile for Raspberry Pi (32-bit armv7)
+--ios           Compile for iOS
+--aarch64       Compile for Aarch64 (e.g. 64-bit Raspberry Pi)
 
-When building on a 32-bit Raspberry Pi, it is advised to use the --rpi option in order to set the correct compiler optimization flags.
+When building on a Raspberry Pi, it is advised to use the --rpi or --aarch64 options instead of --native, in order to set the correct compiler optimization flags.
 
 For cross-compiling, the relevant toolchains have to be installed using the systems package manager.
 The --rpi option requires the arm-linux-gnueabihf toolchain.
@@ -74,19 +74,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}/../../.."
 TF_DIR="${ROOT_DIR}/third_party/tensorflow"
 LCE_MAKEFILE="larq_compute_engine/tflite/build_make/Makefile"
+TF_GEN_DIR="${TF_DIR}/tensorflow/lite/tools/make/gen"
+export LCE_GEN_DIR="${ROOT_DIR}/gen" # export to pass it to the Makefile
 
 # number of hyper threads
 NUM_HYPERTHREADS=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
-
-# Try to figure out the host system
-HOST_OS="unknown"
-UNAME="$(uname -s)"
-if [ "$UNAME" = "Linux" ] ; then
-    HOST_OS="linux"
-elif [ "$UNAME" = "Darwin" ] ; then
-    HOST_OS="osx"
-fi
-HOST_ARCH="$(if uname -m | grep -q i[345678]86; then echo x86_32; else uname -m; fi)"
 
 export BUILD_WITH_RUY=true
 if [ "$benchmark" == "1" ]; then
@@ -95,7 +87,8 @@ fi
 
 if [ "$clean" == "1" ]; then
     echo " --> clean"
-    rm -rf "${TF_DIR}/tensorflow/lite/tools/make/gen"
+    rm -rf ${TF_GEN_DIR}
+    rm -rf ${LCE_GEN_DIR}
 fi
 
 # Check if dependencies need to be downloaded

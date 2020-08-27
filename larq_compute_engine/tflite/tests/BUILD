@@ -21,7 +21,7 @@ cc_library(
     ],
     deps = [
         ":utils",
-        "//larq_compute_engine/tflite/kernels:lce_ops",
+        "//larq_compute_engine/tflite/kernels:lce_op_kernels",
         "@flatbuffers",
     ],
 )
@@ -65,7 +65,7 @@ cc_test(
     deps = [
         ":utils",
         "//larq_compute_engine/core:bitpack_utils",
-        "//larq_compute_engine/tflite/kernels:lce_ops",
+        "//larq_compute_engine/tflite/kernels:lce_op_kernels",
         "@com_google_googletest//:gtest",
         "@flatbuffers",
         "@org_tensorflow//tensorflow/lite:framework",
@@ -80,7 +80,7 @@ cc_test(
     srcs = ["quantization_test.cc"],
     deps = [
         ":utils",
-        "//larq_compute_engine/tflite/kernels:lce_ops",
+        "//larq_compute_engine/tflite/kernels:lce_op_kernels",
         "@com_google_googletest//:gtest",
         "@flatbuffers",
         "@org_tensorflow//tensorflow/lite:framework",

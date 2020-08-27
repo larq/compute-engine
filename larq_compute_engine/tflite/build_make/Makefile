@@ -11,6 +11,10 @@ SHELL := /bin/bash
 TF_DIR := third_party/tensorflow
 TF_MAKEFILE_DIR := $(TF_DIR)/tensorflow/lite/tools/make
 
+ifeq ($(LCE_GEN_DIR),)
+$(error Please set LCE_GEN_DIR to specify an output dir)
+endif
+
 # Try to figure out the host system
 HOST_OS :=
 ifeq ($(OS),Windows_NT)
@@ -101,14 +105,13 @@ endif
 
 # This library is the main target for this makefile. It will contain a minimal
 # runtime that can be linked in to other programs.
-LIB_NAME := libtensorflow-lite.a
+CORE_LIB_NAME := libtensorflow-lite.a
 BENCHMARK_LIB_NAME := benchmark-lib.a
 
 # What sources we want to compile, must be kept in sync with the main Bazel
 # build files.
 
-LCE_ALL_SRCS := \
-$(wildcard larq_compute_engine/tflite/kernels/*.cc) \
+LCE_CORE_SRCS := $(wildcard larq_compute_engine/tflite/kernels/*.cc)
 
 LCE_EXAMPLE_SRCS := \
 	examples/lce_minimal.cc
@@ -127,9 +130,9 @@ TARGET_OUT_DIR ?= $(TARGET)_$(TARGET_ARCH)
 GENDIR := $(TF_MAKEFILE_DIR)/gen/$(TARGET_OUT_DIR)/
 OBJDIR := $(GENDIR)obj/
 LIBDIR := $(GENDIR)lib/
-BINDIR := $(GENDIR)bin/
+BINDIR := $(LCE_GEN_DIR)/$(TARGET_OUT_DIR)/
 
-LIB_PATH := $(LIBDIR)$(LIB_NAME)
+CORE_LIB := $(LIBDIR)$(CORE_LIB_NAME)
 BENCHMARK_LIB := $(LIBDIR)$(BENCHMARK_LIB_NAME)
 LCE_EXAMPLE_BINARY := $(BINDIR)lce_minimal
 LCE_BENCHMARK_BINARY := $(BINDIR)lce_benchmark
@@ -138,8 +141,8 @@ CXX := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}g++
 CC := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}gcc
 AR := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}ar
 
-LIB_OBJS := $(addprefix $(OBJDIR), \
-$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LCE_ALL_SRCS)))))
+LCE_CORE_OBJS := $(addprefix $(OBJDIR), \
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LCE_CORE_SRCS)))))
 
 LCE_EXAMPLE_OBJS := $(addprefix $(OBJDIR), \
 $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LCE_EXAMPLE_SRCS))))
@@ -147,6 +150,8 @@ $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LCE_EXAMPLE_SRCS))))
 LCE_BENCHMARK_OBJS := $(addprefix $(OBJDIR), \
 $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LCE_BENCHMARK_SRCS))))
 
+# The target that's compiled if there's no command-line arguments.
+all: $(LCE_EXAMPLE_BINARY) $(LCE_BENCHMARK_BINARY)
 
 # For normal manually-created TensorFlow Lite C++ source files.
 $(OBJDIR)%.o: %.cpp
@@ -165,41 +170,17 @@ $(OBJDIR)%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
-# The target that's compiled if there's no command-line arguments.
-all: $(LIB_PATH) $(BENCHMARK_LIB) $(LCE_EXAMPLE_BINARY) $(LCE_BENCHMARK_BINARY)
-
-# Add together all the objects we've compiled to the '.a' archive.
-$(LIB_PATH): $(LIB_OBJS)
-	@mkdir -p $(dir $@)
-	$(AR) $(ARFLAGS) $(LIB_PATH) $(LIB_OBJS)
-	# Move the original register.o to the end so that
-	# our version, register_lqce.o, has precedence
-	$(AR) -d $(LIB_PATH) register.o
-
-# Make sure benchmark_lib depends on lib_path so that the access-times are correct.
-# If not, the tflite Makefile will rebuild it
-$(BENCHMARK_LIB): $(LIB_PATH) $(LIB_OBJS)
-	@mkdir -p $(dir $@)
-	$(AR) $(ARFLAGS) $(BENCHMARK_LIB) $(LIB_OBJS)
-	# Move the original register.o to the end
-	$(AR) -d $(BENCHMARK_LIB) register.o
-
-$(LCE_EXAMPLE_BINARY): $(LCE_EXAMPLE_OBJS) $(LIB_PATH)
+$(LCE_EXAMPLE_BINARY): $(LCE_CORE_OBJS) $(LCE_EXAMPLE_OBJS) $(CORE_LIB)
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) \
-	-o $(LCE_EXAMPLE_BINARY) $(LCE_EXAMPLE_OBJS) \
-	$(LIBFLAGS) $(LIB_PATH) $(LDFLAGS) $(LIBS)
+	-o $(LCE_EXAMPLE_BINARY) $(LCE_CORE_OBJS) $(LCE_EXAMPLE_OBJS) \
+	$(LIBFLAGS) $(CORE_LIB) $(LDFLAGS) $(LIBS)
 
-$(LCE_BENCHMARK_BINARY): $(LCE_BENCHMARK_OBJS) $(BENCHMARK_LIB)
+$(LCE_BENCHMARK_BINARY): $(LCE_CORE_OBJS) $(LCE_BENCHMARK_OBJS) $(BENCHMARK_LIB)
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) \
-	-o $(LCE_BENCHMARK_BINARY) $(LCE_BENCHMARK_OBJS) \
+	-o $(LCE_BENCHMARK_BINARY) $(LCE_CORE_OBJS) $(LCE_BENCHMARK_OBJS) \
 	$(LIBFLAGS) $(BENCHMARK_LIB) $(LDFLAGS) $(LIBS)
-
-lib: $(LIB_PATH)
-
-libdir:
-	@echo $(LIBDIR)
 
 # Gets rid of all generated files.
 clean:
