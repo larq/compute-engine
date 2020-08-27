@@ -7,8 +7,8 @@
 #include "tensorflow/lite/optional_debug_tools.h"
 
 // This file is based on the TF lite minimal example where the
-// "BuiltinObResolver" is modified to include the "Larq Compute Engine" custom
-// ops. Here we read a binary model form disk and perform inference by using the
+// "BuiltinOpResolver" is modified to include the "Larq Compute Engine" custom
+// ops. Here we read a binary model from disk and perform inference by using the
 // C++ interface. See the BUILD file in this directory to see an example of
 // linking "Larq Compute Engine" cutoms ops to your inference binary.
 
