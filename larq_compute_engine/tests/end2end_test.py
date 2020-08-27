@@ -165,7 +165,8 @@ def assert_model_output(model_lce, inputs, outputs):
 
 
 @pytest.mark.parametrize(
-    "model_cls", [toy_model, toy_model_sequential, toy_model_int8, lqz.sota.QuickNet],
+    "model_cls",
+    [toy_model, toy_model_sequential, toy_model_int8, lqz.sota.QuickNet],
 )
 def test_simple_model(model_cls):
     model = model_cls(weights="imagenet")
