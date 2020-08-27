@@ -31,6 +31,7 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
   const int dilation_width_factor = params.dilation_width_factor;
   const int dilation_height_factor = params.dilation_height_factor;
 
+  // On bitpacked data, padding with `0` effectively pads with `+1.0` values.
   const std::uint8_t zero_byte = 0;
   const int filter_height = filter_shape.Dims(1);
   const int filter_width = filter_shape.Dims(2);
