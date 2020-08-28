@@ -38,11 +38,11 @@ if ! is_linux; then
   PIP_MANYLINUX2010=0
 else
   while [[ "$PIP_MANYLINUX2010" == "" ]]; do
-    read -p "Does the pip package have tag manylinux2010 (usually the case for nightly release after Aug 1, 2019, or official releases past 1.14.0)?. Y or enter for manylinux2010, N for manylinux1. [Y/n] " INPUT
+      read -p "Are you trying to build a manylinux2010-compatible pip package in the tensorflow:custom-op-ubuntu16 Docker container? Y for manylinux2010, N or enter otherwise. [y/N] " INPUT
     case $INPUT in
       [Yy]* ) PIP_MANYLINUX2010=1;;
       [Nn]* ) PIP_MANYLINUX2010=0;;
-      "" ) PIP_MANYLINUX2010=1;;
+      "" ) PIP_MANYLINUX2010=0;;
       * ) echo "Invalid selection: " $INPUT;;
     esac
   done
