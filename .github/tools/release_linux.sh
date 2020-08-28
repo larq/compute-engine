@@ -36,3 +36,6 @@ bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --distinct
 
 # Package Whl
 bazel-bin/build_pip_pkg artifacts
+
+# Remove manylinux2010 config flags so that normal builds work as expected
+rm -f .lce_configure.bazelrc

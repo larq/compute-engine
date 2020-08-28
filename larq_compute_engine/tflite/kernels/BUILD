@@ -85,13 +85,3 @@ cc_library(
     ],
     alwayslink = 1,
 )
-
-cc_library(
-    name = "lce_ops",
-    srcs = ["lce_register.cc"],
-    deps = [
-        ":lce_op_kernels",
-        "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
-    ],
-    alwayslink = 1,
-)

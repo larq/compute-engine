@@ -11,6 +11,10 @@ SHELL := /bin/bash
 TF_DIR := third_party/tensorflow
 TF_MAKEFILE_DIR := $(TF_DIR)/tensorflow/lite/tools/make
 
+ifeq ($(LCE_GEN_DIR),)
+$(error Please set LCE_GEN_DIR to specify an output dir)
+endif
+
 # Try to figure out the host system
 HOST_OS :=
 ifeq ($(OS),Windows_NT)
@@ -32,7 +36,7 @@ HOST_ARCH := $(shell if uname -m | grep -q i[345678]86; then echo x86_32; else u
 TARGET := $(HOST_OS)
 TARGET_ARCH := $(HOST_ARCH)
 
-#LQCE: Removed the following includes. It is unclear what they were for.
+#LCE: Removed the following includes. It is unclear what they were for.
 #-I$(TF_MAKEFILE_DIR)/../../../../../ \
 #-I$(TF_MAKEFILE_DIR)/../../../../../../ \
 #-I$(OBJDIR)
@@ -54,37 +58,69 @@ INCLUDES := \
 # override local versions in the source tree.
 INCLUDES += -I/usr/local/include
 
+# These are the default libraries needed, but they can be added to or
+# overridden by the platform-specific settings in target makefiles.
+LIBS := \
+-lstdc++ \
+-lpthread \
+-lm \
+-lz \
+-ldl
+
 # There are no rules for compiling objects for the host system (since we don't
 # generate things like the protobuf compiler that require that), so all of
 # these settings are for the target compiler.
-CFLAGS := -O3 -DNDEBUG -fPIC
+CFLAGS := -O3 -DNDEBUG -fPIC $(EXTRA_CFLAGS)
 CXXFLAGS := $(CFLAGS) --std=c++11 $(EXTRA_CXXFLAGS)
 LDOPTS := -L/usr/local/lib
 ARFLAGS := -r
 TARGET_TOOLCHAIN_PREFIX :=
 CC_PREFIX :=
 
+# Added by LCE:
+CXXFLAGS += -DTFLITE_WITH_RUY
+BUILD_WITH_RUY_PROFILER ?= false
+ifeq ($(BUILD_WITH_RUY_PROFILER),true)
+  CXXFLAGS += -DRUY_PROFILER
+endif
+
 ifeq ($(HOST_OS),windows)
 CXXFLAGS += -fext-numeric-literals -D__LITTLE_ENDIAN__
 endif
 
+# Auto-detect optimization opportunity if building natively.
+ifeq ($(HOST_OS),$(TARGET))
+ifeq ($(HOST_ARCH),$(TARGET_ARCH))
+ifeq ($(TARGET_ARCH),armv7l)
+ifneq ($(shell cat /proc/cpuinfo | grep Features | grep neon),)
+  ifneq ($(shell cat /proc/cpuinfo | grep Features | grep vfpv4),)
+    CXXFLAGS += -mfpu=neon-vfpv4
+  else
+    CXXFLAGS += -mfpu=neon
+  endif
+endif # ifeq ($(TARGET_ARCH),armv7l)
+endif # ifeq ($(HOST_ARCH),$(TARGET_ARCH))
+endif # ifeq ($(HOST_OS),$(TARGET))
+endif
+
 # This library is the main target for this makefile. It will contain a minimal
 # runtime that can be linked in to other programs.
-LIB_NAME := libtensorflow-lite.a
+CORE_LIB_NAME := libtensorflow-lite.a
 BENCHMARK_LIB_NAME := benchmark-lib.a
 
 # What sources we want to compile, must be kept in sync with the main Bazel
 # build files.
 
-LQCE_ALL_SRCS := \
-$(wildcard larq_compute_engine/tflite/*.cc) \
-$(wildcard larq_compute_engine/tflite/kernels/*.cc) \
+LCE_CORE_SRCS := $(wildcard larq_compute_engine/tflite/kernels/*.cc)
 
-LQCE_EXAMPLE_SRCS := \
+LCE_EXAMPLE_SRCS := \
 	examples/lce_minimal.cc
 
+LCE_BENCHMARK_SRCS := \
+	larq_compute_engine/tflite/benchmark/lce_benchmark_main.cc
+
 # These target-specific makefiles should modify or replace options like
-# CXXFLAGS or LIBS to work for a specific targetted architecture. All logic
+# CXXFLAGS or LIBS to work for a specific targeted architecture. All logic
 # based on platforms or architectures should happen within these files, to
 # keep this main makefile focused on the sources and dependencies.
 include $(wildcard $(TF_MAKEFILE_DIR)/targets/*_makefile.inc)
@@ -94,21 +130,28 @@ TARGET_OUT_DIR ?= $(TARGET)_$(TARGET_ARCH)
 GENDIR := $(TF_MAKEFILE_DIR)/gen/$(TARGET_OUT_DIR)/
 OBJDIR := $(GENDIR)obj/
 LIBDIR := $(GENDIR)lib/
-BINDIR := $(GENDIR)bin/
+BINDIR := $(LCE_GEN_DIR)/$(TARGET_OUT_DIR)/
 
-LIB_PATH := $(LIBDIR)$(LIB_NAME)
+CORE_LIB := $(LIBDIR)$(CORE_LIB_NAME)
 BENCHMARK_LIB := $(LIBDIR)$(BENCHMARK_LIB_NAME)
-LQCE_EXAMPLE_BINARY := $(BINDIR)lce_minimal
+LCE_EXAMPLE_BINARY := $(BINDIR)lce_minimal
+LCE_BENCHMARK_BINARY := $(BINDIR)lce_benchmark
 
 CXX := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}g++
 CC := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}gcc
 AR := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}ar
 
-LIB_OBJS := $(addprefix $(OBJDIR), \
-$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LQCE_ALL_SRCS)))))
+LCE_CORE_OBJS := $(addprefix $(OBJDIR), \
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LCE_CORE_SRCS)))))
 
-LQCE_EXAMPLE_OBJS := $(addprefix $(OBJDIR), \
-$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LQCE_EXAMPLE_SRCS))))
+LCE_EXAMPLE_OBJS := $(addprefix $(OBJDIR), \
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LCE_EXAMPLE_SRCS))))
+
+LCE_BENCHMARK_OBJS := $(addprefix $(OBJDIR), \
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LCE_BENCHMARK_SRCS))))
+
+# The target that's compiled if there's no command-line arguments.
+all: $(LCE_EXAMPLE_BINARY) $(LCE_BENCHMARK_BINARY)
 
 # For normal manually-created TensorFlow Lite C++ source files.
 $(OBJDIR)%.o: %.cpp
@@ -118,6 +161,7 @@ $(OBJDIR)%.o: %.cpp
 $(OBJDIR)%.o: %.cc
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
 # For normal manually-created TensorFlow Lite C source files.
 $(OBJDIR)%.o: %.c
 	@mkdir -p $(dir $@)
@@ -126,35 +170,17 @@ $(OBJDIR)%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
-# The target that's compiled if there's no command-line arguments.
-all: $(LIB_PATH) $(BENCHMARK_LIB) $(LQCE_EXAMPLE_BINARY)
-
-# Add together all the objects we've compiled to the '.a' archive.
-$(LIB_PATH): $(LIB_OBJS)
-	@mkdir -p $(dir $@)
-	$(AR) $(ARFLAGS) $(LIB_PATH) $(LIB_OBJS)
-	# Move the original register.o to the end so that
-	# our version, register_lqce.o, has precedence
-	$(AR) -d $(LIB_PATH) register.o
-
-# Make sure benchmark_lib depends on lib_path so that the access-times are correct.
-# If not, the tflite Makefile will rebuild it
-$(BENCHMARK_LIB): $(LIB_PATH) $(LIB_OBJS)
-	@mkdir -p $(dir $@)
-	$(AR) $(ARFLAGS) $(BENCHMARK_LIB) $(LIB_OBJS)
-	# Move the original register.o to the end
-	$(AR) -d $(BENCHMARK_LIB) register.o
-
-$(LQCE_EXAMPLE_BINARY): $(LQCE_EXAMPLE_OBJS) $(LIB_PATH)
+$(LCE_EXAMPLE_BINARY): $(LCE_CORE_OBJS) $(LCE_EXAMPLE_OBJS) $(CORE_LIB)
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) \
-	-o $(LQCE_EXAMPLE_BINARY) $(LQCE_EXAMPLE_OBJS) \
-	$(LIBFLAGS) $(LIB_PATH) $(LDFLAGS) $(LIBS)
+	-o $(LCE_EXAMPLE_BINARY) $(LCE_CORE_OBJS) $(LCE_EXAMPLE_OBJS) \
+	$(LIBFLAGS) $(CORE_LIB) $(LDFLAGS) $(LIBS)
 
-lib: $(LIB_PATH)
-
-libdir:
-	@echo $(LIBDIR)
+$(LCE_BENCHMARK_BINARY): $(LCE_CORE_OBJS) $(LCE_BENCHMARK_OBJS) $(BENCHMARK_LIB)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) \
+	-o $(LCE_BENCHMARK_BINARY) $(LCE_CORE_OBJS) $(LCE_BENCHMARK_OBJS) \
+	$(LIBFLAGS) $(BENCHMARK_LIB) $(LDFLAGS) $(LIBS)
 
 # Gets rid of all generated files.
 clean:
