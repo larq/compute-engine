@@ -26,7 +26,7 @@ setup(
     long_description=readme(),
     long_description_content_type="text/markdown",
     author="Plumerai",
-    author_email="arash@plumerai.com",
+    author_email="opensource@plumerai.com",
     packages=find_packages(),
     ext_modules=ext_modules,
     url="https://larq.dev/",
