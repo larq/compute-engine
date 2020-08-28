@@ -35,7 +35,7 @@ advantage of multi-core modern desktop and mobile CPUs.
     - LCE enables high performance, on-device machine learning inference by
       providing hand-optimized kernels and network level optimizations for BNN models.
 
-    - LCE currently supports ARM64-based mobile platforms such as Android phones
+    - LCE currently supports 64-bit ARM-based mobile platforms such as Android phones
       and Raspberry Pi boards.
 
     - Thread parallelism support in LCE is essential for modern mobile devices with
@@ -71,7 +71,7 @@ board:
 Benchmarked on August 21th, 2020 with LCE custom
 [TFLite Model Benchmark Tool](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/tools/benchmark)
 (see [here](https://github.com/larq/compute-engine/tree/master/larq_compute_engine/tflite/benchmark))
-and BNN models with randomized weights and inputs.
+and BNN models with randomized inputs.
 
 ## Getting started
 
@@ -87,7 +87,7 @@ Follow these steps to deploy a BNN with LCE:
 
 3. **Build LCE**
 
-    The LCE documentation provides the build instructions for [Android](https://docs.larq.dev/compute-engine/quickstart_android) and [ARM64-based boards](https://docs.larq.dev/compute-engine/build_arm) such as Raspberry Pi. Please follow the provided instructions to create a native LCE build or cross-compile for one of the supported targets.
+    The LCE documentation provides the build instructions for [Android](https://docs.larq.dev/compute-engine/quickstart_android) and [64-bit ARM-based boards](https://docs.larq.dev/compute-engine/build/arm) such as Raspberry Pi. Please follow the provided instructions to create a native LCE build or cross-compile for one of the supported targets.
 
 4. **Run inference**
 
@@ -100,7 +100,7 @@ Follow these steps to deploy a BNN with LCE:
   [train](https://docs.larq.dev/larq/guides/bnn-optimization/) BNNs for your own
   application with Larq.
 - If you're a mobile developer, visit [Android quickstart](https://docs.larq.dev/compute-engine/quickstart_android).
-- See our build instructions for Raspberry Pi and Arm64-based boards [here](https://docs.larq.dev/compute-engine/build_arm).
+- See our build instructions for Raspberry Pi and 64-bit ARM-based boards [here](https://docs.larq.dev/compute-engine/build/arm).
 - Try our [example programs](https://github.com/larq/compute-engine/tree/master/examples).
 
 ## About
