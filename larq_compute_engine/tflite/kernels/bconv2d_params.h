@@ -32,30 +32,27 @@ typedef struct {
   int pad_value = 0;  // Must be 0 or 1
 
   TfLiteFusedActivation fused_activation_function = kTfLiteActNone;
-  // These min,max take care of a Relu.
+  // These min/max take care of a Relu.
   // Later they will *also* do the clamping in order to go from int32 to int8
   std::int32_t output_activation_min;
   std::int32_t output_activation_max;
 
-  // This is only for int8 mode, its the post_activation_ values scaled by the
+  // This is only for int8 mode; it's the post_activation_ values scaled by the
   // output tensor scale, and the bias includes the output zero-point.
   std::vector<float> scaled_post_activation_multiplier;
   std::vector<float> scaled_post_activation_bias;
   bool is_quantization_initialized = false;
 
-  bool need_im2col = false;
   // IDs are the arbitrary identifiers used by TF Lite to identify and access
   // memory buffers. They are unique in the entire TF Lite context.
   int im2col_id = kTensorNotAllocated;
   // In node->temporaries there is a list of tensor id's that are part
   // of this node in particular. The indices below are offsets into this array.
   // So in pseudo-code: `node->temporaries[index] = id;`
-  std::int32_t im2col_index;
+  std::int32_t im2col_index = -1;
 
   std::vector<float> padding_buffer;
   bool is_padding_correction_cached = false;
-
-  bool write_bitpacked_output = false;
 
   bool conv_params_initialized = false;
 } TfLiteBConv2DParams;

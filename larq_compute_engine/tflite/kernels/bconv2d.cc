@@ -30,13 +30,7 @@ enum class KernelType {
   // kGenericRef: the reference implementation without im2col
   kGenericRef,
 
-  // kGenericOptimized: the impl. path using reference BGEMM kernels in RUY.
-  // TODO(arashb): the generic optimized needs to be redirected to the
-  // reference impl. of RUY kernels.
-  kGenericOptimized,
-
-  // kRuyOptimized: the impl. path using RUY framework with hand-optimized
-  // BGEMM kernels.
+  // kRuyOptimized: the Ruy implementation with hand-optimized BGEMM kernels.
   kRuyOptimized,
 };
 
@@ -99,8 +93,8 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
     return conv_params;
   }
 
-  // We cannot return an error code here, so we set this flag and return an
-  // error code in Prepare
+  // We cannot return an error code here, so we set this flag and potentially
+  // return an error code in Prepare.
   conv_params->conv_params_initialized = true;
   return conv_params;
 }
@@ -128,9 +122,9 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   TF_LITE_ENSURE_EQ(context, NumDimensions(input), 4);
   TF_LITE_ENSURE_EQ(context, NumDimensions(filter), 4);
 
-  conv_params->write_bitpacked_output = output->type == kTfLiteInt32;
+  const bool write_bitpacked_output = output->type == kTfLiteInt32;
 
-  if (conv_params->write_bitpacked_output) {
+  if (write_bitpacked_output) {
     TF_LITE_ENSURE_EQ(context, NumDimensions(thresholds), 1);
   } else {
     TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_multiplier), 1);
@@ -138,7 +132,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   }
 
   if (conv_params->padding_type == kTfLitePaddingSame &&
-      conv_params->pad_value != 1 && conv_params->write_bitpacked_output) {
+      conv_params->pad_value != 1 && write_bitpacked_output) {
     TF_LITE_KERNEL_LOG(context,
                        "Writing bitpacked output is only supported with "
                        "valid or one-padding.");
@@ -156,7 +150,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     return kTfLiteError;
   }
 
-  if (conv_params->write_bitpacked_output) {
+  if (write_bitpacked_output) {
     TF_LITE_ENSURE_EQ(context, thresholds->type, kTfLiteInt32);
   } else {
     // For 8-bit quantized networks, we support both int8 and float32
@@ -185,19 +179,18 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     return kTfLiteError;
   }
 
-  if (!conv_params->write_bitpacked_output) {
-    TF_LITE_ENSURE(
-        context, output->type == kTfLiteInt8 || output->type == kTfLiteFloat32);
-  }
+  TF_LITE_ENSURE(context, output->type == kTfLiteInt32 ||
+                              output->type == kTfLiteInt8 ||
+                              output->type == kTfLiteFloat32);
 
-  // reading the filter dimensions
+  // Read the filter dimensions
   conv_params->channels_out = SizeOfDimension(filter, 0);
   conv_params->filter_height = SizeOfDimension(filter, 1);
   conv_params->filter_width = SizeOfDimension(filter, 2);
 
   TF_LITE_ENSURE_EQ(context, filter->type, kTfLiteInt32);
 
-  if (conv_params->write_bitpacked_output) {
+  if (write_bitpacked_output) {
     TF_LITE_ENSURE_EQ(context, SizeOfDimension(thresholds, 0),
                       conv_params->channels_out);
   } else {
@@ -207,7 +200,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
                       conv_params->channels_out);
   }
 
-  // computing the padding and output values (height, width)
+  // Compute the padding and output values (height, width)
   int out_width, out_height;
   conv_params->padding_values = ComputePaddingHeightWidth(
       conv_params->stride_height, conv_params->stride_width,
@@ -225,26 +218,25 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
                       kTfLiteAffineQuantization);
   }
 
-  if (!conv_params->write_bitpacked_output) {
+  if (!write_bitpacked_output) {
     conv_params->scaled_post_activation_multiplier.resize(
         conv_params->channels_out);
     conv_params->scaled_post_activation_bias.resize(conv_params->channels_out);
   }
 
-  // determine the output dimensions
+  // Determine the output dimensions
   TfLiteIntArray* output_shape = TfLiteIntArrayCreate(4);
   output_shape->data[0] = SizeOfDimension(input, 0);
   output_shape->data[1] = out_height;
   output_shape->data[2] = out_width;
-  if (conv_params->write_bitpacked_output) {
-    // If we write bitpacked output, we use 32-bit bitpacking
+  if (write_bitpacked_output) {
     output_shape->data[3] =
         ce::core::GetBitpackedSize(conv_params->channels_out);
   } else {
     output_shape->data[3] = conv_params->channels_out;
   }
 
-  // allocate the output buffer
+  // Allocate the output buffer
   TF_LITE_ENSURE_OK(context,
                     context->ResizeTensor(context, output, output_shape));
 
@@ -258,17 +250,18 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   // Figure out how many temporary buffers we need
   int temporaries_count = 0;
 
-  // pre-allocate temporary tensors for optimized version
-  if (kernel_type == KernelType::kRuyOptimized) {
-    conv_params->need_im2col =
-        (conv_params->stride_width != 1 || conv_params->stride_height != 1 ||
-         conv_params->dilation_width_factor != 1 ||
-         conv_params->dilation_height_factor != 1 ||
-         conv_params->filter_width != 1 || conv_params->filter_height != 1);
+  const bool need_im2col =
+      kernel_type == KernelType::kRuyOptimized &&
+      (conv_params->stride_width != 1 || conv_params->stride_height != 1 ||
+       conv_params->dilation_width_factor != 1 ||
+       conv_params->dilation_height_factor != 1 ||
+       conv_params->filter_width != 1 || conv_params->filter_height != 1);
 
-    if (conv_params->need_im2col) {
-      conv_params->im2col_index = temporaries_count++;
-    }
+  // Pre-allocate temporary tensors
+  if (need_im2col) {
+    conv_params->im2col_index = temporaries_count++;
+  } else {
+    conv_params->im2col_index = -1;
   }
 
   if (temporaries_count != 0) {
@@ -278,7 +271,8 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   }
 
   // Now allocate the buffers
-  if (conv_params->need_im2col) {
+  if (need_im2col) {
+    // Allocate the im2col tensor if necessary
     if (conv_params->im2col_id == kTensorNotAllocated) {
       context->AddTensors(context, 1, &conv_params->im2col_id);
       node->temporaries->data[conv_params->im2col_index] =
@@ -287,16 +281,11 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
 
     // Resize the im2col tensor
     int channels_in = ce::core::GetBitpackedSize(conv_params->channels_in);
-
-    // determine the im2col buffer size
     TfLiteIntArray* im2col_size = TfLiteIntArrayCopy(output_shape);
     im2col_size->data[3] =
         channels_in * conv_params->filter_height * conv_params->filter_width;
-
-    // get the pointer to im2col tensor
     TfLiteTensor* im2col =
         GetTemporary(context, node, conv_params->im2col_index);
-
     im2col->type = kTfLiteInt32;
     im2col->allocation_type = kTfLiteArenaRw;
     TF_LITE_ENSURE_OK(context,
@@ -433,7 +422,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   const auto* filter = GetInput(context, node, 1);
   auto* output = GetOutput(context, node, 0);
 
-  TfLiteTensor* im2col = params->need_im2col
+  TfLiteTensor* im2col = params->im2col_index >= 0
                              ? GetTemporary(context, node, params->im2col_index)
                              : nullptr;
 
@@ -536,7 +525,7 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   } else if (output_type == kTfLiteInt8) {
     return EvalChooseKernelType<kernel_type, std::int8_t>(context, node,
                                                           params);
-  } else if (params->write_bitpacked_output && output_type == kTfLiteInt32) {
+  } else if (output_type == kTfLiteInt32) {
     return EvalChooseKernelType<kernel_type, TBitpacked>(context, node, params);
   }
   return kTfLiteError;
