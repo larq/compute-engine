@@ -11,27 +11,26 @@ namespace bconv2d {
 
 const int kTensorNotAllocated = -1;
 
-typedef struct {
-  // filters tensor dimensions
+struct TfLiteBConv2DParams {
+  // Filters tensor dimensions
   std::int32_t filter_width{0};
   std::int32_t filter_height{0};
   std::int32_t channels_in{0};
   std::int32_t channels_out{0};
 
-  // strides
+  // Strides
   std::int32_t stride_height{0};
   std::int32_t stride_width{0};
 
-  // dilations
+  // Dilations
   std::int32_t dilation_height_factor{0};
   std::int32_t dilation_width_factor{0};
 
-  // padding
+  // _adding
   TfLitePadding padding_type{};
   TfLitePaddingValues padding_values{};
   int pad_value = 0;  // Must be 0 or 1
 
-  TfLiteFusedActivation fused_activation_function = kTfLiteActNone;
   // These min/max take care of a Relu.
   // Later they will *also* do the clamping in order to go from int32 to int8
   std::int32_t output_activation_min;
@@ -41,7 +40,9 @@ typedef struct {
   // output tensor scale, and the bias includes the output zero-point.
   std::vector<float> scaled_post_activation_multiplier;
   std::vector<float> scaled_post_activation_bias;
-  bool is_quantization_initialized = false;
+
+  // This is used when we have 'same-zero' padding.
+  std::vector<float> padding_buffer;
 
   // IDs are the arbitrary identifiers used by TF Lite to identify and access
   // memory buffers. They are unique in the entire TF Lite context.
@@ -51,11 +52,10 @@ typedef struct {
   // So in pseudo-code: `node->temporaries[index] = id;`
   std::int32_t im2col_index = -1;
 
-  std::vector<float> padding_buffer;
-  bool is_padding_correction_cached = false;
+  bool conv_params_successfully_initialized = false;
 
-  bool conv_params_initialized = false;
-} TfLiteBConv2DParams;
+  bool one_time_setup_complete = false;
+};
 
 }  // namespace bconv2d
 }  // namespace tflite

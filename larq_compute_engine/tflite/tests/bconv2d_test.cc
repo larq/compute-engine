@@ -39,8 +39,6 @@
 #include "tensorflow/lite/kernels/test_util.h"
 #include "tensorflow/lite/model.h"
 
-// using namespace tflite;
-
 namespace tflite {
 
 namespace ops {

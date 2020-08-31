@@ -49,53 +49,54 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
   const std::uint8_t* buffer_t = reinterpret_cast<const std::uint8_t*>(buffer);
   const flexbuffers::Map& m = flexbuffers::GetRoot(buffer_t, length).AsMap();
 
-  // reading the op's input arguments into the "conv_params" struct
+  // Read the op's input arguments into the "conv_params" struct
+
   LCE_ENSURE_PARAM(conv_params, context, !m["stride_height"].IsNull());
   LCE_ENSURE_PARAM(conv_params, context, !m["stride_width"].IsNull());
   LCE_ENSURE_PARAM(conv_params, context, !m["dilation_height_factor"].IsNull());
   LCE_ENSURE_PARAM(conv_params, context, !m["dilation_width_factor"].IsNull());
   LCE_ENSURE_PARAM(conv_params, context, !m["padding"].IsNull());
+  LCE_ENSURE_PARAM(conv_params, context, !m["pad_values"].IsNull());
+  LCE_ENSURE_PARAM(conv_params, context, !m["channels_in"].IsNull());
   LCE_ENSURE_PARAM(conv_params, context,
                    !m["fused_activation_function"].IsNull());
 
-  // reading strides
   conv_params->stride_height = m["stride_height"].AsInt32();
   conv_params->stride_width = m["stride_width"].AsInt32();
-  // reading dilations
+
   conv_params->dilation_height_factor = m["dilation_height_factor"].AsInt32();
   conv_params->dilation_width_factor = m["dilation_width_factor"].AsInt32();
 
   conv_params->padding_type = ConvertPadding((Padding)m["padding"].AsInt32());
-  conv_params->fused_activation_function = ConvertActivation(
-      (ActivationFunctionType)m["fused_activation_function"].AsInt32());
-
-  conv_params->pad_value =
-      m["pad_values"].IsNull() ? 0 : m["pad_values"].AsInt32();
+  conv_params->pad_value = m["pad_values"].AsInt32();
   if (conv_params->pad_value != 0 && conv_params->pad_value != 1) {
     TF_LITE_KERNEL_LOG(context, "Attribute pad_values must be 0 or 1.");
     return conv_params;
   }
 
-  // If we are reading bitpacked input then both the input tensor and the
-  // filters are bitpacked along the (input) channels axis. This means that we
-  // cannot infer the 'true' input shape, and so we have to add an explicit
-  // integer attribute to the op in the converter.
-  if (!m["channels_in"].IsNull()) {
-    conv_params->channels_in = m["channels_in"].AsInt32();
-  }
+  // The input and filters are bitpacked along the channel in axis, which means
+  // we cannot infer the 'true' input shape, so there's an explicit integer
+  // attribute added to the op in the converter.
+  conv_params->channels_in = m["channels_in"].AsInt32();
 
+  const auto fused_activation_function = ConvertActivation(
+      (ActivationFunctionType)m["fused_activation_function"].AsInt32());
   if (conv_params->padding_type == kTfLitePaddingSame &&
       conv_params->pad_value != 1 &&
-      conv_params->fused_activation_function != kTfLiteActNone) {
+      fused_activation_function != kTfLiteActNone) {
     TF_LITE_KERNEL_LOG(
         context,
         "Fused activations are only supported with valid or one-padding.");
     return conv_params;
   }
+  CalculateActivationRange(fused_activation_function,
+                           &conv_params->output_activation_min,
+                           &conv_params->output_activation_max);
 
-  // We cannot return an error code here, so we set this flag and potentially
-  // return an error code in Prepare.
-  conv_params->conv_params_initialized = true;
+  // It's not possible to return an error code in this method. If we get to here
+  // without returning early, initialisation has succeeded without error, and so
+  // we set this flag. If it's unset in Prepare, we report the error there.
+  conv_params->conv_params_successfully_initialized = true;
   return conv_params;
 }
 
@@ -107,10 +108,10 @@ template <KernelType kernel_type>
 TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   auto* conv_params = reinterpret_cast<TfLiteBConv2DParams*>(node->user_data);
 
-  // If an error happened in Init, then report an error message
-  if (!conv_params->conv_params_initialized) return kTfLiteError;
+  // If an error happened in Init, then return an error code.
+  if (!conv_params->conv_params_successfully_initialized) return kTfLiteError;
 
-  TF_LITE_ENSURE(context, node->inputs->size == 5);
+  TF_LITE_ENSURE_EQ(context, node->inputs->size, 5);
 
   const auto* input = GetInput(context, node, 0);
   const auto* filter = GetInput(context, node, 1);
@@ -121,84 +122,18 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
 
   TF_LITE_ENSURE_EQ(context, NumDimensions(input), 4);
   TF_LITE_ENSURE_EQ(context, NumDimensions(filter), 4);
-
-  const bool write_bitpacked_output = output->type == kTfLiteInt32;
-
-  if (write_bitpacked_output) {
-    TF_LITE_ENSURE_EQ(context, NumDimensions(thresholds), 1);
-  } else {
-    TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_multiplier), 1);
-    TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_bias), 1);
-  }
-
-  if (conv_params->padding_type == kTfLitePaddingSame &&
-      conv_params->pad_value != 1 && write_bitpacked_output) {
-    TF_LITE_KERNEL_LOG(context,
-                       "Writing bitpacked output is only supported with "
-                       "valid or one-padding.");
-    return kTfLiteError;
-  }
-
-  if (conv_params->channels_in == 0) {
-    // We don't expect this branch to ever be taken because the `channels_in`
-    // attribute was added to the converter at the same time that support for
-    // bitpacked activations was added, but just in case we don't have a value
-    // we should throw here.
-    TF_LITE_KERNEL_LOG(context,
-                       "Cannot read bitpacked input unless the `channels_in` "
-                       "attribute is set in the converter.");
-    return kTfLiteError;
-  }
-
-  if (write_bitpacked_output) {
-    TF_LITE_ENSURE_EQ(context, thresholds->type, kTfLiteInt32);
-  } else {
-    // For 8-bit quantized networks, we support both int8 and float32
-    // post_activation_ values
-    TF_LITE_ENSURE(context,
-                   post_activation_multiplier->type == kTfLiteFloat32 ||
-                       post_activation_multiplier->type == kTfLiteInt8);
-    TF_LITE_ENSURE(context, post_activation_bias->type == kTfLiteFloat32 ||
-                                post_activation_bias->type == kTfLiteInt8);
-
-    // In case that our network is not 8-bit quantized, we do require float
-    // values
-    if (output->type == kTfLiteFloat32) {
-      TF_LITE_ENSURE_EQ(context, post_activation_multiplier->type,
-                        kTfLiteFloat32);
-      TF_LITE_ENSURE_EQ(context, post_activation_bias->type, kTfLiteFloat32);
-    }
-  }
-
-  if (output->type == kTfLiteInt8 &&
-      conv_params->padding_type == kTfLitePaddingSame &&
-      conv_params->pad_value != 1) {
-    TF_LITE_KERNEL_LOG(
-        context,
-        "8-bit quantization is only supported with valid or one-padding");
-    return kTfLiteError;
-  }
-
-  TF_LITE_ENSURE(context, output->type == kTfLiteInt32 ||
-                              output->type == kTfLiteInt8 ||
-                              output->type == kTfLiteFloat32);
+  TF_LITE_ENSURE_EQ(context, input->type, kTfLiteInt32);
+  TF_LITE_ENSURE_EQ(context, filter->type, kTfLiteInt32);
+  TF_LITE_ENSURE_MSG(context,
+                     output->type == kTfLiteInt32 ||
+                         output->type == kTfLiteInt8 ||
+                         output->type == kTfLiteFloat32,
+                     "Supported output types are int8, int32, and float32.");
 
   // Read the filter dimensions
   conv_params->channels_out = SizeOfDimension(filter, 0);
   conv_params->filter_height = SizeOfDimension(filter, 1);
   conv_params->filter_width = SizeOfDimension(filter, 2);
-
-  TF_LITE_ENSURE_EQ(context, filter->type, kTfLiteInt32);
-
-  if (write_bitpacked_output) {
-    TF_LITE_ENSURE_EQ(context, SizeOfDimension(thresholds, 0),
-                      conv_params->channels_out);
-  } else {
-    TF_LITE_ENSURE_EQ(context, SizeOfDimension(post_activation_multiplier, 0),
-                      conv_params->channels_out);
-    TF_LITE_ENSURE_EQ(context, SizeOfDimension(post_activation_bias, 0),
-                      conv_params->channels_out);
-  }
 
   // Compute the padding and output values (height, width)
   int out_width, out_height;
@@ -209,43 +144,68 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
       conv_params->filter_height, conv_params->filter_width,
       conv_params->padding_type, &out_height, &out_width);
 
-  CalculateActivationRange(conv_params->fused_activation_function,
-                           &conv_params->output_activation_min,
-                           &conv_params->output_activation_max);
+  if (output->type == kTfLiteInt32) {
+    TF_LITE_ENSURE_EQ(context, NumDimensions(thresholds), 1);
+    TF_LITE_ENSURE_EQ(context, thresholds->type, kTfLiteInt32);
+    TF_LITE_ENSURE_EQ(context, SizeOfDimension(thresholds, 0),
+                      conv_params->channels_out);
+    TF_LITE_ENSURE_MSG(context,
+                       conv_params->padding_type != kTfLitePaddingSame ||
+                           conv_params->pad_value == 1,
+                       "Writing bitpacked output is only supported with "
+                       "valid or one-padding.");
+  } else {
+    TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_multiplier), 1);
+    TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_bias), 1);
+    TF_LITE_ENSURE_EQ(context, SizeOfDimension(post_activation_multiplier, 0),
+                      conv_params->channels_out);
+    TF_LITE_ENSURE_EQ(context, SizeOfDimension(post_activation_bias, 0),
+                      conv_params->channels_out);
+  }
 
   if (output->type == kTfLiteInt8) {
+    // With 8-bit output, we allow int8 or float32 `post_activation` values
+    TF_LITE_ENSURE(context,
+                   post_activation_multiplier->type == kTfLiteFloat32 ||
+                       post_activation_multiplier->type == kTfLiteInt8);
+    TF_LITE_ENSURE(context, post_activation_bias->type == kTfLiteFloat32 ||
+                                post_activation_bias->type == kTfLiteInt8);
+
     TF_LITE_ENSURE_EQ(context, output->quantization.type,
                       kTfLiteAffineQuantization);
+
+    TF_LITE_ENSURE_MSG(
+        context,
+        conv_params->padding_type != kTfLitePaddingSame ||
+            conv_params->pad_value == 1,
+        "8-bit quantization is only supported with valid or one-padding");
   }
 
-  if (!write_bitpacked_output) {
-    conv_params->scaled_post_activation_multiplier.resize(
-        conv_params->channels_out);
-    conv_params->scaled_post_activation_bias.resize(conv_params->channels_out);
+  if (output->type == kTfLiteFloat32) {
+    // With float output, we require float `post_activation` values.
+    TF_LITE_ENSURE_EQ(context, post_activation_multiplier->type,
+                      kTfLiteFloat32);
+    TF_LITE_ENSURE_EQ(context, post_activation_bias->type, kTfLiteFloat32);
   }
 
-  // Determine the output dimensions
+  if (kernel_type == KernelType::kGenericRef) {
+    TF_LITE_ENSURE_MSG(
+        context,
+        conv_params->padding_type != kTfLitePaddingSame ||
+            conv_params->pad_value == 1,
+        "The reference kernel only supports valid or one-padding.");
+  }
+
+  // Determine the output dimensions and allocate the output buffer
   TfLiteIntArray* output_shape = TfLiteIntArrayCreate(4);
   output_shape->data[0] = SizeOfDimension(input, 0);
   output_shape->data[1] = out_height;
   output_shape->data[2] = out_width;
-  if (write_bitpacked_output) {
-    output_shape->data[3] =
-        ce::core::GetBitpackedSize(conv_params->channels_out);
-  } else {
-    output_shape->data[3] = conv_params->channels_out;
-  }
-
-  // Allocate the output buffer
-  TF_LITE_ENSURE_OK(context,
-                    context->ResizeTensor(context, output, output_shape));
-
-  if (kernel_type == KernelType::kGenericRef) {
-    // We only support one-padding or valid-padding in the reference
-    // implementation.
-    TF_LITE_ENSURE(context, !(conv_params->pad_value == 0 &&
-                              conv_params->padding_type == kTfLitePaddingSame));
-  }
+  output_shape->data[3] =
+      output->type == kTfLiteInt32
+          ? ce::core::GetBitpackedSize(conv_params->channels_out)
+          : output_shape->data[3] = conv_params->channels_out;
+  TF_LITE_ENSURE_STATUS(context->ResizeTensor(context, output, output_shape));
 
   // Figure out how many temporary buffers we need
   int temporaries_count = 0;
@@ -288,14 +248,12 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
         GetTemporary(context, node, conv_params->im2col_index);
     im2col->type = kTfLiteInt32;
     im2col->allocation_type = kTfLiteArenaRw;
-    TF_LITE_ENSURE_OK(context,
-                      context->ResizeTensor(context, im2col, im2col_size));
+    TF_LITE_ENSURE_STATUS(context->ResizeTensor(context, im2col, im2col_size));
   }
 
-  // Prepare could be called multiple times, when the input tensor is resized,
-  // so we always reset these flags
-  conv_params->is_quantization_initialized = false;
-  conv_params->is_padding_correction_cached = false;
+  // Prepare could be called multiple times; when the input tensor is resized,
+  // we shoud always re-do the one-time setup.
+  conv_params->one_time_setup_complete = false;
 
   return kTfLiteOk;
 }
@@ -314,16 +272,16 @@ inline PaddingType RuntimePaddingType(TfLitePadding padding) {
 
 inline void GetConvParamsType(const TfLiteBConv2DParams& conv_params,
                               ConvParams& op_params) {
-  // padding
+  // Padding
   op_params.padding_type = RuntimePaddingType(conv_params.padding_type);
   op_params.padding_values.width = conv_params.padding_values.width;
   op_params.padding_values.height = conv_params.padding_values.height;
 
-  // strides
+  // Strides
   op_params.stride_height = conv_params.stride_height;
   op_params.stride_width = conv_params.stride_width;
 
-  // dilations
+  // Dilations
   op_params.dilation_height_factor = conv_params.dilation_height_factor;
   op_params.dilation_width_factor = conv_params.dilation_width_factor;
 
@@ -342,81 +300,52 @@ float GetTensorValue(const TfLiteTensor* tensor, int index) {
           tensor->params.zero_point);
 }
 
-void SetupQuantization(TfLiteContext* context, TfLiteNode* node,
-                       TfLiteBConv2DParams* params) {
-  const auto* output = GetOutput(context, node, 0);
-  const auto* post_activation_multiplier = GetInput(context, node, 2);
-  const auto* post_activation_bias = GetInput(context, node, 3);
-
-  // Not required when writing bitpacked output
-  if (output->type == kTfLiteInt32) return;
-
-  // Step 1
-  // If the post_activation_ data is stored in int8, then convert it to float
-  if (post_activation_multiplier->type != kTfLiteFloat32 ||
-      post_activation_bias->type != kTfLiteFloat32) {
-    for (int i = 0; i < params->channels_out; ++i) {
-      params->scaled_post_activation_multiplier[i] =
-          GetTensorValue(post_activation_multiplier, i);
-      params->scaled_post_activation_bias[i] =
-          GetTensorValue(post_activation_bias, i);
-    }
-  }
-
-  if (output->type != kTfLiteInt8) {
-    return;
-  }
-
-  // Step 2
-  // If the output is 8-bit quantized, then rescale these values by the output
-  // scale
-  const double output_zero_point =
-      static_cast<double>(output->params.zero_point);
-  const double output_scale = static_cast<double>(output->params.scale);
-  for (int i = 0; i < params->channels_out; ++i) {
-    const double post_mul = GetTensorValue(post_activation_multiplier, i);
-    const double post_bias = GetTensorValue(post_activation_bias, i);
-
-    params->scaled_post_activation_multiplier[i] = post_mul / output_scale;
-    params->scaled_post_activation_bias[i] =
-        post_bias / output_scale + output_zero_point;
-  }
-}
-
 void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
                   TfLiteBConv2DParams* params) {
-  if (!params->is_padding_correction_cached &&
-      (params->padding_type == kTfLitePaddingSame && params->pad_value == 0)) {
-    const auto* filter = GetInput(context, node, 1);
-    const auto* post_activation_multiplier = GetInput(context, node, 2);
+  const auto* filter = GetInput(context, node, 1);
+  const auto* post_activation_multiplier = GetInput(context, node, 2);
+  const auto* post_activation_bias = GetInput(context, node, 3);
+  const auto* output = GetOutput(context, node, 0);
 
-    // Fill the zero-padding cache
-    ce::core::PaddingFunctor padding_functor;
-
-    std::size_t padding_cache_size = padding_functor.get_cache_size(
+  // For 'same-zero' padding, compute the padding-correction.
+  if (params->padding_type == kTfLitePaddingSame && params->pad_value == 0) {
+    params->padding_buffer.resize(ce::core::PaddingFunctor::get_cache_size(
         params->filter_height, params->filter_width, params->channels_out,
-        params->dilation_height_factor, params->dilation_width_factor);
-
-    params->padding_buffer.resize(padding_cache_size);
-
-    padding_functor.cache_correction_values(
+        params->dilation_height_factor, params->dilation_width_factor));
+    ce::core::PaddingFunctor::cache_correction_values(
         GetTensorData<TBitpacked>(filter), params->filter_height,
         params->filter_width, params->channels_out, params->channels_in,
         params->dilation_height_factor, params->dilation_width_factor,
         GetTensorData<float>(post_activation_multiplier),
         params->padding_buffer.data());
   }
-  params->is_padding_correction_cached = true;
-  if (!params->is_quantization_initialized) {
-    SetupQuantization(context, node, params);
-    params->is_quantization_initialized = true;
+
+  // For int8 output, compute the 'effective' multiplier/bias with fused output
+  // scale and zero-point.
+  if (output->type == kTfLiteInt8) {
+    params->scaled_post_activation_multiplier.resize(params->channels_out);
+    params->scaled_post_activation_bias.resize(params->channels_out);
+    const double output_zero_point =
+        static_cast<double>(output->params.zero_point);
+    const double output_scale = static_cast<double>(output->params.scale);
+    for (int i = 0; i < params->channels_out; ++i) {
+      const double post_mul = GetTensorValue(post_activation_multiplier, i);
+      const double post_bias = GetTensorValue(post_activation_bias, i);
+      params->scaled_post_activation_multiplier[i] = post_mul / output_scale;
+      params->scaled_post_activation_bias[i] =
+          post_bias / output_scale + output_zero_point;
+    }
   }
+
+  params->one_time_setup_complete = true;
 }
 
 template <typename AccumScalar, typename DstScalar>
 void EvalOpt(TfLiteContext* context, TfLiteNode* node,
              TfLiteBConv2DParams* params) {
-  OneTimeSetup(context, node, params);
+  if (!params->one_time_setup_complete) {
+    OneTimeSetup(context, node, params);
+  }
 
   const auto* input = GetInput(context, node, 0);
   const auto* filter = GetInput(context, node, 1);
@@ -462,9 +391,8 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   const auto* packed_filter = GetInput(context, node, 1);
   auto* output = GetOutput(context, node, 0);
 
-  if (!params->is_quantization_initialized) {
-    SetupQuantization(context, node, params);
-    params->is_quantization_initialized = true;
+  if (!params->one_time_setup_complete) {
+    OneTimeSetup(context, node, params);
   }
 
   // Using the standard TF Lite ConvParams struct.
