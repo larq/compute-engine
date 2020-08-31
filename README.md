@@ -68,7 +68,7 @@ board:
 | [QuickNet-Large](https://docs.larq.dev/zoo/api/sota/#quicknetlarge) ([.h5](https://github.com/larq/zoo/releases/download/quicknet_large-v0.2.0/quicknet_large_weights.h5)) |     62.7 %     |          24.7           |          12.6           |
 | [QuickNet-XL](https://docs.larq.dev/zoo/api/sota/#quicknetxl) ([.h5](https://github.com/larq/zoo/releases/download/quicknet_xl-v0.1.0/quicknet_xl_weights.h5))             |     67.0 %     |          37.9           |          22.8           |
 
-Benchmarked on August 21th, 2020 with LCE custom
+Benchmarked on August 21st, 2020 with LCE custom
 [TFLite Model Benchmark Tool](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/tools/benchmark)
 (see [here](https://github.com/larq/compute-engine/tree/master/larq_compute_engine/tflite/benchmark))
 and BNN models with randomized inputs.
