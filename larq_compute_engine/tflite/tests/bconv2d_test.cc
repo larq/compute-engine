@@ -39,8 +39,6 @@
 #include "tensorflow/lite/kernels/test_util.h"
 #include "tensorflow/lite/model.h"
 
-// using namespace tflite;
-
 namespace tflite {
 
 namespace ops {
@@ -770,6 +768,30 @@ TEST(BConv2DTests, ReluErrorDeathTest) {
             ActivationFunctionType_NONE, 1, 1, 1);
       },
       "Writing bitpacked output is only supported with valid or one-padding.");
+}
+
+TEST(BConv2DTests, Int8ErrorDeathTest) {
+  LceTensor<TBitpacked> input_tensor({1, 16, 16, 2});
+  LceTensor<TBitpacked> packed_filter_tensor({128, 3, 3, 64});
+  LceTensor<float> post_tensor({128});
+  LceTensor<std::int32_t> threshold_tensor;
+  LceTensor<std::int8_t> output_tensor;
+
+  output_tensor.scale = 1.0f;
+  output_tensor.zero_point = 0;
+
+  // Required for the macro
+  typedef BConv2DOpModel<std::int8_t, std::int8_t> Int8_BConv2DOpModel;
+
+  EXPECT_DEATH(
+      {
+        Int8_BConv2DOpModel m_lce(compute_engine::tflite::Register_BCONV_2D_OPT,
+                                  input_tensor, packed_filter_tensor,
+                                  output_tensor, post_tensor, post_tensor,
+                                  threshold_tensor, 64, 1, 1, Padding_SAME, 0,
+                                  ActivationFunctionType_NONE, 1, 1, 1);
+      },
+      "8-bit quantization is only supported with valid or one-padding.");
 }
 
 }  // namespace testing
