@@ -204,7 +204,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   output_shape->data[3] =
       output->type == kTfLiteInt32
           ? ce::core::GetBitpackedSize(conv_params->channels_out)
-          : output_shape->data[3] = conv_params->channels_out;
+          : conv_params->channels_out;
   TF_LITE_ENSURE_STATUS(context->ResizeTensor(context, output, output_shape));
 
   // Figure out how many temporary buffers we need
