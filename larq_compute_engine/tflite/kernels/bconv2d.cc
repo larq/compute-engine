@@ -155,6 +155,9 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
                        "Writing bitpacked output is only supported with "
                        "valid or one-padding.");
   } else {
+    TF_LITE_ENSURE_EQ(context, post_activation_multiplier->type,
+                      kTfLiteFloat32);
+    TF_LITE_ENSURE_EQ(context, post_activation_bias->type, kTfLiteFloat32);
     TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_multiplier), 1);
     TF_LITE_ENSURE_EQ(context, NumDimensions(post_activation_bias), 1);
     TF_LITE_ENSURE_EQ(context, SizeOfDimension(post_activation_multiplier, 0),
@@ -164,28 +167,13 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   }
 
   if (output->type == kTfLiteInt8) {
-    // With 8-bit output, we allow int8 or float32 `post_activation` values
-    TF_LITE_ENSURE(context,
-                   post_activation_multiplier->type == kTfLiteFloat32 ||
-                       post_activation_multiplier->type == kTfLiteInt8);
-    TF_LITE_ENSURE(context, post_activation_bias->type == kTfLiteFloat32 ||
-                                post_activation_bias->type == kTfLiteInt8);
-
     TF_LITE_ENSURE_EQ(context, output->quantization.type,
                       kTfLiteAffineQuantization);
-
     TF_LITE_ENSURE_MSG(
         context,
         conv_params->padding_type != kTfLitePaddingSame ||
             conv_params->pad_value == 1,
         "8-bit quantization is only supported with valid or one-padding");
-  }
-
-  if (output->type == kTfLiteFloat32) {
-    // With float output, we require float `post_activation` values.
-    TF_LITE_ENSURE_EQ(context, post_activation_multiplier->type,
-                      kTfLiteFloat32);
-    TF_LITE_ENSURE_EQ(context, post_activation_bias->type, kTfLiteFloat32);
   }
 
   if (kernel_type == KernelType::kGenericRef) {
@@ -290,16 +278,6 @@ inline void GetConvParamsType(const TfLiteBConv2DParams& conv_params,
   op_params.quantized_activation_max = conv_params.output_activation_max;
 }
 
-float GetTensorValue(const TfLiteTensor* tensor, int index) {
-  if (tensor->type == kTfLiteFloat32) {
-    return GetTensorData<float>(tensor)[index];
-  }
-  TF_LITE_ASSERT_EQ(tensor->type, kTfLiteInt8);
-  return tensor->params.scale *
-         (static_cast<int32_t>(GetTensorData<std::int8_t>(tensor)[index]) -
-          tensor->params.zero_point);
-}
-
 void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
                   TfLiteBConv2DParams* params) {
   const auto* filter = GetInput(context, node, 1);
@@ -329,8 +307,9 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
         static_cast<double>(output->params.zero_point);
     const double output_scale = static_cast<double>(output->params.scale);
     for (int i = 0; i < params->channels_out; ++i) {
-      const double post_mul = GetTensorValue(post_activation_multiplier, i);
-      const double post_bias = GetTensorValue(post_activation_bias, i);
+      const double post_mul =
+          GetTensorData<float>(post_activation_multiplier)[i];
+      const double post_bias = GetTensorData<float>(post_activation_bias)[i];
       params->scaled_post_activation_multiplier[i] = post_mul / output_scale;
       params->scaled_post_activation_bias[i] =
           post_bias / output_scale + output_zero_point;
