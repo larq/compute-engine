@@ -26,7 +26,7 @@ struct TfLiteBConv2DParams {
   std::int32_t dilation_height_factor{0};
   std::int32_t dilation_width_factor{0};
 
-  // _adding
+  // Padding
   TfLitePadding padding_type{};
   TfLitePaddingValues padding_values{};
   int pad_value = 0;  // Must be 0 or 1
