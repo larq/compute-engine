@@ -33,10 +33,80 @@ inline void bitpack_bitfield_quantized(const TIn* in, TBitpacked* out,
                                        const TIn zero_point) {
   ruy::profiler::ScopeLabel label(
       "Bitpack bitfield (quantized input, unoptimised)");
-  *out = 0;
-  for (size_t i = 0; i < bitpacking_bitwidth; ++i) {
-    if (in[i] < zero_point) *out |= (TBitpacked(1) << i);
-  }
+  struct bf {
+    unsigned int b0 : 1;
+    unsigned int b1 : 1;
+    unsigned int b2 : 1;
+    unsigned int b3 : 1;
+    unsigned int b4 : 1;
+    unsigned int b5 : 1;
+    unsigned int b6 : 1;
+    unsigned int b7 : 1;
+    unsigned int b8 : 1;
+    unsigned int b9 : 1;
+    unsigned int b10 : 1;
+    unsigned int b11 : 1;
+    unsigned int b12 : 1;
+    unsigned int b13 : 1;
+    unsigned int b14 : 1;
+    unsigned int b15 : 1;
+    unsigned int b16 : 1;
+    unsigned int b17 : 1;
+    unsigned int b18 : 1;
+    unsigned int b19 : 1;
+    unsigned int b20 : 1;
+    unsigned int b21 : 1;
+    unsigned int b22 : 1;
+    unsigned int b23 : 1;
+    unsigned int b24 : 1;
+    unsigned int b25 : 1;
+    unsigned int b26 : 1;
+    unsigned int b27 : 1;
+    unsigned int b28 : 1;
+    unsigned int b29 : 1;
+    unsigned int b30 : 1;
+    unsigned int b31 : 1;
+  };
+
+  union bf_i32 {
+    bf t;
+    TBitpacked i32;
+  };
+
+  bf_i32 i;
+  i.t.b0 = in[0] < zero_point;
+  i.t.b1 = in[1] < zero_point;
+  i.t.b2 = in[2] < zero_point;
+  i.t.b3 = in[3] < zero_point;
+  i.t.b4 = in[4] < zero_point;
+  i.t.b5 = in[5] < zero_point;
+  i.t.b6 = in[6] < zero_point;
+  i.t.b7 = in[7] < zero_point;
+  i.t.b8 = in[8] < zero_point;
+  i.t.b9 = in[9] < zero_point;
+  i.t.b10 = in[10] < zero_point;
+  i.t.b11 = in[11] < zero_point;
+  i.t.b12 = in[12] < zero_point;
+  i.t.b13 = in[13] < zero_point;
+  i.t.b14 = in[14] < zero_point;
+  i.t.b15 = in[15] < zero_point;
+  i.t.b16 = in[16] < zero_point;
+  i.t.b17 = in[17] < zero_point;
+  i.t.b18 = in[18] < zero_point;
+  i.t.b19 = in[19] < zero_point;
+  i.t.b20 = in[20] < zero_point;
+  i.t.b21 = in[21] < zero_point;
+  i.t.b22 = in[22] < zero_point;
+  i.t.b23 = in[23] < zero_point;
+  i.t.b24 = in[24] < zero_point;
+  i.t.b25 = in[25] < zero_point;
+  i.t.b26 = in[26] < zero_point;
+  i.t.b27 = in[27] < zero_point;
+  i.t.b28 = in[28] < zero_point;
+  i.t.b29 = in[29] < zero_point;
+  i.t.b30 = in[30] < zero_point;
+  i.t.b31 = in[31] < zero_point;
+  *out = i.i32;
 }
 
 template <class T>
@@ -84,8 +154,6 @@ inline void bitpack_bitfield(const T* fptr, TBitpacked* buf) {
     TBitpacked i32;
   };
 
-  // TODO: use the bit sign instead of comparision operator
-  // static_cast<const float>(1 << sizeof(a)*8-1);
   bf_i32 i;
   i.t.b0 = fptr[0] < 0;
   i.t.b1 = fptr[1] < 0;
