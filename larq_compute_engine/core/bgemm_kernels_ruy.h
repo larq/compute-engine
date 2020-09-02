@@ -34,8 +34,7 @@ struct BgemmKernel<ruy::Path::kStandardCpp, DstScalar, Spec> {
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
            const Spec& spec, int start_row, int start_col, int end_row,
            int end_col, ruy::Mat<DstScalar>* dst) const {
-    const OutputTransform<AccumScalar, DstScalar>& output_transform =
-        spec.output_transform;
+    const OutputTransform<DstScalar>& output_transform = spec.output_transform;
 
     int clamped_end_row = std::min(end_row, dst->layout.rows);
     int clamped_end_col = std::min(end_col, dst->layout.cols);
@@ -78,8 +77,7 @@ struct BgemmKernel<ruy::Path::kStandardCpp, TBitpacked, Spec> {
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
            const Spec& spec, int start_row, int start_col, int end_row,
            int end_col, ruy::Mat<TBitpacked>* dst) const {
-    const OutputTransform<AccumScalar, TBitpacked>& output_transform =
-        spec.output_transform;
+    const OutputTransform<TBitpacked>& output_transform = spec.output_transform;
 
     // We are writing bitpacked output (where we bitpack along the channel axis)
     // and so we need to operate on blocks of `bitwidth` channels at a time. As
@@ -118,7 +116,6 @@ struct BgemmKernel<ruy::Path::kStandardCpp, TBitpacked, Spec> {
     for (int j = start_col; j < clamped_end_col; j++) {
       TBitpacked bitpacked_column = 0;
       for (int i = start_row; i < clamped_end_row; i++) {
-        using AccumScalar = typename Spec::AccumScalar;
         AccumScalar accum = 0;
         for (int k = 0; k < depth; k++) {
           TBitpacked lhs_val = Element(lhs, k, i);

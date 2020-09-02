@@ -83,7 +83,6 @@ using compute_engine::core::TBitpacked;
 #define RUY_OFFSET_DEPTH 76
 #define RUY_OFFSET_CLAMP_MIN 80
 #define RUY_OFFSET_CLAMP_MAX 84
-#define RUY_OFFSET_BACKTRANSFORM_ADD 88
 
 template <typename Params>
 void CheckOffsetsInKernelParams(const Params&) {
@@ -106,8 +105,6 @@ void CheckOffsetsInKernelParams(const Params&) {
   static_assert(offsetof(Params, depth) == RUY_OFFSET_DEPTH, "");
   static_assert(offsetof(Params, clamp_min) == RUY_OFFSET_CLAMP_MIN, "");
   static_assert(offsetof(Params, clamp_max) == RUY_OFFSET_CLAMP_MAX, "");
-  static_assert(
-      offsetof(Params, backtransform_add) == RUY_OFFSET_BACKTRANSFORM_ADD, "");
 }
 
 // clang-format off
@@ -292,10 +289,6 @@ void BinaryKernelNeonOutOfOrder4x4(const BinaryKernelParams<4, 4>& params) {
       "mov %[lhs_ptr], %[lhs_col_ptr]\n"
       "mov %[rhs_ptr], %[rhs_col_ptr]\n"
 
-      // Load backtransform add (duplicate 4 times into v13)
-      "ldr w1, [%[params], #" RUY_STR(RUY_OFFSET_BACKTRANSFORM_ADD) "]\n"
-      "dup v13.4s, w1 \n"
-
       // Load multiplication bias
       "ldr x1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_MULTIPLIER) "]\n"
       // Offset these base pointers as needed given the current row, col.
@@ -479,7 +472,6 @@ void BinaryKernelNeonOutOfOrder4x4(const BinaryKernelParams<4, 4>& params) {
         "v26", "v27", "v28", "v29", "v30", "v31");
 }
 
-#undef RUY_OFFSET_BACKTRANSFORM_ADD
 #undef RUY_OFFSET_POST_ACTIVATION_MULTIPLIER
 #undef RUY_OFFSET_POST_ACTIVATION_BIAS
 #undef RUY_OFFSET_LHS_BASE_PTR
@@ -616,7 +608,6 @@ void BinaryKernelNeonOutOfOrder4x4(const BinaryKernelParams<4, 4>& params) {
 #define RUY_OFFSET_DEPTH 76
 #define RUY_OFFSET_CLAMP_MIN 80
 #define RUY_OFFSET_CLAMP_MAX 84
-#define RUY_OFFSET_BACKTRANSFORM_ADD 88
 
 // clang-format off
 
@@ -768,9 +759,6 @@ void BinaryKernelNeonOutOfOrder8x4(const BinaryKernelParams<8, 4>& params) {
       // anymore in the rest of the work on the current block. We do it in
       // parallel with the back-transform shift.
 
-      // Load the backtransform add.
-      "ldr w1, [%[params], #" RUY_STR(RUY_OFFSET_BACKTRANSFORM_ADD) "]\n"
-
       // Load the `clamp_min` bound.
       "ldr w2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
 
@@ -780,8 +768,8 @@ void BinaryKernelNeonOutOfOrder8x4(const BinaryKernelParams<8, 4>& params) {
       // Perform the back-transformation shift with 'unsigned shift left long'
       // instructions; this performs the necessary left shift and extends the
       // result, so we get a int16 -> int32 transformation for free.
+      "dup v29.4s, w2\n"  // In parallel, duplicate `clamp_min` into v29.
       "ushll v20.4s, v24.4h, #1\n"
-      "dup v28.4s, w1\n"  // In parallel, duplicate `backtransform_add` into v28.
       "ushll2 v21.4s, v24.8h, #1\n"
       "ld1 {v8.4s}, [%[rhs_ptr]], #16\n"
       "ushll v22.4s, v25.4h, #1\n"
@@ -792,17 +780,6 @@ void BinaryKernelNeonOutOfOrder8x4(const BinaryKernelParams<8, 4>& params) {
       "ushll v26.4s, v27.4h, #1\n"
       "ushll2 v27.4s, v27.8h, #1\n"
       "ld1 {v4.4s, v5.4s, v6.4s, v7.4s}, [%[lhs_ptr]], #64\n"
-
-      // Apply the back-transformation subtraction.
-      "dup v29.4s, w2\n"  // In parallel, duplicate `clamp_min` into v29.
-      "sub v20.4s, v28.4s, v20.4s\n"
-      "sub v21.4s, v28.4s, v21.4s\n"
-      "sub v22.4s, v28.4s, v22.4s\n"
-      "sub v23.4s, v28.4s, v23.4s\n"
-      "sub v24.4s, v28.4s, v24.4s\n"
-      "sub v25.4s, v28.4s, v25.4s\n"
-      "sub v26.4s, v28.4s, v26.4s\n"
-      "sub v27.4s, v28.4s, v27.4s\n"
 
       // Apply the `clamp_min` bound.
       "dup v30.4s, w3\n"  // In parallel, duplicate `clamp_max` into v30.
@@ -980,8 +957,6 @@ void BinaryKernelNeonOutOfOrder8x4(const BinaryKernelParams<8, 4>& params) {
         "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25",
         "v26", "v27", "v28", "v29", "v30", "v31");
 }
-
-#undef RUY_OFFSET_BACKTRANSFORM_ADD
 #undef RUY_OFFSET_POST_ACTIVATION_MULTIPLIER
 #undef RUY_OFFSET_POST_ACTIVATION_BIAS
 #undef RUY_OFFSET_LHS_BASE_PTR

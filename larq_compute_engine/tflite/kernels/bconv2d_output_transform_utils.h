@@ -14,59 +14,27 @@ namespace tflite {
 namespace bconv2d {
 
 using compute_engine::core::OutputTransform;
-using compute_engine::core::OutputTransformBase;
 
-// Fill the parts of the OutputTransform struct that are common to each
-// destination type
-template <typename AccumScalar>
-void GetBaseParams(TfLiteContext* context, TfLiteNode* node,
-                   TfLiteBConv2DParams* params,
-                   OutputTransformBase<AccumScalar>& output_transform) {
-  static_assert(std::is_same<AccumScalar, std::int32_t>::value ||
-                    std::is_same<AccumScalar, std::int16_t>::value,
-                "AccumScalar must be int32 or int16");
-  auto filter_shape = GetTensorShape(GetInput(context, node, 1));
-  output_transform.backtransform_add =
-      filter_shape.Dims(1) * filter_shape.Dims(2) * params->channels_in;
-  output_transform.clamp_min = params->output_activation_min;
-  output_transform.clamp_max = params->output_activation_max;
+// Fill in the OutputTransform values for float and/or int8 outputs
+template <typename DstScalar>
+void GetOutputTransform(OutputTransform<DstScalar>& output_transform,
+                        TfLiteContext* context, TfLiteNode* node,
+                        TfLiteBConv2DParams* params) {
+  static_assert(std::is_same<DstScalar, float>::value ||
+                    std::is_same<DstScalar, std::int8_t>::value,
+                "");
+  output_transform.clamp_min = params->output_transform_clamp_min;
+  output_transform.clamp_max = params->output_transform_clamp_max;
+  output_transform.multiplier = params->output_transform_multiplier.data();
+  output_transform.bias = params->output_transform_bias.data();
 }
 
-// Fill the OutputTransform values for float outputs
-template <typename AccumScalar>
-void GetOutputTransform(TfLiteContext* context, TfLiteNode* node,
-                        TfLiteBConv2DParams* params,
-                        OutputTransform<AccumScalar, float>& output_transform) {
-  GetBaseParams(context, node, params, output_transform);
-  const auto* post_activation_multiplier = GetInput(context, node, 2);
-  const auto* post_activation_bias = GetInput(context, node, 3);
-  TF_LITE_ASSERT_EQ(post_activation_multiplier->type, kTfLiteFloat32);
-  TF_LITE_ASSERT_EQ(post_activation_bias->type, kTfLiteFloat32);
-  output_transform.post_activation_multiplier =
-      GetTensorData<float>(post_activation_multiplier);
-  output_transform.post_activation_bias =
-      GetTensorData<float>(post_activation_bias);
-}
-
-// Fill the OutputTransform values for bitpacked outputs
-template <typename AccumScalar>
-void GetOutputTransform(
-    TfLiteContext* context, TfLiteNode* node, TfLiteBConv2DParams* params,
-    OutputTransform<AccumScalar, TBitpacked>& output_transform) {
+// Fill in the OutputTransform values for bitpacked outputs
+void GetOutputTransform(OutputTransform<TBitpacked>& output_transform,
+                        TfLiteContext* context, TfLiteNode* node,
+                        TfLiteBConv2DParams* params) {
   const auto* thresholds = GetInput(context, node, 4);
-  output_transform.thresholds = GetTensorData<AccumScalar>(thresholds);
-}
-
-// Fill the OutputTransform values for int8 outputs
-template <typename AccumScalar>
-void GetOutputTransform(
-    TfLiteContext* context, TfLiteNode* node, TfLiteBConv2DParams* params,
-    OutputTransform<AccumScalar, std::int8_t>& output_transform) {
-  GetBaseParams(context, node, params, output_transform);
-  output_transform.effective_post_activation_multiplier =
-      params->scaled_post_activation_multiplier.data();
-  output_transform.effective_post_activation_bias =
-      params->scaled_post_activation_bias.data();
+  output_transform.thresholds = GetTensorData<std::int32_t>(thresholds);
 }
 
 }  // namespace bconv2d

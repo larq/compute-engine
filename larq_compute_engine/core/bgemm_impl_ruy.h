@@ -23,12 +23,14 @@ using compute_engine::core::TBitpacked;
 
 template <typename AccumScalar, typename DstScalar>
 struct BGemmImplUsingRuy {
-  static void Run(
-      const MatrixParams<TBitpacked>& lhs_params, const TBitpacked* lhs_data,
-      const MatrixParams<TBitpacked>& rhs_params, const TBitpacked* rhs_data,
-      const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
-      const OutputTransform<AccumScalar, DstScalar>& output_transform,
-      CpuBackendContext* context) {
+  static void Run(const MatrixParams<TBitpacked>& lhs_params,
+                  const TBitpacked* lhs_data,
+                  const MatrixParams<TBitpacked>& rhs_params,
+                  const TBitpacked* rhs_data,
+                  const MatrixParams<DstScalar>& dst_params,
+                  DstScalar* dst_data,
+                  const OutputTransform<DstScalar>& output_transform,
+                  CpuBackendContext* context) {
     ruy::profiler::ScopeLabel label("BGemmRuy");
 
     static_assert(std::is_signed<DstScalar>::value,

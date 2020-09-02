@@ -18,7 +18,7 @@ struct BinaryMulParams {
   using AccumScalar = tAccumScalar;
   using DstScalar = tDstScalar;
 
-  OutputTransform<AccumScalar, DstScalar> output_transform;
+  OutputTransform<DstScalar> output_transform;
 
   static constexpr LoopStructure kLoopStructure = LoopStructure::kAuto;
   static constexpr LayoutSupport kLayoutSupport = LayoutSupport::kGeneral;
@@ -36,7 +36,7 @@ struct BinaryMulParams<tAccumScalar, TBitpacked> {
   using AccumScalar = tAccumScalar;
   using DstScalar = TBitpacked;
 
-  OutputTransform<AccumScalar, DstScalar> output_transform;
+  OutputTransform<DstScalar> output_transform;
 
   static constexpr LoopStructure kLoopStructure = LoopStructure::kAuto;
   static constexpr LayoutSupport kLayoutSupport = LayoutSupport::kGeneral;
@@ -69,7 +69,6 @@ struct BinaryKernelParams {
   std::int32_t depth;
   std::int32_t clamp_min;
   std::int32_t clamp_max;
-  std::int32_t backtransform_add;
   float dst_tmp_buf[LhsCols * RhsCols];
 };
 
@@ -90,10 +89,8 @@ inline void MakeBinaryKernelParams(
   params->dst_base_ptr =
       dst->data.get() + start_col * dst->layout.stride + start_row;
 
-  params->post_activation_multiplier =
-      spec.output_transform.post_activation_multiplier;
-  params->post_activation_bias = spec.output_transform.post_activation_bias;
-  params->backtransform_add = spec.output_transform.backtransform_add;
+  params->post_activation_multiplier = spec.output_transform.multiplier;
+  params->post_activation_bias = spec.output_transform.bias;
   params->start_row = start_row;
   params->start_col = start_col;
   params->last_row = end_row - LhsCols;

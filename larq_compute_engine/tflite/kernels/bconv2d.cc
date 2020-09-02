@@ -79,19 +79,16 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
   // attribute added to the op in the converter.
   conv_params->channels_in = m["channels_in"].AsInt32();
 
-  const auto fused_activation_function = ConvertActivation(
+  conv_params->fused_activation_function = ConvertActivation(
       (ActivationFunctionType)m["fused_activation_function"].AsInt32());
   if (conv_params->padding_type == kTfLitePaddingSame &&
       conv_params->pad_value != 1 &&
-      fused_activation_function != kTfLiteActNone) {
+      conv_params->fused_activation_function != kTfLiteActNone) {
     TF_LITE_KERNEL_LOG(
         context,
         "Fused activations are only supported with valid or one-padding.");
     return conv_params;
   }
-  CalculateActivationRange(fused_activation_function,
-                           &conv_params->output_activation_min,
-                           &conv_params->output_activation_max);
 
   // It's not possible to return an error code in this method. If we get to here
   // without returning early, initialisation has succeeded without error, and so
@@ -274,8 +271,8 @@ inline void GetConvParamsType(const TfLiteBConv2DParams& conv_params,
   op_params.dilation_width_factor = conv_params.dilation_width_factor;
 
   // Activation function
-  op_params.quantized_activation_min = conv_params.output_activation_min;
-  op_params.quantized_activation_max = conv_params.output_activation_max;
+  op_params.quantized_activation_min = conv_params.output_transform_clamp_min;
+  op_params.quantized_activation_max = conv_params.output_transform_clamp_max;
 }
 
 void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
@@ -298,22 +295,40 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
         params->padding_buffer.data());
   }
 
-  // For int8 output, compute the 'effective' multiplier/bias with fused output
-  // scale and zero-point.
-  if (output->type == kTfLiteInt8) {
-    params->scaled_post_activation_multiplier.resize(params->channels_out);
-    params->scaled_post_activation_bias.resize(params->channels_out);
+  // If applicable, fuse the back-transformation and int8 scale/zero-point into
+  // the output transform multiplier/bias.
+  if (output->type == kTfLiteFloat32 || output->type == kTfLiteInt8) {
+    params->output_transform_multiplier.resize(params->channels_out);
+    params->output_transform_bias.resize(params->channels_out);
+
+    const auto filter_shape = GetTensorShape(GetInput(context, node, 1));
+    const std::int32_t backtransform_add =
+        filter_shape.Dims(1) * filter_shape.Dims(2) * params->channels_in;
+    const double output_scale =
+        output->type == kTfLiteInt8 ? output->params.scale : 1.0f;
     const double output_zero_point =
-        static_cast<double>(output->params.zero_point);
-    const double output_scale = static_cast<double>(output->params.scale);
+        output->type == kTfLiteInt8 ? output->params.zero_point : 0.0f;
+
     for (int i = 0; i < params->channels_out; ++i) {
       const double post_mul =
           GetTensorData<float>(post_activation_multiplier)[i];
       const double post_bias = GetTensorData<float>(post_activation_bias)[i];
-      params->scaled_post_activation_multiplier[i] = post_mul / output_scale;
-      params->scaled_post_activation_bias[i] =
-          post_bias / output_scale + output_zero_point;
+      params->output_transform_multiplier.at(i) = -1 * post_mul / output_scale;
+      params->output_transform_bias.at(i) =
+          (post_bias + static_cast<double>(backtransform_add) * post_mul) /
+              output_scale +
+          output_zero_point;
     }
+
+    std::int32_t nominal_clamp_min, nominal_clamp_max;
+    CalculateActivationRange(params->fused_activation_function,
+                             &nominal_clamp_min, &nominal_clamp_max);
+    nominal_clamp_min = std::max(nominal_clamp_min, -1 * backtransform_add);
+    nominal_clamp_max = std::min(nominal_clamp_max, backtransform_add);
+    params->output_transform_clamp_min =
+        -1 * nominal_clamp_max + backtransform_add;
+    params->output_transform_clamp_max =
+        -1 * nominal_clamp_min + backtransform_add;
   }
 
   params->one_time_setup_complete = true;
@@ -342,8 +357,8 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   GetConvParamsType(*params, op_params);
   op_params.input_offset = input->params.zero_point;
 
-  OutputTransform<AccumScalar, DstScalar> output_transform;
-  GetOutputTransform(context, node, params, output_transform);
+  OutputTransform<DstScalar> output_transform;
+  GetOutputTransform(output_transform, context, node, params);
 
   // `BConv2D` wants the *unpacked* output shape.
   auto unpacked_output_shape = GetTensorShape(output);
@@ -381,8 +396,8 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   ConvParams op_params;
   GetConvParamsType(*params, op_params);
 
-  OutputTransform<std::int32_t, DstScalar> output_transform;
-  GetOutputTransform(context, node, params, output_transform);
+  OutputTransform<DstScalar> output_transform;
+  GetOutputTransform(output_transform, context, node, params);
 
   TfLiteTensor* im2col = nullptr;
   ce::ref::BConv2D<std::int32_t, DstScalar>(

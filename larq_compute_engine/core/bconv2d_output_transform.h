@@ -21,90 +21,125 @@ enum class OutputTransformDetails {
   PreprocessedIntegerOnly
 };
 
-// The `OutputTransform` struct describes what needs to be done to get from the
-// int32 accumulator value to the final result that is written back to memory.
-//
-// This transform depends on the destination type `DstScalar` which can be:
-// - float
-// - TBitpacked (i.e. int32_t, meaning bitpacked output)
-// - int8
-template <typename AccumScalar, typename DstScalar,
+/*
+ * The `OutputTransform` struct describes what needs to be done to get from the
+ * int32 accumulator value to the final result that is written back to memory.
+ */
+template <typename DstScalar,
           OutputTransformDetails = OutputTransformDetails::Default>
 struct OutputTransform {};
 
-// A part of the transformation is common to all output types.
-// This part is described by `OutputTransformBase`.
-template <typename AccumScalar>
-struct OutputTransformBase {
-  AccumScalar backtransform_add = 0;
-  std::int32_t clamp_min = std::numeric_limits<AccumScalar>::lowest();
-  std::int32_t clamp_max = std::numeric_limits<AccumScalar>::max();
+/*
+ * ------------
+ * Float output
+ * ------------
+ *
+ * Conceptually, the float output transform is as follows:
+ *   0. We start with an XOR-popcount accumulator value `accum`. It lies in the
+ *      range {0, ..., K}, where K := `kernel_height` * `kernel_width` *
+ *      `channels_in` is the maximum number of bits that can be set.
+ *   1. Perform a 'back-transformation', which is a linear transformation that
+ *      maps {0, ..., K} onto {-K, ..., K}:
+ *                         K - 2 * accum = -2 * accum + K
+ *      This yields the 'true output' of the binary convolution operation, in
+ *      the sense that it's the same value that you would get by running a
+ *      normal floating-point convolution with +1/-1 input and +1/-1 weights.
+ *   2. Perform a clamp operation that represents a fused activation function.
+ *   3. Convert to float and perform a linear transformation with a multiplier
+ *      and bias that represents a fused batch normalisation layer.
+ *
+ * Thus, the float output transform is:
+ *                 float_cast(clamp(-2 * accum + K)) * mul + bias
+ *
+ * However, we can perform an equivalent, faster computation, by adjusting the
+ * clamp values and fusing (part of) the back-transformation into the
+ * multiplier/bias:
+ *                 float_cast(clamp'(accum << 1)) * mul' + bias'
+ *
+ * Note that the left shift cannot be fused, because the left-shifted
+ * accumulator value will either be always odd or always even, and we support
+ * clamping to arbitrary integers.
+ *
+ * The parameters of the output transform are therefore two int32 clamp values
+ * and float pointers to a multiplier and a bias.
+ */
+template <>
+struct OutputTransform<float, OutputTransformDetails::Default> {
+  std::int32_t clamp_min = std::numeric_limits<std::int32_t>::lowest();
+  std::int32_t clamp_max = std::numeric_limits<std::int32_t>::max();
+  const float* multiplier = nullptr;
+  const float* bias = nullptr;
 
-  inline AccumScalar RunBase(const AccumScalar accum) const {
-    // Backtransform can still be done in int32
-    AccumScalar x = backtransform_add - 2 * accum;
-    // Activation function can also be done in int32
-    x = std::min<AccumScalar>(x, clamp_max);
-    x = std::max<AccumScalar>(x, clamp_min);
-    return x;
+  float Run(const std::int32_t accum, int out_channel) const {
+    TFLITE_DCHECK(multiplier != nullptr);
+    TFLITE_DCHECK(bias != nullptr);
+    std::int32_t x = accum << 1;
+    x = std::max<std::int32_t>(std::min<std::int32_t>(x, clamp_max), clamp_min);
+    return static_cast<float>(x) * multiplier[out_channel] + bias[out_channel];
   }
 };
 
-// Output transformation for float kernels
-template <typename AccumScalar>
-struct OutputTransform<AccumScalar, float, OutputTransformDetails::Default>
-    : OutputTransformBase<AccumScalar> {
-  const float* post_activation_multiplier = nullptr;
-  const float* post_activation_bias = nullptr;
+/*
+ * -----------
+ * Int8 output
+ * -----------
+ *
+ * For int8 output, there are two additional conceptual steps:
+ *   4. Multiply by the reciprocal of the int8 output scale, and add the int8
+ *      zero-point.
+ *   5. Round to an integer and clamp to the int8 range.
+ *
+ * We can fuse step (4) into the existing multiplier/bias, and so the int8
+ * output transform is:
+ *           int8_cast(float_cast(clamp'(accum << 1)) * mul + bias)
+ *
+ * Thus, the int8 output transform parameters are the same as in the float case.
+ */
+template <>
+struct OutputTransform<std::int8_t, OutputTransformDetails::Default> {
+  std::int32_t clamp_min = std::numeric_limits<std::int32_t>::lowest();
+  std::int32_t clamp_max = std::numeric_limits<std::int32_t>::max();
+  const float* multiplier = nullptr;
+  const float* bias = nullptr;
 
-  float Run(const AccumScalar accum, int out_channel) const {
-    TF_LITE_ASSERT(post_activation_multiplier != nullptr);
-    TF_LITE_ASSERT(post_activation_bias != nullptr);
-    // Post multiply and add are done in float
-    float x = static_cast<float>(this->RunBase(accum));
-    x *= post_activation_multiplier[out_channel];
-    x += post_activation_bias[out_channel];
-    return x;
+  std::int8_t Run(const std::int32_t accum, int out_channel) const {
+    TFLITE_DCHECK(multiplier != nullptr);
+    TFLITE_DCHECK(bias != nullptr);
+    // Clamping is done in int32
+    std::int32_t x = accum << 1;
+    x = std::max<std::int32_t>(std::min<std::int32_t>(x, clamp_max), clamp_min);
+    // The linear transformation is done in float
+    float y =
+        static_cast<float>(x) * multiplier[out_channel] + bias[out_channel];
+    // And then we round back to int32 and clamp to the int8 range
+    std::int32_t z = tflite::TfLiteRound(y);
+    z = std::min<std::int32_t>(z, std::numeric_limits<std::int8_t>::max());
+    z = std::max<std::int32_t>(z, std::numeric_limits<std::int8_t>::lowest());
+    return static_cast<std::int8_t>(z);
   }
 };
 
-// Output transformation for bitpacked output
-template <typename AccumScalar>
-struct OutputTransform<AccumScalar, TBitpacked,
-                       OutputTransformDetails::Default> {
-  const AccumScalar* thresholds = nullptr;
+/*
+ * ----------------
+ * Bitpacked output
+ * ----------------
+ *
+ * For writing bitpacked output, the output transform needs to yield a single
+ * bit - the sign of the result of conceptual step (3). In fact, it's possible
+ * to avoid having to do the clamping and the linear transformation first, and
+ * instead compare the accumulator directly against a pre-computed threshold to
+ * work out which bit to return.
+ *
+ * Thus, the bitpacked output transform parameters are a single pointer to an
+ * array of pre-computed thresholds.
+ */
+template <>
+struct OutputTransform<TBitpacked, OutputTransformDetails::Default> {
+  const std::int32_t* thresholds = nullptr;
 
-  bool Run(const AccumScalar accum, int out_channel) const {
-    TF_LITE_ASSERT(thresholds != nullptr);
+  bool Run(const std::int32_t accum, int out_channel) const {
+    TFLITE_DCHECK(thresholds != nullptr);
     return accum > thresholds[out_channel];
-  }
-};
-
-// Output transformation for 8-bit quantization
-template <typename AccumScalar>
-struct OutputTransform<AccumScalar, std::int8_t,
-                       OutputTransformDetails::Default>
-    : OutputTransformBase<AccumScalar> {
-  // These effective values are the post-activation multipliers and biases
-  // divided by output_scale and including the output zero_point
-  const float* effective_post_activation_multiplier = nullptr;
-  const float* effective_post_activation_bias = nullptr;
-
-  std::int8_t Run(const AccumScalar accum, int out_channel) const {
-    TF_LITE_ASSERT(effective_post_activation_multiplier != nullptr);
-    TF_LITE_ASSERT(effective_post_activation_bias != nullptr);
-    // First convert to full precision to do the linear transformation
-    float result_fp = static_cast<float>(this->RunBase(accum));
-    result_fp *= effective_post_activation_multiplier[out_channel];
-    result_fp += effective_post_activation_bias[out_channel];
-    // Now round back to int32
-    AccumScalar result = tflite::TfLiteRound(result_fp);
-    // Clamp to int8 range
-    result =
-        std::min<AccumScalar>(result, std::numeric_limits<std::int8_t>::max());
-    result = std::max<AccumScalar>(result,
-                                   std::numeric_limits<std::int8_t>::lowest());
-    return static_cast<std::int8_t>(result);
   }
 };
 
