@@ -52,7 +52,6 @@ using compute_engine::core::TBitpacked;
 #define RUY_OFFSET_DEPTH 56
 #define RUY_OFFSET_CLAMP_MIN 60
 #define RUY_OFFSET_CLAMP_MAX 64
-#define RUY_OFFSET_BACKTRANSFORM_ADD 68
 
 #define RUY_STACK_OFFSET_SIZE 96
 #define RUY_STACK_OFFSET_DST_COL_PTR 0
@@ -83,8 +82,6 @@ void CheckOffsetsInKernelParams(const Params&) {
   static_assert(offsetof(Params, depth) == RUY_OFFSET_DEPTH, "");
   static_assert(offsetof(Params, clamp_min) == RUY_OFFSET_CLAMP_MIN, "");
   static_assert(offsetof(Params, clamp_max) == RUY_OFFSET_CLAMP_MAX, "");
-  static_assert(
-      offsetof(Params, backtransform_add) == RUY_OFFSET_BACKTRANSFORM_ADD, "");
 }
 
 // This is a very naive and first attempt on using the SIMD registers for BGEMM.
@@ -269,10 +266,6 @@ void BinaryKernelNeonOutOfOrder4x4(BinaryKernelParams<4, 4>& params) {
       "ldr r5, [sp, #" RUY_STR(RUY_STACK_OFFSET_RHS_COL_PTR) "]\n"
       "mov %[rhs_ptr], r5\n"
 
-      // Load backtransform add (duplicate 4 times into v13)
-      "ldr r1, [%[params], #" RUY_STR(RUY_OFFSET_BACKTRANSFORM_ADD) "]\n"
-      "vdup q13.32, r1 \n"
-
       // post-accumulation transformation:
       //
       // q13 = |BKADD|BKADD|BKADD|BKADD|
@@ -304,20 +297,15 @@ void BinaryKernelNeonOutOfOrder4x4(BinaryKernelParams<4, 4>& params) {
       "vld1.32 {d8, d9, d10, d11}, [%[rhs_ptr]]!\n"
       "vld1.32 {d12, d13, d14, d15}, [%[rhs_ptr]]!\n"
 
-      // Perform the backtransformation (in int32)
+      // Load the clamp_max bound (in parallel with the shift)
+      "ldr r1, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
+      "vdup q12.32, r1 \n"  // clamp_min
+
+      // Perform the backtransformation shift (in int32)
       "vshl q8.s32, q8.s32, #1\n"
       "vshl q9.s32, q9.s32, #1\n"
       "vshl q10.s32, q10.s32, #1\n"
       "vshl q11.s32, q11.s32, #1\n"
-
-      // Load the clamp_max bound (in parallel with the sub)
-      "ldr r1, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
-      "vdup q12.32, r1 \n"  // clamp_min
-
-      "vsub q8.s32, q13.s32, q8.s32\n"
-      "vsub q9.s32, q13.s32, q9.s32\n"
-      "vsub q10.s32, q13.s32, q10.s32\n"
-      "vsub q11.s32, q13.s32, q11.s32\n"
 
       // Load the clamp_max bound (in parallel with the clamp_min)
       "ldr r2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MAX) "]\n"
@@ -534,7 +522,6 @@ void BinaryKernelNeonOutOfOrder4x4(BinaryKernelParams<4, 4>& params) {
 #undef RUY_OFFSET_DEPTH
 #undef RUY_OFFSET_CLAMP_MIN
 #undef RUY_OFFSET_CLAMP_MAX
-#undef RUY_OFFSET_BACKTRANSFORM_ADD
 
 #endif  // RUY_PLATFORM_NEON && RUY_OPT(ASM) && RUY_PLATFORM_NEON_32
 #endif  // COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_ARM32_H_

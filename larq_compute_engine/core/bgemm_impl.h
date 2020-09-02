@@ -34,7 +34,7 @@ void BGemm(const MatrixParams<TBitpacked>& lhs_params,
            const MatrixParams<TBitpacked>& rhs_params,
            const TBitpacked* rhs_data,
            const MatrixParams<DstScalar>& dst_params, DstScalar* dst_data,
-           const OutputTransform<AccumScalar, DstScalar>& params,
+           const OutputTransform<DstScalar>& params,
            CpuBackendContext* context) {
   ruy::profiler::ScopeLabel label("BGemm");
   // TODO: special fast bgemm impl. for matrix-vector multiplication

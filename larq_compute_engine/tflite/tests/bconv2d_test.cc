@@ -404,7 +404,7 @@ void test_lce_op_output(const std::vector<std::int8_t>& lce_output_data,
     unrounded_builtin_output[i] = unrounded_int8_output;
   }
 
-  EXPECT_THAT(lce_output_data, ::testing::Pointwise(::testing::FloatNear(0.501),
+  EXPECT_THAT(lce_output_data, ::testing::Pointwise(::testing::FloatNear(0.55),
                                                     unrounded_builtin_output));
 }
 

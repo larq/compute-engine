@@ -31,15 +31,15 @@ struct TfLiteBConv2DParams {
   TfLitePaddingValues padding_values{};
   int pad_value = 0;  // Must be 0 or 1
 
-  // These min/max take care of a Relu.
-  // Later they will *also* do the clamping in order to go from int32 to int8
-  std::int32_t output_activation_min;
-  std::int32_t output_activation_max;
+  // Fused activation function
+  TfLiteFusedActivation fused_activation_function{};
 
-  // This is only for int8 mode; it's the post_activation_ values scaled by the
-  // output tensor scale, and the bias includes the output zero-point.
-  std::vector<float> scaled_post_activation_multiplier;
-  std::vector<float> scaled_post_activation_bias;
+  // Computed output transform values. These are only used when writing
+  // float/int8 output.
+  std::int32_t output_transform_clamp_min;
+  std::int32_t output_transform_clamp_max;
+  std::vector<float> output_transform_multiplier;
+  std::vector<float> output_transform_bias;
 
   // This is used when we have 'same-zero' padding.
   std::vector<float> padding_buffer;

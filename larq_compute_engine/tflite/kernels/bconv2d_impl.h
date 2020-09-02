@@ -66,27 +66,26 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
 
 // Get the post_activation_multiplier out of the OutputTransform struct
 // Required for the padding functor
-template <typename AccumScalar, typename DstScalar>
+template <typename DstScalar>
 const float* GetPostActivationMultiplier(
-    const OutputTransform<AccumScalar, DstScalar>& output_transform) {
+    const OutputTransform<DstScalar>& output_transform) {
   return nullptr;
 }
-template <typename AccumScalar>
 const float* GetPostActivationMultiplier(
-    const OutputTransform<AccumScalar, float>& output_transform) {
-  return output_transform.post_activation_multiplier;
+    const OutputTransform<float>& output_transform) {
+  return output_transform.multiplier;
 }
 
 template <typename AccumScalar, typename DstScalar>
-inline void BConv2D(
-    const ConvParams& params, const RuntimeShape& input_shape,
-    const TBitpacked* input_data, const RuntimeShape& filter_shape,
-    const TBitpacked* packed_filter_data,
-    const OutputTransform<AccumScalar, DstScalar>& output_transform,
-    const RuntimeShape& output_shape, DstScalar* output_data,
-    const RuntimeShape& im2col_shape, TBitpacked* im2col_data,
-    const float* padding_buffer, const int pad_value,
-    CpuBackendContext* cpu_backend_context) {
+inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
+                    const TBitpacked* input_data,
+                    const RuntimeShape& filter_shape,
+                    const TBitpacked* packed_filter_data,
+                    const OutputTransform<DstScalar>& output_transform,
+                    const RuntimeShape& output_shape, DstScalar* output_data,
+                    const RuntimeShape& im2col_shape, TBitpacked* im2col_data,
+                    const float* padding_buffer, const int pad_value,
+                    CpuBackendContext* cpu_backend_context) {
   TF_LITE_ASSERT_EQ(input_shape.DimensionsCount(), 4);
   TF_LITE_ASSERT_EQ(filter_shape.DimensionsCount(), 4);
   TF_LITE_ASSERT_EQ(output_shape.DimensionsCount(), 4);
@@ -150,8 +149,8 @@ inline void BConv2D(
   dst_params.rows = n;
   dst_params.cols = m;
 
-  BGemm(lhs_params, lhs_data, rhs_params, rhs_data, dst_params, output_data,
-        output_transform, cpu_backend_context);
+  BGemm<AccumScalar>(lhs_params, lhs_data, rhs_params, rhs_data, dst_params,
+                     output_data, output_transform, cpu_backend_context);
 
   if (params.padding_type == PaddingType::kSame && pad_value == 0) {
     const int stride_width = params.stride_width;
