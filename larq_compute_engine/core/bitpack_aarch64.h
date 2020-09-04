@@ -15,7 +15,8 @@ namespace core {
 
 // Bitpack an array of `4 * 32 * num_blocks` floats.
 inline void bitpack_aarch64_4x32(const float* input, std::size_t num_blocks,
-                                 TBitpacked* output) {
+                                 TBitpacked* output,
+                                 const float zero_point /*ignored*/) {
   static_assert(sizeof(TBitpacked) == 4,
                 "Correctness of this function relies on the size of TBitpacked "
                 "being 4 bytes.");
@@ -171,7 +172,7 @@ inline void bitpack_aarch64_4x32(const float* input, std::size_t num_blocks,
       "sri v0.16b, v2.16b, #4\n"
 
       "ld2 {v28.8h, v29.8h}, [%[in_ptr]], #32\n"
-      "st1 {v0.2d}, [%[out_ptr]], #16\n"
+      "st1 {v0.4s}, [%[out_ptr]], #16\n"
       "ld2 {v30.8h, v31.8h}, [%[in_ptr]], #32\n"
 
       "bge 2b\n"
@@ -214,7 +215,7 @@ inline void bitpack_aarch64_4x32(const float* input, std::size_t num_blocks,
       "uzp1 v2.16b, v8.16b, v10.16b\n"
       "sri v0.16b, v2.16b, #4\n"
 
-      "st1 {v0.2d}, [%[out_ptr]], #16\n"
+      "st1 {v0.4s}, [%[out_ptr]], #16\n"
 
       : [ in_ptr ] "+r"(input), [ n ] "+r"(num_blocks), [ out_ptr ] "+r"(output)
       :
@@ -222,6 +223,156 @@ inline void bitpack_aarch64_4x32(const float* input, std::size_t num_blocks,
         "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18",
         "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28",
         "v29", "v30", "v31");
+}
+
+// Bitpack an array of `4 * 32 * num_blocks` int8 bytes.
+inline void bitpack_aarch64_4x32(const std::int8_t* input,
+                                 std::size_t num_blocks, TBitpacked* output,
+                                 const std::int8_t zero_byte) {
+  static_assert(sizeof(TBitpacked) == 4,
+                "Correctness of this function relies on the size of TBitpacked "
+                "being 4 bytes.");
+
+  ruy::profiler::ScopeLabel label("Bitpack 4x32 Int8 bytes (optimised)");
+
+  if (num_blocks < 1) return;
+
+  // TODO(AdamHillier): the ASM block below can likely be further optimised if
+  //     deemed beneficial. Bitpacking 256 bytes into two NEON registers at once
+  //     would reduce pipeline stalls between dependent instructions at the end
+  //     of the main loop body. We could also investigate using LD4 rather than
+  //     LD2 instructions, which would allow us to remove some of the unzip
+  //     instructions. LD4 is lower throughput (per word loaded) than LD2 on
+  //     some CPUs, which is why we don't use it for packing floats, but for
+  //     packing bytes we're less likely to be memory-bound.
+  asm volatile(
+      // Populate v31 with the zero-byte
+      "dup v31.16b, %w[zero_byte]\n"
+
+      // Load 128 bytes into the registers.
+      //
+      // These LD2 instructions load a sequence of pairs of bytes from memory
+      // and de-interleave the pairs into two vector registers. This means that
+      // the first vector register receives every even byte, and the second
+      // vector register receives every odd byte. As a result, output of the SRI
+      // instructions below will have the sign bits in the correct order in each
+      // register.
+      "ld2 {v0.16b, v1.16b}, [%[in_ptr]], #32\n"
+      "ld2 {v2.16b, v3.16b}, [%[in_ptr]], #32\n"
+      "cmp %[n], #1\n"
+      "ld2 {v4.16b, v5.16b}, [%[in_ptr]], #32\n"
+      "ld2 {v6.16b, v7.16b}, [%[in_ptr]], #32\n"
+      "beq 1f\n"
+
+      "2:\n"
+
+      // This is the main loop.
+      //
+      // Here, n >= 2. We compute four int32 bitpacked words (from 128 bytes)
+      // while reloading data into the registers for the next iteration.
+      //
+      // After the LD2 instructions, each odd register v0, ..., v7 contains 16
+      // bytes (128 bytes in total). The bytes are 'de-interleaved' between
+      // adjacent pairs of registers (v0/v1, v2/v3, v4/v5, v6/v7). The byte
+      // ordering is therefore as follows:
+      //          v0           v1       ...         v6              v7
+      //     [1 3 ... 31] [0 2 ... 30]  ...  [97 99 ... 127] [96 98 ... 126]
+      //
+      // The first step is to subtract the zero-byte from each value (with
+      // saturation). Afterwards, the sign-bit (high-bit) of each byte will be
+      // the bit we want to be bitpacked.
+      "sqsub v8.16b, v1.16b, v31.16b\n"
+      "sqsub v9.16b, v0.16b, v31.16b\n"
+      "sqsub v10.16b, v3.16b, v31.16b\n"
+      "sqsub v11.16b, v2.16b, v31.16b\n"
+      "ld2 {v0.16b, v1.16b}, [%[in_ptr]], #32\n"
+      "sqsub v12.16b, v5.16b, v31.16b\n"
+      "sqsub v13.16b, v4.16b, v31.16b\n"
+      "sqsub v14.16b, v7.16b, v31.16b\n"
+      "sqsub v15.16b, v6.16b, v31.16b\n"
+
+      "sub %[n], %[n], #1\n"
+
+      // The next step is to combine the pairs of adjacent registers with 'shift
+      // right and insert' SRI instructions. Because of the LD2 de-interleaving,
+      // the result registers will each have 32 sign-bits in the correct order.
+      //     For example, after the first SRI instruction below, v0 will
+      // contain:
+      //                                v0
+      //                     [0/1  2/3  4/5 ... 30/31]
+      //
+      // Where `0/1` is a byte that has the high-bit equal to the high-bit of
+      // byte 1, and the second highest bit equal to the high-bit of byte 0.
+      "ld2 {v2.16b, v3.16b}, [%[in_ptr]], #32\n"
+      "sri v8.16b, v9.16b, #1\n"
+      "sri v10.16b, v11.16b, #1\n"
+      "sri v12.16b, v13.16b, #1\n"
+      "sri v14.16b, v15.16b, #1\n"
+
+      // From this point on, the computation is exactly the same as when packing
+      // floats. We use a sequence of 'unzip' and 'shift right and insert'
+      // instructions to accumulate four sign-bits in each byte. See the
+      // comments of the float-case for further detail.
+      "ld2 {v4.16b, v5.16b}, [%[in_ptr]], #32\n"
+      "uzp2 v16.16b, v8.16b, v10.16b\n"
+      "uzp1 v17.16b, v8.16b, v10.16b\n"
+      "uzp2 v18.16b, v12.16b, v14.16b\n"
+      "uzp1 v19.16b, v12.16b, v14.16b\n"
+
+      "cmp %[n], #2\n"
+
+      "ld2 {v6.16b, v7.16b}, [%[in_ptr]], #32\n"
+      "sri v16.16b, v17.16b, #2\n"
+      "sri v18.16b, v19.16b, #2\n"
+
+      "uzp2 v8.16b, v16.16b, v18.16b\n"
+      "uzp1 v9.16b, v16.16b, v18.16b\n"
+
+      "sri v8.16b, v9.16b, #4\n"
+
+      "st1 {v8.4s}, [%[out_ptr]], #16\n"
+
+      "bge 2b\n"
+
+      "1:\n"
+
+      // Here, n = 1, so we compute four int32 bitpacked words (from 128 bytes)
+      // without any data reloading and then exit.
+
+      "sqsub v8.16b, v1.16b, v31.16b\n"
+      "sqsub v9.16b, v0.16b, v31.16b\n"
+      "sqsub v10.16b, v3.16b, v31.16b\n"
+      "sqsub v11.16b, v2.16b, v31.16b\n"
+      "sqsub v12.16b, v5.16b, v31.16b\n"
+      "sqsub v13.16b, v4.16b, v31.16b\n"
+      "sqsub v14.16b, v7.16b, v31.16b\n"
+      "sqsub v15.16b, v6.16b, v31.16b\n"
+
+      "sri v8.16b, v9.16b, #1\n"
+      "sri v10.16b, v11.16b, #1\n"
+      "sri v12.16b, v13.16b, #1\n"
+      "sri v14.16b, v15.16b, #1\n"
+
+      "uzp2 v16.16b, v8.16b, v10.16b\n"
+      "uzp1 v17.16b, v8.16b, v10.16b\n"
+      "uzp2 v18.16b, v12.16b, v14.16b\n"
+      "uzp1 v19.16b, v12.16b, v14.16b\n"
+
+      "sri v16.16b, v17.16b, #2\n"
+      "sri v18.16b, v19.16b, #2\n"
+
+      "uzp2 v8.16b, v16.16b, v18.16b\n"
+      "uzp1 v9.16b, v16.16b, v18.16b\n"
+
+      "sri v8.16b, v9.16b, #4\n"
+
+      "st1 {v8.4s}, [%[out_ptr]], #16\n"
+
+      : [ in_ptr ] "+r"(input), [ n ] "+r"(num_blocks), [ out_ptr ] "+r"(output)
+      : [ zero_byte ] "r"(zero_byte)
+      : "cc", "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8",
+        "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18",
+        "v19", "v31");
 }
 
 }  // namespace core

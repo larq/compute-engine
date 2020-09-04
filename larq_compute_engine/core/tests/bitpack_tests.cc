@@ -36,9 +36,17 @@ void runBitpackingTest(const int num_rows, const int num_cols,
       ce::core::GetBitpackedMatrixSize(num_rows, num_cols));
 
   // Generate some random data for the input.
-  std::generate(std::begin(input_matrix), std::end(input_matrix), [&gen]() {
-    return std::uniform_real_distribution<>(-1.5, 1.5)(gen);
-  });
+  if (std::is_same<TIn, float>::value) {
+    std::generate(std::begin(input_matrix), std::end(input_matrix), [&gen]() {
+      return std::uniform_real_distribution<>(-1.5, 1.5)(gen);
+    });
+  } else if (std::is_same<TIn, std::int8_t>::value) {
+    std::generate(std::begin(input_matrix), std::end(input_matrix), [&gen]() {
+      return std::uniform_real_distribution<>(-128, 127)(gen);
+    });
+  } else {
+    EXPECT_FALSE(true);
+  }
 
   // Perform the bitpacking.
   ce::core::bitpack_matrix(input_matrix.data(), num_rows, num_cols,
@@ -94,16 +102,15 @@ std::string TestName(
                       param_zp_value_str);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    Bitpacking, BitpackingTest,
-    ::testing::Combine(
-        // num_rows
-        ::testing::Values(1, 2, 3, 4, 5, 6, 7, 8, 10, 15, 250),
-        // num_cols
-        ::testing::Values(1, 3, 16, 32, 33, 63, 64, 65, 96, 256),
-        // zero_point
-        ::testing::Values(-1000, -1, 0, 1, 127)),
-    TestName);
+INSTANTIATE_TEST_SUITE_P(Bitpacking, BitpackingTest,
+                         ::testing::Combine(
+                             // num_rows
+                             ::testing::Values(1, 2, 3, 8, 10, 15, 64),
+                             // num_cols
+                             ::testing::Values(1, 3, 16, 32, 33, 63, 64, 128),
+                             // zero_point
+                             ::testing::Values(-1000, -1, 0, 23, 127, 128)),
+                         TestName);
 
 }  // end namespace testing
 }  // namespace compute_engine

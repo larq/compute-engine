@@ -13,28 +13,35 @@ namespace testing {
 
 using namespace compute_engine::core;
 
-void test_bitpacking(int num_4x32_blocks) {
+template <typename DstScalar>
+void test_bitpacking_order(const int num_4x32_blocks) {
+  static_assert(std::is_same<DstScalar, float>::value ||
+                    std::is_same<DstScalar, std::int8_t>::value,
+                "");
+
   const int num_blocks = 4 * num_4x32_blocks;
   const int n = 32 * num_blocks;
 
-  float input[n];
+  DstScalar input[n];
+  const DstScalar zero_point =
+      std::is_same<DstScalar, std::int8_t>::value ? -42 : 0;
   TBitpacked output[num_blocks];
   for (auto i = 0; i < n; ++i) {
     // Try to get the position of bit i by packing the one-hot vector e_i
     for (auto j = 0; j < n; ++j) {
       if (j == i)
-        input[j] = -1.2345f;
+        input[j] = zero_point - 5;
       else
-        input[j] = 1.2345f;
+        input[j] = zero_point + 5;
     }
     // Run bitpacking
-    bitpack_aarch64_4x32(input, num_blocks, output);
+    bitpack_aarch64_4x32(input, num_blocks, output, zero_point);
     // See where in the output the bit has popped up
     int bit_index = -1;
     int bits_found = 0;
     for (auto j = 0; j < num_blocks; ++j) {
       for (auto k = 0; k < 32; ++k) {
-        if (output[j] & (1uL << k)) {
+        if (output[j] & (TBitpacked(1) << k)) {
           bit_index = k + j * 32;
           bits_found++;
         }
@@ -48,11 +55,21 @@ void test_bitpacking(int num_4x32_blocks) {
   }
 }
 
-TEST(BitpackingAarch64, 1x4x32) { test_bitpacking(1); }
-TEST(BitpackingAarch64, 2x4x32) { test_bitpacking(2); }
-TEST(BitpackingAarch64, 3x4x32) { test_bitpacking(3); }
-TEST(BitpackingAarch64, 11x4x32) { test_bitpacking(11); }
-TEST(BitpackingAarch64, 17x4x32) { test_bitpacking(17); }
+TEST(BitpackingAarch64, Float_1x4x32) { test_bitpacking_order<float>(1); }
+TEST(BitpackingAarch64, Float_2x4x32) { test_bitpacking_order<float>(2); }
+TEST(BitpackingAarch64, Float_3x4x32) { test_bitpacking_order<float>(3); }
+TEST(BitpackingAarch64, Float_11x4x32) { test_bitpacking_order<float>(11); }
+TEST(BitpackingAarch64, Float_17x4x32) { test_bitpacking_order<float>(17); }
+
+TEST(BitpackingAarch64, Int8_1x4x32) { test_bitpacking_order<std::int8_t>(1); }
+TEST(BitpackingAarch64, Int8_2x4x32) { test_bitpacking_order<std::int8_t>(2); }
+TEST(BitpackingAarch64, Int8_3x4x32) { test_bitpacking_order<std::int8_t>(3); }
+TEST(BitpackingAarch64, Int8_11x4x32) {
+  test_bitpacking_order<std::int8_t>(11);
+}
+TEST(BitpackingAarch64, Int8_17x4x32) {
+  test_bitpacking_order<std::int8_t>(17);
+}
 
 }  // end namespace testing
 }  // end namespace compute_engine
