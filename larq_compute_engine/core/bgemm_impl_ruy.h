@@ -66,6 +66,7 @@ struct BGemmImplUsingRuy {
     constexpr auto BGemmCompiledPaths = ruy::kAllPaths;
 
     ruy::Path bgemm_runtime_path = ruy_ctx->SelectPath(ruy::kAllPaths);
+    RUY_DCHECK_NE(bgemm_runtime_path, ruy::Path::kNone);
 
 #if RUY_PLATFORM_ARM
     if (bgemm_runtime_path == ruy::Path::kNeonDotprod)
@@ -78,11 +79,6 @@ struct BGemmImplUsingRuy {
 
     // For now, writing bitpacked output only has a C++ implementation.
     if (std::is_same<DstScalar, TBitpacked>::value) {
-      bgemm_runtime_path = ruy::Path::kStandardCpp;
-    }
-
-    // For now, int8 output only has a C++ implementation.
-    if (std::is_same<DstScalar, std::int8_t>::value) {
       bgemm_runtime_path = ruy::Path::kStandardCpp;
     }
 
