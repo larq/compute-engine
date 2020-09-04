@@ -47,11 +47,11 @@ struct BinaryMulParams<tAccumScalar, TBitpacked> {
   using StandardCppKernelRhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
 };
 
-template <int LhsCols, int RhsCols>
+template <typename DstScalar, int LhsCols, int RhsCols>
 struct BinaryKernelParams {
   const TBitpacked* lhs_base_ptr;
   const TBitpacked* rhs_base_ptr;
-  float* dst_base_ptr;
+  DstScalar* dst_base_ptr;
   // post_mutiply and post_activation_bias are currently float
   // in order to accomodate for batchnorm scales
   // Later this might be changed to the int8 system of multipliers+shifts
@@ -69,15 +69,15 @@ struct BinaryKernelParams {
   std::int32_t depth;
   std::int32_t clamp_min;
   std::int32_t clamp_max;
-  float dst_tmp_buf[LhsCols * RhsCols];
+  DstScalar dst_tmp_buf[LhsCols * RhsCols];
 };
 
-template <int LhsCols, int RhsCols, typename AccumScalar>
+template <typename AccumScalar, typename DstScalar, int LhsCols, int RhsCols>
 inline void MakeBinaryKernelParams(
     const PMat<TBitpacked>& lhs, const PMat<TBitpacked>& rhs,
-    const BinaryMulParams<AccumScalar, float>& spec, int start_row,
-    int start_col, int end_row, int end_col, Mat<float>* dst,
-    BinaryKernelParams<LhsCols, RhsCols>* params) {
+    const BinaryMulParams<AccumScalar, DstScalar>& spec, int start_row,
+    int start_col, int end_row, int end_col, Mat<DstScalar>* dst,
+    BinaryKernelParams<DstScalar, LhsCols, RhsCols>* params) {
   const int depth = lhs.layout.rows;
   RUY_DCHECK_EQ(start_row % LhsCols, 0);
   RUY_DCHECK_EQ(start_col % RhsCols, 0);
@@ -97,7 +97,7 @@ inline void MakeBinaryKernelParams(
   params->last_col = end_col - RhsCols;
   params->lhs_stride = sizeof(TBitpacked) * lhs.layout.stride;
   params->rhs_stride = sizeof(TBitpacked) * rhs.layout.stride;
-  params->dst_stride = sizeof(float) * dst->layout.stride;
+  params->dst_stride = sizeof(DstScalar) * dst->layout.stride;
   params->depth = depth;
   params->clamp_min = spec.output_transform.clamp_min;
   params->clamp_max = spec.output_transform.clamp_max;

@@ -135,7 +135,9 @@ void CheckOffsetsInKernelParams(const Params&) {
 
 // clang-format on
 
-void BinaryKernelNeonOutOfOrder4x4(const BinaryKernelParams<4, 4>& params) {
+template <typename DstScalar>
+void BinaryKernelNeonOutOfOrder4x4(
+    const BinaryKernelParams<DstScalar, 4, 4>& params) {
   CheckOffsetsInKernelParams(params);
   ruy::profiler::ScopeLabel label(
       "Binary Kernel (4x4) (kNeon, optimized for out-of-order cores)");
@@ -149,13 +151,20 @@ void BinaryKernelNeonOutOfOrder4x4(const BinaryKernelParams<4, 4>& params) {
   TBitpacked* lhs_ptr = lhs_col_ptr;
   TBitpacked* rhs_ptr = rhs_col_ptr;
 
-  float* dst_col_ptr = params.dst_base_ptr;
-  float* dst_ptr = dst_col_ptr;
+  DstScalar* dst_col_ptr = params.dst_base_ptr;
+  DstScalar* dst_ptr = dst_col_ptr;
   int row = params.start_row;
   int col = params.start_col;
 
   asm volatile(
 #define RUY_MAKE_ZERO(reg) "dup " #reg ".4s, wzr\n"
+
+#define IF_FLOAT_OUTPUT(a) ".if %c[float_output]\n" a ".endif\n"
+
+#define IF_INT8_OUTPUT(a) ".if %c[int8_output]\n" a ".endif\n"
+
+#define IF_FLOAT_ELIF_INT8_OUTPUT(a, b) \
+  ".if %c[float_output]\n" a ".elseif %c[int8_output]\n" b ".endif\n"
 
       // clang-format off
 
@@ -353,6 +362,26 @@ void BinaryKernelNeonOutOfOrder4x4(const BinaryKernelParams<4, 4>& params) {
       "fadd v26.4s, v26.4s, v15.4s\n"
       "fadd v27.4s, v27.4s, v15.4s\n"
 
+IF_INT8_OUTPUT(
+      // Convert to int32, rounding to nearest with ties to even.
+      "fcvtns v24.4s, v24.4s\n"
+      "fcvtns v25.4s, v25.4s\n"
+      "fcvtns v26.4s, v26.4s\n"
+      "fcvtns v27.4s, v27.4s\n"
+
+      // Narrow to int16 with "signed saturating extract narrow" instructions.
+      "sqxtn v24.4h, v24.4s\n"
+      "sqxtn v25.4h, v25.4s\n"
+      "sqxtn v26.4h, v26.4s\n"
+      "sqxtn v27.4h, v27.4s\n"
+
+      // Narrow to int8.
+      "sqxtn v24.8b, v24.8h\n"
+      "sqxtn v25.8b, v25.8h\n"
+      "sqxtn v26.8b, v26.8h\n"
+      "sqxtn v27.8b, v27.8h\n"
+)
+
       // Compute how much of the 4x4 block of destination values that
       // we have computed, fit in the destination matrix. Typically, all of
       // it fits, but when the destination matrix shape is not a multiple
@@ -376,7 +405,11 @@ void BinaryKernelNeonOutOfOrder4x4(const BinaryKernelParams<4, 4>& params) {
       // Not all of the 4x4 block fits.
       // Set (x3 address, x4 stride) to write to dst_tmp_buf
       "mov x3, %[dst_tmp_buf]\n"
+IF_FLOAT_ELIF_INT8_OUTPUT(
       "mov x4, #16\n"
+,
+      "mov x4, #4\n"
+)
       "b 31f\n"
       "30:\n"
       // Yes, all of the 4x4 block fits.
@@ -387,6 +420,7 @@ void BinaryKernelNeonOutOfOrder4x4(const BinaryKernelParams<4, 4>& params) {
 
       // Write our values to the destination described by
       // (x3 address, x4 stride).
+IF_FLOAT_ELIF_INT8_OUTPUT(
       "str q24, [x3, #0]\n"
       "add x3, x3, x4\n"
       RUY_MAKE_ZERO(v24)
@@ -399,6 +433,19 @@ void BinaryKernelNeonOutOfOrder4x4(const BinaryKernelParams<4, 4>& params) {
       "str q27, [x3, #0]\n"
       "add x3, x3, x4\n"
       RUY_MAKE_ZERO(v27)
+,
+      "str s24, [x3]\n"
+      "add x3, x3, x4\n"
+      "str s25, [x3]\n"
+      "add x3, x3, x4\n"
+      "str s26, [x3]\n"
+      "add x3, x3, x4\n"
+      "str s27, [x3]\n"
+      RUY_MAKE_ZERO(v24)
+      RUY_MAKE_ZERO(v25)
+      RUY_MAKE_ZERO(v26)
+      RUY_MAKE_ZERO(v27)
+)
 
       // If all of the 4x4 block fits, we just finished writing it to the
       // destination, so we skip the next part.
@@ -412,18 +459,31 @@ void BinaryKernelNeonOutOfOrder4x4(const BinaryKernelParams<4, 4>& params) {
       "50:\n"
       "mov w15, #0\n"
       "51:\n"
+IF_FLOAT_ELIF_INT8_OUTPUT(
       "ldr w13, [x3, x15, lsl #2]\n"
       "str w13, [x4, x15, lsl #2]\n"
+,
+      "ldrb w13, [x3, x15]\n"
+      "strb w13, [x4, x15]\n"
+)
       "add w15, w15, #1\n"
       "cmp w15, w1\n"
       "blt 51b\n"
       "add w14, w14, #1\n"
+IF_FLOAT_ELIF_INT8_OUTPUT(
       "add x3, x3, #16\n"
+,
+      "add x3, x3, #4\n"
+)
       "add x4, x4, x11\n"
       "cmp w14, w2\n"
       "blt 50b\n"
       "41:\n"
+IF_FLOAT_ELIF_INT8_OUTPUT(
       "add %[dst_ptr], %[dst_ptr], #16\n"
+,
+      "add %[dst_ptr], %[dst_ptr], #4\n"
+)
 
       // At this point we have completely finished writing values to the
       // destination matrix for the current block.
@@ -460,7 +520,9 @@ void BinaryKernelNeonOutOfOrder4x4(const BinaryKernelParams<4, 4>& params) {
         [lhs_ptr] "+r"(lhs_ptr), [rhs_ptr] "+r"(rhs_ptr),
         [dst_col_ptr] "+r"(dst_col_ptr), [dst_ptr] "+r"(dst_ptr), [row] "+r"(row), [col] "+r"(col)
       : [params] "r"(&params), [dst_rows] "r"(params.dst_rows),
-        [dst_cols] "r"(params.dst_cols), [dst_tmp_buf] "r"(params.dst_tmp_buf)
+        [dst_cols] "r"(params.dst_cols), [dst_tmp_buf] "r"(params.dst_tmp_buf),
+        [float_output]"i"(std::is_same<DstScalar, float>::value),
+        [int8_output]"i"(std::is_same<DstScalar, std::int8_t>::value)
       : "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "cc",
         "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12",
         "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25",
@@ -636,7 +698,9 @@ void BinaryKernelNeonOutOfOrder4x4(const BinaryKernelParams<4, 4>& params) {
 
 // clang-format on
 
-void BinaryKernelNeonOutOfOrder8x4(const BinaryKernelParams<8, 4>& params) {
+template <typename DstScalar>
+void BinaryKernelNeonOutOfOrder8x4(
+    const BinaryKernelParams<DstScalar, 8, 4>& params) {
   CheckOffsetsInKernelParams(params);
   ruy::profiler::ScopeLabel label(
       "Binary Kernel (8x4) (kNeon, optimized for out-of-order cores)");
@@ -650,13 +714,20 @@ void BinaryKernelNeonOutOfOrder8x4(const BinaryKernelParams<8, 4>& params) {
   TBitpacked* lhs_ptr = lhs_col_ptr;
   TBitpacked* rhs_ptr = rhs_col_ptr;
 
-  float* dst_col_ptr = params.dst_base_ptr;
-  float* dst_ptr = dst_col_ptr;
+  DstScalar* dst_col_ptr = params.dst_base_ptr;
+  DstScalar* dst_ptr = dst_col_ptr;
   int row = params.start_row;
   int col = params.start_col;
 
   asm volatile(
 #define RUY_MAKE_ZERO(reg) "dup " #reg ".4s, wzr\n"
+
+#define IF_FLOAT_OUTPUT(a) ".if %c[float_output]\n" a ".endif\n"
+
+#define IF_INT8_OUTPUT(a) ".if %c[int8_output]\n" a ".endif\n"
+
+#define IF_FLOAT_ELIF_INT8_OUTPUT(a, b) \
+  ".if %c[float_output]\n" a ".elseif %c[int8_output]\n" b ".endif\n"
 
       // clang-format off
 
@@ -837,6 +908,34 @@ void BinaryKernelNeonOutOfOrder8x4(const BinaryKernelParams<8, 4>& params) {
       "fadd v26.4s, v26.4s, v30.4s\n"
       "fadd v27.4s, v27.4s, v31.4s\n"
 
+IF_INT8_OUTPUT(
+      // Convert to int32, rounding to nearest with ties to even.
+      "fcvtns v20.4s, v20.4s\n"
+      "fcvtns v21.4s, v21.4s\n"
+      "fcvtns v22.4s, v22.4s\n"
+      "fcvtns v23.4s, v23.4s\n"
+      "fcvtns v24.4s, v24.4s\n"
+      "fcvtns v25.4s, v25.4s\n"
+      "fcvtns v26.4s, v26.4s\n"
+      "fcvtns v27.4s, v27.4s\n"
+
+      // Narrow to int16 with "signed saturating extract narrow" instructions.
+      "sqxtn v28.4h, v20.4s\n"
+      "sqxtn2 v28.8h, v21.4s\n"
+      "sqxtn v29.4h, v22.4s\n"
+      "sqxtn2 v29.8h, v23.4s\n"
+      "sqxtn v30.4h, v24.4s\n"
+      "sqxtn2 v30.8h, v25.4s\n"
+      "sqxtn v31.4h, v26.4s\n"
+      "sqxtn2 v31.8h, v27.4s\n"
+
+      // Narrow to int8.
+      "sqxtn v20.8b, v28.8h\n"
+      "sqxtn v21.8b, v29.8h\n"
+      "sqxtn v22.8b, v30.8h\n"
+      "sqxtn v23.8b, v31.8h\n"
+)
+
       // Compute how much of the 8x4 block of destination values that we have
       // computed fits in the destination matrix. Typically, all of it fits, but
       // when the destination matrix shape is not a multiple of 8x4 there are
@@ -860,7 +959,11 @@ void BinaryKernelNeonOutOfOrder8x4(const BinaryKernelParams<8, 4>& params) {
       // Not all of the 8x4 block fits.
       // Set (x3 address, x4 stride) to write to `dst_tmp_buf`.
       "mov x3, %[dst_tmp_buf]\n"
+IF_FLOAT_ELIF_INT8_OUTPUT(
       "mov x4, #32\n"
+,
+      "mov x4, #8\n"
+)
       "b 31f\n"
       "30:\n"
       // Yes, all of the 8x4 block fits.
@@ -871,6 +974,7 @@ void BinaryKernelNeonOutOfOrder8x4(const BinaryKernelParams<8, 4>& params) {
 
       // Write our values to the destination described by
       // (x3 address, x4 stride).
+IF_FLOAT_ELIF_INT8_OUTPUT(
       "str q20, [x3]\n"
       "str q21, [x3, #16]\n"
       "add x3, x3, x4\n"
@@ -886,6 +990,19 @@ void BinaryKernelNeonOutOfOrder8x4(const BinaryKernelParams<8, 4>& params) {
       "str q27, [x3, #16]\n"
       RUY_MAKE_ZERO(v26)
       RUY_MAKE_ZERO(v27)
+,
+      "str d20, [x3]\n"
+      "add x3, x3, x4\n"
+      "str d21, [x3]\n"
+      "add x3, x3, x4\n"
+      "str d22, [x3]\n"
+      "add x3, x3, x4\n"
+      "str d23, [x3]\n"
+      RUY_MAKE_ZERO(v24)
+      RUY_MAKE_ZERO(v25)
+      RUY_MAKE_ZERO(v26)
+      RUY_MAKE_ZERO(v27)
+)
 
       // If all of the 8x4 block fits, we just finished writing it to the
       // destination, so we skip the next part.
@@ -899,18 +1016,31 @@ void BinaryKernelNeonOutOfOrder8x4(const BinaryKernelParams<8, 4>& params) {
       "50:\n"
       "mov w15, #0\n"
       "51:\n"
+IF_FLOAT_ELIF_INT8_OUTPUT(
       "ldr w13, [x3, x15, lsl #2]\n"
       "str w13, [x4, x15, lsl #2]\n"
+,
+      "ldrb w13, [x3, x15]\n"
+      "strb w13, [x4, x15]\n"
+)
       "add w15, w15, #1\n"
       "cmp w15, w1\n"
       "blt 51b\n"
       "add w14, w14, #1\n"
+IF_FLOAT_ELIF_INT8_OUTPUT(
       "add x3, x3, #32\n"
+,
+      "add x3, x3, #8\n"
+)
       "add x4, x4, x11\n"
       "cmp w14, w2\n"
       "blt 50b\n"
       "41:\n"
+IF_FLOAT_ELIF_INT8_OUTPUT(
       "add %[dst_ptr], %[dst_ptr], #32\n"
+,
+      "add %[dst_ptr], %[dst_ptr], #8\n"
+)
 
       // At this point we have completely finished writing values to the
       // destination matrix for the current block.
@@ -946,7 +1076,9 @@ void BinaryKernelNeonOutOfOrder8x4(const BinaryKernelParams<8, 4>& params) {
         [lhs_ptr] "+r"(lhs_ptr), [rhs_ptr] "+r"(rhs_ptr),
         [dst_col_ptr] "+r"(dst_col_ptr), [dst_ptr] "+r"(dst_ptr), [row] "+r"(row), [col] "+r"(col)
       : [params] "r"(&params), [dst_rows] "r"(params.dst_rows),
-        [dst_cols] "r"(params.dst_cols), [dst_tmp_buf] "r"(params.dst_tmp_buf)
+        [dst_cols] "r"(params.dst_cols), [dst_tmp_buf] "r"(params.dst_tmp_buf),
+        [float_output]"i"(std::is_same<DstScalar, float>::value),
+        [int8_output]"i"(std::is_same<DstScalar, std::int8_t>::value)
       : "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "cc",
         "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12",
         "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25",

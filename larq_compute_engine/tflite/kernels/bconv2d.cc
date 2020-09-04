@@ -423,7 +423,9 @@ inline TfLiteStatus EvalChooseKernelType(TfLiteContext* context,
     // there would need to be > 7000 input channels to present an overflow risk.
     const int depth =
         params->filter_height * params->filter_width * params->channels_in;
-    if (std::is_same<DstScalar, float>::value && depth + 512 < 1 << 16) {
+    if ((std::is_same<DstScalar, float>::value ||
+         std::is_same<DstScalar, std::int8_t>::value) &&
+        depth + 512 < 1 << 16) {
       EvalOpt<std::int16_t, DstScalar>(context, node, params);
       return kTfLiteOk;
     }

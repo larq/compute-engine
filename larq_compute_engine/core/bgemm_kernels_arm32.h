@@ -122,7 +122,9 @@ void CheckOffsetsInKernelParams(const Params&) {
 
 // clang-format on
 
-void BinaryKernelNeonOutOfOrder4x4(BinaryKernelParams<4, 4>& params) {
+template <typename DstScalar>
+void BinaryKernelNeonOutOfOrder4x4(
+    BinaryKernelParams<DstScalar, 4, 4>& params) {
   CheckOffsetsInKernelParams(params);
   ruy::profiler::ScopeLabel label(
       "Binary Kernel (4x4) (kNeon, optimized for out-of-order cores)");
@@ -136,13 +138,20 @@ void BinaryKernelNeonOutOfOrder4x4(BinaryKernelParams<4, 4>& params) {
   TBitpacked* lhs_ptr = lhs_col_ptr;
   TBitpacked* rhs_ptr = rhs_col_ptr;
 
-  float* dst_col_ptr = params.dst_base_ptr;
-  float* dst_ptr = dst_col_ptr;
+  DstScalar* dst_col_ptr = params.dst_base_ptr;
+  DstScalar* dst_ptr = dst_col_ptr;
   int row = params.start_row;
   int col = params.start_col;
 
   asm volatile(
 #define RUY_MAKE_ZERO(reg) "vmov.i32 " #reg ", #0\n"
+
+#define IF_FLOAT_OUTPUT(a) ".if %c[float_output]\n" a ".endif\n"
+
+#define IF_INT8_OUTPUT(a) ".if %c[int8_output]\n" a ".endif\n"
+
+#define IF_FLOAT_ELIF_INT8_OUTPUT(a, b) \
+  ".if %c[float_output]\n" a ".elseif %c[int8_output]\n" b ".endif\n"
 
       "sub sp, sp, #" RUY_STR(RUY_STACK_OFFSET_SIZE) "\n"
       // auto dst_col_ptr = params.dst_base_ptr;
@@ -341,6 +350,34 @@ void BinaryKernelNeonOutOfOrder4x4(BinaryKernelParams<4, 4>& params) {
       "vadd.f32 q10, q10, q15\n"
       "vadd.f32 q11, q11, q15\n"
 
+IF_INT8_OUTPUT(
+      // Convert to signed integer, rounding to nearest.
+      //     Arm32 NEON has an instruction (vcvtr) to convert from float->int
+      // with rounding-to-nearest behaviour, but for some reason when used here
+      // truncation (rounding-to-zero) behaviour was observed instead. It's
+      // unclear what the issue is - perhaps QEMU doesn't correctly emulate the
+      // rounding behaviour?
+      //     The work-around is to first convert from float to fixed-point (24
+      // integer bits, 8 fractional bits)...
+      "vcvt.s32.f32 q8, q8, #8\n"
+      "vcvt.s32.f32 q9, q9, #8\n"
+      "vcvt.s32.f32 q10, q10, #8\n"
+      "vcvt.s32.f32 q11, q11, #8\n"
+      // ...and then use "vector saturating shift right and narrow, by immediate
+      // value, with rounding" instructions to round to the nearest integer and
+      // simultaneously narrow the result to int16.
+      "vqrshrn.s32 d16, q8, #8\n"
+      "vqrshrn.s32 d18, q9, #8\n"
+      "vqrshrn.s32 d20, q10, #8\n"
+      "vqrshrn.s32 d22, q11, #8\n"
+
+      // Narrow to int8 with "signed saturating extract narrow" instructions.
+      "vqmovn.s16 d16, q8\n"
+      "vqmovn.s16 d18, q9\n"
+      "vqmovn.s16 d20, q10\n"
+      "vqmovn.s16 d22, q11\n"
+)
+
       // Done post-accumuation transformation.
 
       // Compute how much of the 4x4 block of destination values that
@@ -379,7 +416,11 @@ void BinaryKernelNeonOutOfOrder4x4(BinaryKernelParams<4, 4>& params) {
       // Not all of the 4x4 block fits.
       // Set (r3 address, r4 stride) to write to dst_tmp_buf
       "mov r3, %[dst_tmp_buf]\n"
+IF_FLOAT_ELIF_INT8_OUTPUT(
       "mov r4, #16\n"
+,
+      "mov r4, #4\n"
+)
       "b 31f\n"
       "30:\n"
       // Yes, all of the 4x4 block fits.
@@ -390,18 +431,25 @@ void BinaryKernelNeonOutOfOrder4x4(BinaryKernelParams<4, 4>& params) {
 
       // Write our values to the destination described by
       // (x3 address, x4 stride).
-      "vst1.32 {d16, d17}, [r3]\n"
-      "add r3, r3, r4\n"
-      "vst1.32 {d18, d19}, [r3]\n"
-      "add r3, r3, r4\n"
+IF_FLOAT_ELIF_INT8_OUTPUT(
+      "vst1.32 {d16, d17}, [r3], r4\n"
+      "vst1.32 {d18, d19}, [r3], r4\n"
       RUY_MAKE_ZERO(q8)
       RUY_MAKE_ZERO(q9)
-      "vst1.32 {d20, d21}, [r3]\n"
-      "add r3, r3, r4\n"
+      "vst1.32 {d20, d21}, [r3], r4\n"
       "vst1.32 {d22, d23}, [r3]\n"
-      "add r3, r3, r4\n"
       RUY_MAKE_ZERO(q10)
       RUY_MAKE_ZERO(q11)
+,
+      "vst1.32 {d16[0]}, [r3], r4\n"
+      "vst1.32 {d18[0]}, [r3], r4\n"
+      RUY_MAKE_ZERO(q8)
+      RUY_MAKE_ZERO(q9)
+      "vst1.32 {d20[0]}, [r3], r4\n"
+      "vst1.32 {d22[0]}, [r3]\n"
+      RUY_MAKE_ZERO(q10)
+      RUY_MAKE_ZERO(q11)
+)
 
       // If all of the 4x4 block fits, we just finished writing it to the
       // destination, so we skip the next part.
@@ -418,19 +466,32 @@ void BinaryKernelNeonOutOfOrder4x4(BinaryKernelParams<4, 4>& params) {
       "mov r5, #0\n"
       "51:\n"
 
+IF_FLOAT_ELIF_INT8_OUTPUT(
       "ldr r10, [r3, r5, lsl #2]\n"
       "str r10, [r4, r5, lsl #2]\n"
+,
+      "ldrb r10, [r3, r5]\n"
+      "strb r10, [r4, r5]\n"
+)
       "add r5, r5, #1\n"
       "cmp r5, r1\n"
       "blt 51b\n"
       "add r6, r6, #1\n"
+IF_FLOAT_ELIF_INT8_OUTPUT(
       "add r3, r3, #16\n"
+,
+      "add r3, r3, #4\n"
+)
       "add r4, r4, r8\n"
       "cmp r6, r2\n"
       "blt 50b\n"
       "41:\n"
       "ldr r4, [sp, #" RUY_STR(RUY_STACK_OFFSET_DST_PTR) "]\n"
+IF_FLOAT_ELIF_INT8_OUTPUT(
       "add r4, r4, #16\n"
+,
+      "add r4, r4, #4\n"
+)
       "str r4, [sp, #" RUY_STR(RUY_STACK_OFFSET_DST_PTR) "]\n"
 
       // At this point we have completely finished writing values to the
@@ -490,7 +551,9 @@ void BinaryKernelNeonOutOfOrder4x4(BinaryKernelParams<4, 4>& params) {
 
       // clang-format on
       : [lhs_ptr] "+r"(lhs_ptr), [rhs_ptr] "+r"(rhs_ptr)
-      : [ params ] "r"(&params), [dst_tmp_buf] "r"(params.dst_tmp_buf)
+      : [ params ] "r"(&params), [dst_tmp_buf] "r"(params.dst_tmp_buf),
+        [float_output]"i"(std::is_same<DstScalar, float>::value),
+        [int8_output]"i"(std::is_same<DstScalar, std::int8_t>::value)
       : "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "cc",
         "memory", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12",
         "q13", "q14", "q15" );
