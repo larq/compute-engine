@@ -310,20 +310,15 @@ void BinaryKernelNeonOutOfOrder4x4(const BinaryKernelParams<4, 4>& params) {
       "ld1 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[lhs_ptr]], #64\n"
       "ld1 {v4.4s, v5.4s, v6.4s, v7.4s}, [%[rhs_ptr]], #64\n"
 
-      // Perform the backtransformation (in int32)
+      // Load the clamp_max bound (in parallel with the shift)
+      "ldr w2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
+      "dup v12.4s, w2\n"  // clamp_min
+
+      // Perform the backtransformation shift (in int32)
       "shl v24.4s, v24.4s, #1\n"
       "shl v25.4s, v25.4s, #1\n"
       "shl v26.4s, v26.4s, #1\n"
       "shl v27.4s, v27.4s, #1\n"
-
-      // Load the clamp_max bound (in parallel with the sub)
-      "ldr w2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
-      "dup v12.4s, w2\n"  // clamp_min
-
-      "sub v24.4s, v13.4s, v24.4s\n"
-      "sub v25.4s, v13.4s, v25.4s\n"
-      "sub v26.4s, v13.4s, v26.4s\n"
-      "sub v27.4s, v13.4s, v27.4s\n"
 
       // Load the clamp_max bound (in parallel with the clamp_min)
       "ldr w3, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MAX) "]\n"

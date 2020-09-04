@@ -362,7 +362,8 @@ using ::testing::ElementsAreArray;
 void test_lce_op_output(const std::vector<TBitpacked>& lce_output_data,
                         const std::vector<int>& builtin_output_shape,
                         const std::vector<float>& builtin_output_data,
-                        std::int32_t zero_point, float scale) {
+                        std::int32_t zero_point, float scale,
+                        bool high_error_tolerance = false /* ignored */) {
   // Apply bitpacking to the builtin output.
   RuntimeShape out_shape;
   out_shape.BuildFrom(builtin_output_shape);
@@ -383,16 +384,20 @@ void test_lce_op_output(const std::vector<TBitpacked>& lce_output_data,
 void test_lce_op_output(const std::vector<float>& lce_output_data,
                         const std::vector<int>& builtin_output_shape,
                         const std::vector<float>& builtin_output_data,
-                        std::int32_t zero_point, float scale) {
-  EXPECT_THAT(lce_output_data, ::testing::Pointwise(::testing::FloatNear(1e-3),
-                                                    builtin_output_data));
+                        std::int32_t zero_point, float scale,
+                        bool high_error_tolerance = false) {
+  const float tolerance = high_error_tolerance ? 1e-2 : 1e-3;
+  EXPECT_THAT(lce_output_data,
+              ::testing::Pointwise(::testing::FloatNear(tolerance),
+                                   builtin_output_data));
 }
 
 // Output test for int8 output (compared to builtin float output)
 void test_lce_op_output(const std::vector<std::int8_t>& lce_output_data,
                         const std::vector<int>& builtin_output_shape,
                         const std::vector<float>& builtin_output_data,
-                        std::int32_t zero_point, float scale) {
+                        std::int32_t zero_point, float scale,
+                        bool high_error_tolerance = false /* ignored */) {
   // Convert builtin float output to int8, but leave it unrounded.
   // This way, we can spot rounding errors in our int8 implementation.
   std::vector<float> unrounded_builtin_output(builtin_output_data.size());
@@ -653,9 +658,11 @@ void runTest(const TestParam& param) {
 
   // Invoke the op and test that the output is correct.
   m_lce.Invoke();
+  const bool use_high_error_tolerance =
+      filter_height * filter_width * input_depth > 1 << 12;
   test_lce_op_output(m_lce.GetOutput(), m_builtin.GetOutputShape(),
                      builtin_output, output_tensor.zero_point,
-                     output_tensor.scale);
+                     output_tensor.scale, use_high_error_tolerance);
 }
 
 TEST_P(BConv2DOpTest, BitpackedOutput) {
@@ -688,15 +695,15 @@ INSTANTIATE_TEST_SUITE_P(
         ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
     TestParam::TestNameSuffix);
 
-#if RUY_PLATFORM_ARM_64
-// Separately, for 64-bit optimised kernels only, test a very large input
-// channel and filter size combination that would overflow 16-bit accumulators
-// (to check that we successfully fall back to the 32-bit accumulator kernels).
+// Separately, for optimised kernels only, test a very large input channel and
+// filter size combination that would overflow 16-bit accumulators (to check
+// that we successfully fall back to the 32-bit accumulator kernels if
+// necessary).
 INSTANTIATE_TEST_SUITE_P(
     OptimizedKernel16BitOverflowTest, BConv2DOpTest,
     ::testing::Combine(
-        Values(std::array<int, 4>{1, 8, 8, 2048}),  // input shape [BHWI]
-        Values(std::array<int, 3>{7, 7, 4}),        // filter shape [HWO]
+        Values(std::array<int, 4>{1, 6, 6, 3072}),  // input shape [BHWI]
+        Values(std::array<int, 3>{5, 5, 4}),        // filter shape [HWO]
         Values(std::array<int, 2>{1, 1}),           // strides height/width
         Values(std::array<int, 2>{1, 1}),           // dilation height/width
         Values(Padding_VALID, Padding_ONE),         // padding
@@ -706,7 +713,6 @@ INSTANTIATE_TEST_SUITE_P(
         Values(std::pair<std::string, register_function>{
             "BConv2DOPT", compute_engine::tflite::Register_BCONV_2D_OPT})),
     TestParam::TestNameSuffix);
-#endif
 
 // The BigTest suite will be skipped in the qemu CI runs as they take more than
 // an hour.
