@@ -1,5 +1,5 @@
-#ifndef COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_ARM32_H_
-#define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_ARM32_H_
+#ifndef COMPUTE_ENGINE_CORE_BGEMM_KERNELS_ARM32_H_
+#define COMPUTE_ENGINE_CORE_BGEMM_KERNELS_ARM32_H_
 
 #include <cstdint>
 
@@ -13,45 +13,23 @@ using compute_engine::core::TBitpacked;
 
 #if RUY_PLATFORM_NEON && RUY_OPT(ASM) && RUY_PLATFORM_NEON_32
 
-// clang-format off
-
-#define LCE_BMLA(Vd, Vr, Vl0, Vl1, Vl2, Vl3) \
-  "veor.s8 q12, " #Vr", " #Vl0 "\n"    \
-  "veor.s8 q13, " #Vr", " #Vl1 "\n"    \
-  "veor.s8 q14, " #Vr", " #Vl2 "\n"    \
-  "veor.s8 q15, " #Vr", " #Vl3 "\n"    \
-  "vcnt.s8 q12, q12\n"                 \
-  "vcnt.s8 q13, q13\n"                 \
-  "vcnt.s8 q14, q14\n"                 \
-  "vcnt.s8 q15, q15\n"                 \
-  "vpadd.i8 d24, d24, d25\n"           \
-  "vpadd.i8 d25, d26, d27\n"           \
-  "vpadd.i8 d28, d28, d29\n"           \
-  "vpadd.i8 d29, d30, d31\n"           \
-  "vpadd.i8 d24, d24, d25\n"           \
-  "vpadd.i8 d25, d28, d29\n"           \
-  "vpaddl.u8 q12, q12\n"               \
-  "vpadal.u16 " #Vd" , q12\n"
-
-// clang-format on
-
 #define RUY_OFFSET_LHS_BASE_PTR 0
 #define RUY_OFFSET_RHS_BASE_PTR 4
 #define RUY_OFFSET_DST_BASE_PTR 8
-#define RUY_OFFSET_POST_ACTIVATION_MULTIPLIER 12
-#define RUY_OFFSET_POST_ACTIVATION_BIAS 16
-#define RUY_OFFSET_START_ROW 20
-#define RUY_OFFSET_START_COL 24
-#define RUY_OFFSET_LAST_ROW 28
-#define RUY_OFFSET_LAST_COL 32
-#define RUY_OFFSET_DST_ROWS 36
-#define RUY_OFFSET_DST_COLS 40
-#define RUY_OFFSET_LHS_STRIDE 44
-#define RUY_OFFSET_RHS_STRIDE 48
-#define RUY_OFFSET_DST_STRIDE 52
-#define RUY_OFFSET_DEPTH 56
-#define RUY_OFFSET_CLAMP_MIN 60
-#define RUY_OFFSET_CLAMP_MAX 64
+#define RUY_OFFSET_START_ROW 12
+#define RUY_OFFSET_START_COL 16
+#define RUY_OFFSET_LAST_ROW 20
+#define RUY_OFFSET_LAST_COL 24
+#define RUY_OFFSET_DST_ROWS 28
+#define RUY_OFFSET_DST_COLS 32
+#define RUY_OFFSET_LHS_STRIDE 36
+#define RUY_OFFSET_RHS_STRIDE 40
+#define RUY_OFFSET_DST_STRIDE 44
+#define RUY_OFFSET_DEPTH 48
+#define RUY_OFFSET_OUTPUT_TRANSFORM_CLAMP_MIN 52
+#define RUY_OFFSET_OUTPUT_TRANSFORM_CLAMP_MAX 56
+#define RUY_OFFSET_OUTPUT_TRANSFORM_MULTIPLIER 60
+#define RUY_OFFSET_OUTPUT_TRANSFORM_BIAS 64
 
 #define RUY_STACK_OFFSET_SIZE 96
 #define RUY_STACK_OFFSET_DST_COL_PTR 0
@@ -66,12 +44,6 @@ void CheckOffsetsInKernelParams(const Params&) {
   static_assert(offsetof(Params, lhs_base_ptr) == RUY_OFFSET_LHS_BASE_PTR, "");
   static_assert(offsetof(Params, rhs_base_ptr) == RUY_OFFSET_RHS_BASE_PTR, "");
   static_assert(offsetof(Params, dst_base_ptr) == RUY_OFFSET_DST_BASE_PTR, "");
-  static_assert(offsetof(Params, post_activation_multiplier) ==
-                    RUY_OFFSET_POST_ACTIVATION_MULTIPLIER,
-                "");
-  static_assert(
-      offsetof(Params, post_activation_bias) == RUY_OFFSET_POST_ACTIVATION_BIAS,
-      "");
   static_assert(offsetof(Params, start_row) == RUY_OFFSET_START_ROW, "");
   static_assert(offsetof(Params, start_col) == RUY_OFFSET_START_COL, "");
   static_assert(offsetof(Params, last_row) == RUY_OFFSET_LAST_ROW, "");
@@ -80,9 +52,69 @@ void CheckOffsetsInKernelParams(const Params&) {
   static_assert(offsetof(Params, rhs_stride) == RUY_OFFSET_RHS_STRIDE, "");
   static_assert(offsetof(Params, dst_stride) == RUY_OFFSET_DST_STRIDE, "");
   static_assert(offsetof(Params, depth) == RUY_OFFSET_DEPTH, "");
-  static_assert(offsetof(Params, clamp_min) == RUY_OFFSET_CLAMP_MIN, "");
-  static_assert(offsetof(Params, clamp_max) == RUY_OFFSET_CLAMP_MAX, "");
+
+  const std::size_t OT_OFFSET = offsetof(Params, output_transform);
+
+  // For float output
+  static_assert(OT_OFFSET + offsetof(OutputTransform<float>, clamp_min) ==
+                    RUY_OFFSET_OUTPUT_TRANSFORM_CLAMP_MIN,
+                "");
+  static_assert(OT_OFFSET + offsetof(OutputTransform<float>, clamp_max) ==
+                    RUY_OFFSET_OUTPUT_TRANSFORM_CLAMP_MAX,
+                "");
+  static_assert(OT_OFFSET + offsetof(OutputTransform<float>, multiplier) ==
+                    RUY_OFFSET_OUTPUT_TRANSFORM_MULTIPLIER,
+                "");
+  static_assert(OT_OFFSET + offsetof(OutputTransform<float>, bias) ==
+                    RUY_OFFSET_OUTPUT_TRANSFORM_BIAS,
+                "");
+
+  // For int8 output
+  static_assert(OT_OFFSET + offsetof(OutputTransform<std::int8_t>, clamp_min) ==
+                    RUY_OFFSET_OUTPUT_TRANSFORM_CLAMP_MIN,
+                "");
+  static_assert(OT_OFFSET + offsetof(OutputTransform<std::int8_t>, clamp_max) ==
+                    RUY_OFFSET_OUTPUT_TRANSFORM_CLAMP_MAX,
+                "");
+  static_assert(
+      OT_OFFSET + offsetof(OutputTransform<std::int8_t>, multiplier) ==
+          RUY_OFFSET_OUTPUT_TRANSFORM_MULTIPLIER,
+      "");
+  static_assert(OT_OFFSET + offsetof(OutputTransform<std::int8_t>, bias) ==
+                    RUY_OFFSET_OUTPUT_TRANSFORM_BIAS,
+                "");
 }
+
+#define MAKE_ZERO(reg) "veor.s8 " #reg ", " #reg ", " #reg "\n"
+
+#define IF_FLOAT_OUTPUT(a) ".if %c[float_output]\n" a ".endif\n"
+
+#define IF_INT8_OUTPUT(a) ".if %c[int8_output]\n" a ".endif\n"
+
+#define IF_FLOAT_ELIF_INT8_OUTPUT(a, b) \
+  ".if %c[float_output]\n" a ".elseif %c[int8_output]\n" b ".endif\n"
+
+// clang-format off
+
+#define LCE_BMLA(Vd, Vr, Vl0, Vl1, Vl2, Vl3) \
+  "veor.s8 q12, " #Vr", " #Vl0 "\n"          \
+  "veor.s8 q13, " #Vr", " #Vl1 "\n"          \
+  "veor.s8 q14, " #Vr", " #Vl2 "\n"          \
+  "veor.s8 q15, " #Vr", " #Vl3 "\n"          \
+  "vcnt.s8 q12, q12\n"                       \
+  "vcnt.s8 q13, q13\n"                       \
+  "vcnt.s8 q14, q14\n"                       \
+  "vcnt.s8 q15, q15\n"                       \
+  "vpadd.i8 d24, d24, d25\n"                 \
+  "vpadd.i8 d25, d26, d27\n"                 \
+  "vpadd.i8 d28, d28, d29\n"                 \
+  "vpadd.i8 d29, d30, d31\n"                 \
+  "vpadd.i8 d24, d24, d25\n"                 \
+  "vpadd.i8 d25, d28, d29\n"                 \
+  "vpaddl.u8 q12, q12\n"                     \
+  "vpadal.u16 " #Vd" , q12\n"
+
+// clang-format on
 
 // This is a very naive and first attempt on using the SIMD registers for BGEMM.
 // The following optimizations still need to be implemented:
@@ -93,8 +125,6 @@ void CheckOffsetsInKernelParams(const Params&) {
 // registers in BMLA)
 // 2. taking advantage of out-of-order cpu by dual dispatching the load/compute
 // instructions
-
-// clang-format off
 
 // The asm kernel below has the following NEON register allocation:
 //
@@ -120,8 +150,6 @@ void CheckOffsetsInKernelParams(const Params&) {
 // No attempt had been made so far at implementing the RUY_OPT_MAX_STREAMING
 // optimization for this kernel.
 
-// clang-format on
-
 template <typename DstScalar>
 void BinaryKernelNeonOutOfOrder4x4(
     BinaryKernelParams<DstScalar, 4, 4>& params) {
@@ -144,15 +172,6 @@ void BinaryKernelNeonOutOfOrder4x4(
   int col = params.start_col;
 
   asm volatile(
-#define RUY_MAKE_ZERO(reg) "vmov.i32 " #reg ", #0\n"
-
-#define IF_FLOAT_OUTPUT(a) ".if %c[float_output]\n" a ".endif\n"
-
-#define IF_INT8_OUTPUT(a) ".if %c[int8_output]\n" a ".endif\n"
-
-#define IF_FLOAT_ELIF_INT8_OUTPUT(a, b) \
-  ".if %c[float_output]\n" a ".elseif %c[int8_output]\n" b ".endif\n"
-
       "sub sp, sp, #" RUY_STR(RUY_STACK_OFFSET_SIZE) "\n"
       // auto dst_col_ptr = params.dst_base_ptr;
       "ldr r1, [%[params], #" RUY_STR(RUY_OFFSET_DST_BASE_PTR) "]\n"
@@ -179,10 +198,10 @@ void BinaryKernelNeonOutOfOrder4x4(
       "str r2, [sp, #" RUY_STR(RUY_STACK_OFFSET_RHS_COL_PTR) "]\n"
 
       // Clear accumulators.
-      RUY_MAKE_ZERO(q8)
-      RUY_MAKE_ZERO(q9)
-      RUY_MAKE_ZERO(q10)
-      RUY_MAKE_ZERO(q11)
+      MAKE_ZERO(q8)
+      MAKE_ZERO(q9)
+      MAKE_ZERO(q10)
+      MAKE_ZERO(q11)
 
       // Load the first 64 bytes of LHS and RHS data.
       "vld1.32 {d0, d1, d2, d3}, [%[lhs_ptr]]!\n"
@@ -283,7 +302,7 @@ void BinaryKernelNeonOutOfOrder4x4(
       //
 
       // Load multiplication bias
-      "ldr r1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_MULTIPLIER) "]\n"
+      "ldr r1, [%[params], #" RUY_STR(RUY_OFFSET_OUTPUT_TRANSFORM_MULTIPLIER) "]\n"
       // Offset these base pointers as needed given the current row, col.
       "ldr r8, [sp, #" RUY_STR(RUY_STACK_OFFSET_ROW) "]\n"
       "add r1, r1, r8, lsl #2\n"
@@ -291,7 +310,7 @@ void BinaryKernelNeonOutOfOrder4x4(
       "vld1.32 {d28, d29}, [r1]!\n"
 
       // Load addition bias, r8 still holds "row offset"
-      "ldr r1, [%[params], #" RUY_STR(RUY_OFFSET_POST_ACTIVATION_BIAS) "]\n"
+      "ldr r1, [%[params], #" RUY_STR(RUY_OFFSET_OUTPUT_TRANSFORM_BIAS) "]\n"
       // Offset these base pointers as needed given the current row, col.
       "add r1, r1, r8, lsl #2\n"
       // Load 4 bias-addition values.
@@ -307,7 +326,7 @@ void BinaryKernelNeonOutOfOrder4x4(
       "vld1.32 {d12, d13, d14, d15}, [%[rhs_ptr]]!\n"
 
       // Load the clamp_max bound (in parallel with the shift)
-      "ldr r1, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MIN) "]\n"
+      "ldr r1, [%[params], #" RUY_STR(RUY_OFFSET_OUTPUT_TRANSFORM_CLAMP_MIN) "]\n"
       "vdup q12.32, r1 \n"  // clamp_min
 
       // Perform the backtransformation shift (in int32)
@@ -317,7 +336,7 @@ void BinaryKernelNeonOutOfOrder4x4(
       "vshl q11.s32, q11.s32, #1\n"
 
       // Load the clamp_max bound (in parallel with the clamp_min)
-      "ldr r2, [%[params], #" RUY_STR(RUY_OFFSET_CLAMP_MAX) "]\n"
+      "ldr r2, [%[params], #" RUY_STR(RUY_OFFSET_OUTPUT_TRANSFORM_CLAMP_MAX) "]\n"
       "vdup q13.32, r2\n"  // clamp_max
 
       // Perform the activation function, by clamping
@@ -434,21 +453,21 @@ IF_FLOAT_ELIF_INT8_OUTPUT(
 IF_FLOAT_ELIF_INT8_OUTPUT(
       "vst1.32 {d16, d17}, [r3], r4\n"
       "vst1.32 {d18, d19}, [r3], r4\n"
-      RUY_MAKE_ZERO(q8)
-      RUY_MAKE_ZERO(q9)
+      MAKE_ZERO(q8)
+      MAKE_ZERO(q9)
       "vst1.32 {d20, d21}, [r3], r4\n"
       "vst1.32 {d22, d23}, [r3]\n"
-      RUY_MAKE_ZERO(q10)
-      RUY_MAKE_ZERO(q11)
+      MAKE_ZERO(q10)
+      MAKE_ZERO(q11)
 ,
       "vst1.32 {d16[0]}, [r3], r4\n"
       "vst1.32 {d18[0]}, [r3], r4\n"
-      RUY_MAKE_ZERO(q8)
-      RUY_MAKE_ZERO(q9)
+      MAKE_ZERO(q8)
+      MAKE_ZERO(q9)
       "vst1.32 {d20[0]}, [r3], r4\n"
       "vst1.32 {d22[0]}, [r3]\n"
-      RUY_MAKE_ZERO(q10)
-      RUY_MAKE_ZERO(q11)
+      MAKE_ZERO(q10)
+      MAKE_ZERO(q11)
 )
 
       // If all of the 4x4 block fits, we just finished writing it to the
@@ -549,7 +568,6 @@ IF_FLOAT_ELIF_INT8_OUTPUT(
 
       "add sp, sp, #" RUY_STR(RUY_STACK_OFFSET_SIZE) "\n"
 
-      // clang-format on
       : [lhs_ptr] "+r"(lhs_ptr), [rhs_ptr] "+r"(rhs_ptr)
       : [ params ] "r"(&params), [dst_tmp_buf] "r"(params.dst_tmp_buf),
         [float_output]"i"(std::is_same<DstScalar, float>::value),
@@ -559,7 +577,11 @@ IF_FLOAT_ELIF_INT8_OUTPUT(
         "q13", "q14", "q15" );
 }
 
-#undef RUY_MAKE_ZERO
+#undef MAKE_ZERO
+#undef IF_FLOAT_OUTPUT
+#undef IF_INT8_OUTPUT
+#undef IF_FLOAT_ELIF_INT8_OUTPUT
+
 #undef RUY_STACK_OFFSET_SIZE
 #undef RUY_STACK_OFFSET_DST_COL_PTR
 #undef RUY_STACK_OFFSET_DST_PTR
@@ -571,8 +593,6 @@ IF_FLOAT_ELIF_INT8_OUTPUT(
 #undef RUY_OFFSET_LHS_BASE_PTR
 #undef RUY_OFFSET_RHS_BASE_PTR
 #undef RUY_OFFSET_DST_BASE_PTR
-#undef RUY_OFFSET_POST_ACTIVATION_MULTIPLIER
-#undef RUY_OFFSET_POST_ACTIVATION_BIAS
 #undef RUY_OFFSET_START_ROW
 #undef RUY_OFFSET_START_COL
 #undef RUY_OFFSET_LAST_ROW
@@ -583,8 +603,10 @@ IF_FLOAT_ELIF_INT8_OUTPUT(
 #undef RUY_OFFSET_RHS_STRIDE
 #undef RUY_OFFSET_DST_STRIDE
 #undef RUY_OFFSET_DEPTH
-#undef RUY_OFFSET_CLAMP_MIN
-#undef RUY_OFFSET_CLAMP_MAX
+#undef RUY_OFFSET_OUTPUT_TRANSFORM_MULTIPLIER
+#undef RUY_OFFSET_OUTPUT_TRANSFORM_BIAS
+#undef RUY_OFFSET_OUTPUT_TRANSFORM_CLAMP_MIN
+#undef RUY_OFFSET_OUTPUT_TRANSFORM_CLAMP_MAX
 
 #endif  // RUY_PLATFORM_NEON && RUY_OPT(ASM) && RUY_PLATFORM_NEON_32
-#endif  // COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_ARM32_H_
+#endif  // COMPUTE_ENGINE_CORE_BGEMM_KERNELS_ARM32_H_

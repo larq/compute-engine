@@ -123,6 +123,19 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   im2col(params, input_shape, input_data, filter_shape, output_shape,
          im2col_shape, im2col_data, result_shape, &rhs_data);
 
+  // If writing bitpacked output with a channel count that isn't a multiple of
+  // 32 (i.e. where padding bits will be required in the output), fill the
+  // output tensor with zeroes in advance so that the BGEMM doesn't have to
+  // worry about doing the padding.
+  if (std::is_same<DstScalar, TBitpacked>::value &&
+      output_shape.Dims(3) % 32 != 0) {
+    std::fill(
+        output_data,
+        output_data + FlatSizeSkipDim(output_shape, 3) *
+                          ce::core::GetBitpackedSize(output_shape.Dims(3)),
+        TBitpacked(0));
+  }
+
   k = result_shape.Dims(3);
   m = FlatSizeSkipDim(result_shape, 3);
 

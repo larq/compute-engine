@@ -21,20 +21,6 @@ using compute_engine::core::TBitpacked;
 
 #if RUY_PLATFORM_NEON
 
-// Generic kNeon template when no types are specified
-template <typename DstScalar, typename MulParamsType>
-struct BgemmKernel<ruy::Path::kNeon, DstScalar, MulParamsType> {
-  ruy::Tuning tuning = Tuning::kAuto;
-  using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
-  using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
-  explicit BgemmKernel(ruy::Tuning tuning_) : tuning(tuning_) {}
-  void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
-           const MulParamsType& mul_params, int start_row, int start_col,
-           int end_row, int end_col, ruy::Mat<DstScalar>* dst) const {
-    TFLITE_DCHECK(false);
-  }
-};
-
 // Generic kNeonDotprod template
 template <typename DstScalar, typename MulParamsType>
 struct BgemmKernel<ruy::Path::kNeonDotprod, DstScalar, MulParamsType> {
@@ -53,40 +39,23 @@ struct BgemmKernel<ruy::Path::kNeonDotprod, DstScalar, MulParamsType> {
 // A BGEMM kernel for ARM32 Neon.
 #include "bgemm_kernels_arm32.h"
 
-// Optimised Arm32 kernel for float output
-template <>
-struct BgemmKernel<ruy::Path::kNeon, float,
-                   BinaryMulParams<std::int32_t, float>> {
+// Optimised Arm32 kernel. Supports float or int8 output.
+template <typename DstScalar>
+struct BgemmKernel<ruy::Path::kNeon, DstScalar,
+                   BinaryMulParams<std::int32_t, DstScalar>> {
   Tuning tuning = Tuning::kAuto;
   using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
   using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
   explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
-           const BinaryMulParams<std::int32_t, float>& mul_params,
+           const BinaryMulParams<std::int32_t, DstScalar>& mul_params,
            int start_row, int start_col, int end_row, int end_col,
-           ruy::Mat<float>* dst) const {
-    BinaryKernelParams<float, LhsLayout::kCols, RhsLayout::kCols> params;
-    MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
-                           end_col, dst, &params);
-    BinaryKernelNeonOutOfOrder4x4(params);
-  }
-};
-
-// Optimised Arm32 kernel for int8 output
-template <>
-struct BgemmKernel<ruy::Path::kNeon, std::int8_t,
-                   BinaryMulParams<std::int32_t, std::int8_t>> {
-  Tuning tuning = Tuning::kAuto;
-  using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
-  using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
-  explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
-  void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
-           const BinaryMulParams<std::int32_t, std::int8_t>& mul_params,
-           int start_row, int start_col, int end_row, int end_col,
-           ruy::Mat<std::int8_t>* dst) const {
-    BinaryKernelParams<std::int8_t, LhsLayout::kCols, RhsLayout::kCols> params;
-    MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
-                           end_col, dst, &params);
+           ruy::Mat<DstScalar>* dst) const {
+    TFLITE_DCHECK((std::is_same<DstScalar, float>::value ||
+                   std::is_same<DstScalar, std::int8_t>::value));
+    BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
+    MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
+                           dst, mul_params, &params);
     BinaryKernelNeonOutOfOrder4x4(params);
   }
 };
@@ -97,80 +66,47 @@ struct BgemmKernel<ruy::Path::kNeon, std::int8_t,
 // A BGEMM kernel for ARM64 Neon.
 #include "bgemm_kernels_arm64.h"
 
-// Optimised Aarch64 kernel for float output with 16-bit accumulators.
-template <>
-struct BgemmKernel<ruy::Path::kNeon, float,
-                   BinaryMulParams<std::int16_t, float>> {
+// Optimised Aarch64 kernel with 16-bit accumulators. Supports float or int8 or
+// bitpacked output.
+template <typename DstScalar>
+struct BgemmKernel<ruy::Path::kNeon, DstScalar,
+                   BinaryMulParams<std::int16_t, DstScalar>> {
   Tuning tuning = Tuning::kAuto;
   using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 8>;
   using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
   explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
-           const BinaryMulParams<std::int16_t, float>& mul_params,
+           const BinaryMulParams<std::int16_t, DstScalar>& mul_params,
            int start_row, int start_col, int end_row, int end_col,
-           ruy::Mat<float>* dst) const {
-    BinaryKernelParams<float, LhsLayout::kCols, RhsLayout::kCols> params;
-    MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
-                           end_col, dst, &params);
+           ruy::Mat<DstScalar>* dst) const {
+    TFLITE_DCHECK((std::is_same<DstScalar, float>::value ||
+                   std::is_same<DstScalar, std::int8_t>::value ||
+                   std::is_same<DstScalar, TBitpacked>::value));
+    BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
+    MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
+                           dst, mul_params, &params);
     BinaryKernelNeonOutOfOrder8x4(params);
   }
 };
 
-// Optimised Aarch64 kernel for int8 output with 16-bit accumulators.
-template <>
-struct BgemmKernel<ruy::Path::kNeon, std::int8_t,
-                   BinaryMulParams<std::int16_t, std::int8_t>> {
-  Tuning tuning = Tuning::kAuto;
-  using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 8>;
-  using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
-  explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
-  void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
-           const BinaryMulParams<std::int16_t, std::int8_t>& mul_params,
-           int start_row, int start_col, int end_row, int end_col,
-           ruy::Mat<std::int8_t>* dst) const {
-    BinaryKernelParams<std::int8_t, LhsLayout::kCols, RhsLayout::kCols> params;
-    MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
-                           end_col, dst, &params);
-    BinaryKernelNeonOutOfOrder8x4(params);
-  }
-};
-
-// Fallback Aarch64 kernel for float output with 32-bit accumulators (when
-// there's a risk of overflowing 16-bit accumulators).
-template <>
-struct BgemmKernel<ruy::Path::kNeon, float,
-                   BinaryMulParams<std::int32_t, float>> {
+// Fallback Aarch64 kernel with 32-bit accumulators (when there's a risk of
+// overflowing 16-bit accumulators). Supports float or int8 output.
+template <typename DstScalar>
+struct BgemmKernel<ruy::Path::kNeon, DstScalar,
+                   BinaryMulParams<std::int32_t, DstScalar>> {
   Tuning tuning = Tuning::kAuto;
   using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
   using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
   explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
-           const BinaryMulParams<std::int32_t, float>& mul_params,
+           const BinaryMulParams<std::int32_t, DstScalar>& mul_params,
            int start_row, int start_col, int end_row, int end_col,
-           ruy::Mat<float>* dst) const {
-    BinaryKernelParams<float, LhsLayout::kCols, RhsLayout::kCols> params;
-    MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
-                           end_col, dst, &params);
-    BinaryKernelNeonOutOfOrder4x4(params);
-  }
-};
-
-// Fallback Aarch64 kernel for int8 output with 32-bit accumulators (when
-// there's a risk of overflowing 16-bit accumulators).
-template <>
-struct BgemmKernel<ruy::Path::kNeon, std::int8_t,
-                   BinaryMulParams<std::int32_t, std::int8_t>> {
-  Tuning tuning = Tuning::kAuto;
-  using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
-  using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
-  explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
-  void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
-           const BinaryMulParams<std::int32_t, std::int8_t>& mul_params,
-           int start_row, int start_col, int end_row, int end_col,
-           ruy::Mat<std::int8_t>* dst) const {
-    BinaryKernelParams<std::int8_t, LhsLayout::kCols, RhsLayout::kCols> params;
-    MakeBinaryKernelParams(lhs, rhs, mul_params, start_row, start_col, end_row,
-                           end_col, dst, &params);
+           ruy::Mat<DstScalar>* dst) const {
+    TFLITE_DCHECK((std::is_same<DstScalar, float>::value ||
+                   std::is_same<DstScalar, std::int8_t>::value));
+    BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
+    MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
+                           dst, mul_params, &params);
     BinaryKernelNeonOutOfOrder4x4(params);
   }
 };
