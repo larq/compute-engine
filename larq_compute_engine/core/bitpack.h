@@ -30,15 +30,12 @@ constexpr int GetBitpackedMatrixSize(int rows, int cols) {
 
 template <class TIn>
 inline void bitpack_bitfield_quantized(const TIn* in, TBitpacked* out,
-                                       const std::int32_t zero_point) {
+                                       const TIn zero_point) {
   ruy::profiler::ScopeLabel label(
       "Bitpack bitfield (quantized input, unoptimised)");
   *out = 0;
   for (size_t i = 0; i < bitpacking_bitwidth; ++i) {
-    // Note: uint8 to int32 will set the top 24 bits to 0
-    //        int8 to int32 will set the top 24 bits to the int8 sign bit
-    if (static_cast<std::int32_t>(in[i]) < zero_point)
-      *out |= (TBitpacked(1) << i);
+    if (in[i] < zero_point) *out |= (TBitpacked(1) << i);
   }
 }
 
@@ -128,7 +125,7 @@ inline void bitpack_bitfield(const T* fptr, TBitpacked* buf) {
 // Helper function
 template <class TIn>
 inline void bitpack_bitfield(const TIn* in, TBitpacked* out,
-                             const std::int32_t zero_point) {
+                             const TIn zero_point) {
   // Note: The expressions in these if-statements are known at compile-time so
   // they are all optimied away
   constexpr bool is_quantized = !std::is_floating_point<TIn>::value;
@@ -142,8 +139,7 @@ inline void bitpack_bitfield(const TIn* in, TBitpacked* out,
 
 template <class TIn>
 inline void bitpack_array(const TIn* input_array, const std::size_t n,
-                          TBitpacked* bitpacked_array,
-                          const std::int32_t zero_point) {
+                          TBitpacked* bitpacked_array, const TIn zero_point) {
   int num_packed_elems = n / bitpacking_bitwidth;
   int elements_left = n - bitpacking_bitwidth * num_packed_elems;
 
@@ -151,11 +147,11 @@ inline void bitpack_array(const TIn* input_array, const std::size_t n,
   TBitpacked* out = bitpacked_array;
 
 #ifdef __aarch64__
-  if (FLATBUFFERS_LITTLEENDIAN && std::is_same<TIn, float>::value &&
-      zero_point == 0) {
+  if (FLATBUFFERS_LITTLEENDIAN &&
+      ((std::is_same<TIn, float>::value && zero_point == 0) ||
+       std::is_same<TIn, std::int8_t>::value)) {
     const int num_4x32_blocks = num_packed_elems / 4;
-    bitpack_aarch64_4x32(reinterpret_cast<const float*>(in), num_4x32_blocks,
-                         out);
+    bitpack_aarch64_4x32(in, num_4x32_blocks, out, zero_point);
     in += bitpacking_bitwidth * 4 * num_4x32_blocks;
     out += 4 * num_4x32_blocks;
     num_packed_elems %= 4;
@@ -184,18 +180,58 @@ template <class TIn>
 inline void bitpack_matrix(const TIn* input, const std::size_t input_num_rows,
                            const std::size_t input_num_cols, TBitpacked* output,
                            const std::int32_t zero_point = 0) {
+  // Calculate the size of the bitpacked rows
+  const std::size_t output_num_cols = GetBitpackedSize(input_num_cols);
+
+  // The public API has an Int32 zero-point, to match the TFLite spec, but
+  // bitpacking is trivial if the zero-point is outside the TIn representable
+  // range.
+
+  if (zero_point <= std::numeric_limits<TIn>::lowest()) {
+    // All values must represent >= 0, so the bitpacked bits will all be 0.
+    std::fill(output, output + input_num_rows * output_num_cols, TBitpacked(0));
+    return;
+  }
+
+  if (zero_point > std::numeric_limits<TIn>::max()) {
+    // All values must represent < 0, so the bitpacked bits will all be 1.
+    //     Unlike the >= 0 case above, this needs more caution, because while
+    // the bitpacking bits will all be 1, any padding bits, if applicable, still
+    // must be zero.
+    if (input_num_cols % bitpacking_bitwidth == 0) {
+      // First, the easy case where there's no padding: just binary ones.
+      std::fill(output, output + input_num_rows * output_num_cols,
+                ~TBitpacked(0));
+    } else {
+      // With padding, all elements of each output column will be binary ones,
+      // except the final element, which will have a prefix of ones with a
+      // suffix of zeroes.
+      const TBitpacked value_with_padding =
+          (1 << (input_num_cols % bitpacking_bitwidth)) - 1;
+      int rows = input_num_rows;
+      while (rows--) {
+        std::fill(output, output + output_num_cols - 1, ~TBitpacked(0));
+        output += output_num_cols;
+        *(output - 1) = value_with_padding;
+      }
+    }
+    return;
+  }
+
+  // Now that we know that the zero point is within the range of TIn, we can
+  // cast it safely.
+  const TIn zero_point_TIn = static_cast<TIn>(zero_point);
+
   if (input_num_cols % bitpacking_bitwidth == 0) {
     // If each row can be bitpacked without any padding, then we can treat
     // the matrix as one flat array and bitpack it all in one go.
-    bitpack_array(input, input_num_cols * input_num_rows, output, zero_point);
+    bitpack_array(input, input_num_cols * input_num_rows, output,
+                  zero_point_TIn);
   } else {
-    // Calculate the size of the bitpacked rows
-    const std::size_t output_num_cols = GetBitpackedSize(input_num_cols);
-
     // Iterate through each row of the input matrix and bitpack the row into the
     // corresponding memory location of the output matrix
-    for (size_t row_index = 0; row_index < input_num_rows; ++row_index) {
-      bitpack_array(input, input_num_cols, output, zero_point);
+    for (std::size_t row_index = 0; row_index < input_num_rows; ++row_index) {
+      bitpack_array(input, input_num_cols, output, zero_point_TIn);
       input += input_num_cols;
       output += output_num_cols;
     }
