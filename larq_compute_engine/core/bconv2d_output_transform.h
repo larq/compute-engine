@@ -19,7 +19,7 @@ using compute_engine::core::TBitpacked;
 std::int8_t saturate(std::int32_t x) {
 #ifdef __arm__
   std::int8_t y;
-  asm("ssat %[y], 8, %[x]\n" : [ y ] "=r"(y) : [ x ] "r"(x));
+  asm("ssat %[y], #8, %[x]\n" : [ y ] "=r"(y) : [ x ] "r"(x));
   return y;
 #else
   x = std::min<std::int32_t>(x, std::numeric_limits<std::int8_t>::max());
