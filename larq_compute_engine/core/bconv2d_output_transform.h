@@ -15,10 +15,39 @@ namespace core {
 
 using compute_engine::core::TBitpacked;
 
+// Clamp an int32 value to int8 range
+std::int8_t saturate(std::int32_t x) {
+#ifdef __thumb__
+  std::int8_t y;
+  asm("ssat %[y], 8, %[x]\n" : [ y ] "=r"(y) : [ x ] "r"(x));
+  return y;
+#else
+  x = std::min<std::int32_t>(x, std::numeric_limits<std::int8_t>::max());
+  x = std::max<std::int32_t>(x, std::numeric_limits<std::int8_t>::lowest());
+  return static_cast<std::int8_t>(x);
+#endif
+}
+
+// round-to-nearest. Handling of ties is allowed to be anything, as discussed in
+// https://github.com/tensorflow/tensorflow/issues/25087
+std::int32_t round(float x) {
+#if defined(__thumb__) && defined(__VFP_FP__) && !defined(__SOFTFP__)
+  // The `vcvtr` instructions follows the IEEE 754 rounding standard which
+  // rounds halfway points to the nearest *even* integer.
+  std::int32_t y;
+  asm("vcvtr.s32.f32 %[x], %[x] \n"
+      "vmov %[y], %[x] \n"
+      : [ y ] "=r"(y)
+      : [ x ] "t"(x));  // The "t" means `x` will be in an FPU register
+  return y;
+#else
+  return tflite::TfLiteRound(x);
+#endif
+}
+
 enum class OutputTransformDetails {
   Default,
-  Preprocessed,
-  PreprocessedIntegerOnly
+  IntegerOnly,
 };
 
 /*
@@ -112,10 +141,8 @@ struct OutputTransform<std::int8_t, OutputTransformDetails::Default> {
     float y =
         static_cast<float>(x) * multiplier[out_channel] + bias[out_channel];
     // And then we round back to int32 and clamp to the int8 range
-    std::int32_t z = tflite::TfLiteRound(y);
-    z = std::min<std::int32_t>(z, std::numeric_limits<std::int8_t>::max());
-    z = std::max<std::int32_t>(z, std::numeric_limits<std::int8_t>::lowest());
-    return static_cast<std::int8_t>(z);
+    std::int32_t z = round(y);
+    return saturate(z);
   }
 };
 
