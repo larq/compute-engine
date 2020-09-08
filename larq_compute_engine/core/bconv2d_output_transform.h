@@ -17,7 +17,7 @@ using compute_engine::core::TBitpacked;
 
 // Clamp an int32 value to int8 range
 std::int8_t saturate(std::int32_t x) {
-#ifdef __thumb__
+#ifdef __arm__
   std::int8_t y;
   asm("ssat %[y], 8, %[x]\n" : [ y ] "=r"(y) : [ x ] "r"(x));
   return y;
@@ -28,7 +28,7 @@ std::int8_t saturate(std::int32_t x) {
 #endif
 }
 
-// round-to-nearest. Handling of ties is allowed to be anything, as discussed in
+// Round-to-nearest. Handling of ties is allowed to be anything, as discussed in
 // https://github.com/tensorflow/tensorflow/issues/25087
 std::int32_t round(float x) {
 #if defined(__thumb__) && defined(__VFP_FP__) && !defined(__SOFTFP__)
@@ -141,8 +141,7 @@ struct OutputTransform<std::int8_t, OutputTransformDetails::Default> {
     float y =
         static_cast<float>(x) * multiplier[out_channel] + bias[out_channel];
     // And then we round back to int32 and clamp to the int8 range
-    std::int32_t z = round(y);
-    return saturate(z);
+    return saturate(round(y));
   }
 };
 
