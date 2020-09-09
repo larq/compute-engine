@@ -1,5 +1,5 @@
-#ifndef COMPUTE_EGNINE_TFLITE_KERNELS_LCE_REGISTER_H_
-#define COMPUTE_EGNINE_TFLITE_KERNELS_LCE_REGISTER_H_
+#ifndef COMPUTE_ENGINE_TFLITE_KERNELS_LCE_OPS_REGISTER_H_
+#define COMPUTE_ENGINE_TFLITE_KERNELS_LCE_OPS_REGISTER_H_
 
 #include "tensorflow/lite/context.h"
 #include "tensorflow/lite/op_resolver.h"
@@ -31,4 +31,4 @@ inline void RegisterLCECustomOps(::tflite::MutableOpResolver* resolver) {
 }  // namespace tflite
 }  // namespace compute_engine
 
-#endif  // TENSORFLOW_LITE_KERNELS_REGISTER_H_
+#endif  // COMPUTE_ENGINE_TFLITE_KERNELS_LCE_OPS_REGISTER_H_

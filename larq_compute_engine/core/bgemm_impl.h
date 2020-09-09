@@ -1,5 +1,5 @@
-#ifndef COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_IMPL_H_
-#define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_IMPL_H_
+#ifndef COMPUTE_ENGINE_CORE_BGEMM_IMPL_H_
+#define COMPUTE_ENGINE_CORE_BGEMM_IMPL_H_
 
 #include "bgemm_kernels_common.h"
 #include "ruy/profiler/instrumentation.h"
@@ -54,4 +54,4 @@ void BGemm(const MatrixParams<TBitpacked>& lhs_params,
 }  // namespace tflite
 }  // namespace compute_engine
 
-#endif  // COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_IMPL_H_
+#endif  // COMPUTE_ENGINE_CORE_BGEMM_IMPL_H_

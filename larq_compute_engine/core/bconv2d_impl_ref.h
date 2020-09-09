@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-#ifndef COMPUTE_EGNINE_CORE_BCONV2d_IMPL_H_
-#define COMPUTE_EGNINE_CORE_BCONV2d_IMPL_H_
+#ifndef COMPUTE_ENGINE_CORE_BCONV2D_IMPL_REF_H_
+#define COMPUTE_ENGINE_CORE_BCONV2D_IMPL_REF_H_
 
 #include "larq_compute_engine/core/bconv2d_output_transform.h"
 #include "larq_compute_engine/core/bgemm_functor.h"
@@ -137,4 +137,4 @@ inline void BConv2D(
 }  // namespace ref
 }  // namespace compute_engine
 
-#endif  // COMPUTE_EGNINE_CORE_BCONV2d_IMPL_H_
+#endif  // COMPUTE_ENGINE_CORE_BCONV2D_IMPL_REF_H_

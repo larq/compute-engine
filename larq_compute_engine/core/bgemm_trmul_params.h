@@ -1,5 +1,5 @@
-#ifndef COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_TRMUL_PARAMS_H_
-#define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_TRMUL_PARAMS_H_
+#ifndef COMPUTE_ENGINE_CORE_BGEMM_TRMUL_PARAMS_H_
+#define COMPUTE_ENGINE_CORE_BGEMM_TRMUL_PARAMS_H_
 
 #include "larq_compute_engine/core/bgemm_kernels_ruy.h"
 #include "larq_compute_engine/core/ruy_pack.h"
@@ -174,4 +174,4 @@ void CreateBinaryTrMulParams(const Mat<TBitpacked>& lhs,
 }  // namespace tflite
 }  // namespace compute_engine
 
-#endif  // COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_TRMUL_PARAMS_H_
+#endif  // COMPUTE_ENGINE_CORE_BGEMM_TRMUL_PARAMS_H_
