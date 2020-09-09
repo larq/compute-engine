@@ -1,5 +1,5 @@
-#ifndef COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_RUY_H_
-#define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_RUY_H_
+#ifndef COMPUTE_ENGINE_CORE_BGEMM_KERNELS_RUY_H_
+#define COMPUTE_ENGINE_CORE_BGEMM_KERNELS_RUY_H_
 
 #include "larq_compute_engine/core/bgemm_functor.h"
 #include "larq_compute_engine/core/bitpack_utils.h"
@@ -190,4 +190,4 @@ void RunBgemmKernel(ruy::Tuning tuning, const ruy::SidePair<ruy::PEMat>& src,
 }  // namespace tflite
 }  // namespace compute_engine
 
-#endif  // COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_RUY_H_
+#endif  // COMPUTE_ENGINE_CORE_BGEMM_KERNELS_RUY_H_

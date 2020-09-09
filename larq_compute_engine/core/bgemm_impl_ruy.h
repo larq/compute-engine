@@ -1,5 +1,5 @@
-#ifndef COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_RUY_H_
-#define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_RUY_H_
+#ifndef COMPUTE_ENGINE_CORE_BGEMM_IMPL_RUY_H_
+#define COMPUTE_ENGINE_CORE_BGEMM_IMPL_RUY_H_
 
 #include "bgemm_kernels_common.h"
 #include "bgemm_trmul_params.h"
@@ -98,4 +98,4 @@ struct BGemmImplUsingRuy {
 }  // namespace tflite
 }  // namespace compute_engine
 
-#endif  // COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_RUY_H_
+#endif  // COMPUTE_ENGINE_CORE_BGEMM_IMPL_RUY_H_

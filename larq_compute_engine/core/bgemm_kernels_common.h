@@ -1,5 +1,5 @@
-#ifndef COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_COMMON_H_
-#define COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_COMMON_H_
+#ifndef COMPUTE_ENGINE_CORE_BGEMM_KERNELS_COMMON_H_
+#define COMPUTE_ENGINE_CORE_BGEMM_KERNELS_COMMON_H_
 
 #include "larq_compute_engine/core/bconv2d_output_transform.h"
 #include "ruy/kernel_common.h"
@@ -108,4 +108,4 @@ inline void MakeBinaryKernelParams(
   RUY_DCHECK_LT(params->last_col, params->dst_cols);
 }
 
-#endif  // COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_COMMON_H_
+#endif  // COMPUTE_ENGINE_CORE_BGEMM_KERNELS_COMMON_H_
