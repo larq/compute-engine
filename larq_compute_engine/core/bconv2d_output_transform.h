@@ -16,7 +16,7 @@ namespace core {
 using compute_engine::core::TBitpacked;
 
 // Clamp an int32 value to int8 range
-std::int8_t saturate(std::int32_t x) {
+inline std::int8_t saturate(std::int32_t x) {
 #ifdef __arm__
   std::int8_t y;
   asm("ssat %[y], #8, %[x]\n" : [ y ] "=r"(y) : [ x ] "r"(x));
@@ -30,7 +30,7 @@ std::int8_t saturate(std::int32_t x) {
 
 // Round-to-nearest. Handling of ties is allowed to be anything, as discussed in
 // https://github.com/tensorflow/tensorflow/issues/25087
-std::int32_t round(float x) {
+inline std::int32_t round(float x) {
 #if defined(__thumb__) && defined(__VFP_FP__) && !defined(__SOFTFP__)
   // The `vcvtr` instructions follows the IEEE 754 rounding standard which
   // rounds halfway points to the nearest *even* integer.
