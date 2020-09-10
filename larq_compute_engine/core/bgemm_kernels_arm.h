@@ -35,8 +35,9 @@ struct BgemmKernel<ruy::Path::kNeon, DstScalar,
            const BinaryMulParams<std::int32_t, DstScalar>& mul_params,
            int start_row, int start_col, int end_row, int end_col,
            ruy::Mat<DstScalar>* dst) const {
-    TFLITE_DCHECK((std::is_same<DstScalar, float>::value ||
-                   std::is_same<DstScalar, std::int8_t>::value));
+    static_assert(std::is_same<DstScalar, float>::value ||
+                      std::is_same<DstScalar, std::int8_t>::value,
+                  "");
     BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
     MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
                            dst, mul_params, &params);
@@ -63,9 +64,10 @@ struct BgemmKernel<ruy::Path::kNeon, DstScalar,
            const BinaryMulParams<std::int16_t, DstScalar>& mul_params,
            int start_row, int start_col, int end_row, int end_col,
            ruy::Mat<DstScalar>* dst) const {
-    TFLITE_DCHECK((std::is_same<DstScalar, float>::value ||
-                   std::is_same<DstScalar, std::int8_t>::value ||
-                   std::is_same<DstScalar, TBitpacked>::value));
+    static_assert(std::is_same<DstScalar, float>::value ||
+                      std::is_same<DstScalar, std::int8_t>::value ||
+                      std::is_same<DstScalar, TBitpacked>::value,
+                  "");
     BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
     MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
                            dst, mul_params, &params);
@@ -86,8 +88,9 @@ struct BgemmKernel<ruy::Path::kNeon, DstScalar,
            const BinaryMulParams<std::int32_t, DstScalar>& mul_params,
            int start_row, int start_col, int end_row, int end_col,
            ruy::Mat<DstScalar>* dst) const {
-    TFLITE_DCHECK((std::is_same<DstScalar, float>::value ||
-                   std::is_same<DstScalar, std::int8_t>::value));
+    static_assert(std::is_same<DstScalar, float>::value ||
+                      std::is_same<DstScalar, std::int8_t>::value,
+                  "");
     BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
     MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
                            dst, mul_params, &params);
