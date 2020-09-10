@@ -22,7 +22,7 @@ void PopulateBgemmTrMulParams(const Mat<TBitpacked>& lhs,
   params->mul_params = ToVoidPtr(&mul_params);
 
   // Optimised code paths only support all matrices being column-major
-  if (ruy::IsColMajorTrMul(*params) && ThePath != ruy::Path::kStandardCpp) {
+  if (!ruy::IsColMajorTrMul(*params) && ThePath != ruy::Path::kStandardCpp) {
     PopulateBgemmTrMulParams<ruy::Path::kStandardCpp>(lhs, rhs, dst, mul_params,
                                                       params);
     return;
