@@ -77,8 +77,10 @@ struct BGemmImplUsingRuy {
       bgemm_runtime_path = ruy::Path::kStandardCpp;
 #endif
 
-    // For now, writing bitpacked output only has a C++ implementation.
-    if (std::is_same<DstScalar, TBitpacked>::value) {
+    // Bitpacked output is only supported in the assembly kernels with int16
+    // accumulators. Otherwise, fall back to the C++ kernel.
+    if (!std::is_same<AccumScalar, std::int16_t>::value &&
+        std::is_same<DstScalar, TBitpacked>::value) {
       bgemm_runtime_path = ruy::Path::kStandardCpp;
     }
 
