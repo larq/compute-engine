@@ -36,7 +36,7 @@ struct BGemmImplUsingRuy {
     static_assert(std::is_signed<DstScalar>::value,
                   "Output of BGEMM should be of a signed type.");
 
-    // getting ruy context
+    // Get ruy context
     auto ruy_ctx = get_ctx(context->ruy_context());
 
     // Set up the matrix layouts and mul_params.
@@ -63,37 +63,27 @@ struct BGemmImplUsingRuy {
     BinaryMulParams<AccumScalar, DstScalar> mul_params;
     mul_params.output_transform = output_transform;
 
-    constexpr auto BGemmCompiledPaths = ruy::kAllPaths;
-
-    ruy::Path bgemm_runtime_path = ruy_ctx->SelectPath(ruy::kAllPaths);
-    RUY_DCHECK_NE(bgemm_runtime_path, ruy::Path::kNone);
-
-#if RUY_PLATFORM_ARM
-    if (bgemm_runtime_path == ruy::Path::kNeonDotprod)
-      bgemm_runtime_path = ruy::Path::kNeon;
-#elif RUY_PLATFORM_X86
-    if (bgemm_runtime_path == ruy::Path::kAvx2 ||
-        bgemm_runtime_path == ruy::Path::kAvx512)
-      bgemm_runtime_path = ruy::Path::kStandardCpp;
+#if RUY_PLATFORM_NEON
+    constexpr bool HasOptimizedNeonKernel =
+        std::is_same<AccumScalar, std::int16_t>::value ||
+        std::is_same<DstScalar, float>::value ||
+        std::is_same<DstScalar, std::int8_t>::value;
+    constexpr auto SelectedPath =
+        HasOptimizedNeonKernel ? ruy::Path::kNeon : ruy::Path::kStandardCpp;
+#else
+    constexpr auto SelectedPath = ruy::Path::kStandardCpp;
 #endif
-
-    // Bitpacked output is only supported in the assembly kernels with int16
-    // accumulators. Otherwise, fall back to the C++ kernel.
-    if (!std::is_same<AccumScalar, std::int16_t>::value &&
-        std::is_same<DstScalar, TBitpacked>::value) {
-      bgemm_runtime_path = ruy::Path::kStandardCpp;
-    }
 
     ruy::Mat<TBitpacked> transposed_lhs(internal_lhs);
     Transpose(&transposed_lhs);
 
-    ruy::TrMulParams binary_trmul_params;
-    CreateBinaryTrMulParams<BGemmCompiledPaths>(
-        transposed_lhs, internal_rhs, mul_params, ruy_ctx, &internal_dst,
-        bgemm_runtime_path, &binary_trmul_params);
+    ruy::TrMulParams bgemm_trmul_params;
+    PopulateBgemmTrMulParams<SelectedPath>(transposed_lhs, internal_rhs,
+                                           internal_dst, mul_params,
+                                           &bgemm_trmul_params);
 
-    HandlePrepackedCaching(&binary_trmul_params, ruy_ctx);
-    ruy::TrMul(&binary_trmul_params, ruy_ctx);
+    HandlePrepackedCaching(&bgemm_trmul_params, ruy_ctx);
+    ruy::TrMul(&bgemm_trmul_params, ruy_ctx);
   }
 };
 

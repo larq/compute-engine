@@ -19,22 +19,6 @@ using namespace ruy;
 
 using compute_engine::core::TBitpacked;
 
-#if RUY_PLATFORM_NEON
-
-// Generic kNeonDotprod template
-template <typename DstScalar, typename MulParamsType>
-struct BgemmKernel<ruy::Path::kNeonDotprod, DstScalar, MulParamsType> {
-  ruy::Tuning tuning = Tuning::kAuto;
-  using LhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
-  using RhsLayout = FixedKernelLayout<Order::kRowMajor, 1, 8>;
-  explicit BgemmKernel(ruy::Tuning tuning_) : tuning(tuning_) {}
-  void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
-           const MulParamsType& mul_params, int start_row, int start_col,
-           int end_row, int end_col, ruy::Mat<DstScalar>* dst) const {
-    TFLITE_DCHECK(false);
-  }
-};
-
 #if RUY_PLATFORM_NEON && RUY_OPT(ASM) && RUY_PLATFORM_NEON_32
 // A BGEMM kernel for ARM32 Neon.
 #include "bgemm_kernels_arm32.h"
@@ -51,8 +35,9 @@ struct BgemmKernel<ruy::Path::kNeon, DstScalar,
            const BinaryMulParams<std::int32_t, DstScalar>& mul_params,
            int start_row, int start_col, int end_row, int end_col,
            ruy::Mat<DstScalar>* dst) const {
-    TFLITE_DCHECK((std::is_same<DstScalar, float>::value ||
-                   std::is_same<DstScalar, std::int8_t>::value));
+    static_assert(std::is_same<DstScalar, float>::value ||
+                      std::is_same<DstScalar, std::int8_t>::value,
+                  "");
     BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
     MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
                            dst, mul_params, &params);
@@ -79,9 +64,10 @@ struct BgemmKernel<ruy::Path::kNeon, DstScalar,
            const BinaryMulParams<std::int16_t, DstScalar>& mul_params,
            int start_row, int start_col, int end_row, int end_col,
            ruy::Mat<DstScalar>* dst) const {
-    TFLITE_DCHECK((std::is_same<DstScalar, float>::value ||
-                   std::is_same<DstScalar, std::int8_t>::value ||
-                   std::is_same<DstScalar, TBitpacked>::value));
+    static_assert(std::is_same<DstScalar, float>::value ||
+                      std::is_same<DstScalar, std::int8_t>::value ||
+                      std::is_same<DstScalar, TBitpacked>::value,
+                  "");
     BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
     MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
                            dst, mul_params, &params);
@@ -102,8 +88,9 @@ struct BgemmKernel<ruy::Path::kNeon, DstScalar,
            const BinaryMulParams<std::int32_t, DstScalar>& mul_params,
            int start_row, int start_col, int end_row, int end_col,
            ruy::Mat<DstScalar>* dst) const {
-    TFLITE_DCHECK((std::is_same<DstScalar, float>::value ||
-                   std::is_same<DstScalar, std::int8_t>::value));
+    static_assert(std::is_same<DstScalar, float>::value ||
+                      std::is_same<DstScalar, std::int8_t>::value,
+                  "");
     BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
     MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
                            dst, mul_params, &params);
@@ -112,7 +99,5 @@ struct BgemmKernel<ruy::Path::kNeon, DstScalar,
 };
 
 #endif  // RUY_OPT(ASM) && RUY_PLATFORM_NEON_64
-
-#endif  // RUY_PLATFORM_NEON
 
 #endif  // COMPUTE_EGNINE_TFLITE_KERNELS_BGEMM_KERNELS_ARM_H_

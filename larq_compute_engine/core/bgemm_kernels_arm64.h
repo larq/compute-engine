@@ -903,6 +903,9 @@ IF_BITPACKED_OUTPUT(
       "beq 60f\n"
 
       // Slow path: not all the 8x4 block fits
+      //     Fill v30.b[0] with a bitstring of the form 0...01...1 with `w1`
+      // ones, so that v30 can be used as a mask to keep only the bits in each
+      // bitpacked byte that correspond to actual output values.
       "mov w15, #1\n"
       "lsl w15, w15, w1\n"
       "sub w15, w15, #1\n"

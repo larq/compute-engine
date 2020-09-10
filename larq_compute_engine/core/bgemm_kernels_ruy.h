@@ -21,8 +21,6 @@ struct BgemmKernel {};
 // TODO: this is hacky
 #if RUY_PLATFORM_NEON
 #include "bgemm_kernels_arm.h"
-#elif RUY_PLATFORM_X86
-#include "bgemm_kernels_x86.h"
 #endif
 
 template <typename DstScalar, typename Spec>

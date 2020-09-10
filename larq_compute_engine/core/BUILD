@@ -104,7 +104,6 @@ cc_library(
     hdrs = [
         "bgemm_kernels_arm.h",
         "bgemm_kernels_ruy.h",
-        "bgemm_kernels_x86.h",
     ],
     deps = [
         ":bgemm_kernels_arm",
