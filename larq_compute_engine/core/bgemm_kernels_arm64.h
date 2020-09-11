@@ -83,7 +83,7 @@ void CheckOffsetsInBinaryKernelParams(const Params&) {
                 "");
 }
 
-#define MAKE_ZERO(reg) "eor " #reg ".16b, " #reg ".16b, " #reg ".16b\n"
+#define MAKE_ZERO(reg) "movi " #reg ".16b, #0\n"
 
 #define IF_FLOAT_OUTPUT(a) ".if %c[float_output]\n" a ".endif\n"
 

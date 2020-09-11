@@ -85,7 +85,7 @@ void CheckOffsetsInKernelParams(const Params&) {
                 "");
 }
 
-#define MAKE_ZERO(reg) "veor.s8 " #reg ", " #reg ", " #reg "\n"
+#define MAKE_ZERO(reg) "vmov.s8 " #reg ", #0\n"
 
 #define IF_FLOAT_OUTPUT(a) ".if %c[float_output]\n" a ".endif\n"
 
