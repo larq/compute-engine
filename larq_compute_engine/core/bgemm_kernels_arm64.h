@@ -735,6 +735,13 @@ void BinaryKernelNeonOutOfOrder8x4(
       "ldr w12, [%[params], #" RUY_STR(RUY_OFFSET_DEPTH) "]\n"
       MAKE_ZERO(v27)
 
+IF_INT8_OUTPUT(
+      // Load a constant -128 / +127 into the register v30/v31 so that they can
+      // be used for saturating the output values to the int8 range.
+      "mvni v30.4s, #127\n"
+      "movi v31.4s, #127\n"
+)
+
 IF_BITPACKED_OUTPUT(
       // Load a constant into the vector register v31, such that each half word
       // at position i is equal to (1 << i). This will be a bitmask used for
@@ -955,10 +962,10 @@ IF_FLOAT_OR_INT8_OUTPUT(
       // result, so we get a int16 -> int32 transformation for free.
       "ushll v20.4s, v24.4h, #1\n"
       "ushll2 v21.4s, v24.8h, #1\n"
-      "ld1r {v29.4s}, [x14]\n"  // In parallel, duplicate `clamp_min` into v29.
+      "ld1r {v14.4s}, [x14]\n"  // In parallel, duplicate `clamp_min` into v14.
       "ushll v22.4s, v25.4h, #1\n"
       "ushll2 v23.4s, v25.8h, #1\n"
-      "ld1r {v30.4s}, [x15]\n"  // In parallel, duplicate `clamp_max` into v30.
+      "ld1r {v15.4s}, [x15]\n"  // In parallel, duplicate `clamp_max` into v15.
       "ushll v24.4s, v26.4h, #1\n"
       "ushll2 v25.4s, v26.8h, #1\n"
       "ld1 {v8.4s}, [%[rhs_ptr]], #16\n" // In parallel, load next RHS data.
@@ -971,63 +978,63 @@ IF_FLOAT_OR_INT8_OUTPUT(
 
       // Apply the `clamp_min` bound.
       "ld1 {v0.4s, v1.4s}, [%[lhs_ptr]], #32\n" // In parallel, load next LHS data.
-      "smax v20.4s, v20.4s, v29.4s\n"
-      "smax v21.4s, v21.4s, v29.4s\n"
+      "smax v20.4s, v20.4s, v14.4s\n"
+      "smax v21.4s, v21.4s, v14.4s\n"
       "ld1 {v2.4s, v3.4s}, [%[lhs_ptr]], #32\n" // In parallel, load next LHS data.
-      "smax v22.4s, v22.4s, v29.4s\n"
-      "smax v23.4s, v23.4s, v29.4s\n"
+      "smax v22.4s, v22.4s, v14.4s\n"
+      "smax v23.4s, v23.4s, v14.4s\n"
       "ld1 {v4.4s, v5.4s}, [%[lhs_ptr]], #32\n" // In parallel, load next LHS data.
-      "smax v24.4s, v24.4s, v29.4s\n"
-      "smax v25.4s, v25.4s, v29.4s\n"
+      "smax v24.4s, v24.4s, v14.4s\n"
+      "smax v25.4s, v25.4s, v14.4s\n"
       "ld1 {v6.4s, v7.4s}, [%[lhs_ptr]], #32\n" // In parallel, load next LHS data.
-      "smax v26.4s, v26.4s, v29.4s\n"
-      "smax v27.4s, v27.4s, v29.4s\n"
+      "smax v26.4s, v26.4s, v14.4s\n"
+      "smax v27.4s, v27.4s, v14.4s\n"
 
       // Offset the multiplier/bias pointers as needed given the current row.
       "add x14, x14, %x[row], lsl #2\n"
       "add x15, x15, %x[row], lsl #2\n"
 
       // Apply the clamp_max bound.
-      "smin v20.4s, v20.4s, v30.4s\n"
-      "smin v21.4s, v21.4s, v30.4s\n"
-      "smin v22.4s, v22.4s, v30.4s\n"
-      "smin v23.4s, v23.4s, v30.4s\n"
-      "ld1 {v28.4s, v29.4s}, [x14]\n"  // In parallel, load 8 multiplier values.
-      "smin v24.4s, v24.4s, v30.4s\n"
-      "smin v25.4s, v25.4s, v30.4s\n"
-      "smin v26.4s, v26.4s, v30.4s\n"
-      "smin v27.4s, v27.4s, v30.4s\n"
+      "smin v20.4s, v20.4s, v15.4s\n"
+      "smin v21.4s, v21.4s, v15.4s\n"
+      "smin v22.4s, v22.4s, v15.4s\n"
+      "smin v23.4s, v23.4s, v15.4s\n"
+      "ld1 {v16.4s, v17.4s}, [x14]\n"  // In parallel, load 8 multiplier values.
+      "smin v24.4s, v24.4s, v15.4s\n"
+      "smin v25.4s, v25.4s, v15.4s\n"
+      "smin v26.4s, v26.4s, v15.4s\n"
+      "smin v27.4s, v27.4s, v15.4s\n"
 
       // Convert to single precision float.
       "scvtf v20.4s, v20.4s\n"
       "scvtf v21.4s, v21.4s\n"
       "scvtf v22.4s, v22.4s\n"
       "scvtf v23.4s, v23.4s\n"
-      "ld1 {v30.4s, v31.4s}, [x15]\n"  // In parallel, load 8 bias values.
+      "ld1 {v18.4s, v19.4s}, [x15]\n"  // In parallel, load 8 bias values.
       "scvtf v24.4s, v24.4s\n"
       "scvtf v25.4s, v25.4s\n"
       "scvtf v26.4s, v26.4s\n"
       "scvtf v27.4s, v27.4s\n"
 
       // Perform the post multiplications.
-      "fmul v20.4s, v20.4s, v28.4s\n"
-      "fmul v21.4s, v21.4s, v29.4s\n"
-      "fmul v22.4s, v22.4s, v28.4s\n"
-      "fmul v23.4s, v23.4s, v29.4s\n"
-      "fmul v24.4s, v24.4s, v28.4s\n"
-      "fmul v25.4s, v25.4s, v29.4s\n"
-      "fmul v26.4s, v26.4s, v28.4s\n"
-      "fmul v27.4s, v27.4s, v29.4s\n"
+      "fmul v20.4s, v20.4s, v16.4s\n"
+      "fmul v21.4s, v21.4s, v17.4s\n"
+      "fmul v22.4s, v22.4s, v16.4s\n"
+      "fmul v23.4s, v23.4s, v17.4s\n"
+      "fmul v24.4s, v24.4s, v16.4s\n"
+      "fmul v25.4s, v25.4s, v17.4s\n"
+      "fmul v26.4s, v26.4s, v16.4s\n"
+      "fmul v27.4s, v27.4s, v17.4s\n"
 
       // Perform the post additions.
-      "fadd v20.4s, v20.4s, v30.4s\n"
-      "fadd v21.4s, v21.4s, v31.4s\n"
-      "fadd v22.4s, v22.4s, v30.4s\n"
-      "fadd v23.4s, v23.4s, v31.4s\n"
-      "fadd v24.4s, v24.4s, v30.4s\n"
-      "fadd v25.4s, v25.4s, v31.4s\n"
-      "fadd v26.4s, v26.4s, v30.4s\n"
-      "fadd v27.4s, v27.4s, v31.4s\n"
+      "fadd v20.4s, v20.4s, v18.4s\n"
+      "fadd v21.4s, v21.4s, v19.4s\n"
+      "fadd v22.4s, v22.4s, v18.4s\n"
+      "fadd v23.4s, v23.4s, v19.4s\n"
+      "fadd v24.4s, v24.4s, v18.4s\n"
+      "fadd v25.4s, v25.4s, v19.4s\n"
+      "fadd v26.4s, v26.4s, v18.4s\n"
+      "fadd v27.4s, v27.4s, v19.4s\n"
 )
 
 IF_INT8_OUTPUT(
@@ -1041,21 +1048,39 @@ IF_INT8_OUTPUT(
       "fcvtns v26.4s, v26.4s\n"
       "fcvtns v27.4s, v27.4s\n"
 
-      // Narrow to int16 with "signed saturating extract narrow" instructions.
-      "sqxtn v28.4h, v20.4s\n"
-      "sqxtn2 v28.8h, v21.4s\n"
-      "sqxtn v29.4h, v22.4s\n"
-      "sqxtn2 v29.8h, v23.4s\n"
-      "sqxtn v30.4h, v24.4s\n"
-      "sqxtn2 v30.8h, v25.4s\n"
-      "sqxtn v31.4h, v26.4s\n"
-      "sqxtn2 v31.8h, v27.4s\n"
+      // Clamp to the int8 range
+      "smax v20.4s, v20.4s, v30.4s\n"
+      "smax v21.4s, v21.4s, v30.4s\n"
+      "smax v22.4s, v22.4s, v30.4s\n"
+      "smax v23.4s, v23.4s, v30.4s\n"
+      "smax v24.4s, v24.4s, v30.4s\n"
+      "smax v25.4s, v25.4s, v30.4s\n"
+      "smax v26.4s, v26.4s, v30.4s\n"
+      "smax v27.4s, v27.4s, v30.4s\n"
+      "smin v20.4s, v20.4s, v31.4s\n"
+      "smin v21.4s, v21.4s, v31.4s\n"
+      "smin v22.4s, v22.4s, v31.4s\n"
+      "smin v23.4s, v23.4s, v31.4s\n"
+      "smin v24.4s, v24.4s, v31.4s\n"
+      "smin v25.4s, v25.4s, v31.4s\n"
+      "smin v26.4s, v26.4s, v31.4s\n"
+      "smin v27.4s, v27.4s, v31.4s\n"
+
+      // Narrow to int16 with "extract narrow" instructions.
+      "xtn v16.4h, v20.4s\n"
+      "xtn v17.4h, v22.4s\n"
+      "xtn v18.4h, v24.4s\n"
+      "xtn v19.4h, v26.4s\n"
+      "xtn2 v16.8h, v21.4s\n"
+      "xtn2 v17.8h, v23.4s\n"
+      "xtn2 v18.8h, v25.4s\n"
+      "xtn2 v19.8h, v27.4s\n"
 
       // Narrow to int8.
-      "sqxtn v20.8b, v28.8h\n"
-      "sqxtn v21.8b, v29.8h\n"
-      "sqxtn v22.8b, v30.8h\n"
-      "sqxtn v23.8b, v31.8h\n"
+      "xtn v20.8b, v16.8h\n"
+      "xtn v21.8b, v17.8h\n"
+      "xtn v22.8b, v18.8h\n"
+      "xtn v23.8b, v19.8h\n"
 )
 
 IF_FLOAT_OR_INT8_OUTPUT(
@@ -1079,25 +1104,15 @@ IF_FLOAT_OR_INT8_OUTPUT(
       // Write our values to the destination described by
       // (x3 address, x4 stride).
       IF_FLOAT_ELIF_INT8_OUTPUT(
-            "str q20, [x3]\n"
-            "str q21, [x3, #16]\n"
-            "add x3, x3, x4\n"
-            "str q22, [x3]\n"
-            "str q23, [x3, #16]\n"
-            "add x3, x3, x4\n"
-            "str q24, [x3]\n"
-            "str q25, [x3, #16]\n"
-            "add x3, x3, x4\n"
-            "str q26, [x3]\n"
-            "str q27, [x3, #16]\n"
+            "st1 {v20.4s, v21.4s}, [x3], x4\n"
+            "st1 {v22.4s, v23.4s}, [x3], x4\n"
+            "st1 {v24.4s, v25.4s}, [x3], x4\n"
+            "st1 {v26.4s, v27.4s}, [x3]\n"
       ,
-            "str d20, [x3]\n"
-            "add x3, x3, x4\n"
-            "str d21, [x3]\n"
-            "add x3, x3, x4\n"
-            "str d22, [x3]\n"
-            "add x3, x3, x4\n"
-            "str d23, [x3]\n"
+            "st1 {v20.2s}, [x3], x4\n"
+            "st1 {v21.2s}, [x3], x4\n"
+            "st1 {v22.2s}, [x3], x4\n"
+            "st1 {v23.2s}, [x3]\n"
       )
 
       // If all of the 8x4 block fits, we just finished writing it to the
