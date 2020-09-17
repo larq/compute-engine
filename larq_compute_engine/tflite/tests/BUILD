@@ -74,6 +74,14 @@ cc_test(
     ],
 )
 
+py_test(
+    name = "interpreter_test",
+    srcs = ["interpreter_test.py"],
+    deps = [
+        "//larq_compute_engine/tflite/python:interpreter",
+    ],
+)
+
 # COLLECTION OF ALL TFLITE CC TESTS
 # each new cc test needs to be added here
 test_suite(
