@@ -8,25 +8,6 @@ from larq_compute_engine.tflite.python import interpreter_wrapper_lite
 __all__ = ["Interpreter"]
 
 
-def normalize_input_data(input_data):
-    """Normalise input data into a list (batch dimension) of lists (number of inputs) of
-    numpy arrays."""
-    # For a single-input model, we accept a single numpy array where the first
-    # dimension is implicitly the batch dimension.
-    if isinstance(input_data, np.ndarray):
-        return [[np.expand_dims(data, axis=0)] for data in input_data]
-    if not isinstance(input_data, list) or len(input_data) == 0:
-        raise TypeError(
-            "Expected either a non-empty list of inputs or a numpy array with "
-            f"implicit initial batch dimension. Received: {input_data}"
-        )
-    # If the input data is not a list of lists assume that the model has a
-    # single input and wrap each element in a singleton list.
-    if not isinstance(input_data[0], list):
-        return [[data] for data in input_data]
-    return input_data
-
-
 class Interpreter:
     """Interpreter interface for Larq Compute Engine Models.
 
@@ -65,25 +46,35 @@ class Interpreter:
         return self.interpreter.output_shapes
 
     def predict(
-        self,
-        input_data: Union[np.ndarray, List[np.ndarray], List[List[np.ndarray]]],
-        verbose: int = 0,
-    ) -> Union[List[np.ndarray], List[List[np.ndarray]]]:
+        self, x: Union[np.ndarray, List[np.ndarray]], verbose: int = 0
+    ) -> Union[np.ndarray, List[np.ndarray]]:
         """Generates output predictions for the input samples.
 
         # Arguments
-            input_data: Input samples.
+            x: Input samples. A Numpy array, or a list of arrays in case the model has
+                multiple inputs.
             verbose: Verbosity mode, 0 or 1.
 
         # Returns
-            A list of output predictions.
+            Numpy array(s) of output predictions.
         """
-        input_data = normalize_input_data(input_data)
 
-        if verbose >= 1:
-            input_data = tqdm(input_data)
+        if not isinstance(x, (list, np.ndarray)) or len(x) == 0:
+            raise ValueError(
+                "Expected either a non-empty list of inputs or a numpy array with "
+                f"implicit initial batch dimension. Received: {x}"
+            )
+
+        if len(self.input_shapes) == 1:
+            x = [x]
+
+        batch_iter = tqdm(zip(*x)) if verbose >= 1 else zip(*x)
+        prediction_batch_iter = (
+            self.interpreter.predict([np.expand_dims(inp, axis=0) for inp in inputs])
+            for inputs in batch_iter
+        )
+        outputs = [np.concatenate(batches) for batches in zip(*prediction_batch_iter)]
 
         if len(self.output_shapes) == 1:
-            return [self.interpreter.predict(data)[0] for data in input_data]
-
-        return [self.interpreter.predict(data) for data in input_data]
+            return outputs[0]
+        return outputs

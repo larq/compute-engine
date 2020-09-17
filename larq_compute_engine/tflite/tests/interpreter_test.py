@@ -7,41 +7,47 @@ import tensorflow as tf
 from larq_compute_engine.tflite.python.interpreter import Interpreter
 
 
-@pytest.mark.parametrize("input_shapes", [[(24,)], [(24, 24, 3)], [(16, 16, 1), (3,)]])
-def test_interpreter(input_shapes):
-    input_tensors = [tf.keras.Input(shape) for shape in input_shapes]
-    output_tensors = [(i + 1) * x for i, x in enumerate(input_tensors)]
-    model = tf.keras.Model(input_tensors, output_tensors)
-
+def test_interpreter():
+    input_shape = (24, 24, 3)
+    x = tf.keras.Input(input_shape)
+    model = tf.keras.Model(x, tf.keras.layers.Flatten()(x))
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    flatbuffer_model = converter.convert()
 
-    shapes = [(1, *shape) for shape in input_shapes]
-    types = [np.float32] * len(input_shapes)
-    batch_size = 2
-    inputs = [
-        [np.random.uniform(-1, 1, size=shape).astype(np.float32) for shape in shapes]
-        for _ in range(batch_size)
-    ]
-    expected_outputs = [[(i + 1) * x for i, x in enumerate(inp)] for inp in inputs]
-    if len(shapes) == 1:
-        inputs = [inp[0] for inp in inputs]
-        expected_outputs = [out[0] for out in expected_outputs]
+    inputs = np.random.uniform(-1, 1, size=(16, *input_shape)).astype(np.float32)
+    expected_outputs = inputs.reshape(16, -1)
 
-    interpreter = Interpreter(flatbuffer_model)
-    assert interpreter.input_types == types
-    assert interpreter.output_types == types
-    assert interpreter.input_shapes == shapes
-    assert interpreter.output_shapes == shapes
+    interpreter = Interpreter(converter.convert())
+    assert interpreter.input_types == [np.float32]
+    assert interpreter.output_types == [np.float32]
+    assert interpreter.input_shapes == [input_shape]
+    assert interpreter.output_shapes == [(np.product(input_shape),)]
 
-    outputs = interpreter.predict(inputs)
-    assert len(outputs) == len(expected_outputs)
-    for output, expected_output in zip(outputs, expected_outputs):
-        if isinstance(expected_output, list):
-            for out, expected_out in zip(output, expected_output):
-                np.testing.assert_allclose(out, expected_out, rtol=0.001, atol=0.25)
-        else:
-            np.testing.assert_allclose(output, expected_output, rtol=0.001, atol=0.25)
+    outputs = interpreter.predict(inputs, 1)
+    np.testing.assert_allclose(outputs, expected_outputs)
+
+
+def test_interpreter_multi_input():
+    x = tf.keras.Input((24, 24, 2))
+    y = tf.keras.Input((24, 24, 1))
+    model = tf.keras.Model(
+        [x, y], [tf.keras.layers.Flatten()(x), tf.keras.layers.Flatten()(y)]
+    )
+    converter = tf.lite.TFLiteConverter.from_keras_model(model)
+
+    x_np = np.random.uniform(-1, 1, size=(16, 24, 24, 2)).astype(np.float32)
+    y_np = np.random.uniform(-1, 1, size=(16, 24, 24, 1)).astype(np.float32)
+    expected_output_x = x_np.reshape(16, -1)
+    expected_output_y = y_np.reshape(16, -1)
+
+    interpreter = Interpreter(converter.convert())
+    assert interpreter.input_types == [np.float32, np.float32]
+    assert interpreter.output_types == [np.float32, np.float32]
+    assert interpreter.input_shapes == [(24, 24, 2), (24, 24, 1)]
+    assert interpreter.output_shapes == [(24 * 24 * 2,), (24 * 24 * 1,)]
+
+    output_x, output_y = interpreter.predict([x_np, y_np])
+    np.testing.assert_allclose(output_x, expected_output_x)
+    np.testing.assert_allclose(output_y, expected_output_y)
 
 
 if __name__ == "__main__":

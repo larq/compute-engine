@@ -157,8 +157,7 @@ def preprocess(data):
 def assert_model_output(model_lce, inputs, outputs):
     interpreter = Interpreter(model_lce)
     actual_outputs = interpreter.predict(inputs)
-    for actual_output, output in zip(actual_outputs, outputs):
-        np.testing.assert_allclose(actual_output[0], output, rtol=0.001, atol=0.25)
+    np.testing.assert_allclose(actual_outputs, outputs, rtol=0.001, atol=0.25)
 
 
 @pytest.mark.parametrize(
