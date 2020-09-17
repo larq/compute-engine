@@ -34,14 +34,28 @@ class InterpreterWrapperBase {
   pybind11::list predict(const pybind11::list& input_list);
 
   // List of numpy types
-  pybind11::list get_input_types() const;
-  pybind11::list get_output_types() const;
+  pybind11::list get_input_types() const {
+    MINIMAL_CHECK(interpreter_);
+    return get_types(interpreter_->inputs());
+  }
+  pybind11::list get_output_types() const {
+    MINIMAL_CHECK(interpreter_);
+    return get_types(interpreter_->outputs());
+  }
   // List of shape tuples
-  pybind11::list get_input_shapes() const;
-  pybind11::list get_output_shapes() const;
+  pybind11::list get_input_shapes() const {
+    MINIMAL_CHECK(interpreter_);
+    return get_shapes(interpreter_->inputs());
+  }
+  pybind11::list get_output_shapes() const {
+    MINIMAL_CHECK(interpreter_);
+    return get_shapes(interpreter_->outputs());
+  }
 
  protected:
   std::unique_ptr<InterpreterType> interpreter_;
+  pybind11::list get_types(const std::vector<int>& tensors) const;
+  pybind11::list get_shapes(const std::vector<int>& tensors) const;
 };
 
 TfLiteType TfLiteTypeFromPyType(pybind11::dtype py_type) {
@@ -120,14 +134,12 @@ bool SetTensorFromNumpy(const TfLiteTensor* tensor,
 }
 
 template <typename InterpreterType>
-pybind11::list InterpreterWrapperBase<InterpreterType>::get_input_types()
-    const {
-  MINIMAL_CHECK(interpreter_);
+pybind11::list InterpreterWrapperBase<InterpreterType>::get_types(
+    const std::vector<int>& tensors) const {
   pybind11::list result;
 
-  for (size_t i = 0; i < interpreter_->inputs().size(); ++i) {
-    const TfLiteTensor* tensor =
-        interpreter_->tensor(interpreter_->inputs()[i]);
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    const TfLiteTensor* tensor = interpreter_->tensor(tensors[i]);
     result.append(PyTypeFromTfLiteType(tensor->type));
   }
 
@@ -135,47 +147,12 @@ pybind11::list InterpreterWrapperBase<InterpreterType>::get_input_types()
 }
 
 template <typename InterpreterType>
-pybind11::list InterpreterWrapperBase<InterpreterType>::get_output_types()
-    const {
-  MINIMAL_CHECK(interpreter_);
+pybind11::list InterpreterWrapperBase<InterpreterType>::get_shapes(
+    const std::vector<int>& tensors) const {
   pybind11::list result;
 
-  for (size_t i = 0; i < interpreter_->outputs().size(); ++i) {
-    const TfLiteTensor* tensor =
-        interpreter_->tensor(interpreter_->outputs()[i]);
-    result.append(PyTypeFromTfLiteType(tensor->type));
-  }
-
-  return result;
-}
-
-template <typename InterpreterType>
-pybind11::list InterpreterWrapperBase<InterpreterType>::get_input_shapes()
-    const {
-  MINIMAL_CHECK(interpreter_);
-  pybind11::list result;
-
-  for (size_t i = 0; i < interpreter_->inputs().size(); ++i) {
-    const TfLiteTensor* tensor =
-        interpreter_->tensor(interpreter_->inputs()[i]);
-    pybind11::tuple shape(tensor->dims->size - 1);
-    for (int j = 0; j < tensor->dims->size - 1; ++j)
-      shape[j] = tensor->dims->data[j + 1];
-    result.append(shape);
-  }
-
-  return result;
-}
-
-template <typename InterpreterType>
-pybind11::list InterpreterWrapperBase<InterpreterType>::get_output_shapes()
-    const {
-  MINIMAL_CHECK(interpreter_);
-  pybind11::list result;
-
-  for (size_t i = 0; i < interpreter_->outputs().size(); ++i) {
-    const TfLiteTensor* tensor =
-        interpreter_->tensor(interpreter_->outputs()[i]);
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    const TfLiteTensor* tensor = interpreter_->tensor(tensors[i]);
     pybind11::tuple shape(tensor->dims->size - 1);
     for (int j = 0; j < tensor->dims->size - 1; ++j)
       shape[j] = tensor->dims->data[j + 1];
