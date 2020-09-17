@@ -1,14 +1,15 @@
+import math
 import sys
-import pytest
+
 import larq as lq
 import larq_zoo as lqz
+import numpy as np
+import pytest
 import tensorflow as tf
 import tensorflow_datasets as tfds
-import numpy as np
-import math
 
 from larq_compute_engine.mlir.python.converter import convert_keras_model
-from larq_compute_engine.tests._end2end_verify import run_model
+from larq_compute_engine.tflite.python.interpreter import Interpreter
 
 
 def toy_model(**kwargs):
@@ -154,14 +155,10 @@ def preprocess(data):
 
 
 def assert_model_output(model_lce, inputs, outputs):
-    for input, output in zip(inputs, outputs):
-        actual_outputs = run_model(model_lce, list(input.flatten()))
-        assert len(actual_outputs) > 1
-        np.testing.assert_allclose(actual_outputs[0], actual_outputs[1], rtol=1e-5)
-        for actual_output in actual_outputs:
-            np.testing.assert_allclose(
-                actual_output, output.flatten(), rtol=0.001, atol=0.25
-            )
+    interpreter = Interpreter(model_lce)
+    actual_outputs = interpreter.predict(inputs)
+    for actual_output, output in zip(actual_outputs, outputs):
+        np.testing.assert_allclose(actual_output[0], output, rtol=0.001, atol=0.25)
 
 
 @pytest.mark.parametrize(
