@@ -298,8 +298,10 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
   // If applicable, fuse the back-transformation and int8 scale/zero-point into
   // the output transform multiplier/bias.
   if (output->type == kTfLiteFloat32 || output->type == kTfLiteInt8) {
-    params->output_transform_multiplier.resize(params->channels_out);
-    params->output_transform_bias.resize(params->channels_out);
+    params->output_transform_multiplier.resize(params->channels_out +
+                                               LCE_EXTRA_BYTES / sizeof(float));
+    params->output_transform_bias.resize(params->channels_out +
+                                         LCE_EXTRA_BYTES / sizeof(float));
 
     const auto filter_shape = GetTensorShape(GetInput(context, node, 1));
     const std::int32_t backtransform_add =
