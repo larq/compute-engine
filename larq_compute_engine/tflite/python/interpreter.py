@@ -79,15 +79,11 @@ class Interpreter:
             A list of output predictions.
         """
         input_data = normalize_input_data(input_data)
-        output_data = []
 
         if verbose >= 1:
             input_data = tqdm(input_data)
 
-        for data in input_data:
-            output_data.append(self.interpreter.predict(data))
-
         if len(self.output_shapes) == 1:
-            output_data = [data[0] for data in output_data]
+            return [self.interpreter.predict(data)[0] for data in input_data]
 
-        return output_data
+        return [self.interpreter.predict(data) for data in input_data]
