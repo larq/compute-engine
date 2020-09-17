@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Tuple, Union
 
 import numpy as np
 from tqdm import tqdm
@@ -28,31 +28,56 @@ def normalize_input_data(input_data):
 
 
 class Interpreter:
-    def __init__(self, flatbuffer: bytes):
-        self.flatbuffer = flatbuffer
-        self.interpreter = interpreter_wrapper_lite.LiteInterpreter(flatbuffer)
+    """Interpreter interface for Larq Compute Engine Models.
+
+    !!! example
+        ```python
+        tflite_model = convert_keras_model(model)
+        interpreter = Interpreter(tflite_model)
+        interpreter.predict(input_data, verbose=1)
+        ```
+
+    # Arguments
+        flatbuffer_model: A serialized TFLite model in the flatbuffer format.
+    """
+
+    def __init__(self, flatbuffer_model: bytes):
+        self.interpreter = interpreter_wrapper_lite.LiteInterpreter(flatbuffer_model)
 
     @property
-    def input_types(self):
+    def input_types(self) -> list:
+        """Returns a list of input types."""
         return self.interpreter.input_types
 
     @property
-    def input_shapes(self):
+    def input_shapes(self) -> List[Tuple[int]]:
+        """Returns a list of input shapes."""
         return self.interpreter.input_shapes
 
     @property
-    def output_types(self):
+    def output_types(self) -> list:
+        """Returns a list of output types."""
         return self.interpreter.output_types
 
     @property
-    def output_shapes(self):
+    def output_shapes(self) -> List[Tuple[int]]:
+        """Returns a list of output shapes."""
         return self.interpreter.output_shapes
 
     def predict(
         self,
         input_data: Union[np.ndarray, List[np.ndarray], List[List[np.ndarray]]],
         verbose: int = 0,
-    ):
+    ) -> Union[List[np.ndarray], List[List[np.ndarray]]]:
+        """Generates output predictions for the input samples.
+
+        # Arguments
+            input_data: Input samples.
+            verbose: Verbosity mode, 0 or 1.
+
+        # Returns
+            A list of output predictions.
+        """
         input_data = normalize_input_data(input_data)
         output_data = []
 
