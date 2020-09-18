@@ -13,13 +13,13 @@ class Interpreter(interpreter_wrapper_lite.LiteInterpreter):
 
     !!! example
         ```python
-        tflite_model = convert_keras_model(model)
-        interpreter = Interpreter(tflite_model)
+        lce_model = convert_keras_model(model)
+        interpreter = Interpreter(lce_model)
         interpreter.predict(input_data, verbose=1)
         ```
 
     # Arguments
-        flatbuffer_model: A serialized TFLite model in the flatbuffer format.
+        flatbuffer_model: A serialized Larq Compute Engine model in the flatbuffer format.
     """
 
     def predict(
@@ -38,7 +38,7 @@ class Interpreter(interpreter_wrapper_lite.LiteInterpreter):
 
         if not isinstance(x, (list, np.ndarray)) or len(x) == 0:
             raise ValueError(
-                "Expected either a non-empty list of inputs or a numpy array with "
+                "Expected either a non-empty list of inputs or a Numpy array with "
                 f"implicit initial batch dimension. Received: {x}"
             )
 
