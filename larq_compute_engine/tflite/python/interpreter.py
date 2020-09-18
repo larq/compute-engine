@@ -20,6 +20,12 @@ class Interpreter:
 
     # Arguments
         flatbuffer_model: A serialized Larq Compute Engine model in the flatbuffer format.
+
+    # Attributes
+        input_types: Returns a list of input types.
+        input_shapes: Returns a list of input shapes.
+        output_types: Returns a list of output types.
+        output_shapes: Returns a list of output shapes.
     """
 
     def __init__(self, flatbuffer_model: bytes):
