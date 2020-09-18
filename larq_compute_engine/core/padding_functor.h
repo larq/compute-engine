@@ -121,7 +121,7 @@ class PaddingFunctor {
 
                 // filter = +1.0 --> bit = 0 ; correction += +1.0
                 // filter = -1.0 --> bit = 1 ; correction += -1.0
-                popcount += __builtin_popcount(filter_data[filter_idx]);
+                popcount += xor_popcount(filter_data[filter_idx], 0);
               }
               float cur_correction = input_channels - 2 * popcount;
 

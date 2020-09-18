@@ -1,7 +1,6 @@
 #ifndef COMPUTE_ENGINE_CORE_BGEMM_KERNELS_RUY_H_
 #define COMPUTE_ENGINE_CORE_BGEMM_KERNELS_RUY_H_
 
-#include "larq_compute_engine/core/bgemm_functor.h"
 #include "larq_compute_engine/core/bitpack_utils.h"
 #include "ruy/platform.h"
 #include "ruy/profiler/instrumentation.h"
@@ -16,7 +15,7 @@ using ce::core::bitpacking_bitwidth;
 using ce::core::TBitpacked;
 
 template <ruy::Path ThePath, typename DstScalar, typename Spec>
-struct BgemmKernel {};
+struct BGemmKernel {};
 
 // TODO: this is hacky
 #if RUY_PLATFORM_NEON
@@ -24,11 +23,11 @@ struct BgemmKernel {};
 #endif
 
 template <typename DstScalar, typename Spec>
-struct BgemmKernel<ruy::Path::kStandardCpp, DstScalar, Spec> {
+struct BGemmKernel<ruy::Path::kStandardCpp, DstScalar, Spec> {
   using AccumScalar = typename Spec::AccumScalar;
   using LhsLayout = typename Spec::StandardCppKernelLhsLayout;
   using RhsLayout = typename Spec::StandardCppKernelRhsLayout;
-  explicit BgemmKernel(ruy::Tuning) {}
+  explicit BGemmKernel(ruy::Tuning) {}
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
            const Spec& spec, int start_row, int start_col, int end_row,
            int end_col, ruy::Mat<DstScalar>* dst) const {
@@ -67,11 +66,11 @@ struct BgemmKernel<ruy::Path::kStandardCpp, DstScalar, Spec> {
 
 // A template specialisation for writing bitpacked output.
 template <typename Spec>
-struct BgemmKernel<ruy::Path::kStandardCpp, TBitpacked, Spec> {
+struct BGemmKernel<ruy::Path::kStandardCpp, TBitpacked, Spec> {
   using AccumScalar = typename Spec::AccumScalar;
   using LhsLayout = typename Spec::StandardCppKernelLhsLayout;
   using RhsLayout = typename Spec::StandardCppKernelRhsLayout;
-  explicit BgemmKernel(ruy::Tuning) {}
+  explicit BGemmKernel(ruy::Tuning) {}
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
            const Spec& spec, int start_row, int start_col, int end_row,
            int end_col, ruy::Mat<TBitpacked>* dst) const {
@@ -137,11 +136,11 @@ struct BgemmKernel<ruy::Path::kStandardCpp, TBitpacked, Spec> {
 };
 
 template <ruy::Path ThePath, typename DstScalar, typename Spec>
-void RunBgemmKernelTyped(ruy::Tuning tuning, const ruy::PMat<TBitpacked>& lhs,
+void RunBGemmKernelTyped(ruy::Tuning tuning, const ruy::PMat<TBitpacked>& lhs,
                          const ruy::PMat<TBitpacked>& rhs, const Spec& spec,
                          int start_row, int start_col, int end_row, int end_col,
                          ruy::Mat<DstScalar>* dst) {
-  using BKernel = BgemmKernel<ThePath, DstScalar, Spec>;
+  using BKernel = BGemmKernel<ThePath, DstScalar, Spec>;
   BKernel kernel(tuning);
   using LhsLayout = typename BKernel::LhsLayout;
   using RhsLayout = typename BKernel::RhsLayout;
@@ -173,11 +172,11 @@ void RunBgemmKernelTyped(ruy::Tuning tuning, const ruy::PMat<TBitpacked>& lhs,
 }
 
 template <ruy::Path ThePath, typename DstScalar, typename Spec>
-void RunBgemmKernel(ruy::Tuning tuning, const ruy::SidePair<ruy::PEMat>& src,
+void RunBGemmKernel(ruy::Tuning tuning, const ruy::SidePair<ruy::PEMat>& src,
                     void* spec, const ruy::SidePair<int>& start,
                     const ruy::SidePair<int>& end, ruy::EMat* dst) {
   ruy::Mat<DstScalar> mdst = ruy::UneraseType<DstScalar>(*dst);
-  RunBgemmKernelTyped<ThePath, DstScalar, Spec>(
+  RunBGemmKernelTyped<ThePath, DstScalar, Spec>(
       tuning, ruy::UneraseType<TBitpacked>(src[ruy::Side::kLhs]),
       ruy::UneraseType<TBitpacked>(src[ruy::Side::kRhs]),
       *static_cast<const Spec*>(spec), start[ruy::Side::kLhs],
