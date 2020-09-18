@@ -19,8 +19,8 @@ def test_interpreter():
     interpreter = Interpreter(converter.convert())
     assert interpreter.input_types == [np.float32]
     assert interpreter.output_types == [np.float32]
-    assert interpreter.input_shapes == [input_shape]
-    assert interpreter.output_shapes == [(np.product(input_shape),)]
+    assert interpreter.input_shapes == [(1, *input_shape)]
+    assert interpreter.output_shapes == [(1, np.product(input_shape))]
 
     outputs = interpreter.predict(inputs, 1)
     np.testing.assert_allclose(outputs, expected_outputs)
@@ -42,8 +42,8 @@ def test_interpreter_multi_input():
     interpreter = Interpreter(converter.convert())
     assert interpreter.input_types == [np.float32, np.float32]
     assert interpreter.output_types == [np.float32, np.float32]
-    assert interpreter.input_shapes == [(24, 24, 2), (24, 24, 1)]
-    assert interpreter.output_shapes == [(24 * 24 * 2,), (24 * 24 * 1,)]
+    assert interpreter.input_shapes == [(1, 24, 24, 2), (1, 24, 24, 1)]
+    assert interpreter.output_shapes == [(1, 24 * 24 * 2), (1, 24 * 24 * 1)]
 
     output_x, output_y = interpreter.predict([x_np, y_np])
     np.testing.assert_allclose(output_x, expected_output_x)

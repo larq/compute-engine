@@ -154,9 +154,9 @@ pybind11::list InterpreterWrapperBase<InterpreterType>::get_shapes(
 
   for (auto tensor_id : tensors) {
     const TfLiteTensor* tensor = interpreter_->tensor(tensor_id);
-    pybind11::tuple shape(tensor->dims->size - 1);
-    for (int j = 0; j < tensor->dims->size - 1; ++j)
-      shape[j] = tensor->dims->data[j + 1];
+    pybind11::tuple shape(tensor->dims->size);
+    for (int j = 0; j < tensor->dims->size; ++j)
+      shape[j] = tensor->dims->data[j];
     result.append(shape);
   }
 
