@@ -55,8 +55,10 @@ class InterpreterWrapperBase {
 
  protected:
   std::unique_ptr<InterpreterType> interpreter_;
-  pybind11::list get_types(const std::vector<int>& tensors) const;
-  pybind11::list get_shapes(const std::vector<int>& tensors) const;
+  template <typename TensorList>
+  pybind11::list get_types(const TensorList& tensors) const;
+  template <typename TensorList>
+  pybind11::list get_shapes(const TensorList& tensors) const;
 };
 
 TfLiteType TfLiteTypeFromPyType(pybind11::dtype py_type) {
@@ -135,8 +137,9 @@ bool SetTensorFromNumpy(const TfLiteTensor* tensor,
 }
 
 template <typename InterpreterType>
+template <typename TensorList>
 pybind11::list InterpreterWrapperBase<InterpreterType>::get_types(
-    const std::vector<int>& tensors) const {
+    const TensorList& tensors) const {
   pybind11::list result;
 
   for (auto tensor_id : tensors) {
@@ -148,8 +151,9 @@ pybind11::list InterpreterWrapperBase<InterpreterType>::get_types(
 }
 
 template <typename InterpreterType>
+template <typename TensorList>
 pybind11::list InterpreterWrapperBase<InterpreterType>::get_shapes(
-    const std::vector<int>& tensors) const {
+    const TensorList& tensors) const {
   pybind11::list result;
 
   for (auto tensor_id : tensors) {
