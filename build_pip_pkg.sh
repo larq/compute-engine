@@ -77,8 +77,8 @@ function main() {
 
   if ! is_windows; then
     echo "=== Stripping symbols"
-    chmod +w ${TMPDIR}/larq_compute_engine/mlir/*.so
-    strip -x ${TMPDIR}/larq_compute_engine/mlir/*.so
+    chmod +w ${TMPDIR}/larq_compute_engine/mlir/*.so ${TMPDIR}/larq_compute_engine/tflite/python/*.so
+    strip -x ${TMPDIR}/larq_compute_engine/mlir/*.so ${TMPDIR}/larq_compute_engine/tflite/python/*.so
   fi
 
   echo $(date) : "=== Building wheel"
