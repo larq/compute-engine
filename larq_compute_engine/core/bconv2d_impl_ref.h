@@ -17,7 +17,6 @@ limitations under the License.
 #define COMPUTE_ENGINE_CORE_BCONV2D_IMPL_REF_H_
 
 #include "larq_compute_engine/core/bconv2d_output_transform.h"
-#include "larq_compute_engine/core/bgemm_functor.h"
 #include "tensorflow/lite/kernels/internal/common.h"
 #include "tensorflow/lite/kernels/internal/types.h"
 

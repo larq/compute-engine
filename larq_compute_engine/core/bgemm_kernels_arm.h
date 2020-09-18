@@ -25,12 +25,12 @@ using compute_engine::core::TBitpacked;
 
 // Optimised Arm32 kernel. Supports float or int8 output.
 template <typename DstScalar>
-struct BgemmKernel<ruy::Path::kNeon, DstScalar,
+struct BGemmKernel<ruy::Path::kNeon, DstScalar,
                    BinaryMulParams<std::int32_t, DstScalar>> {
   Tuning tuning = Tuning::kAuto;
   using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
   using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
-  explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
+  explicit BGemmKernel(Tuning tuning_) : tuning(tuning_) {}
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
            const BinaryMulParams<std::int32_t, DstScalar>& mul_params,
            int start_row, int start_col, int end_row, int end_col,
@@ -54,12 +54,12 @@ struct BgemmKernel<ruy::Path::kNeon, DstScalar,
 // Optimised Aarch64 kernel with 16-bit accumulators. Supports float or int8 or
 // bitpacked output.
 template <typename DstScalar>
-struct BgemmKernel<ruy::Path::kNeon, DstScalar,
+struct BGemmKernel<ruy::Path::kNeon, DstScalar,
                    BinaryMulParams<std::int16_t, DstScalar>> {
   Tuning tuning = Tuning::kAuto;
   using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 8>;
   using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
-  explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
+  explicit BGemmKernel(Tuning tuning_) : tuning(tuning_) {}
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
            const BinaryMulParams<std::int16_t, DstScalar>& mul_params,
            int start_row, int start_col, int end_row, int end_col,
@@ -78,12 +78,12 @@ struct BgemmKernel<ruy::Path::kNeon, DstScalar,
 // Fallback Aarch64 kernel with 32-bit accumulators (when there's a risk of
 // overflowing 16-bit accumulators). Supports float or int8 output.
 template <typename DstScalar>
-struct BgemmKernel<ruy::Path::kNeon, DstScalar,
+struct BGemmKernel<ruy::Path::kNeon, DstScalar,
                    BinaryMulParams<std::int32_t, DstScalar>> {
   Tuning tuning = Tuning::kAuto;
   using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
   using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
-  explicit BgemmKernel(Tuning tuning_) : tuning(tuning_) {}
+  explicit BGemmKernel(Tuning tuning_) : tuning(tuning_) {}
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
            const BinaryMulParams<std::int32_t, DstScalar>& mul_params,
            int start_row, int start_col, int end_row, int end_col,

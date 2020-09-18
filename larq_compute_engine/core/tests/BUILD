@@ -3,16 +3,6 @@ licenses(["notice"])  # Apache 2.0
 package(default_visibility = ["//visibility:public"])
 
 cc_test(
-    name = "bgemm_tests",
-    size = "small",
-    srcs = ["bgemm_tests.cc"],
-    deps = [
-        "//larq_compute_engine/core:bgemm_functor",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_test(
     name = "bitpack_tests",
     size = "small",
     srcs = ["bitpack_tests.cc"],
@@ -38,7 +28,6 @@ cc_test(
 test_suite(
     name = "cc_tests",
     tests = [
-        "bgemm_tests",
         "bitpack_tests",
     ],
 )

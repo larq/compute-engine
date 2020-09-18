@@ -12,7 +12,7 @@ namespace compute_engine {
 namespace tflite {
 
 template <ruy::Path ThePath, typename DstScalar, typename MulParamsType>
-void PopulateBgemmTrMulParams(const Mat<TBitpacked>& lhs,
+void PopulateBGemmTrMulParams(const Mat<TBitpacked>& lhs,
                               const Mat<TBitpacked>& rhs, Mat<DstScalar>& dst,
                               const MulParamsType& mul_params,
                               ruy::TrMulParams* params) {
@@ -23,12 +23,12 @@ void PopulateBgemmTrMulParams(const Mat<TBitpacked>& lhs,
 
   // Optimised code paths only support all matrices being column-major
   if (!ruy::IsColMajorTrMul(*params) && ThePath != ruy::Path::kStandardCpp) {
-    PopulateBgemmTrMulParams<ruy::Path::kStandardCpp>(lhs, rhs, dst, mul_params,
+    PopulateBGemmTrMulParams<ruy::Path::kStandardCpp>(lhs, rhs, dst, mul_params,
                                                       params);
     return;
   };
 
-  using Kernel = BgemmKernel<ThePath, DstScalar, MulParamsType>;
+  using Kernel = BGemmKernel<ThePath, DstScalar, MulParamsType>;
   using LhsKernelLayout = typename Kernel::LhsLayout;
   using RhsKernelLayout = typename Kernel::RhsLayout;
 
@@ -42,7 +42,7 @@ void PopulateBgemmTrMulParams(const Mat<TBitpacked>& lhs,
       &compute_engine::tflite::RunPack<ThePath, LhsKernelLayout>;
   params->run_pack[Side::kRhs] =
       &compute_engine::tflite::RunPack<ThePath, RhsKernelLayout>;
-  params->run_kernel = &RunBgemmKernel<ThePath, DstScalar, MulParamsType>;
+  params->run_kernel = &RunBGemmKernel<ThePath, DstScalar, MulParamsType>;
 }
 
 }  // namespace tflite

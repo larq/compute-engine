@@ -1,6 +1,7 @@
 #ifndef COMPUTE_ENGINE_CORE_TYPES_H_
 #define COMPUTE_ENGINE_CORE_TYPES_H_
 
+#include <bitset>
 #include <cstdint>
 #include <limits>
 #include <type_traits>
@@ -17,6 +18,10 @@ namespace core {
 using TBitpacked = std::int32_t;
 constexpr std::size_t bitpacking_bitwidth =
     std::numeric_limits<typename std::make_unsigned<TBitpacked>::type>::digits;
+
+inline int xor_popcount(const TBitpacked& a, const TBitpacked& b) {
+  return std::bitset<bitpacking_bitwidth>(a ^ b).count();
+}
 
 }  // namespace core
 }  // namespace compute_engine
