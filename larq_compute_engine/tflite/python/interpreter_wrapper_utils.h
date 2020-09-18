@@ -9,11 +9,12 @@
 #include "pybind11/stl.h"
 #include "tensorflow/lite/c/common.h"
 
-#define PY_ERROR(x)                                                           \
-  {                                                                           \
-    std::stringstream ss;                                                     \
-    ss << "ERROR at " << __FILE__ << ":" << __LINE__ << " : " x << std::endl; \
-    throw std::runtime_error(ss.str());                                       \
+#define PY_ERROR(x)                                                \
+  {                                                                \
+    std::stringstream ss;                                          \
+    ss << "ERROR at " << __FILE__ << ":" << __LINE__ << " : " << x \
+       << std::endl;                                               \
+    throw std::runtime_error(ss.str());                            \
   }
 
 #define MINIMAL_CHECK(x)                        \
