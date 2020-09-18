@@ -31,7 +31,7 @@ class InterpreterWrapperBase {
   // one numpy array for each model input.
   //
   // The result is a `List` of numpy arrays, one for each output
-  pybind11::list predict(const pybind11::list& input_list);
+  pybind11::list predict_batch(const pybind11::list& input_list);
 
   // List of numpy types
   pybind11::list get_input_types() const {
@@ -163,7 +163,7 @@ pybind11::list InterpreterWrapperBase<InterpreterType>::get_shapes(
 }
 
 template <typename InterpreterType>
-pybind11::list InterpreterWrapperBase<InterpreterType>::predict(
+pybind11::list InterpreterWrapperBase<InterpreterType>::predict_batch(
     const pybind11::list& input_list) {
   MINIMAL_CHECK(interpreter_);
   const size_t inputs_size = input_list.size();
