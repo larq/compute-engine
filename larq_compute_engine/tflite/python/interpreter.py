@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Tuple, Union
 
 import numpy as np
 from tqdm import tqdm
@@ -8,7 +8,7 @@ from larq_compute_engine.tflite.python import interpreter_wrapper_lite
 __all__ = ["Interpreter"]
 
 
-class Interpreter(interpreter_wrapper_lite.LiteInterpreter):
+class Interpreter:
     """Interpreter interface for Larq Compute Engine Models.
 
     !!! example
@@ -21,6 +21,29 @@ class Interpreter(interpreter_wrapper_lite.LiteInterpreter):
     # Arguments
         flatbuffer_model: A serialized Larq Compute Engine model in the flatbuffer format.
     """
+
+    def __init__(self, flatbuffer_model: bytes):
+        self.interpreter = interpreter_wrapper_lite.LiteInterpreter(flatbuffer_model)
+
+    @property
+    def input_types(self) -> list:
+        """Returns a list of input types."""
+        return self.interpreter.input_types
+
+    @property
+    def input_shapes(self) -> List[Tuple[int]]:
+        """Returns a list of input shapes."""
+        return self.interpreter.input_shapes
+
+    @property
+    def output_types(self) -> list:
+        """Returns a list of output types."""
+        return self.interpreter.output_types
+
+    @property
+    def output_shapes(self) -> List[Tuple[int]]:
+        """Returns a list of output shapes."""
+        return self.interpreter.output_shapes
 
     def predict(
         self, x: Union[np.ndarray, List[np.ndarray]], verbose: int = 0
@@ -47,7 +70,7 @@ class Interpreter(interpreter_wrapper_lite.LiteInterpreter):
 
         batch_iter = tqdm(zip(*x)) if verbose >= 1 else zip(*x)
         prediction_batch_iter = (
-            self.predict_batch([np.expand_dims(inp, axis=0) for inp in inputs])
+            self.interpreter.predict([np.expand_dims(inp, axis=0) for inp in inputs])
             for inputs in batch_iter
         )
         outputs = [np.concatenate(batches) for batches in zip(*prediction_batch_iter)]

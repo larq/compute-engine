@@ -47,13 +47,12 @@ PYBIND11_MODULE(interpreter_wrapper_lite, m) {
   pybind11::class_<LiteInterpreterWrapper>(m, "LiteInterpreter")
       .def(pybind11::init<const pybind11::bytes&>())
       .def_property("input_types", &LiteInterpreterWrapper::get_input_types,
-                    nullptr, "Returns a list of input types.")
+                    nullptr)
       .def_property("output_types", &LiteInterpreterWrapper::get_output_types,
-                    nullptr, "Returns a list of output types.")
+                    nullptr)
       .def_property("input_shapes", &LiteInterpreterWrapper::get_input_shapes,
-                    nullptr, "Returns a list of input shapes.")
+                    nullptr)
       .def_property("output_shapes", &LiteInterpreterWrapper::get_output_shapes,
-                    nullptr, "Returns a list of output shapes.")
-      .def("predict_batch", &LiteInterpreterWrapper::predict_batch,
-           "Generates output predictions for a single input sample.");
+                    nullptr)
+      .def("predict", &LiteInterpreterWrapper::predict);
 };
