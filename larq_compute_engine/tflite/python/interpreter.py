@@ -7,10 +7,10 @@ from larq_compute_engine.tflite.python import interpreter_wrapper_lite
 
 __all__ = ["Interpreter"]
 
+Data = Union[np.ndarray, List[np.ndarray]]
 
-def data_generator(
-    x: Union[np.ndarray, List[np.ndarray]]
-) -> Iterator[List[np.ndarray]]:
+
+def data_generator(x: Data) -> Iterator[List[np.ndarray]]:
     if not isinstance(x, (list, np.ndarray)) or len(x) == 0:
         raise ValueError(
             "Expected either a non-empty list of inputs or a Numpy array with "
@@ -67,9 +67,7 @@ class Interpreter:
         """Returns a list of output shapes."""
         return self.interpreter.output_shapes
 
-    def predict(
-        self, x: Union[np.ndarray, List[np.ndarray]], verbose: int = 0
-    ) -> Union[np.ndarray, List[np.ndarray]]:
+    def predict(self, x: Data, verbose: int = 0) -> Data:
         """Generates output predictions for the input samples.
 
         # Arguments
