@@ -10,18 +10,24 @@ __all__ = ["Interpreter"]
 Data = Union[np.ndarray, List[np.ndarray]]
 
 
-def data_generator(x: Data) -> Iterator[List[np.ndarray]]:
-    if not isinstance(x, (list, np.ndarray)) or len(x) == 0:
-        raise ValueError(
-            "Expected either a non-empty list of inputs or a Numpy array with "
-            f"implicit initial batch dimension. Received: {x}"
-        )
-
+def data_generator(x: Union[Data, Iterator[Data]]) -> Iterator[List[np.ndarray]]:
     if isinstance(x, np.ndarray):
-        x = [x]
-
-    for inputs in zip(*x):
-        yield [np.expand_dims(inp, axis=0) for inp in inputs]
+        for inputs in x:
+            yield [np.expand_dims(inputs, axis=0)]
+    elif isinstance(x, list):
+        for inputs in zip(*x):
+            yield [np.expand_dims(inp, axis=0) for inp in inputs]
+    elif hasattr(x, "__next__") and hasattr(x, "__iter__"):
+        for inputs in x:
+            if isinstance(inputs, np.ndarray):
+                yield [np.expand_dims(inputs, axis=0)]
+            else:
+                yield [np.expand_dims(inp, axis=0) for inp in inputs]
+    else:
+        raise ValueError(
+            "Expected either a list of inputs or a Numpy array with implicit initial"
+            f"batch dimension or an iterator yielding one of the above. Received: {x}"
+        )
 
 
 class Interpreter:
@@ -67,7 +73,7 @@ class Interpreter:
         """Returns a list of output shapes."""
         return self.interpreter.output_shapes
 
-    def predict(self, x: Data, verbose: int = 0) -> Data:
+    def predict(self, x: Union[Data, Iterator[Data]], verbose: int = 0) -> Data:
         """Generates output predictions for the input samples.
 
         # Arguments

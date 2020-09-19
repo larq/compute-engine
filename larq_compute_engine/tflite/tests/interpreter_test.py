@@ -7,7 +7,8 @@ import tensorflow as tf
 from larq_compute_engine.tflite.python.interpreter import Interpreter
 
 
-def test_interpreter():
+@pytest.mark.parametrize("use_iterator", [True, False])
+def test_interpreter(use_iterator):
     input_shape = (24, 24, 3)
     x = tf.keras.Input(input_shape)
     model = tf.keras.Model(x, tf.keras.layers.Flatten()(x))
@@ -22,11 +23,17 @@ def test_interpreter():
     assert interpreter.input_shapes == [(1, *input_shape)]
     assert interpreter.output_shapes == [(1, np.product(input_shape))]
 
-    outputs = interpreter.predict(inputs, 1)
+    def input_fn():
+        if use_iterator:
+            return (input for input in inputs)
+        return inputs
+
+    outputs = interpreter.predict(input_fn(), 1)
     np.testing.assert_allclose(outputs, expected_outputs)
 
 
-def test_interpreter_multi_input():
+@pytest.mark.parametrize("use_iterator", [True, False])
+def test_interpreter_multi_input(use_iterator):
     x = tf.keras.Input((24, 24, 2))
     y = tf.keras.Input((24, 24, 1))
     model = tf.keras.Model(
@@ -45,7 +52,12 @@ def test_interpreter_multi_input():
     assert interpreter.input_shapes == [(1, 24, 24, 2), (1, 24, 24, 1)]
     assert interpreter.output_shapes == [(1, 24 * 24 * 2), (1, 24 * 24 * 1)]
 
-    output_x, output_y = interpreter.predict([x_np, y_np])
+    def input_fn():
+        if use_iterator:
+            return ([x, y] for x, y in zip(x_np, y_np))
+        return [x_np, y_np]
+
+    output_x, output_y = interpreter.predict(input_fn())
     np.testing.assert_allclose(output_x, expected_output_x)
     np.testing.assert_allclose(output_y, expected_output_y)
 
