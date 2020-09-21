@@ -8,7 +8,8 @@
 class LiteInterpreterWrapper
     : public InterpreterWrapperBase<tflite::Interpreter> {
  public:
-  LiteInterpreterWrapper(const pybind11::bytes& flatbuffer);
+  LiteInterpreterWrapper(const pybind11::bytes& flatbuffer,
+                         const int num_threads);
   ~LiteInterpreterWrapper(){};
 
  private:
@@ -20,7 +21,7 @@ class LiteInterpreterWrapper
 };
 
 LiteInterpreterWrapper::LiteInterpreterWrapper(
-    const pybind11::bytes& flatbuffer) {
+    const pybind11::bytes& flatbuffer, const int num_threads = 1) {
   // Make a copy of the flatbuffer because it can get deallocated after the
   // constructor is done
   flatbuffer_ = static_cast<std::string>(flatbuffer);
@@ -36,7 +37,7 @@ LiteInterpreterWrapper::LiteInterpreterWrapper(
   compute_engine::tflite::RegisterLCECustomOps(resolver_.get());
 
   tflite::InterpreterBuilder builder(*model_, *resolver_);
-  builder(&interpreter_);
+  builder(&interpreter_, num_threads);
   MINIMAL_CHECK(interpreter_ != nullptr);
 
   // Allocate tensor buffers.
@@ -45,7 +46,7 @@ LiteInterpreterWrapper::LiteInterpreterWrapper(
 
 PYBIND11_MODULE(interpreter_wrapper_lite, m) {
   pybind11::class_<LiteInterpreterWrapper>(m, "LiteInterpreter")
-      .def(pybind11::init<const pybind11::bytes&>())
+      .def(pybind11::init<const pybind11::bytes&, const int>())
       .def_property("input_types", &LiteInterpreterWrapper::get_input_types,
                     nullptr)
       .def_property("output_types", &LiteInterpreterWrapper::get_output_types,
