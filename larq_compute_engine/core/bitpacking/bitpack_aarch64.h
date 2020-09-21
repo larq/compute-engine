@@ -1,5 +1,5 @@
-#ifndef COMPUTE_ENGINE_AARCH64_BITPACK_H
-#define COMPUTE_ENGINE_AARCH64_BITPACK_H
+#ifndef COMPUTE_ENGINE_CORE_BITPACKING_BITPACK_AARCH64_H_
+#define COMPUTE_ENGINE_CORE_BITPACKING_BITPACK_AARCH64_H_
 
 #ifndef __aarch64__
 #pragma GCC error "ERROR: This file should only be compiled for Aarch64."
@@ -12,6 +12,7 @@
 
 namespace compute_engine {
 namespace core {
+namespace bitpacking {
 
 // Bitpack an array of `4 * 32 * num_blocks` floats.
 inline void bitpack_aarch64_4x32(const float* input, std::size_t num_blocks,
@@ -375,7 +376,8 @@ inline void bitpack_aarch64_4x32(const std::int8_t* input,
         "v19", "v31");
 }
 
+}  // namespace bitpacking
 }  // namespace core
 }  // namespace compute_engine
 
-#endif
+#endif  // COMPUTE_ENGINE_CORE_BITPACKING_BITPACK_AARCH64_H_

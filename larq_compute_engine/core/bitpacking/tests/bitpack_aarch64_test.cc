@@ -4,14 +4,13 @@
 #include <cstdint>
 #include <vector>
 
-#include "larq_compute_engine/core/bitpack.h"
-#include "larq_compute_engine/core/bitpack_aarch64.h"
+#include "larq_compute_engine/core/bitpacking/bitpack_aarch64.h"
+#include "larq_compute_engine/core/bitpacking/bitpack.h"
 #include "larq_compute_engine/core/types.h"
 
 namespace compute_engine {
-namespace testing {
-
-using namespace compute_engine::core;
+namespace core {
+namespace bitpacking {
 
 template <typename DstScalar>
 void test_bitpacking_order(const int num_4x32_blocks) {
@@ -71,5 +70,7 @@ TEST(BitpackingAarch64, Int8_17x4x32) {
   test_bitpacking_order<std::int8_t>(17);
 }
 
-}  // end namespace testing
-}  // end namespace compute_engine
+}  // namespace bitpacking
+}  // namespace core
+}  // namespace compute_engine
+

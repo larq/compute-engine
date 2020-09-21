@@ -1,8 +1,8 @@
-#ifndef COMPUTE_ENGINE_CORE_BGEMM_IMPL_H_
-#define COMPUTE_ENGINE_CORE_BGEMM_IMPL_H_
+#ifndef COMPUTE_ENGINE_CORE_BGEMM_BGEMM_H_
+#define COMPUTE_ENGINE_CORE_BGEMM_BGEMM_H_
 
-#include "bgemm_kernels_common.h"
-#include "bgemm_trmul_params.h"
+#include "larq_compute_engine/core/bgemm/kernels_common.h"
+#include "larq_compute_engine/core/bgemm/ruy_trmul_params.h"
 #include "ruy/context.h"
 #include "ruy/context_get_ctx.h"
 #include "ruy/matrix.h"
@@ -16,9 +16,8 @@ using namespace tflite;
 using namespace tflite::cpu_backend_gemm;
 
 namespace compute_engine {
-namespace tflite {
-
-using compute_engine::core::TBitpacked;
+namespace core {
+namespace bgemm {
 
 template <typename AccumScalar, typename DstScalar>
 void BGemm(const MatrixParams<TBitpacked>& lhs_params,
@@ -31,7 +30,7 @@ void BGemm(const MatrixParams<TBitpacked>& lhs_params,
   ruy::profiler::ScopeLabel label("BGemm (Ruy)");
 
   static_assert(std::is_signed<DstScalar>::value,
-                "Output of BGEMM should be of a signed type.");
+                "The DstScalar should be signed.");
 
   // Get ruy context
   auto ruy_ctx = get_ctx(context->ruy_context());
@@ -83,7 +82,8 @@ void BGemm(const MatrixParams<TBitpacked>& lhs_params,
   ruy::TrMul(&bgemm_trmul_params, ruy_ctx);
 }
 
-}  // namespace tflite
+}  // namespace bgemm
+}  // namespace core
 }  // namespace compute_engine
 
-#endif  // COMPUTE_ENGINE_CORE_BGEMM_IMPL_H_
+#endif  // COMPUTE_ENGINE_CORE_BGEMM_BGEMM_H_

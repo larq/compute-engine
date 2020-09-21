@@ -21,15 +21,17 @@
  * for 4x4 column-major kernel layouts.
  */
 
+#ifndef COMPUTE_ENGINE_CORE_BGEMM_RUY_PACK_H_
+#define COMPUTE_ENGINE_CORE_BGEMM_RUY_PACK_H_
+
 #include "larq_compute_engine/core/types.h"
 #include "ruy/pack_common.h"
 
 namespace compute_engine {
-namespace tflite {
+namespace core {
+namespace bgemm {
 
-using compute_engine::core::TBitpacked;
 using namespace ruy;
-
 template <Path ThePath, typename FixedKernelLayout>
 struct LceRuyPackImpl
     : PackImpl<ThePath, FixedKernelLayout, TBitpacked, TBitpacked, TBitpacked> {
@@ -124,13 +126,16 @@ struct LceRuyPackImpl<ThePath, FixedKernelLayout<Order::kColMajor, 4, 4>> {
 // Derived from the function of the same name in Ruy:
 // https://github.com/google/ruy/blob/c9f5f9cecde3d6314df6e7d91517356bf07135eb/ruy/pack.h#L130-L140
 template <Path ThePath, typename FixedKernelLayout>
-void RunPack(Tuning tuning, const EMat& src_matrix, PEMat* packed_matrix,
-             int start_col, int end_col) {
+void RunRuyPack(Tuning tuning, const EMat& src_matrix, PEMat* packed_matrix,
+                int start_col, int end_col) {
   Mat<TBitpacked> src = UneraseType<TBitpacked>(src_matrix);
   PMat<TBitpacked> packed = UneraseType<TBitpacked>(*packed_matrix);
   LceRuyPackImpl<ThePath, FixedKernelLayout>::Run(tuning, src, &packed,
                                                   start_col, end_col);
 }
 
-}  // namespace tflite
+}  // namespace bgemm
+}  // namespace core
 }  // namespace compute_engine
+
+#endif  // COMPUTE_ENGINE_CORE_BGEMM_RUY_PACK_H_

@@ -1,8 +1,8 @@
-#ifndef COMPUTE_ENGINE_TFLITE_KERNELS_BCONV2D_IMPL_H_
-#define COMPUTE_ENGINE_TFLITE_KERNELS_BCONV2D_IMPL_H_
+#ifndef COMPUTE_ENGINE_CORE_BCONV2D_OPTIMIZED_H_
+#define COMPUTE_ENGINE_CORE_BCONV2D_OPTIMIZED_H_
 
-#include "larq_compute_engine/core/bgemm_impl.h"
-#include "larq_compute_engine/core/padding_functor.h"
+#include "larq_compute_engine/core/bconv2d/padding_functor.h"
+#include "larq_compute_engine/core/bgemm/bgemm.h"
 #include "ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
@@ -10,15 +10,11 @@
 #include "tensorflow/lite/kernels/internal/types.h"
 #include "tensorflow/lite/kernels/padding.h"
 
-using namespace tflite;
-
 namespace compute_engine {
+namespace core {
+namespace bconv2d {
 
-namespace ce = compute_engine;
-
-namespace tflite {
-
-using ce::core::TBitpacked;
+using namespace tflite;
 
 inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
                    const TBitpacked* input_data,
@@ -77,15 +73,15 @@ const float* GetPostActivationMultiplier(
 }
 
 template <typename AccumScalar, typename DstScalar>
-inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
-                    const TBitpacked* input_data,
-                    const RuntimeShape& filter_shape,
-                    const TBitpacked* packed_filter_data,
-                    const OutputTransform<DstScalar>& output_transform,
-                    const RuntimeShape& output_shape, DstScalar* output_data,
-                    const RuntimeShape& im2col_shape, TBitpacked* im2col_data,
-                    const float* padding_buffer, const int pad_value,
-                    CpuBackendContext* cpu_backend_context) {
+inline void BConv2DOptimized(
+    const ConvParams& params, const RuntimeShape& input_shape,
+    const TBitpacked* input_data, const RuntimeShape& filter_shape,
+    const TBitpacked* packed_filter_data,
+    const OutputTransform<DstScalar>& output_transform,
+    const RuntimeShape& output_shape, DstScalar* output_data,
+    const RuntimeShape& im2col_shape, TBitpacked* im2col_data,
+    const float* padding_buffer, const int pad_value,
+    CpuBackendContext* cpu_backend_context) {
   TF_LITE_ASSERT_EQ(input_shape.DimensionsCount(), 4);
   TF_LITE_ASSERT_EQ(filter_shape.DimensionsCount(), 4);
   TF_LITE_ASSERT_EQ(output_shape.DimensionsCount(), 4);
@@ -132,7 +128,7 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
     std::fill(
         output_data,
         output_data + FlatSizeSkipDim(output_shape, 3) *
-                          ce::core::GetBitpackedSize(output_shape.Dims(3)),
+                          bitpacking::GetBitpackedSize(output_shape.Dims(3)),
         TBitpacked(0));
   }
 
@@ -162,8 +158,9 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   dst_params.rows = n;
   dst_params.cols = m;
 
-  BGemm<AccumScalar>(lhs_params, lhs_data, rhs_params, rhs_data, dst_params,
-                     output_data, output_transform, cpu_backend_context);
+  bgemm::BGemm<AccumScalar>(lhs_params, lhs_data, rhs_params, rhs_data,
+                            dst_params, output_data, output_transform,
+                            cpu_backend_context);
 
   if (params.padding_type == PaddingType::kSame && pad_value == 0) {
     const int stride_width = params.stride_width;
@@ -180,9 +177,9 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
     const int output_width = output_shape.Dims(2);
     const int output_height = output_shape.Dims(1);
 
-    ce::core::PaddingFunctor padding_functor;
+    PaddingFunctor padding_functor;
     {
-      ruy::profiler::ScopeLabel label3("ZeroPaddingCorrection");
+      ruy::profiler::ScopeLabel label("ZeroPaddingCorrection");
       padding_functor(
           batches, input_height, input_width, input_depth, nullptr,
           filter_height, filter_width, output_depth, stride_height,
@@ -193,7 +190,8 @@ inline void BConv2D(const ConvParams& params, const RuntimeShape& input_shape,
   }
 }
 
-}  // namespace tflite
+}  // namespace bconv2d
+}  // namespace core
 }  // namespace compute_engine
 
-#endif  // COMPUTE_ENGINE_TFLITE_KERNELS_BCONV2D_IMPL_H_
+#endif  // COMPUTE_ENGINE_CORE_BCONV2D_OPTIMIZED_H_

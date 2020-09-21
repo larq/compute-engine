@@ -108,7 +108,7 @@ cc_library(
         "transforms/passes.h",
     ],
     deps = [
-        "//larq_compute_engine/core:bitpack",
+        "//larq_compute_engine/core/bitpacking:bitpack",
         "@flatbuffers",
         "@llvm-project//mlir:QuantOps",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
@@ -177,7 +177,7 @@ cc_library(
     ],
     deps = [
         ":larq_compute_engine",
-        "//larq_compute_engine/core:bitpack",
+        "//larq_compute_engine/core/bitpacking:bitpack",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
@@ -196,8 +196,8 @@ cc_library(
     ],
     deps = [
         ":larq_compute_engine",
-        "//larq_compute_engine/core:bitpack",
         "//larq_compute_engine/core:types",
+        "//larq_compute_engine/core/bitpacking:bitpack",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
     ],
     alwayslink = 1,

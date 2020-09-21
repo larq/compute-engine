@@ -1,4 +1,4 @@
-#include "larq_compute_engine/core/bitpack.h"
+#include "larq_compute_engine/core/bitpacking/bitpack.h"
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -12,6 +12,7 @@ namespace {
 
 using compute_engine::core::bitpacking_bitwidth;
 using compute_engine::core::TBitpacked;
+using namespace compute_engine::core::bitpacking;
 
 struct BitpackWeightsLCE : public PassWrapper<BitpackWeightsLCE, FunctionPass> {
   void runOnFunction() override;
@@ -31,8 +32,7 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
   auto shape = x.getType().cast<ShapedType>().getShape();
   int num_rows = shape[0] * shape[1] * shape[2];
   int unpacked_channels = shape[3];
-  int packed_channels =
-      compute_engine::core::GetBitpackedSize(unpacked_channels);
+  int packed_channels = GetBitpackedSize(unpacked_channels);
 
   std::vector<TBitpacked> new_values(num_rows * packed_channels);
   std::vector<float> old_values(num_rows * unpacked_channels);
@@ -43,7 +43,6 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
   }
   assert(i == num_rows * unpacked_channels);
 
-  using namespace compute_engine::core;
   bitpack_matrix(old_values.data(), num_rows, unpacked_channels,
                  new_values.data());
 

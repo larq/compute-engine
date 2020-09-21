@@ -1,19 +1,16 @@
-#ifndef COMPUTE_ENGINE_KERNELS_PADDING_H_
-#define COMPUTE_ENGINE_KERNELS_PADDING_H_
+#ifndef COMPUTE_ENGINE_CORE_BCONV2D_PADDING_FUNCTOR_H_
+#define COMPUTE_ENGINE_CORE_BCONV2D_PADDING_FUNCTOR_H_
 
-#include "larq_compute_engine/core/bitpack.h"
+#include "larq_compute_engine/core/bitpacking/bitpack.h"
 #include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/kernels/op_macros.h"
 
 namespace compute_engine {
 namespace core {
+namespace bconv2d {
 
-namespace ce = compute_engine;
-
-//
 // Applies (in-place) corrections for zero-padding
 // Assumes that padding type is 'SAME'.
-//
 class PaddingFunctor {
  public:
   static std::size_t get_cache_size(const int filter_height,
@@ -109,7 +106,8 @@ class PaddingFunctor {
             for (int filter_x = 0; filter_x < filter_width; ++filter_x) {
               // Sum over input channels
               int popcount = 0;
-              int packed_channels = GetBitpackedSize(input_channels);
+              int packed_channels =
+                  bitpacking::GetBitpackedSize(input_channels);
               for (int in_c = 0; in_c < packed_channels; ++in_c) {
                 int filter_idx;
                 // filter_data has shape
@@ -291,7 +289,8 @@ class PaddingFunctor {
   }
 };
 
+}  // namespace bconv2d
 }  // namespace core
 }  // namespace compute_engine
 
-#endif  // COMPUTE_ENGINE_KERNELS_PADDING_H_
+#endif  // COMPUTE_ENGINE_CORE_BCONV2D_PADDING_FUNCTOR_H_

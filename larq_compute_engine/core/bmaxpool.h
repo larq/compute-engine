@@ -6,13 +6,10 @@
 #include "tensorflow/lite/kernels/internal/types.h"
 #include "tensorflow/lite/kernels/padding.h"
 
-using namespace tflite;
-
 namespace compute_engine {
-namespace ce = compute_engine;
-namespace ref {
+namespace core {
 
-using ce::core::TBitpacked;
+using namespace tflite;
 
 struct BMaxPoolParams {
   std::int32_t filter_height{0};
@@ -90,7 +87,7 @@ void BMaxPool(const BMaxPoolParams& params, const RuntimeShape& input_shape,
   }
 }
 
-}  // namespace ref
+}  // namespace core
 }  // namespace compute_engine
 
 #endif  // COMPUTE_ENGINE_CORE_MAXPOOL_H_

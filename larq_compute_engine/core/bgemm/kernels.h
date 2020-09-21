@@ -1,27 +1,23 @@
-#ifndef COMPUTE_ENGINE_CORE_BGEMM_KERNELS_RUY_H_
-#define COMPUTE_ENGINE_CORE_BGEMM_KERNELS_RUY_H_
+#ifndef COMPUTE_ENGINE_CORE_BGEMM_KERNELS_H_
+#define COMPUTE_ENGINE_CORE_BGEMM_KERNELS_H_
 
-#include "larq_compute_engine/core/bitpack_utils.h"
+#include "larq_compute_engine/core/bitpacking/utils.h"
 #include "ruy/platform.h"
 #include "ruy/profiler/instrumentation.h"
 #include "ruy/ruy.h"
 
 namespace compute_engine {
-namespace tflite {
-
-namespace ce = compute_engine;
-
-using ce::core::bitpacking_bitwidth;
-using ce::core::TBitpacked;
+namespace core {
+namespace bgemm {
 
 template <ruy::Path ThePath, typename DstScalar, typename Spec>
 struct BGemmKernel {};
 
-// TODO: this is hacky
-#if RUY_PLATFORM_NEON
-#include "bgemm_kernels_arm.h"
-#endif
+/************************
+ * Portable C++ kernels *
+ ************************/
 
+// A portable C++ kernel for float/int8 output.
 template <typename DstScalar, typename Spec>
 struct BGemmKernel<ruy::Path::kStandardCpp, DstScalar, Spec> {
   using AccumScalar = typename Spec::AccumScalar;
@@ -55,7 +51,7 @@ struct BGemmKernel<ruy::Path::kStandardCpp, DstScalar, Spec> {
         for (int k = 0; k < depth; k++) {
           TBitpacked lhs_val = Element(lhs, k, i);
           TBitpacked rhs_val = Element(rhs, k, j);
-          accum += ce::core::xor_popcount(lhs_val, rhs_val);
+          accum += core::xor_popcount(lhs_val, rhs_val);
         }
         // Post-process the accumulated value and store the result
         *ElementPtr(dst, i, j) = output_transform.Run(accum, i);
@@ -64,7 +60,7 @@ struct BGemmKernel<ruy::Path::kStandardCpp, DstScalar, Spec> {
   }
 };
 
-// A template specialisation for writing bitpacked output.
+// A portable C++ kernel for bitpacked output.
 template <typename Spec>
 struct BGemmKernel<ruy::Path::kStandardCpp, TBitpacked, Spec> {
   using AccumScalar = typename Spec::AccumScalar;
@@ -102,11 +98,11 @@ struct BGemmKernel<ruy::Path::kStandardCpp, TBitpacked, Spec> {
     RUY_DCHECK_EQ(dst->layout.order, Order::kColMajor);
 
     ruy::profiler::ScopeLabel label(
-        "Binary Kernel (Standard Cpp) Bitpacked Output.");
+        "Binary Kernel (Standard Cpp), Bitpacked Output.");
 
     const int depth = lhs.layout.rows;
     const int dst_stride_bitpacked =
-        ce::core::GetBitpackedSize(dst->layout.stride);
+        bitpacking::GetBitpackedSize(dst->layout.stride);
 
     // The destination is column major and we need to bitpack along the row
     // (channels) axis so we need to loop over column index then row index.
@@ -117,7 +113,7 @@ struct BGemmKernel<ruy::Path::kStandardCpp, TBitpacked, Spec> {
         for (int k = 0; k < depth; k++) {
           TBitpacked lhs_val = Element(lhs, k, i);
           TBitpacked rhs_val = Element(rhs, k, j);
-          accum += ce::core::xor_popcount(lhs_val, rhs_val);
+          accum += core::xor_popcount(lhs_val, rhs_val);
         }
         bool bit = output_transform.Run(accum, i);
         if (bit) {
@@ -134,6 +130,95 @@ struct BGemmKernel<ruy::Path::kStandardCpp, TBitpacked, Spec> {
     }
   }
 };
+
+/*****************
+ * Arm32 kernels *
+ *****************/
+
+#if RUY_PLATFORM_NEON && RUY_OPT(ASM) && RUY_PLATFORM_NEON_32
+#include "kernels_arm32.h"
+
+// Optimised Arm32 kernel. Supports float or int8 output.
+template <typename DstScalar>
+struct BGemmKernel<ruy::Path::kNeon, DstScalar,
+                   BinaryMulParams<std::int32_t, DstScalar>> {
+  Tuning tuning = Tuning::kAuto;
+  using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
+  using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
+  explicit BGemmKernel(Tuning tuning_) : tuning(tuning_) {}
+  void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
+           const BinaryMulParams<std::int32_t, DstScalar>& mul_params,
+           int start_row, int start_col, int end_row, int end_col,
+           ruy::Mat<DstScalar>* dst) const {
+    static_assert(std::is_same<DstScalar, float>::value ||
+                      std::is_same<DstScalar, std::int8_t>::value,
+                  "");
+    BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
+    MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
+                           dst, mul_params, &params);
+    BinaryKernelNeonOutOfOrder4x4(params);
+  }
+};
+#endif
+
+/*******************
+ * Aarch64 kernels *
+ *******************/
+
+#if RUY_PLATFORM_NEON && RUY_OPT(ASM) && RUY_PLATFORM_NEON_64
+#include "kernels_aarch64.h"
+
+// Optimised Aarch64 kernel with 16-bit accumulators. Supports float or int8 or
+// bitpacked output.
+template <typename DstScalar>
+struct BGemmKernel<ruy::Path::kNeon, DstScalar,
+                   BinaryMulParams<std::int16_t, DstScalar>> {
+  Tuning tuning = Tuning::kAuto;
+  using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 8>;
+  using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
+  explicit BGemmKernel(Tuning tuning_) : tuning(tuning_) {}
+  void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
+           const BinaryMulParams<std::int16_t, DstScalar>& mul_params,
+           int start_row, int start_col, int end_row, int end_col,
+           ruy::Mat<DstScalar>* dst) const {
+    static_assert(std::is_same<DstScalar, float>::value ||
+                      std::is_same<DstScalar, std::int8_t>::value ||
+                      std::is_same<DstScalar, TBitpacked>::value,
+                  "");
+    BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
+    MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
+                           dst, mul_params, &params);
+    BinaryKernelNeonOutOfOrder8x4(params);
+  }
+};
+
+// Fallback Aarch64 kernel with 32-bit accumulators (when there's a risk of
+// overflowing 16-bit accumulators). Supports float or int8 output.
+template <typename DstScalar>
+struct BGemmKernel<ruy::Path::kNeon, DstScalar,
+                   BinaryMulParams<std::int32_t, DstScalar>> {
+  Tuning tuning = Tuning::kAuto;
+  using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
+  using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
+  explicit BGemmKernel(Tuning tuning_) : tuning(tuning_) {}
+  void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
+           const BinaryMulParams<std::int32_t, DstScalar>& mul_params,
+           int start_row, int start_col, int end_row, int end_col,
+           ruy::Mat<DstScalar>* dst) const {
+    static_assert(std::is_same<DstScalar, float>::value ||
+                      std::is_same<DstScalar, std::int8_t>::value,
+                  "");
+    BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
+    MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
+                           dst, mul_params, &params);
+    BinaryKernelNeonOutOfOrder4x4(params);
+  }
+};
+#endif  // RUY_OPT(ASM) && RUY_PLATFORM_NEON_64
+
+/********************************
+ * Kernel entry point functions *
+ ********************************/
 
 template <ruy::Path ThePath, typename DstScalar, typename Spec>
 void RunBGemmKernelTyped(ruy::Tuning tuning, const ruy::PMat<TBitpacked>& lhs,
@@ -184,7 +269,8 @@ void RunBGemmKernel(ruy::Tuning tuning, const ruy::SidePair<ruy::PEMat>& src,
       &mdst);
 }
 
-}  // namespace tflite
+}  // namespace bgemm
+}  // namespace core
 }  // namespace compute_engine
 
-#endif  // COMPUTE_ENGINE_CORE_BGEMM_KERNELS_RUY_H_
+#endif  // COMPUTE_ENGINE_CORE_BGEMM_KERNELS_H_

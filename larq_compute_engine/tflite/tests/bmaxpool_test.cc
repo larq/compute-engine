@@ -1,13 +1,15 @@
 #include <random>
 
 #include "flatbuffers/flexbuffers.h"
-#include "larq_compute_engine/core/bitpack_utils.h"
+#include "larq_compute_engine/core/bitpacking/utils.h"
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/tflite/tests/utils.h"
 #include "tensorflow/lite/kernels/test_util.h"
 
 using namespace tflite;
-using namespace compute_engine::core;
+
+using compute_engine::core::TBitpacked;
+using namespace compute_engine::core::bitpacking;
 
 namespace compute_engine {
 namespace tflite {
@@ -193,7 +195,8 @@ TEST_P(BMaxPoolOpTest, BinaryInput) {
                  builtin_output_data_bp.data());
 
   // Check our binary op
-  EXPECT_EQ(m_lce_binary.GetOutputShape(), GetShape(packed_shape(out_shape)));
+  EXPECT_EQ(m_lce_binary.GetOutputShape(),
+            GetShape(bitpacked_shape(out_shape)));
   EXPECT_EQ(m_lce_binary.GetOutput(), builtin_output_data_bp);
 }
 

@@ -2,10 +2,10 @@
 #include <cstdint>
 
 #include "flatbuffers/flexbuffers.h"
-#include "larq_compute_engine/core/bconv2d_impl_ref.h"
-#include "larq_compute_engine/core/padding_functor.h"
+#include "larq_compute_engine/core/bconv2d/optimized.h"
+#include "larq_compute_engine/core/bconv2d/padding_functor.h"
+#include "larq_compute_engine/core/bconv2d/reference.h"
 #include "larq_compute_engine/core/types.h"
-#include "larq_compute_engine/tflite/kernels/bconv2d_impl.h"
 #include "larq_compute_engine/tflite/kernels/bconv2d_output_transform_utils.h"
 #include "larq_compute_engine/tflite/kernels/bconv2d_params.h"
 #include "larq_compute_engine/tflite/kernels/utils.h"
@@ -18,13 +18,11 @@
 
 using namespace tflite;
 
-namespace ce = compute_engine;
-
 namespace compute_engine {
 namespace tflite {
 namespace bconv2d {
 
-using ce::core::TBitpacked;
+using namespace core::bitpacking;
 
 enum class KernelType {
   // kGenericRef: the reference implementation without im2col
@@ -186,10 +184,9 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   output_shape->data[0] = SizeOfDimension(input, 0);
   output_shape->data[1] = out_height;
   output_shape->data[2] = out_width;
-  output_shape->data[3] =
-      output->type == kTfLiteInt32
-          ? ce::core::GetBitpackedSize(conv_params->channels_out)
-          : conv_params->channels_out;
+  output_shape->data[3] = output->type == kTfLiteInt32
+                              ? GetBitpackedSize(conv_params->channels_out)
+                              : conv_params->channels_out;
   TF_LITE_ENSURE_STATUS(context->ResizeTensor(context, output, output_shape));
 
   // Figure out how many temporary buffers we need
@@ -225,7 +222,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     }
 
     // Resize the im2col tensor
-    int channels_in = ce::core::GetBitpackedSize(conv_params->channels_in);
+    int channels_in = GetBitpackedSize(conv_params->channels_in);
     TfLiteIntArray* im2col_size = TfLiteIntArrayCopy(output_shape);
     im2col_size->data[3] =
         channels_in * conv_params->filter_height * conv_params->filter_width;
@@ -284,10 +281,10 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
 
   // For 'same-zero' padding, compute the padding-correction.
   if (params->padding_type == kTfLitePaddingSame && params->pad_value == 0) {
-    params->padding_buffer.resize(ce::core::PaddingFunctor::get_cache_size(
+    params->padding_buffer.resize(core::bconv2d::PaddingFunctor::get_cache_size(
         params->filter_height, params->filter_width, params->channels_out,
         params->dilation_height_factor, params->dilation_width_factor));
-    ce::core::PaddingFunctor::cache_correction_values(
+    core::bconv2d::PaddingFunctor::cache_correction_values(
         GetTensorData<TBitpacked>(filter), params->filter_height,
         params->filter_width, params->channels_out, params->channels_in,
         params->dilation_height_factor, params->dilation_width_factor,
@@ -371,7 +368,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   // weights data.
   //     Likewise, we pass the original output shape even if we are going to
   // write bitpacked output directly.
-  BConv2D<AccumScalar, DstScalar>(
+  core::bconv2d::BConv2DOptimized<AccumScalar, DstScalar>(
       op_params, GetTensorShape(input), GetTensorData<TBitpacked>(input),
       GetTensorShape(filter), GetTensorData<TBitpacked>(filter),
       output_transform, unpacked_output_shape, GetTensorData<DstScalar>(output),
@@ -402,7 +399,7 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   GetOutputTransform(output_transform, context, node, params);
 
   TfLiteTensor* im2col = nullptr;
-  ce::ref::BConv2D<std::int32_t, DstScalar>(
+  core::bconv2d::BConv2DReference<std::int32_t, DstScalar>(
       op_params, GetTensorShape(input), GetTensorData<TBitpacked>(input),
       GetTensorShape(packed_filter), GetTensorData<TBitpacked>(packed_filter),
       output_transform, GetTensorShape(output),

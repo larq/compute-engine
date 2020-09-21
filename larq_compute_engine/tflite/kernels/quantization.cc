@@ -1,4 +1,4 @@
-#include "larq_compute_engine/core/bitpack_utils.h"
+#include "larq_compute_engine/core/bitpacking/utils.h"
 #include "ruy/profiler/instrumentation.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/kernels/internal/cppmath.h"
@@ -7,12 +7,11 @@
 
 using namespace tflite;
 
-namespace ce = compute_engine;
-
 namespace compute_engine {
 namespace tflite {
 
-using ce::core::TBitpacked;
+using namespace core::bitpacking;
+using core::TBitpacked;
 
 TfLiteStatus QuantizePrepare(TfLiteContext* context, TfLiteNode* node) {
   TF_LITE_ENSURE_EQ(context, NumInputs(node), 1);
@@ -32,7 +31,7 @@ TfLiteStatus QuantizePrepare(TfLiteContext* context, TfLiteNode* node) {
 
   // The last dimension is bitpacked
   output_dims->data[num_dims - 1] =
-      ce::core::GetBitpackedSize(SizeOfDimension(input, num_dims - 1));
+      GetBitpackedSize(SizeOfDimension(input, num_dims - 1));
 
   return context->ResizeTensor(context, output, output_dims);
 }
@@ -61,7 +60,7 @@ TfLiteStatus DequantizePrepare(TfLiteContext* context, TfLiteNode* node) {
   int packed_channels = SizeOfDimension(input, num_dims - 1);
   int unpacked_channels = SizeOfDimension(output, num_dims - 1);
   TF_LITE_ENSURE_EQ(context, packed_channels,
-                    ce::core::GetBitpackedSize(unpacked_channels));
+                    GetBitpackedSize(unpacked_channels));
 
   // We don't support resizing here, because we can not know the number of
   // output channels based on the number of input channels
@@ -76,12 +75,11 @@ TfLiteStatus QuantizeEval(TfLiteContext* context, TfLiteNode* node) {
   TfLiteTensor* output = GetOutput(context, node, 0);
 
   if (input->type == kTfLiteFloat32) {
-    ce::core::bitpack_tensor(GetTensorShape(input), GetTensorData<float>(input),
-                             0, GetTensorData<TBitpacked>(output));
+    bitpack_tensor(GetTensorShape(input), GetTensorData<float>(input), 0,
+                   GetTensorData<TBitpacked>(output));
   } else if (input->type == kTfLiteInt8) {
-    ce::core::bitpack_tensor(
-        GetTensorShape(input), GetTensorData<std::int8_t>(input),
-        input->params.zero_point, GetTensorData<TBitpacked>(output));
+    bitpack_tensor(GetTensorShape(input), GetTensorData<std::int8_t>(input),
+                   input->params.zero_point, GetTensorData<TBitpacked>(output));
   } else {
     return kTfLiteError;
   }
@@ -101,17 +99,17 @@ TfLiteStatus DequantizeEval(TfLiteContext* context, TfLiteNode* node) {
   int num_cols = out_shape.Dims(dims - 1);
 
   if (output->type == kTfLiteFloat32) {
-    ce::core::unpack_matrix(GetTensorData<TBitpacked>(input), num_rows,
-                            num_cols, GetTensorData<float>(output));
+    unpack_matrix(GetTensorData<TBitpacked>(input), num_rows, num_cols,
+                  GetTensorData<float>(output));
   } else if (output->type == kTfLiteInt8) {
     int offset = TfLiteRound(1.0f / output->params.scale);
     std::int8_t zero_bit_result =
         std::min(127, output->params.zero_point + offset);
     std::int8_t one_bit_result =
         std::max(-128, output->params.zero_point - offset);
-    ce::core::unpack_matrix(GetTensorData<TBitpacked>(input), num_rows,
-                            num_cols, GetTensorData<std::int8_t>(output),
-                            zero_bit_result, one_bit_result);
+    unpack_matrix(GetTensorData<TBitpacked>(input), num_rows, num_cols,
+                  GetTensorData<std::int8_t>(output), zero_bit_result,
+                  one_bit_result);
   } else {
     return kTfLiteError;
   }

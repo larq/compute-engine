@@ -1,7 +1,7 @@
 #ifndef LARQ_COMPUTE_ENGINE_TFLITE_KERNELS_BCONV2D_OUTPUT_TRANSFORM_SETUP
 #define LARQ_COMPUTE_ENGINE_TFLITE_KERNELS_BCONV2D_OUTPUT_TRANSFORM_SETUP
 
-#include "larq_compute_engine/core/bconv2d_output_transform.h"
+#include "larq_compute_engine/core/bconv2d/output_transform.h"
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/tflite/kernels/bconv2d_params.h"
 #include "tensorflow/lite/kernels/internal/tensor.h"
@@ -13,7 +13,8 @@ namespace compute_engine {
 namespace tflite {
 namespace bconv2d {
 
-using compute_engine::core::OutputTransform;
+using compute_engine::core::TBitpacked;
+using compute_engine::core::bconv2d::OutputTransform;
 
 // Fill in the OutputTransform values for float and/or int8 outputs
 template <typename DstScalar>
