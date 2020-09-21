@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import Iterator, List, Tuple, Union
 
 import numpy as np
 from tqdm import tqdm
@@ -6,6 +6,28 @@ from tqdm import tqdm
 from larq_compute_engine.tflite.python import interpreter_wrapper_lite
 
 __all__ = ["Interpreter"]
+
+Data = Union[np.ndarray, List[np.ndarray]]
+
+
+def data_generator(x: Union[Data, Iterator[Data]]) -> Iterator[List[np.ndarray]]:
+    if isinstance(x, np.ndarray):
+        for inputs in x:
+            yield [np.expand_dims(inputs, axis=0)]
+    elif isinstance(x, list):
+        for inputs in zip(*x):
+            yield [np.expand_dims(inp, axis=0) for inp in inputs]
+    elif hasattr(x, "__next__") and hasattr(x, "__iter__"):
+        for inputs in x:
+            if isinstance(inputs, np.ndarray):
+                yield [np.expand_dims(inputs, axis=0)]
+            else:
+                yield [np.expand_dims(inp, axis=0) for inp in inputs]
+    else:
+        raise ValueError(
+            "Expected either a list of inputs or a Numpy array with implicit initial "
+            f"batch dimension or an iterator yielding one of the above. Received: {x}"
+        )
 
 
 class Interpreter:
@@ -51,9 +73,7 @@ class Interpreter:
         """Returns a list of output shapes."""
         return self.interpreter.output_shapes
 
-    def predict(
-        self, x: Union[np.ndarray, List[np.ndarray]], verbose: int = 0
-    ) -> Union[np.ndarray, List[np.ndarray]]:
+    def predict(self, x: Union[Data, Iterator[Data]], verbose: int = 0) -> Data:
         """Generates output predictions for the input samples.
 
         # Arguments
@@ -65,21 +85,12 @@ class Interpreter:
             Numpy array(s) of output predictions.
         """
 
-        if not isinstance(x, (list, np.ndarray)) or len(x) == 0:
-            raise ValueError(
-                "Expected either a non-empty list of inputs or a Numpy array with "
-                f"implicit initial batch dimension. Received: {x}"
-            )
+        data_iterator = data_generator(x)
+        if verbose >= 1:
+            data_iterator = tqdm(data_iterator)
 
-        if len(self.input_shapes) == 1:
-            x = [x]
-
-        batch_iter = tqdm(zip(*x)) if verbose >= 1 else zip(*x)
-        prediction_batch_iter = (
-            self.interpreter.predict([np.expand_dims(inp, axis=0) for inp in inputs])
-            for inputs in batch_iter
-        )
-        outputs = [np.concatenate(batches) for batches in zip(*prediction_batch_iter)]
+        prediction_iter = (self.interpreter.predict(inputs) for inputs in data_iterator)
+        outputs = [np.concatenate(batches) for batches in zip(*prediction_iter)]
 
         if len(self.output_shapes) == 1:
             return outputs[0]
