@@ -46,7 +46,7 @@ def test_interpreter_multi_input(use_iterator):
     expected_output_x = x_np.reshape(16, -1)
     expected_output_y = y_np.reshape(16, -1)
 
-    interpreter = Interpreter(converter.convert())
+    interpreter = Interpreter(converter.convert(), num_threads=2)
     assert interpreter.input_types == [np.float32, np.float32]
     assert interpreter.output_types == [np.float32, np.float32]
     assert interpreter.input_shapes == [(1, 24, 24, 2), (1, 24, 24, 1)]

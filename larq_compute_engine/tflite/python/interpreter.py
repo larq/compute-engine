@@ -42,6 +42,7 @@ class Interpreter:
 
     # Arguments
         flatbuffer_model: A serialized Larq Compute Engine model in the flatbuffer format.
+        num_threads: The number of threads used by the interpreter.
 
     # Attributes
         input_types: Returns a list of input types.
@@ -50,8 +51,10 @@ class Interpreter:
         output_shapes: Returns a list of output shapes.
     """
 
-    def __init__(self, flatbuffer_model: bytes):
-        self.interpreter = interpreter_wrapper_lite.LiteInterpreter(flatbuffer_model)
+    def __init__(self, flatbuffer_model: bytes, num_threads: int = 1):
+        self.interpreter = interpreter_wrapper_lite.LiteInterpreter(
+            flatbuffer_model, num_threads
+        )
 
     @property
     def input_types(self) -> list:
