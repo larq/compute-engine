@@ -15,8 +15,8 @@ cc_library(
 )
 
 cc_library(
-    name = "padding_functor",
-    hdrs = ["padding_functor.h"],
+    name = "zero_padding_correction",
+    hdrs = ["zero_padding_correction.h"],
 )
 
 cc_library(
@@ -36,7 +36,7 @@ cc_library(
         "optimized.h",
     ],
     deps = [
-        ":padding_functor",
+        ":zero_padding_correction",
         "//larq_compute_engine/core/bgemm",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",

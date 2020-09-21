@@ -3,8 +3,8 @@
 
 #include "flatbuffers/flexbuffers.h"
 #include "larq_compute_engine/core/bconv2d/optimized.h"
-#include "larq_compute_engine/core/bconv2d/padding_functor.h"
 #include "larq_compute_engine/core/bconv2d/reference.h"
+#include "larq_compute_engine/core/bconv2d/zero_padding_correction.h"
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/tflite/kernels/bconv2d_output_transform_utils.h"
 #include "larq_compute_engine/tflite/kernels/bconv2d_params.h"
@@ -281,10 +281,11 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
 
   // For 'same-zero' padding, compute the padding-correction.
   if (params->padding_type == kTfLitePaddingSame && params->pad_value == 0) {
-    params->padding_buffer.resize(core::bconv2d::PaddingFunctor::get_cache_size(
-        params->filter_height, params->filter_width, params->channels_out,
-        params->dilation_height_factor, params->dilation_width_factor));
-    core::bconv2d::PaddingFunctor::cache_correction_values(
+    params->padding_buffer.resize(
+        core::bconv2d::zero_padding_correction::GetCacheSize(
+            params->filter_height, params->filter_width, params->channels_out,
+            params->dilation_height_factor, params->dilation_width_factor));
+    core::bconv2d::zero_padding_correction::CacheCorrectionValues(
         GetTensorData<TBitpacked>(filter), params->filter_height,
         params->filter_width, params->channels_out, params->channels_in,
         params->dilation_height_factor, params->dilation_width_factor,
@@ -403,9 +404,7 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
       op_params, GetTensorShape(input), GetTensorData<TBitpacked>(input),
       GetTensorShape(packed_filter), GetTensorData<TBitpacked>(packed_filter),
       output_transform, GetTensorShape(output),
-      GetTensorData<DstScalar>(output), GetTensorShape(im2col),
-      GetTensorData<TBitpacked>(im2col), nullptr /*padding buffer*/,
-      params->pad_value, nullptr /*cpu backend context*/);
+      GetTensorData<DstScalar>(output), params->pad_value);
 }
 
 template <KernelType kernel_type, typename DstScalar>

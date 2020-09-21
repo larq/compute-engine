@@ -40,8 +40,7 @@ inline void BConv2DReference(
     const TBitpacked* packed_filter_data,
     const OutputTransform<DstScalar, details>& output_transform,
     const RuntimeShape& output_shape, DstScalar* output_data,
-    const RuntimeShape& im2col_shape, TBitpacked* im2col_data,
-    void* padding_buffer, const int pad_value, void* cpu_backend_context) {
+    const int pad_value) {
   static_assert(std::is_same<DstScalar, float>::value ||
                     std::is_same<DstScalar, TBitpacked>::value ||
                     std::is_same<DstScalar, std::int8_t>::value,
@@ -59,8 +58,6 @@ inline void BConv2DReference(
   TFLITE_DCHECK_EQ(packed_filter_shape.DimensionsCount(), 4);
   TFLITE_DCHECK_EQ(output_shape.DimensionsCount(), 4);
 
-  (void)im2col_data;   // only used in optimized code.
-  (void)im2col_shape;  // only used in optimized code.
   const int batches = MatchingDim(packed_input_shape, 0, output_shape, 0);
   const int input_depth =
       MatchingDim(packed_input_shape, 3, packed_filter_shape, 3);
