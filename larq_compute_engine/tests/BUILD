@@ -24,7 +24,7 @@ py_test(
 test_suite(
     name = "cc_tests",
     tests = [
-        "//larq_compute_engine/core/tests:cc_tests",
+        "//larq_compute_engine/core/bitpacking/tests:cc_tests",
         "//larq_compute_engine/tflite/tests:cc_tests",
     ],
 )
@@ -49,7 +49,7 @@ sh_test(
 test_suite(
     name = "cc_tests_aarch64",
     tests = [
-        "//larq_compute_engine/core/tests:cc_tests_aarch64",
+        "//larq_compute_engine/core/bitpacking/tests:cc_tests_aarch64",
         "//larq_compute_engine/tflite/tests:cc_tests",
     ],
 )

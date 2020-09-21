@@ -1,16 +1,18 @@
 #ifndef COMPUTE_ENGINE_CORE_BGEMM_KERNELS_COMMON_H_
 #define COMPUTE_ENGINE_CORE_BGEMM_KERNELS_COMMON_H_
 
-#include "larq_compute_engine/core/bconv2d_output_transform.h"
+#include "larq_compute_engine/core/bconv2d/output_transform.h"
 #include "larq_compute_engine/core/types.h"
 #include "ruy/kernel_common.h"
 
+namespace compute_engine {
+namespace core {
+namespace bgemm {
+
 using namespace ruy;
 
-namespace ce = compute_engine;
-using ce::core::bitpacking_bitwidth;
-using ce::core::OutputTransform;
-using ce::core::TBitpacked;
+using namespace bitpacking;
+using bconv2d::OutputTransform;
 
 // Our version of `ruy::MulParams`; The original is in `ruy/mul_params.h`.
 // We simply use our `OutputTransform` struct.
@@ -92,8 +94,7 @@ inline void MakeBinaryKernelParams(
     // TBitpacked value. Hence the need for char pointer arithmetic.
     params->dst_base_ptr =
         (DstScalar*)((char*)(dst->data.get() +
-                             start_col * ce::core::GetBitpackedSize(
-                                             dst->layout.stride)) +
+                             start_col * GetBitpackedSize(dst->layout.stride)) +
                      start_row / 8);
   } else {
     params->dst_base_ptr =
@@ -109,7 +110,7 @@ inline void MakeBinaryKernelParams(
   params->rhs_stride = sizeof(TBitpacked) * rhs.layout.stride;
   params->dst_stride =
       sizeof(DstScalar) * (std::is_same<DstScalar, TBitpacked>::value
-                               ? ce::core::GetBitpackedSize(dst->layout.stride)
+                               ? GetBitpackedSize(dst->layout.stride)
                                : dst->layout.stride);
   params->depth = lhs.layout.rows;
   params->output_transform =
@@ -118,5 +119,9 @@ inline void MakeBinaryKernelParams(
   RUY_DCHECK_LT(params->last_row, params->dst_rows);
   RUY_DCHECK_LT(params->last_col, params->dst_cols);
 }
+
+}  // namespace bgemm
+}  // namespace core
+}  // namespace compute_engine
 
 #endif  // COMPUTE_ENGINE_CORE_BGEMM_KERNELS_COMMON_H_

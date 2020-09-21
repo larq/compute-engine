@@ -27,8 +27,8 @@
 #include "absl/memory/memory.h"
 #include "absl/strings/substitute.h"
 #include "flatbuffers/flexbuffers.h"  // TF:flatbuffers
-#include "larq_compute_engine/core/bitpack.h"
-#include "larq_compute_engine/core/bitpack_utils.h"
+#include "larq_compute_engine/core/bitpacking/bitpack.h"
+#include "larq_compute_engine/core/bitpacking/utils.h"
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/tflite/tests/bconv2d_op_model.h"
 #include "larq_compute_engine/tflite/tests/utils.h"
@@ -52,7 +52,8 @@ TfLiteRegistration* Register_CONVOLUTION_GENERIC_OPT();
 
 namespace {
 
-using ::compute_engine::core::TBitpacked;
+using compute_engine::core::TBitpacked;
+using namespace compute_engine::core::bitpacking;
 
 class BaseConvolutionOpModel : public SingleOpModel {
  public:
@@ -368,9 +369,9 @@ void test_lce_op_output(const std::vector<TBitpacked>& lce_output_data,
   RuntimeShape out_shape;
   out_shape.BuildFrom(builtin_output_shape);
   std::vector<TBitpacked> builtin_output_data_bp(
-      core::GetBitpackedTensorSize(out_shape));
-  core::bitpack_tensor(out_shape, builtin_output_data.data(), 0,
-                       builtin_output_data_bp.data());
+      GetBitpackedTensorSize(out_shape));
+  bitpack_tensor(out_shape, builtin_output_data.data(), 0,
+                 builtin_output_data_bp.data());
 
   // We need the outputs here to be bit-exact, so don't allow for floating
   // point imprecision.
@@ -449,7 +450,7 @@ void runTest(const TestParam& param) {
       (padding == Padding_ONE ? Padding_SAME : padding);
   const int pad_values = (padding == Padding_ONE ? 1 : 0);
 
-  const int packed_channels = core::GetBitpackedSize(input_depth);
+  const int packed_channels = GetBitpackedSize(input_depth);
 
   const int input_num_elem =
       input_batch_count * input_height * input_width * input_depth;
@@ -552,7 +553,6 @@ void runTest(const TestParam& param) {
   }
 
   // Bitpack input and filters
-  using namespace compute_engine::core;
   bitpack_matrix(input_data.data(),
                  input_batch_count * input_height * input_width, input_depth,
                  packed_input_data.data(), input_tensor.zero_point);

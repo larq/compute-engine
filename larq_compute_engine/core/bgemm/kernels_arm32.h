@@ -3,13 +3,11 @@
 
 #include <cstdint>
 
-#include "larq_compute_engine/core/bgemm_kernels_common.h"
+#include "larq_compute_engine/core/bgemm/kernels_common.h"
 #include "larq_compute_engine/core/types.h"
 #include "ruy/profiler/instrumentation.h"
 
 using namespace ruy;
-
-using compute_engine::core::TBitpacked;
 
 #if RUY_PLATFORM_NEON && RUY_OPT(ASM) && RUY_PLATFORM_NEON_32
 
@@ -609,4 +607,5 @@ IF_FLOAT_ELIF_INT8_OUTPUT(
 #undef RUY_OFFSET_OUTPUT_TRANSFORM_CLAMP_MAX
 
 #endif  // RUY_PLATFORM_NEON && RUY_OPT(ASM) && RUY_PLATFORM_NEON_32
+
 #endif  // COMPUTE_ENGINE_CORE_BGEMM_KERNELS_ARM32_H_

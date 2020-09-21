@@ -8,22 +8,6 @@ package(
 )
 
 cc_library(
-    name = "bconv2d_impl",
-    hdrs = [
-        "bconv2d_impl.h",
-    ],
-    deps = [
-        "//larq_compute_engine/core:bgemm_impl",
-        "//larq_compute_engine/core:padding_functor",
-        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
-        "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
-        "@org_tensorflow//tensorflow/lite/kernels:padding",
-        "@org_tensorflow//tensorflow/lite/kernels/internal:optimized_base",
-        "@ruy//ruy/profiler:instrumentation",
-    ],
-)
-
-cc_library(
     name = "bconv2d_params",
     hdrs = [
         "bconv2d_params.h",
@@ -37,8 +21,8 @@ cc_library(
     ],
     deps = [
         ":bconv2d_params",
-        "//larq_compute_engine/core:bconv2d_output_transform",
         "//larq_compute_engine/core:types",
+        "//larq_compute_engine/core/bconv2d:output_transform",
         "@org_tensorflow//tensorflow/lite/kernels/internal:tensor",
     ],
 )
@@ -69,14 +53,14 @@ cc_library(
     ],
     copts = tflite_copts() + tf_opts_nortti_if_android(),
     deps = [
-        ":bconv2d_impl",
         ":bconv2d_output_transform_utils",
         ":bconv2d_params",
         ":utils",
-        "//larq_compute_engine/core:bconv2d_impl_ref",
-        "//larq_compute_engine/core:bitpack",
-        "//larq_compute_engine/core:bitpack_utils",
         "//larq_compute_engine/core:bmaxpool",
+        "//larq_compute_engine/core/bconv2d:optimized",
+        "//larq_compute_engine/core/bconv2d:reference",
+        "//larq_compute_engine/core/bitpacking:bitpack",
+        "//larq_compute_engine/core/bitpacking:utils",
         "@flatbuffers",
         "@org_tensorflow//tensorflow/lite:framework",
         "@org_tensorflow//tensorflow/lite/kernels/internal:kernel_utils",

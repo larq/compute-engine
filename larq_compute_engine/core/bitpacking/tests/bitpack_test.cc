@@ -1,3 +1,5 @@
+#include "larq_compute_engine/core/bitpacking/bitpack.h"
+
 #include <gtest/gtest.h>
 
 #include <array>
@@ -6,15 +8,10 @@
 #include <vector>
 
 #include "absl/strings/str_cat.h"
-#include "larq_compute_engine/core/bitpack.h"
 
 namespace compute_engine {
-namespace testing {
-
-namespace ce = compute_engine;
-
-using ce::core::bitpacking_bitwidth;
-using ce::core::TBitpacked;
+namespace core {
+namespace bitpacking {
 
 class BitpackingTest
     : public ::testing::TestWithParam<std::tuple<int, int, std::int32_t>> {};
@@ -26,14 +23,14 @@ void runBitpackingTest(const int num_rows, const int num_cols,
     GTEST_SKIP();
   }
 
-  const int num_packed_cols = ce::core::GetBitpackedSize(num_cols);
+  const int num_packed_cols = GetBitpackedSize(num_cols);
 
   std::random_device rd;
   std::mt19937 gen(rd());
 
   std::vector<TIn> input_matrix(num_rows * num_cols);
   std::vector<TBitpacked> output_matrix(
-      ce::core::GetBitpackedMatrixSize(num_rows, num_cols));
+      GetBitpackedMatrixSize(num_rows, num_cols));
 
   // Generate some random data for the input.
   if (std::is_same<TIn, float>::value) {
@@ -49,8 +46,8 @@ void runBitpackingTest(const int num_rows, const int num_cols,
   }
 
   // Perform the bitpacking.
-  ce::core::bitpack_matrix(input_matrix.data(), num_rows, num_cols,
-                           output_matrix.data(), zero_point);
+  bitpack_matrix(input_matrix.data(), num_rows, num_cols, output_matrix.data(),
+                 zero_point);
 
   // Verify correctness of the results.
   for (auto i = 0; i < num_rows; i++) {
@@ -112,5 +109,6 @@ INSTANTIATE_TEST_SUITE_P(Bitpacking, BitpackingTest,
                              ::testing::Values(-1000, -1, 0, 23, 127, 128)),
                          TestName);
 
-}  // end namespace testing
+}  // namespace bitpacking
+}  // namespace core
 }  // namespace compute_engine

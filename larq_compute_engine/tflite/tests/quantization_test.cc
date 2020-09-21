@@ -1,6 +1,6 @@
 #include <random>
 
-#include "larq_compute_engine/core/bitpack_utils.h"
+#include "larq_compute_engine/core/bitpacking/utils.h"
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/tflite/tests/utils.h"
 #include "tensorflow/lite/kernels/test_util.h"
@@ -76,7 +76,7 @@ template <typename TUnpacked>
 void TestQuantization(const TestParamTuple& param) {
   std::array<int, 4> shape = ::testing::get<0>(param);
 
-  int packed_channels = GetBitpackedSize(shape[3]);
+  int packed_channels = bitpacking::GetBitpackedSize(shape[3]);
 
   LceTensor<TUnpacked> unpacked_tensor(
       {shape[0], shape[1], shape[2], shape[3]});

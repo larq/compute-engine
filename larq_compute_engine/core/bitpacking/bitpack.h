@@ -1,5 +1,5 @@
-#ifndef COMPUTE_ENGINE_KERNELS_BITPACK_H_
-#define COMPUTE_ENGINE_KERNELS_BITPACK_H_
+#ifndef COMPUTE_ENGINE_CORE_BITPACKING_BITPACK_H_
+#define COMPUTE_ENGINE_CORE_BITPACKING_BITPACK_H_
 
 #include <array>
 #include <cstdint>
@@ -8,7 +8,7 @@
 
 #include "larq_compute_engine/core/types.h"
 #ifdef __aarch64__
-#include "larq_compute_engine/core/bitpack_aarch64.h"
+#include "larq_compute_engine/core/bitpacking/bitpack_aarch64.h"
 #endif
 
 #include "flatbuffers/base.h"  // Used for the FLATBUFFERS_LITTLEENDIAN macro
@@ -17,6 +17,7 @@
 
 namespace compute_engine {
 namespace core {
+namespace bitpacking {
 
 // Utility functions
 
@@ -344,7 +345,8 @@ inline void unpack_matrix(const TBitpacked* input_data,
   }
 }
 
+}  // namespace bitpacking
 }  // namespace core
 }  // namespace compute_engine
 
-#endif  // COMPUTE_ENGINE_KERNELS_BITPACK_H_
+#endif  // COMPUTE_ENGINE_CORE_BITPACKING_BITPACK_H_

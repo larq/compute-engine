@@ -1,15 +1,13 @@
-#ifndef COMPUTE_ENGINE_CORE_BGEMM_KERNELS_ARM64_H_
-#define COMPUTE_ENGINE_CORE_BGEMM_KERNELS_ARM64_H_
+#ifndef COMPUTE_ENGINE_CORE_BGEMM_KERNELS_AARCH64_H_
+#define COMPUTE_ENGINE_CORE_BGEMM_KERNELS_AARCH64_H_
 
 #include <cstdint>
 
-#include "larq_compute_engine/core/bgemm_kernels_common.h"
+#include "larq_compute_engine/core/bgemm/kernels_common.h"
 #include "larq_compute_engine/core/types.h"
 #include "ruy/profiler/instrumentation.h"
 
 using namespace ruy;
-
-using compute_engine::core::TBitpacked;
 
 #if RUY_PLATFORM_NEON_64 && RUY_OPT(ASM)
 
@@ -1213,4 +1211,5 @@ IF_FLOAT_ELIF_INT8_ELIF_BITPACKED_OUTPUT(
 #undef RUY_OFFSET_OUTPUT_TRANSFORM_THRESHOLDS
 
 #endif  // RUY_PLATFORM_NEON_64 && RUY_OPT(ASM)
-#endif  // COMPUTE_ENGINE_CORE_BGEMM_KERNELS_ARM64_H_
+
+#endif  // COMPUTE_ENGINE_CORE_BGEMM_KERNELS_AARCH64_H_

@@ -13,33 +13,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-#ifndef COMPUTE_ENGINE_CORE_BCONV2D_IMPL_REF_H_
-#define COMPUTE_ENGINE_CORE_BCONV2D_IMPL_REF_H_
-
-#include "larq_compute_engine/core/bconv2d_output_transform.h"
-#include "tensorflow/lite/kernels/internal/common.h"
-#include "tensorflow/lite/kernels/internal/types.h"
 
 // This file is originally copied from
 // "tensorflow/lite/kernels/internal/reference/conv.h".
-// However, it's modified to perform binary convolution instead
-using namespace tflite;
+// However, it's modified to perform a binary convolution instead.
+
+#ifndef COMPUTE_ENGINE_CORE_BCONV2D_REFERENCE_H_
+#define COMPUTE_ENGINE_CORE_BCONV2D_REFERENCE_H_
+
+#include "larq_compute_engine/core/bconv2d/output_transform.h"
+#include "tensorflow/lite/kernels/internal/common.h"
+#include "tensorflow/lite/kernels/internal/types.h"
 
 namespace compute_engine {
-namespace ce = compute_engine;
-namespace ref {
+namespace core {
+namespace bconv2d {
 
-using ce::core::bitpacking_bitwidth;
-using ce::core::TBitpacked;
+using namespace tflite;
 
 template <typename AccumScalar, typename DstScalar,
-          ce::core::OutputTransformDetails details>
-inline void BConv2D(
+          OutputTransformDetails details>
+inline void BConv2DReference(
     const ConvParams& params, const RuntimeShape& packed_input_shape,
     const TBitpacked* packed_input_data,
     const RuntimeShape& packed_filter_shape,
     const TBitpacked* packed_filter_data,
-    const ce::core::OutputTransform<DstScalar, details>& output_transform,
+    const OutputTransform<DstScalar, details>& output_transform,
     const RuntimeShape& output_shape, DstScalar* output_data,
     const RuntimeShape& im2col_shape, TBitpacked* im2col_data,
     void* padding_buffer, const int pad_value, void* cpu_backend_context) {
@@ -98,7 +97,7 @@ inline void BConv2D(
                 TBitpacked filter_value =
                     packed_filter_data[Offset(packed_filter_shape, out_channel,
                                               filter_y, filter_x, in_channel)];
-                accum += ce::core::xor_popcount(input_value, filter_value);
+                accum += core::xor_popcount(input_value, filter_value);
               }
             }
           }
@@ -133,7 +132,8 @@ inline void BConv2D(
   }
 }
 
-}  // namespace ref
+}  // namespace bconv2d
+}  // namespace core
 }  // namespace compute_engine
 
-#endif  // COMPUTE_ENGINE_CORE_BCONV2D_IMPL_REF_H_
+#endif  // COMPUTE_ENGINE_CORE_BCONV2D_REFERENCE_H_

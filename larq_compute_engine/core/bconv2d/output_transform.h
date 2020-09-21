@@ -1,5 +1,5 @@
-#ifndef COMPUTE_ENGINE_CORE_OUTPUT_TRANSFORM_H_
-#define COMPUTE_ENGINE_CORE_OUTPUT_TRANSFORM_H_
+#ifndef COMPUTE_ENGINE_CORE_BCONV2D_OUTPUT_TRANSFORM_H_
+#define COMPUTE_ENGINE_CORE_BCONV2D_OUTPUT_TRANSFORM_H_
 
 #include <algorithm>
 #include <cstdint>
@@ -10,10 +10,8 @@
 #include "tensorflow/lite/kernels/internal/cppmath.h"
 
 namespace compute_engine {
-
 namespace core {
-
-using compute_engine::core::TBitpacked;
+namespace bconv2d {
 
 // Clamp an int32 value to int8 range
 inline std::int8_t saturate(std::int32_t x) {
@@ -169,7 +167,8 @@ struct OutputTransform<TBitpacked, OutputTransformDetails::Default> {
   }
 };
 
+}  // namespace bconv2d
 }  // namespace core
 }  // namespace compute_engine
 
-#endif  // COMPUTE_ENGINE_CORE_OUTPUT_TRANSFORM_H_
+#endif  // COMPUTE_ENGINE_CORE_BCONV2D_OUTPUT_TRANSFORM_H_

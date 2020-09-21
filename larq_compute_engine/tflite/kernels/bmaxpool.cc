@@ -19,7 +19,7 @@ namespace bmaxpool {
 using ce::core::TBitpacked;
 
 void* Init(TfLiteContext* context, const char* buffer, size_t length) {
-  auto* poolparams = new ce::ref::BMaxPoolParams{};
+  auto* poolparams = new core::BMaxPoolParams{};
 
   const std::uint8_t* buffer_t = reinterpret_cast<const std::uint8_t*>(buffer);
   const flexbuffers::Map& m = flexbuffers::GetRoot(buffer_t, length).AsMap();
@@ -34,12 +34,12 @@ void* Init(TfLiteContext* context, const char* buffer, size_t length) {
 }
 
 void Free(TfLiteContext* context, void* buffer) {
-  delete reinterpret_cast<ce::ref::BMaxPoolParams*>(buffer);
+  delete reinterpret_cast<core::BMaxPoolParams*>(buffer);
 }
 
 TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
-  ce::ref::BMaxPoolParams* poolparams =
-      reinterpret_cast<ce::ref::BMaxPoolParams*>(node->user_data);
+  core::BMaxPoolParams* poolparams =
+      reinterpret_cast<core::BMaxPoolParams*>(node->user_data);
 
   TF_LITE_ENSURE_EQ(context, NumInputs(node), 1);
   TF_LITE_ENSURE_EQ(context, NumOutputs(node), 1);
@@ -75,15 +75,15 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
 TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   ruy::profiler::ScopeLabel label("Binary MaxPool");
 
-  ce::ref::BMaxPoolParams* poolparams =
-      reinterpret_cast<ce::ref::BMaxPoolParams*>(node->user_data);
+  core::BMaxPoolParams* poolparams =
+      reinterpret_cast<core::BMaxPoolParams*>(node->user_data);
 
   TfLiteTensor* output = GetOutput(context, node, 0);
   const TfLiteTensor* input = GetInput(context, node, 0);
 
-  ce::ref::BMaxPool(*poolparams, GetTensorShape(input),
-                    GetTensorData<TBitpacked>(input), GetTensorShape(output),
-                    GetTensorData<TBitpacked>(output));
+  core::BMaxPool(*poolparams, GetTensorShape(input),
+                 GetTensorData<TBitpacked>(input), GetTensorShape(output),
+                 GetTensorData<TBitpacked>(output));
   return kTfLiteOk;
 }
 
