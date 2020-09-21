@@ -25,7 +25,7 @@ def data_generator(x: Union[Data, Iterator[Data]]) -> Iterator[List[np.ndarray]]
                 yield [np.expand_dims(inp, axis=0) for inp in inputs]
     else:
         raise ValueError(
-            "Expected either a list of inputs or a Numpy array with implicit initial"
+            "Expected either a list of inputs or a Numpy array with implicit initial "
             f"batch dimension or an iterator yielding one of the above. Received: {x}"
         )
 
