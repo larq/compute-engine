@@ -1,4 +1,5 @@
 import math
+import os
 import sys
 
 import larq as lq
@@ -155,7 +156,7 @@ def preprocess(data):
 
 
 def assert_model_output(model_lce, inputs, outputs):
-    interpreter = Interpreter(model_lce)
+    interpreter = Interpreter(model_lce, num_threads=min(os.cpu_count(), 4))
     actual_outputs = interpreter.predict(inputs)
     np.testing.assert_allclose(actual_outputs, outputs, rtol=0.001, atol=0.25)
 
