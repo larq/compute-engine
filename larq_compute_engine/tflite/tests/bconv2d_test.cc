@@ -187,7 +187,8 @@ namespace compute_engine {
 namespace tflite {
 
 TfLiteRegistration* Register_BCONV_2D_REF();
-TfLiteRegistration* Register_BCONV_2D_OPT();
+TfLiteRegistration* Register_BCONV_2D_OPT_BGEMM();
+TfLiteRegistration* Register_BCONV_2D_OPT_INDIRECT_BGEMM();
 
 namespace testing {
 
@@ -272,12 +273,14 @@ struct TestParam {
 
   std::string kernel_name = "Unknown";
   register_function registration =
-      compute_engine::tflite::Register_BCONV_2D_OPT;
+      compute_engine::tflite::Register_BCONV_2D_OPT_BGEMM;
 };
 
 const auto kKernelMap = new std::map<string, register_function>({
-    {"BConv2DREF", compute_engine::tflite::Register_BCONV_2D_REF},
-    {"BConv2DOPT", compute_engine::tflite::Register_BCONV_2D_OPT},
+    {"BConv2D_REF", compute_engine::tflite::Register_BCONV_2D_REF},
+    {"BConv2D_OPT_BGEMM", compute_engine::tflite::Register_BCONV_2D_OPT_BGEMM},
+    {"BConv2D_OPT_INDIRECT_BGEMM",
+     compute_engine::tflite::Register_BCONV_2D_OPT_INDIRECT_BGEMM},
 });
 
 class BConv2DOpTest : public ::testing::TestWithParam<TestParamTuple> {
@@ -713,7 +716,8 @@ INSTANTIATE_TEST_SUITE_P(
                ActivationFunctionType_RELU),  // activation function
         Values(1, 2),                         // number of threads
         Values(std::pair<std::string, register_function>{
-            "BConv2DOPT", compute_engine::tflite::Register_BCONV_2D_OPT})),
+            "BConv2D_RUY_OPT_BGEMM",
+            compute_engine::tflite::Register_BCONV_2D_OPT_BGEMM})),
     TestParam::TestNameSuffix);
 
 // The BigTest suite will be skipped in the qemu CI runs as they take more than
@@ -757,11 +761,11 @@ TEST(BConv2DTests, ReluErrorDeathTest) {
   // Test if fused ReLu throws an error in combination with zero-padding
   EXPECT_DEATH(
       {
-        FP_BConv2DOpModel m_lce(compute_engine::tflite::Register_BCONV_2D_OPT,
-                                input_tensor, packed_filter_tensor,
-                                output_tensor, post_tensor, post_tensor,
-                                threshold_tensor, 64, 1, 1, Padding_SAME, 0,
-                                ActivationFunctionType_RELU, 1, 1, 1);
+        FP_BConv2DOpModel m_lce(
+            compute_engine::tflite::Register_BCONV_2D_OPT_BGEMM, input_tensor,
+            packed_filter_tensor, output_tensor, post_tensor, post_tensor,
+            threshold_tensor, 64, 1, 1, Padding_SAME, 0,
+            ActivationFunctionType_RELU, 1, 1, 1);
       },
       "Fused activations are only supported with valid or one-padding.");
 
@@ -770,7 +774,7 @@ TEST(BConv2DTests, ReluErrorDeathTest) {
   EXPECT_DEATH(
       {
         Bitpacked_BConv2DOpModel m_lce(
-            compute_engine::tflite::Register_BCONV_2D_OPT, input_tensor,
+            compute_engine::tflite::Register_BCONV_2D_OPT_BGEMM, input_tensor,
             packed_filter_tensor, packed_output_tensor, post_tensor,
             post_tensor, threshold_tensor, 64, 1, 1, Padding_SAME, 0,
             ActivationFunctionType_NONE, 1, 1, 1);
@@ -793,11 +797,11 @@ TEST(BConv2DTests, Int8ErrorDeathTest) {
 
   EXPECT_DEATH(
       {
-        Int8_BConv2DOpModel m_lce(compute_engine::tflite::Register_BCONV_2D_OPT,
-                                  input_tensor, packed_filter_tensor,
-                                  output_tensor, post_tensor, post_tensor,
-                                  threshold_tensor, 64, 1, 1, Padding_SAME, 0,
-                                  ActivationFunctionType_NONE, 1, 1, 1);
+        Int8_BConv2DOpModel m_lce(
+            compute_engine::tflite::Register_BCONV_2D_OPT_BGEMM, input_tensor,
+            packed_filter_tensor, output_tensor, post_tensor, post_tensor,
+            threshold_tensor, 64, 1, 1, Padding_SAME, 0,
+            ActivationFunctionType_NONE, 1, 1, 1);
       },
       "8-bit quantization is only supported with valid or one-padding.");
 }

@@ -1,5 +1,5 @@
-#ifndef COMPUTE_ENGINE_CORE_BCONV2D_OPTIMIZED_H_
-#define COMPUTE_ENGINE_CORE_BCONV2D_OPTIMIZED_H_
+#ifndef COMPUTE_ENGINE_CORE_BCONV2D_OPTIMIZED_BGEMM_H_
+#define COMPUTE_ENGINE_CORE_BCONV2D_OPTIMIZED_BGEMM_H_
 
 #include "larq_compute_engine/core/bconv2d/zero_padding_correction.h"
 #include "larq_compute_engine/core/bgemm/bgemm.h"
@@ -61,7 +61,7 @@ inline void im2col(const ConvParams& params, const RuntimeShape& input_shape,
 }
 
 template <typename AccumScalar, typename DstScalar>
-inline void BConv2DOptimized(
+inline void BConv2DOptimizedBGEMM(
     const ConvParams& params, const RuntimeShape& input_shape,
     const TBitpacked* input_data, const RuntimeShape& filter_shape,
     const TBitpacked* packed_filter_data,
@@ -152,6 +152,8 @@ inline void BConv2DOptimized(
 
   if (std::is_same<DstScalar, float>::value &&
       params.padding_type == PaddingType::kSame && pad_value == 0) {
+    ruy::profiler::ScopeLabel label("Zero padding correction");
+
     const int stride_width = params.stride_width;
     const int stride_height = params.stride_height;
     const int dilation_width_factor = params.dilation_width_factor;
@@ -166,15 +168,12 @@ inline void BConv2DOptimized(
     const int output_width = output_shape.Dims(2);
     const int output_height = output_shape.Dims(1);
 
-    {
-      ruy::profiler::ScopeLabel label("Zero padding correction");
-      zero_padding_correction::ApplyCorrection(
-          batches, input_height, input_width, input_depth, filter_height,
-          filter_width, output_depth, stride_height, stride_width,
-          dilation_height_factor, dilation_width_factor,
-          reinterpret_cast<float*>(output_data), output_height, output_width,
-          padding_buffer);
-    }
+    zero_padding_correction::ApplyCorrection(
+        batches, input_height, input_width, input_depth, filter_height,
+        filter_width, output_depth, stride_height, stride_width,
+        dilation_height_factor, dilation_width_factor,
+        reinterpret_cast<float*>(output_data), output_height, output_width,
+        padding_buffer);
   }
 }
 
@@ -182,4 +181,4 @@ inline void BConv2DOptimized(
 }  // namespace core
 }  // namespace compute_engine
 
-#endif  // COMPUTE_ENGINE_CORE_BCONV2D_OPTIMIZED_H_
+#endif  // COMPUTE_ENGINE_CORE_BCONV2D_OPTIMIZED_BGEMM_H_

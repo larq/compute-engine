@@ -2,9 +2,12 @@
 #include <cstdint>
 
 #include "flatbuffers/flexbuffers.h"
-#include "larq_compute_engine/core/bconv2d/optimized.h"
+#include "larq_compute_engine/core/bconv2d/optimized_bgemm.h"
+#include "larq_compute_engine/core/bconv2d/optimized_indirect_bgemm.h"
 #include "larq_compute_engine/core/bconv2d/reference.h"
 #include "larq_compute_engine/core/bconv2d/zero_padding_correction.h"
+#include "larq_compute_engine/core/indirect_bgemm/kernel.h"
+#include "larq_compute_engine/core/indirect_bgemm/prepare.h"
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/tflite/kernels/bconv2d_output_transform_utils.h"
 #include "larq_compute_engine/tflite/kernels/bconv2d_params.h"
@@ -25,11 +28,14 @@ namespace bconv2d {
 using namespace core::bitpacking;
 
 enum class KernelType {
-  // kGenericRef: the reference implementation without im2col
-  kGenericRef,
+  // The reference implementation with for-loops.
+  kReference,
 
-  // kRuyOptimized: the Ruy implementation with hand-optimized BGEMM kernels.
-  kRuyOptimized,
+  // The Ruy implementation with im2col and hand-optimized BGEMM kernels.
+  kOptimizedBGEMM,
+
+  // The XNNPack-derived implementation with indirect BGEMM kernels.
+  kOptimizedIndirectBGEMM,
 };
 
 #define LCE_ENSURE_PARAM(conv_params, context, a)                       \
@@ -171,12 +177,16 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
         "8-bit quantization is only supported with valid or one-padding");
   }
 
-  if (kernel_type == KernelType::kGenericRef) {
+  if (kernel_type == KernelType::kReference) {
     TF_LITE_ENSURE_MSG(
         context,
         conv_params->padding_type != kTfLitePaddingSame ||
             conv_params->pad_value == 1,
         "The reference kernel only supports valid or one-padding.");
+  } else if (kernel_type == KernelType::kOptimizedIndirectBGEMM) {
+    TF_LITE_ENSURE_MSG(
+        context, input->allocation_type != kTfLiteDynamic,
+        "The input tensor must not have dynamic allocation type");
   }
 
   // Determine the output dimensions and allocate the output buffer
@@ -193,7 +203,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   int temporaries_count = 0;
 
   const bool need_im2col =
-      kernel_type == KernelType::kRuyOptimized &&
+      kernel_type == KernelType::kOptimizedBGEMM &&
       (conv_params->stride_width != 1 || conv_params->stride_height != 1 ||
        conv_params->dilation_width_factor != 1 ||
        conv_params->dilation_height_factor != 1 ||
@@ -335,8 +345,8 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node,
 }
 
 template <typename AccumScalar, typename DstScalar>
-void EvalOpt(TfLiteContext* context, TfLiteNode* node,
-             TfLiteBConv2DParams* params) {
+void EvalOptBGEMM(TfLiteContext* context, TfLiteNode* node,
+                  TfLiteBConv2DParams* params) {
   if (!params->one_time_setup_complete) {
     OneTimeSetup(context, node, params);
   }
@@ -369,7 +379,7 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
   // weights data.
   //     Likewise, we pass the original output shape even if we are going to
   // write bitpacked output directly.
-  core::bconv2d::BConv2DOptimized<AccumScalar, DstScalar>(
+  core::bconv2d::BConv2DOptimizedBGEMM<AccumScalar, DstScalar>(
       op_params, GetTensorShape(input), GetTensorData<TBitpacked>(input),
       GetTensorShape(filter), GetTensorData<TBitpacked>(filter),
       output_transform, unpacked_output_shape, GetTensorData<DstScalar>(output),
@@ -379,15 +389,55 @@ void EvalOpt(TfLiteContext* context, TfLiteNode* node,
 }
 
 template <typename DstScalar>
-void EvalRef(TfLiteContext* context, TfLiteNode* node,
-             TfLiteBConv2DParams* params) {
+void EvalOptIndirectBGEMM(TfLiteContext* context, TfLiteNode* node,
+                          TfLiteBConv2DParams* conv_params) {
+  bool kernel_is_initialized = true;
+  if (!conv_params->one_time_setup_complete) {
+    OneTimeSetup(context, node, conv_params);
+    kernel_is_initialized = false;
+  }
+
   const auto* input = GetInput(context, node, 0);
-  const auto* packed_filter = GetInput(context, node, 1);
+  const auto* filter = GetInput(context, node, 1);
   auto* output = GetOutput(context, node, 0);
 
+  const auto bitpacked_input_shape = GetTensorShape(input);
+  const auto output_shape = GetTensorShape(output);
+
+  const auto kernel = core::indirect_bgemm::SelectRuntimeKernel<DstScalar>(
+      conv_params, bitpacked_input_shape, output_shape);
+
+  OutputTransform<DstScalar> output_transform;
+  GetOutputTransform(output_transform, context, node, conv_params);
+
+  if (!kernel_is_initialized) {
+    core::indirect_bgemm::FillIndirectionBuffer(
+        kernel.block_size_pixels, conv_params, bitpacked_input_shape,
+        output_shape, GetTensorData<TBitpacked>(input),
+        conv_params->indirection_buffer, conv_params->zero_buffer);
+    core::indirect_bgemm::PackWeights(
+        kernel.block_size_output_channels, conv_params, bitpacked_input_shape,
+        output_shape, GetTensorData<TBitpacked>(filter),
+        conv_params->packed_weights);
+  }
+
+  core::bconv2d::BConv2DOptimizedIndirectBGEMM<DstScalar>(
+      kernel, conv_params, bitpacked_input_shape, output_shape,
+      output_transform, conv_params->packed_weights.data(),
+      conv_params->indirection_buffer.data(), GetTensorData<DstScalar>(output),
+      conv_params->padding_buffer.data(), conv_params->pad_value);
+}
+
+template <typename DstScalar>
+void EvalRef(TfLiteContext* context, TfLiteNode* node,
+             TfLiteBConv2DParams* params) {
   if (!params->one_time_setup_complete) {
     OneTimeSetup(context, node, params);
   }
+
+  const auto* input = GetInput(context, node, 0);
+  const auto* packed_filter = GetInput(context, node, 1);
+  auto* output = GetOutput(context, node, 0);
 
   // Using the standard TF Lite ConvParams struct.
   // This requires extra step of converting the TfLiteBConv2DParams
@@ -399,7 +449,6 @@ void EvalRef(TfLiteContext* context, TfLiteNode* node,
   OutputTransform<DstScalar> output_transform;
   GetOutputTransform(output_transform, context, node, params);
 
-  TfLiteTensor* im2col = nullptr;
   core::bconv2d::BConv2DReference<std::int32_t, DstScalar>(
       op_params, GetTensorShape(input), GetTensorData<TBitpacked>(input),
       GetTensorShape(packed_filter), GetTensorData<TBitpacked>(packed_filter),
@@ -411,7 +460,7 @@ template <KernelType kernel_type, typename DstScalar>
 inline TfLiteStatus EvalChooseKernelType(TfLiteContext* context,
                                          TfLiteNode* node,
                                          TfLiteBConv2DParams* params) {
-  if (kernel_type == KernelType::kRuyOptimized) {
+  if (kernel_type == KernelType::kOptimizedBGEMM) {
 #if RUY_PLATFORM_ARM_64
     // On 64 bit Arm only there is an optimised kernel with 16-bit accumulators.
     // It is safe to use this without risk of overflow as long as the maximum
@@ -422,14 +471,17 @@ inline TfLiteStatus EvalChooseKernelType(TfLiteContext* context,
     const int depth =
         params->filter_height * params->filter_width * params->channels_in;
     if (depth + 512 < 1 << 16) {
-      EvalOpt<std::int16_t, DstScalar>(context, node, params);
+      EvalOptBGEMM<std::int16_t, DstScalar>(context, node, params);
       return kTfLiteOk;
     }
 #endif
     // In all other cases, use 32-bit accumulators.
-    EvalOpt<std::int32_t, DstScalar>(context, node, params);
+    EvalOptBGEMM<std::int32_t, DstScalar>(context, node, params);
     return kTfLiteOk;
-  } else if (kernel_type == KernelType::kGenericRef) {
+  } else if (kernel_type == KernelType::kOptimizedIndirectBGEMM) {
+    EvalOptIndirectBGEMM<DstScalar>(context, node, params);
+    return kTfLiteOk;
+  } else if (kernel_type == KernelType::kReference) {
     EvalRef<DstScalar>(context, node, params);
     return kTfLiteOk;
   }
@@ -456,23 +508,31 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
 TfLiteRegistration* Register_BCONV_2D_REF() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kGenericRef>,
-      bconv2d::Eval<bconv2d::KernelType::kGenericRef>};
+      bconv2d::Prepare<bconv2d::KernelType::kReference>,
+      bconv2d::Eval<bconv2d::KernelType::kReference>};
   return &r;
 }
 
-TfLiteRegistration* Register_BCONV_2D_OPT() {
+TfLiteRegistration* Register_BCONV_2D_OPT_BGEMM() {
   static TfLiteRegistration r = {
       bconv2d::Init, bconv2d::Free,
-      bconv2d::Prepare<bconv2d::KernelType::kRuyOptimized>,
-      bconv2d::Eval<bconv2d::KernelType::kRuyOptimized>};
+      bconv2d::Prepare<bconv2d::KernelType::kOptimizedBGEMM>,
+      bconv2d::Eval<bconv2d::KernelType::kOptimizedBGEMM>};
+  return &r;
+}
+
+TfLiteRegistration* Register_BCONV_2D_OPT_INDIRECT_BGEMM() {
+  static TfLiteRegistration r = {
+      bconv2d::Init, bconv2d::Free,
+      bconv2d::Prepare<bconv2d::KernelType::kOptimizedIndirectBGEMM>,
+      bconv2d::Eval<bconv2d::KernelType::kOptimizedIndirectBGEMM>};
   return &r;
 }
 
 // Use this registration wrapper to decide which implementation to use.
 TfLiteRegistration* Register_BCONV_2D() {
 #if defined TFLITE_WITH_RUY
-  return Register_BCONV_2D_OPT();
+  return Register_BCONV_2D_OPT_BGEMM();
 #else
   return Register_BCONV_2D_REF();
 #endif

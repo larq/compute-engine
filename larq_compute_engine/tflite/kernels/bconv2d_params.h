@@ -3,11 +3,14 @@
 
 #include <vector>
 
+#include "larq_compute_engine/core/types.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 
 namespace compute_engine {
 namespace tflite {
 namespace bconv2d {
+
+using core::TBitpacked;
 
 const int kTensorNotAllocated = -1;
 
@@ -43,6 +46,11 @@ struct TfLiteBConv2DParams {
 
   // This is used when we have 'same-zero' padding.
   std::vector<float> padding_buffer;
+
+  // These are used in the 'indirect bgemm' kernels.
+  std::vector<TBitpacked> packed_weights;
+  std::vector<const TBitpacked*> indirection_buffer;
+  std::vector<TBitpacked> zero_buffer;
 
   // IDs are the arbitrary identifiers used by TF Lite to identify and access
   // memory buffers. They are unique in the entire TF Lite context.
