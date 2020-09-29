@@ -12,6 +12,9 @@ cc_library(
     hdrs = [
         "bconv2d_params.h",
     ],
+    deps = [
+        "//larq_compute_engine/core:types",
+    ],
 )
 
 cc_library(
@@ -57,10 +60,13 @@ cc_library(
         ":bconv2d_params",
         ":utils",
         "//larq_compute_engine/core:bmaxpool",
-        "//larq_compute_engine/core/bconv2d:optimized",
+        "//larq_compute_engine/core/bconv2d:optimized_bgemm",
+        "//larq_compute_engine/core/bconv2d:optimized_indirect_bgemm",
         "//larq_compute_engine/core/bconv2d:reference",
         "//larq_compute_engine/core/bitpacking:bitpack",
         "//larq_compute_engine/core/bitpacking:utils",
+        "//larq_compute_engine/core/indirect_bgemm:kernels",
+        "//larq_compute_engine/core/indirect_bgemm:prepare",
         "@flatbuffers",
         "@org_tensorflow//tensorflow/lite:framework",
         "@org_tensorflow//tensorflow/lite/kernels/internal:kernel_utils",
