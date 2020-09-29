@@ -19,6 +19,9 @@ cc_library(
     hdrs = [
         "kernel.h",
         "kernel_4x2_portable.h",
+        "kernel_8x4x1_aarch64.h",
+        "kernel_8x4x2_aarch64.h",
+        "kernel_8x4x4_aarch64.h",
     ],
     deps = [
         "//larq_compute_engine/core:types",

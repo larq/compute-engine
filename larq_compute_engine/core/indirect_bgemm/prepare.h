@@ -47,7 +47,12 @@ void FillIndirectionBuffer(const int block_size_pixels,
       block_size_pixels *
       ((output_size + block_size_pixels - 1) / block_size_pixels);
 
-  indirection_buffer.resize(tiled_output_size * kernel_size);
+  // Create the indirection buffer with padding (+ block_size_pixels) and fill
+  // it with pointers to the first element of the input, so that the padding at
+  // the end of the array contains pointers to valid memory.
+  indirection_buffer.assign(tiled_output_size * kernel_size + block_size_pixels,
+                            input_ptr);
+
   zero_buffer.assign(kernel_size * bitpacked_input_channels, 0);
 
   for (int32_t output_tile_start = 0; output_tile_start < tiled_output_size;
@@ -95,6 +100,7 @@ void FillIndirectionBuffer(const int block_size_pixels,
 // This function is (heavily) adapted from this XNNPack function:
 // https://github.com/google/XNNPACK/blob/80a8ac59849bfdae8d2e1409f5642baa502c0b9e/src/packing.c#L429-L484
 void PackWeights(const int block_size_output_channels,
+                 const int block_size_depth,
                  const TfLiteBConv2DParams* conv_params,
                  const RuntimeShape& bitpacked_input_shape,
                  const RuntimeShape& output_shape,
@@ -107,13 +113,16 @@ void PackWeights(const int block_size_output_channels,
   const int32_t kernel_size =
       conv_params->filter_height * conv_params->filter_width;
 
+  assert(bitpacked_input_channels % block_size_depth == 0);
+
   const int32_t rounded_up_output_channels =
       block_size_output_channels *
       ((output_channels + block_size_output_channels - 1) /
        block_size_output_channels);
 
-  packed_weights.resize(rounded_up_output_channels * kernel_size *
-                        bitpacked_input_channels);
+  packed_weights.resize(
+      rounded_up_output_channels * kernel_size * bitpacked_input_channels +
+      /* padding */ block_size_output_channels * block_size_depth);
 
   int32_t packed_weights_index = 0;
 
@@ -122,17 +131,22 @@ void PackWeights(const int block_size_output_channels,
     const int32_t block_size =
         std::min(output_channels - block_start, block_size_output_channels);
     for (int32_t ki = 0; ki < kernel_size; ki++) {
-      for (int32_t ci = 0; ci < bitpacked_input_channels; ci++) {
+      for (int32_t ci = 0; ci < bitpacked_input_channels;
+           ci += block_size_depth) {
         for (int32_t block_offset = 0; block_offset < block_size;
              block_offset++) {
-          const int32_t weights_index = (block_start + block_offset) *
-                                            kernel_size *
-                                            bitpacked_input_channels +
-                                        ki * bitpacked_input_channels + ci;
-          packed_weights.at(packed_weights_index++) =
-              weights_ptr[weights_index];
+          for (int32_t ci_offset = 0; ci_offset < block_size_depth;
+               ci_offset++) {
+            const int32_t weights_index =
+                (block_start + block_offset) * kernel_size *
+                    bitpacked_input_channels +
+                ki * bitpacked_input_channels + ci + ci_offset;
+            packed_weights.at(packed_weights_index++) =
+                weights_ptr[weights_index];
+          }
         }
-        packed_weights_index += block_size_output_channels - block_size;
+        packed_weights_index +=
+            (block_size_output_channels - block_size) * block_size_depth;
       }
     }
   }

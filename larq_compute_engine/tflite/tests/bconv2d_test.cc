@@ -688,9 +688,12 @@ using ::testing::ValuesIn;
 INSTANTIATE_TEST_SUITE_P(
     SmallTest, BConv2DOpTest,
     ::testing::Combine(
-        Values(std::array<int, 4>{1, 4, 4, 1},
-               std::array<int, 4>{1, 4, 4, 64}),  // input shape [BHWI]
-        Values(std::array<int, 3>{1, 1, 1}, std::array<int, 3>{3, 3, 1},
+        Values(std::array<int, 4>{1, 4, 4, 4}, std::array<int, 4>{1, 4, 4, 64},
+               std::array<int, 4>{1, 4, 4, 96},
+               std::array<int, 4>{1, 4, 4, 128},
+               std::array<int, 4>{1, 4, 4, 192},
+               std::array<int, 4>{1, 4, 4, 256}),  // input shape [BHWI]
+        Values(std::array<int, 3>{1, 1, 1}, std::array<int, 3>{3, 3, 4},
                std::array<int, 3>{3, 3, 64}),  // filter shape [HWO]
         Values(std::array<int, 2>{1, 1}),      // strides height/width
         Values(std::array<int, 2>{1, 1}),      // dilation height/width
@@ -700,8 +703,8 @@ INSTANTIATE_TEST_SUITE_P(
         ValuesIn(BConv2DOpTest::GetKernelsTuples(*kKernelMap))),
     TestParam::TestNameSuffix);
 
-// Separately, for optimised kernels only, test a very large input channel and
-// filter size combination that would overflow 16-bit accumulators (to check
+// Separately, for optimised BGEMM kernels only, test a very large input channel
+// and filter size combination that would overflow 16-bit accumulators (to check
 // that we successfully fall back to the 32-bit accumulator kernels if
 // necessary).
 INSTANTIATE_TEST_SUITE_P(
@@ -720,20 +723,21 @@ INSTANTIATE_TEST_SUITE_P(
             compute_engine::tflite::Register_BCONV_2D_OPT_BGEMM})),
     TestParam::TestNameSuffix);
 
-// The BigTest suite will be skipped in the qemu CI runs as they take more than
-// an hour.
+// The BigTest suite will be skipped in the qemu CI runs as they take a long
+// time to run.
 INSTANTIATE_TEST_SUITE_P(
     BigTest, BConv2DOpTest,
     ::testing::Combine(
-        Values(std::array<int, 4>{1, 7, 7, 1}, std::array<int, 4>{1, 8, 5, 1},
-               std::array<int, 4>{1, 7, 7, 64}, std::array<int, 4>{1, 8, 5, 64},
-               std::array<int, 4>{1, 7, 7, 130},
-               std::array<int, 4>{1, 8, 5, 130}),  // input shape [BHWI]
+        Values(std::array<int, 4>{1, 7, 7, 4}, std::array<int, 4>{1, 8, 5, 64},
+               std::array<int, 4>{1, 7, 7, 96},
+               std::array<int, 4>{1, 8, 5, 128},
+               std::array<int, 4>{1, 7, 7, 192},
+               std::array<int, 4>{1, 8, 5, 256}),  // input shape [BHWI]
         Values(std::array<int, 3>{1, 1, 1}, std::array<int, 3>{3, 3, 1},
-               std::array<int, 3>{2, 3, 1}, std::array<int, 3>{1, 1, 4},
-               std::array<int, 3>{3, 3, 4}, std::array<int, 3>{2, 3, 4},
-               std::array<int, 3>{1, 1, 64}, std::array<int, 3>{3, 3, 64},
-               std::array<int, 3>{2, 3, 64}),  // filter shape [HWO]
+               std::array<int, 3>{2, 3, 2}, std::array<int, 3>{1, 1, 3},
+               std::array<int, 3>{3, 3, 4}, std::array<int, 3>{2, 3, 5},
+               std::array<int, 3>{1, 1, 6}, std::array<int, 3>{3, 3, 7},
+               std::array<int, 3>{2, 3, 32}),  // filter shape [HWO]
         Values(std::array<int, 2>{1, 1},
                std::array<int, 2>{2, 3}),  // strides height/width
         Values(std::array<int, 2>{1, 1},
