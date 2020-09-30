@@ -79,10 +79,12 @@ namespace kernel_8x4x1_aarch64 {
  *     accum_3 = 0;
  *
  *     // This block is removed in the depth=1 case
- *     a_ptr_0 = indirection_buffer[0];
- *     a_ptr_1 = indirection_buffer[1];
- *     a_ptr_2 = indirection_buffer[2];
- *     a_ptr_3 = indirection_buffer[3];
+ *     // The first set of activations is already loaded, so this +1
+ *     // ensures that the first 'block' loads the next set of activations.
+ *     a_ptr_0 = indirection_buffer[0] + 1;
+ *     a_ptr_1 = indirection_buffer[1] + 1;
+ *     a_ptr_2 = indirection_buffer[2] + 1;
+ *     a_ptr_3 = indirection_buffer[3] + 1;
  *     indirection_buffer += 4;
  *
  *     int ks = kernel_size;
