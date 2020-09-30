@@ -21,16 +21,13 @@ namespace core {
 namespace indirect_bgemm {
 namespace kernel_8x4x1_aarch64 {
 
-/**
- * This block of instructions takes as input the activation vector registers
- * a_0, ..., a_3 and the weight vector registers w_0, w_1, and computes 'binary
- * multiplication and accumulation' (BMLA) using XOR and popcount instructions,
- * adding the results to the 16-bit accumulator vector registers accum_0, ...,
- * accum_3.
- *
- * Additionally, it loads the next values into a_0, ..., a_3 (from the pointers
- * a_ptr_0, ..., a_ptr_3) and into w_0, w_1 (from the pointer w_ptr).
- */
+// This block of instructions takes as input the activation vector registers
+// a_0, ..., a_3 and the weight vector registers w_0, w_1, and computes
+// 'binary multiplication and accumulation' (BMLA) using XOR and popcount
+// instructions, adding the results to the 16-bit accumulator vector registers
+// accum_0, ..., accum_3.
+//     It also reloads data for the next loop iteration into a_0, ..., a_3 and
+// w_0, w_1 from the pointers a_ptr_0, ..., a_ptr_3 and w_ptr.
 #define XOR_POPCOUNT_ACCUM_LOAD_BLOCK_32   \
   "eor v0.16b, %[a_0].16b, %[w_0].16b\n\t" \
   "eor v1.16b, %[a_1].16b, %[w_0].16b\n\t" \
@@ -65,10 +62,49 @@ namespace kernel_8x4x1_aarch64 {
   "uadalp %[accum_3].8h, v3.16b\n\t"
 
 /**
- * This function performs the accumulation loop when we know that the depth is
- * greater than one, i.e. the (bitpacked) number of input channels is greater
- * than 32.
+ * Accumulation loops
+ *
+ * There are two variants of the accumulation loop: one for when we know the
+ * depth is greater than one, i.e. the number of input channels is greater than
+ * 32; and one for when we know the depth is equal to one, i.e. the number of
+ * input channels is equal to 32. The latter case allows for a slight
+ * optimisation.
+ *
+ * The accumulation loops use inline assembly but are equivalent to the
+ * following pseudocode:
+ *
+ *     accum_0 = 0;
+ *     accum_1 = 0;
+ *     accum_2 = 0;
+ *     accum_3 = 0;
+ *
+ *     // This block is removed in the depth=1 case
+ *     a_ptr_0 = indirection_buffer[0];
+ *     a_ptr_1 = indirection_buffer[1];
+ *     a_ptr_2 = indirection_buffer[2];
+ *     a_ptr_3 = indirection_buffer[3];
+ *     indirection_buffer += 4;
+ *
+ *     int ks = kernel_size;
+ *     do {
+ *         // This loop is removed in the depth=1 case
+ *         for (int d = 0; d < depth - 1; d++) {
+ *             XOR_POPCOUNT_ACCUM_LOAD_BLOCK_32
+ *         }
+ *
+ *         // Before the final inner (depth loop) iteration, set the activation
+ *         // pointers so that the activations for the next outer loop iteration
+ *         // are loaded correctly.
+ *         a_ptr_0 = indirection_buffer[0];
+ *         a_ptr_1 = indirection_buffer[1];
+ *         a_ptr_2 = indirection_buffer[2];
+ *         a_ptr_3 = indirection_buffer[3];
+ *         indirection_buffer += 4;
+ *
+ *         XOR_POPCOUNT_ACCUM_LOAD_BLOCK_32
+ *     } while (--ks > 0);
  */
+
 inline void AccumulationLoop_Depth2OrMore(
     std::int32_t conv_kernel_size, const std::int32_t depth,
     int32x4_t weights[2], int32x4_t activations[4], uint16x8_t accumulators[4],
@@ -125,10 +161,6 @@ inline void AccumulationLoop_Depth2OrMore(
         "v7");
 }
 
-/**
- * This function performs the accumulation loop when we know that the depth is
- * equal to one, i.e. the (bitpacked) number of input channels is 32.
- */
 inline void AccumulationLoop_Depth1(std::int32_t conv_kernel_size,
                                     int32x4_t weights[2],
                                     int32x4_t activations[4],
@@ -177,9 +209,15 @@ inline void AccumulationLoop_Depth1(std::int32_t conv_kernel_size,
 #undef XOR_POPCOUNT_ACCUM_LOAD_BLOCK_32
 
 /**
- * The output transform and store function for float output. Also reloads the
- * weight and activation registers for the next iteration.
+ * Output transforms
+ *
+ * These destination-type-specific functions take the accumulator values and
+ * perform the output transform, before storing the results in the output array.
+ * They additionally reload data into the weight and activation registers for
+ * the first iteration of the next accumulation loop.
  */
+
+// Float output transform
 inline void OutputTransformAndLoadNextAndStore(
     const std::int32_t c_out_index, const std::int32_t channels_out,
     uint16x8_t accumulators[4], int32x4_t weights[2], int32x4_t activations[4],
@@ -335,10 +373,7 @@ inline void OutputTransformAndLoadNextAndStore(
   }
 }
 
-/**
- * The output transform and store function for int8 output. Also reloads the
- * weight and activation registers for the next iteration.
- */
+// Int8 output transform
 inline void OutputTransformAndLoadNextAndStore(
     const std::int32_t c_out_index, const std::int32_t channels_out,
     uint16x8_t accumulators[4], int32x4_t weights[2], int32x4_t activations[4],
