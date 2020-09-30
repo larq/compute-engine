@@ -728,8 +728,8 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     BigTest, BConv2DOpTest,
     ::testing::Combine(
-        Values(std::array<int, 4>{1, 7, 7, 4}, std::array<int, 4>{1, 8, 5, 64},
-               std::array<int, 4>{1, 7, 7, 96},
+        Values(std::array<int, 4>{1, 7, 7, 4}, std::array<int, 4>{3, 8, 5, 64},
+               std::array<int, 4>{10, 7, 7, 96},
                std::array<int, 4>{1, 8, 5, 128},
                std::array<int, 4>{1, 7, 7, 192},
                std::array<int, 4>{1, 8, 5, 256}),  // input shape [BHWI]

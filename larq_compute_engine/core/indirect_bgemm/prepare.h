@@ -34,6 +34,7 @@ void FillIndirectionBuffer(const int block_size_pixels,
   const int32_t input_padding_top = conv_params->padding_values.height;
   const int32_t input_padding_left = conv_params->padding_values.width;
 
+  const int32_t batch_size = bitpacked_input_shape.Dims(0);
   const int32_t input_height = bitpacked_input_shape.Dims(1);
   const int32_t input_width = bitpacked_input_shape.Dims(2);
   const int32_t bitpacked_input_channels = bitpacked_input_shape.Dims(3);
@@ -41,7 +42,7 @@ void FillIndirectionBuffer(const int block_size_pixels,
   const int32_t output_height = output_shape.Dims(1);
   const int32_t output_width = output_shape.Dims(2);
 
-  const int32_t output_size = output_height * output_width;
+  const int32_t output_size = batch_size * output_height * output_width;
   const int32_t kernel_size = kernel_height * kernel_width;
   const int32_t tiled_output_size =
       block_size_pixels *
@@ -61,8 +62,10 @@ void FillIndirectionBuffer(const int block_size_pixels,
          output_tile_offset++) {
       const int32_t output_index =
           std::min(output_tile_start + output_tile_offset, output_size - 1);
+      const int32_t batch_index = output_index / (output_height * output_width);
       const int32_t output_x = output_index % output_width;
-      const int32_t output_y = output_index / output_width;
+      const int32_t output_y =
+          (output_index % (output_height * output_width)) / output_width;
       for (int32_t kernel_y = 0; kernel_y < kernel_height; kernel_y++) {
         const int32_t input_y = output_y * stride_height +
                                 kernel_y * dilation_height - input_padding_top;
@@ -77,7 +80,8 @@ void FillIndirectionBuffer(const int block_size_pixels,
                                   output_tile_offset;
             if (0 <= input_x && input_x < input_width) {
               indirection_buffer.at(index) =
-                  (input_ptr + (input_y * input_width + input_x) *
+                  (input_ptr + (batch_index * input_height * input_width +
+                                input_y * input_width + input_x) *
                                    bitpacked_input_channels);
             } else {
               indirection_buffer.at(index) = zero_buffer.data();
