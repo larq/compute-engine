@@ -416,8 +416,8 @@ void EvalOptIndirectBGEMM(TfLiteContext* context, TfLiteNode* node,
         output_shape, GetTensorData<TBitpacked>(input),
         conv_params->indirection_buffer, conv_params->zero_buffer);
     core::indirect_bgemm::PackWeights(
-        kernel.block_size_output_channels, conv_params, bitpacked_input_shape,
-        output_shape, GetTensorData<TBitpacked>(filter),
+        kernel.block_size_output_channels, kernel.block_size_depth, conv_params,
+        bitpacked_input_shape, output_shape, GetTensorData<TBitpacked>(filter),
         conv_params->packed_weights);
   }
 

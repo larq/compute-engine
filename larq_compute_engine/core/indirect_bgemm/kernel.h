@@ -5,6 +5,11 @@
 #include <cstdint>
 #include <type_traits>
 
+#ifdef __aarch64__
+#include "larq_compute_engine/core/indirect_bgemm/kernel_8x4x1_aarch64.h"
+#include "larq_compute_engine/core/indirect_bgemm/kernel_8x4x2_aarch64.h"
+#include "larq_compute_engine/core/indirect_bgemm/kernel_8x4x4_aarch64.h"
+#endif
 #include "larq_compute_engine/core/indirect_bgemm/kernel_4x2_portable.h"
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/tflite/kernels/bconv2d_params.h"
@@ -29,6 +34,7 @@ struct IndirectBGEMMKernel {
   MicroKernelFunction* micro_kernel_function;
   const std::int32_t block_size_output_channels;
   const std::int32_t block_size_pixels;
+  const std::int32_t block_size_depth;
 };
 
 // This function allows us to select which kernel to use at runtime based on any
@@ -42,9 +48,52 @@ inline IndirectBGEMMKernel<DstScalar> SelectRuntimeKernel(
     const TfLiteBConv2DParams* conv_params,
     const RuntimeShape& bitpacked_input_shape,
     const RuntimeShape& output_shape) {
-  // For now there is only one kernel available.
-  return IndirectBGEMMKernel<DstScalar>{
-      &kernel_4x2_portable::RunKernel<DstScalar>, 4, 2};
+#ifdef __aarch64__
+  // There are optimised assembly kernels for float and int8 output on Aarch64.
+  // They all use int16 accumulators. A different kernel is selected depending
+  // on whether the bitpacked number of input channels is a multiple of 4, 2, or
+  // 1, and whether that multiple is 1 or more than 1.
+
+  constexpr bool is_float_or_int8 = std::is_same<DstScalar, float>::value ||
+                                    std::is_same<DstScalar, std::int8_t>::value;
+  const int max_accumulator_value = conv_params->filter_height *
+                                    conv_params->filter_width *
+                                    conv_params->channels_in;
+  const bool fits_in_int16_accumulators = max_accumulator_value + 512 < 1 << 16;
+
+  if (is_float_or_int8 && fits_in_int16_accumulators) {
+    // This weirdness is required because DstScalar could be `TBitpacked`, but
+    // in many cases RunKernel<TBitpacked, ...> isn't defined. As we can't use
+    // `if constexpr` (C++17), this causes a compile error despite the fact that
+    // we know that within this if block DstScalar must be float or int8.
+    using DS =
+        typename std::conditional<is_float_or_int8, DstScalar, float>::type;
+    using KFn = typename IndirectBGEMMKernel<DstScalar>::MicroKernelFunction;
+
+    if (bitpacked_input_shape.Dims(3) % 4 == 0) {
+      if (bitpacked_input_shape.Dims(3) > 4) {
+        return {(KFn*)&kernel_8x4x4_aarch64::RunKernel<DS, true>, 8, 4, 4};
+      } else {
+        return {(KFn*)&kernel_8x4x4_aarch64::RunKernel<DS, false>, 8, 4, 4};
+      }
+    } else if (bitpacked_input_shape.Dims(3) % 2 == 0) {
+      if (bitpacked_input_shape.Dims(3) > 2) {
+        return {(KFn*)&kernel_8x4x2_aarch64::RunKernel<DS, true>, 8, 4, 2};
+      } else {
+        return {(KFn*)&kernel_8x4x2_aarch64::RunKernel<DS, false>, 8, 4, 2};
+      }
+    } else {
+      if (bitpacked_input_shape.Dims(3) > 1) {
+        return {(KFn*)&kernel_8x4x1_aarch64::RunKernel<DS, true>, 8, 4, 1};
+      } else {
+        return {(KFn*)&kernel_8x4x1_aarch64::RunKernel<DS, false>, 8, 4, 1};
+      }
+    }
+  }
+#endif
+
+  // Fallback C++ kernel
+  return {&kernel_4x2_portable::RunKernel<DstScalar>, 4, 2, 1};
 }
 
 template <typename DstScalar>
