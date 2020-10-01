@@ -26,7 +26,8 @@ inline void BConv2DOptimizedIndirectBGEMM(
   const std::int32_t conv_kernel_size =
       conv_params->filter_height * conv_params->filter_width;
   const std::int32_t bitpacked_input_channels = bitpacked_input_shape.Dims(3);
-  const std::int32_t output_size = output_shape.Dims(1) * output_shape.Dims(2);
+  const std::int32_t output_size =
+      output_shape.Dims(0) * output_shape.Dims(1) * output_shape.Dims(2);
   const std::int32_t output_channels = conv_params->channels_out;
 
   indirect_bgemm::RunKernel(kernel, conv_kernel_size, bitpacked_input_channels,
