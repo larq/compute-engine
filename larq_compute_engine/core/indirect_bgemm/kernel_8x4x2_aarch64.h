@@ -27,7 +27,12 @@ namespace kernel_8x4x2_aarch64 {
 // instructions, adding the results to the 16-bit accumulator vector registers
 // accum_0, ..., accum_3.
 //     It also reloads data for the next loop iteration into a_0, ..., a_3 and
-// w_0, ..., w_3 from the pointers a_ptr_0, ..., a_ptr_3 and w_ptr.
+// w_0, ..., w_3 from the pointers a_ptr_0, ..., a_ptr_3 and w_ptr. Note that
+// the accumulator loads use pairs of "load single lane" `ld1` instructions
+// rather than "load and duplicate" `ld1r` instructions. This is because `ld1r`
+// of 64-bit elements uses the F0/F1 (ASIMD) pipelines, whereas the 64-bit
+// single-lane "ld1" instructions use only the L0/L1 (load) pipelines. See
+// https://github.com/larq/compute-engine/pull/521 for more details.
 #define XOR_POPCOUNT_ACCUM_LOAD_BLOCK_64    \
   "eor v0.16b, %[a_0].16b, %[w_0].16b\n\t"  \
   "eor v1.16b, %[a_1].16b, %[w_0].16b\n\t"  \
@@ -41,42 +46,46 @@ namespace kernel_8x4x2_aarch64 {
   "eor v9.16b, %[a_1].16b, %[w_2].16b\n\t"  \
   "eor v10.16b, %[a_2].16b, %[w_2].16b\n\t" \
   "eor v11.16b, %[a_3].16b, %[w_2].16b\n\t" \
+  "ldr %q[w_0], [%[w_ptr]]\n\t"             \
   "eor v12.16b, %[a_0].16b, %[w_3].16b\n\t" \
   "eor v13.16b, %[a_1].16b, %[w_3].16b\n\t" \
   "eor v14.16b, %[a_2].16b, %[w_3].16b\n\t" \
   "eor v15.16b, %[a_3].16b, %[w_3].16b\n\t" \
+  "ldr %q[w_1], [%[w_ptr], #16]\n\t"        \
   "cnt v0.16b, v0.16b\n\t"                  \
   "cnt v1.16b, v1.16b\n\t"                  \
-  "ld1r {%[a_0].2d}, [%[a_ptr_0]], #8\n\t"  \
+  "ld1 {%[a_0].d}[0], [%[a_ptr_0]]\n\t"     \
   "cnt v2.16b, v2.16b\n\t"                  \
   "cnt v3.16b, v3.16b\n\t"                  \
-  "ld1r {%[a_1].2d}, [%[a_ptr_1]], #8\n\t"  \
+  "ld1 {%[a_1].d}[0], [%[a_ptr_1]]\n\t"     \
   "cnt v4.16b, v4.16b\n\t"                  \
   "cnt v5.16b, v5.16b\n\t"                  \
-  "ld1r {%[a_2].2d}, [%[a_ptr_2]], #8\n\t"  \
+  "ld1 {%[a_2].d}[0], [%[a_ptr_2]]\n\t"     \
   "cnt v6.16b, v6.16b\n\t"                  \
   "cnt v7.16b, v7.16b\n\t"                  \
-  "ld1r {%[a_3].2d}, [%[a_ptr_3]], #8\n\t"  \
+  "ld1 {%[a_3].d}[0], [%[a_ptr_3]]\n\t"     \
   "cnt v8.16b, v8.16b\n\t"                  \
   "cnt v9.16b, v9.16b\n\t"                  \
-  "ldr %q[w_0], [%[w_ptr]]\n\t"             \
+  "ld1 {%[a_0].d}[1], [%[a_ptr_0]], #8\n\t" \
   "cnt v10.16b, v10.16b\n\t"                \
   "cnt v11.16b, v11.16b\n\t"                \
-  "ldr %q[w_1], [%[w_ptr], #16]\n\t"        \
+  "ld1 {%[a_1].d}[1], [%[a_ptr_1]], #8\n\t" \
   "cnt v12.16b, v12.16b\n\t"                \
   "cnt v13.16b, v13.16b\n\t"                \
-  "ldr %q[w_2], [%[w_ptr], #32]\n\t"        \
+  "ld1 {%[a_2].d}[1], [%[a_ptr_2]], #8\n\t" \
   "cnt v14.16b, v14.16b\n\t"                \
   "cnt v15.16b, v15.16b\n\t"                \
-  "ldr %q[w_3], [%[w_ptr], #48]\n\t"        \
+  "ld1 {%[a_3].d}[1], [%[a_ptr_3]], #8\n\t" \
   "addp v0.16b, v0.16b, v4.16b\n\t"         \
   "addp v1.16b, v1.16b, v5.16b\n\t"         \
   "addp v2.16b, v2.16b, v6.16b\n\t"         \
   "addp v3.16b, v3.16b, v7.16b\n\t"         \
+  "ldr %q[w_2], [%[w_ptr], #32]\n\t"        \
   "addp v8.16b, v8.16b, v12.16b\n\t"        \
   "addp v9.16b, v9.16b, v13.16b\n\t"        \
   "addp v10.16b, v10.16b, v14.16b\n\t"      \
   "addp v11.16b, v11.16b, v15.16b\n\t"      \
+  "ldr %q[w_3], [%[w_ptr], #48]\n\t"        \
   "addp v0.16b, v0.16b, v8.16b\n\t"         \
   "addp v1.16b, v1.16b, v9.16b\n\t"         \
   "addp v2.16b, v2.16b, v10.16b\n\t"        \
@@ -284,21 +293,25 @@ inline void OutputTransformAndLoadNextAndStore(
       "ldr q4, [%[bias_addr]]\n\t"
       "smax %[result_30].4s, %[result_30].4s, v0.4s\n\t"
       "smax %[result_31].4s, %[result_31].4s, v0.4s\n\t"
+      "ldr q5, [%[bias_addr], #16]\n\t"
       "smax %[result_20].4s, %[result_20].4s, v0.4s\n\t"
       "smax %[result_21].4s, %[result_21].4s, v0.4s\n\t"
-      "ldr q5, [%[bias_addr], #16]\n\t"
+      "ldr %q[w_0], [%[w_ptr], #-64]\n\t"
       "smax %[result_10].4s, %[result_10].4s, v0.4s\n\t"
       "smax %[result_11].4s, %[result_11].4s, v0.4s\n\t"
+      "ldr %q[w_1], [%[w_ptr], #-48]\n\t"
       "smax %[result_00].4s, %[result_00].4s, v0.4s\n\t"
       "smax %[result_01].4s, %[result_01].4s, v0.4s\n\t"
-      "ld1r {%[a_0].2d}, [x0]\n\t"
+      "ld1 {%[a_0].d}[0], [x0]\n\t"
       "smin %[result_30].4s, %[result_30].4s, v1.4s\n\t"
       "smin %[result_31].4s, %[result_31].4s, v1.4s\n\t"
+      "ld1 {%[a_1].d}[0], [x1]\n\t"
       "smin %[result_20].4s, %[result_20].4s, v1.4s\n\t"
       "smin %[result_21].4s, %[result_21].4s, v1.4s\n\t"
-      "ld1r {%[a_1].2d}, [x1]\n\t"
+      "ld1 {%[a_2].d}[0], [x2]\n\t"
       "smin %[result_10].4s, %[result_10].4s, v1.4s\n\t"
       "smin %[result_11].4s, %[result_11].4s, v1.4s\n\t"
+      "ld1 {%[a_3].d}[0], [x3]\n\t"
       "smin %[result_00].4s, %[result_00].4s, v1.4s\n\t"
       "smin %[result_01].4s, %[result_01].4s, v1.4s\n\t"
 
@@ -307,18 +320,18 @@ inline void OutputTransformAndLoadNextAndStore(
       // block the Neon pipeline. It is therefore important for optimal
       // performance to interleave the float multiply and add instructions
       // between the "scvtf" instructions.
-      "ld1r {%[a_2].2d}, [x2]\n\t"
+      "ld1 {%[a_0].d}[1], [x0]\n\t"
       "scvtf %[result_30].4s, %[result_30].4s\n\t"
       "scvtf %[result_31].4s, %[result_31].4s\n\t"
-      "ld1r {%[a_3].2d}, [x3]\n\t"
+      "ld1 {%[a_1].d}[1], [x1]\n\t"
       "scvtf %[result_20].4s, %[result_20].4s\n\t"
       "fmul %[result_30].4s, %[result_30].4s, v2.4s\n\t"
       "scvtf %[result_21].4s, %[result_21].4s\n\t"
-      "ldr %q[w_0], [%[w_ptr], #-64]\n\t"
+      "ld1 {%[a_2].d}[1], [x2]\n\t"
       "fmul %[result_31].4s, %[result_31].4s, v3.4s\n\t"
       "fadd %[result_30].4s, %[result_30].4s, v4.4s\n\t"
       "scvtf %[result_10].4s, %[result_10].4s\n\t"
-      "ldr %q[w_1], [%[w_ptr], #-48]\n\t"
+      "ld1 {%[a_3].d}[1], [x3]\n\t"
       "fmul %[result_20].4s, %[result_20].4s, v2.4s\n\t"
       "fadd %[result_31].4s, %[result_31].4s, v5.4s\n\t"
       "scvtf %[result_11].4s, %[result_11].4s\n\t"
@@ -444,21 +457,25 @@ inline void OutputTransformAndLoadNextAndStore(
       "ldr q4, [%[bias_addr]]\n\t"
       "smax %[result_30].4s, %[result_30].4s, v0.4s\n\t"
       "smax %[result_31].4s, %[result_31].4s, v0.4s\n\t"
+      "ldr q5, [%[bias_addr], #16]\n\t"
       "smax %[result_20].4s, %[result_20].4s, v0.4s\n\t"
       "smax %[result_21].4s, %[result_21].4s, v0.4s\n\t"
-      "ldr q5, [%[bias_addr], #16]\n\t"
+      "ldr %q[w_0], [%[w_ptr], #-64]\n\t"
       "smax %[result_10].4s, %[result_10].4s, v0.4s\n\t"
       "smax %[result_11].4s, %[result_11].4s, v0.4s\n\t"
+      "ldr %q[w_1], [%[w_ptr], #-48]\n\t"
       "smax %[result_00].4s, %[result_00].4s, v0.4s\n\t"
       "smax %[result_01].4s, %[result_01].4s, v0.4s\n\t"
-      "ld1r {%[a_0].2d}, [x0]\n\t"
+      "ld1 {%[a_0].d}[0], [x0]\n\t"
       "smin %[result_30].4s, %[result_30].4s, v1.4s\n\t"
       "smin %[result_31].4s, %[result_31].4s, v1.4s\n\t"
+      "ld1 {%[a_1].d}[0], [x1]\n\t"
       "smin %[result_20].4s, %[result_20].4s, v1.4s\n\t"
       "smin %[result_21].4s, %[result_21].4s, v1.4s\n\t"
-      "ld1r {%[a_1].2d}, [x1]\n\t"
+      "ld1 {%[a_2].d}[0], [x2]\n\t"
       "smin %[result_10].4s, %[result_10].4s, v1.4s\n\t"
       "smin %[result_11].4s, %[result_11].4s, v1.4s\n\t"
+      "ld1 {%[a_3].d}[0], [x3]\n\t"
       "smin %[result_00].4s, %[result_00].4s, v1.4s\n\t"
       "smin %[result_01].4s, %[result_01].4s, v1.4s\n\t"
 
@@ -468,18 +485,18 @@ inline void OutputTransformAndLoadNextAndStore(
       // conversion instructions ("scvtf" and "fcvtns") are *very* slow and
       // block the Neon pipeline. It is therefore important for optimal
       // performance to interleave other instructions between them.
-      "ld1r {%[a_2].2d}, [x2]\n\t"
+      "ld1 {%[a_0].d}[1], [x0]\n\t"
       "scvtf %[result_30].4s, %[result_30].4s\n\t"
       "scvtf %[result_31].4s, %[result_31].4s\n\t"
-      "ld1r {%[a_3].2d}, [x3]\n\t"
+      "ld1 {%[a_1].d}[1], [x1]\n\t"
       "scvtf %[result_20].4s, %[result_20].4s\n\t"
       "fmul %[result_30].4s, %[result_30].4s, v2.4s\n\t"
       "scvtf %[result_21].4s, %[result_21].4s\n\t"
-      "ldr %q[w_0], [%[w_ptr], #-64]\n\t"
+      "ld1 {%[a_2].d}[1], [x2]\n\t"
       "fmul %[result_31].4s, %[result_31].4s, v3.4s\n\t"
       "fadd %[result_30].4s, %[result_30].4s, v4.4s\n\t"
       "scvtf %[result_10].4s, %[result_10].4s\n\t"
-      "ldr %q[w_1], [%[w_ptr], #-48]\n\t"
+      "ld1 {%[a_3].d}[1], [x3]\n\t"
       "fmul %[result_20].4s, %[result_20].4s, v2.4s\n\t"
       "fadd %[result_31].4s, %[result_31].4s, v5.4s\n\t"
       "scvtf %[result_11].4s, %[result_11].4s\n\t"
