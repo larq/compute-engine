@@ -132,10 +132,8 @@ multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
                     $dilation_height_factor,
                     $dilation_width_factor,
                     TFL_AF_None,
-                    ConstantAttr<I32Attr,
-                    "1">:$pad_values,
-                    ConstantAttr<StrAttr,
-                    "SAME">:$padding,
+                    ConstantAttr<I32Attr, "1">:$pad_values,
+                    ConstantAttr<StrAttr, "SAME">:$padding,
                     $stride_height,
                     $stride_width)),
             (LQ_Bconv2dOp
