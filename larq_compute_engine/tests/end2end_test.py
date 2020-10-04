@@ -12,8 +12,16 @@ from larq_compute_engine.mlir.python.converter import convert_keras_model
 from larq_compute_engine.tflite.python.interpreter import Interpreter
 
 
+class UnipolarSteSign(lq.quantizers.SteSign):
+    def __init__(self, clip_value: float = 0.5, **kwargs):
+        super().__init__(clip_value=clip_value, **kwargs)
+
+    def call(self, inputs):
+        return 0.5 * super().call(inputs - 0.5) + 0.5
+
+
 def toy_model(**kwargs):
-    def block(padding, pad_values, activation):
+    def block(input_quantizer, padding, pad_values, activation):
         def dummy(x):
             shortcut = x
             x = lq.layers.QuantConv2D(
@@ -21,7 +29,7 @@ def toy_model(**kwargs):
                 kernel_size=3,
                 padding=padding,
                 pad_values=pad_values,
-                input_quantizer="ste_sign",
+                input_quantizer=input_quantizer,
                 kernel_quantizer="ste_sign",
                 use_bias=False,
                 activation=activation,
@@ -37,12 +45,14 @@ def toy_model(**kwargs):
         out
     )
 
-    # Test zero-padding
-    out = block("same", 0.0, "relu")(out)
-    # Test one-padding
-    out = block("same", 1.0, "relu")(out)
-    # Test no activation function
-    out = block("same", 1.0, None)(out)
+    # Test bipolar inputs with 0/1 padding and unipolar inputs with 0 padding,
+    # and test both with/without an activation function.
+    out = block("ste_sign", "same", 0.0, "relu")(out)
+    out = block("ste_sign", "same", 1.0, "relu")(out)
+    out = block("ste_sign", "same", 0.0, None)(out)
+    out = block("ste_sign", "same", 1.0, None)(out)
+    out = block(UnipolarSteSign(), "same", 0.0, "relu")(out)
+    out = block(UnipolarSteSign(), "same", 0.0, None)(out)
 
     out = tf.keras.layers.GlobalAvgPool2D()(out)
     return tf.keras.Model(inputs=img_input, outputs=out)
@@ -74,11 +84,11 @@ def toy_model_sequential(**kwargs):
             lq.layers.QuantConv2D(
                 32,
                 (3, 3),
-                input_quantizer="ste_sign",
+                input_quantizer=UnipolarSteSign(),
                 kernel_quantizer="ste_sign",
                 strides=(2, 2),
                 padding="same",
-                pad_values=1.0,
+                pad_values=0.0,
                 use_bias=False,
             ),
             tf.keras.layers.BatchNormalization(
