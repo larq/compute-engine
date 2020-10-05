@@ -116,26 +116,12 @@ def toy_model_int8(**kwargs):
     x = lq.layers.QuantConv2D(
         12, 3, strides=2, input_quantizer="ste_sign", kernel_quantizer="ste_sign"
     )(x)
-    # Make sure the typical output is in the (-3, 3) range
-    # by dividing by sqrt(filter_height * filter_width * input_channels)
-    x = tf.keras.layers.BatchNormalization(
-        gamma_initializer=tf.keras.initializers.RandomNormal(
-            1.0 / math.sqrt(3 * 3 * 3), stddev=0.1 / math.sqrt(3 * 3 * 3)
-        ),
-        beta_initializer="uniform",
-    )(x)
+    x = tf.keras.layers.BatchNormalization(momentum=0.7)(x)
     x = quant(x)
     x = lq.layers.QuantConv2D(
         12, 3, strides=2, input_quantizer="ste_sign", kernel_quantizer="ste_sign"
     )(x)
-    # Make sure the typical output is in the (-3, 3) range
-    # by dividing by sqrt(filter_height * filter_width * input_channels)
-    x = tf.keras.layers.BatchNormalization(
-        gamma_initializer=tf.keras.initializers.RandomNormal(
-            1.0 / math.sqrt(3 * 3 * 12), stddev=0.1 / math.sqrt(3 * 3 * 12)
-        ),
-        beta_initializer="uniform",
-    )(x)
+    x = tf.keras.layers.BatchNormalization(momentum=0.7)(x)
     x = quant(x)
     x = tf.keras.layers.GlobalAveragePooling2D()(x)
     x = quant(x)
@@ -148,10 +134,10 @@ def preprocess(data):
     return lqz.preprocess_input(data["image"]), data["label"]
 
 
-def assert_model_output(model_lce, inputs, outputs):
+def assert_model_output(model_lce, inputs, outputs, rtol, atol):
     interpreter = Interpreter(model_lce, num_threads=min(os.cpu_count(), 4))
     actual_outputs = interpreter.predict(inputs)
-    np.testing.assert_allclose(actual_outputs, outputs, rtol=0.05, atol=0.125)
+    np.testing.assert_allclose(actual_outputs, outputs, rtol=rtol, atol=atol)
 
 
 @pytest.mark.parametrize(
@@ -159,7 +145,7 @@ def assert_model_output(model_lce, inputs, outputs):
     [toy_model, toy_model_sequential, toy_model_int8, lqz.sota.QuickNet],
 )
 def test_simple_model(model_cls):
-    # Test on the Oxford flowers dataset
+    # Test on the OxfordFlowers dataset
     dataset = (
         tfds.load("tf_flowers", split="train", try_gcs=True)
         .map(preprocess)
@@ -183,16 +169,29 @@ def test_simple_model(model_cls):
         model, experimental_enable_bitpacked_activations=True
     )
 
+    if model_cls == lqz.sota.QuickNet:
+        # Since QuickNet is a deep model we are more tolerant of error.
+        rtol = 0.05
+        atol = 0.2
+    elif model_cls == toy_model_int8:
+        # 0.025 atol is chosen because it allows an off-by-one error in the int8
+        # model (with +-3 scales) but not off-by-two.
+        rtol = 0.01
+        atol = 0.025
+    else:
+        rtol = 0.001
+        atol = 0.001
+
     # Test on a single batch of images
     inputs = next(tfds.as_numpy(dataset.map(lambda *data: data[0]).take(1)))
     outputs = model(inputs).numpy()
-    assert_model_output(model_lce, inputs, outputs)
+    assert_model_output(model_lce, inputs, outputs, rtol, atol)
 
     # Test on some random inputs
     input_shape = (10, *model.input.shape[1:])
     inputs = np.random.uniform(-1, 1, size=input_shape).astype(np.float32)
     outputs = model(inputs).numpy()
-    assert_model_output(model_lce, inputs, outputs)
+    assert_model_output(model_lce, inputs, outputs, rtol, atol)
 
 
 @pytest.mark.parametrize("model_cls", [toy_model, toy_model_int8])
