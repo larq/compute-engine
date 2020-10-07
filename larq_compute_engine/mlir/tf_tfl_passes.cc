@@ -119,6 +119,7 @@ void AddTFToLCETFLConversionPasses(
   // Add a shape inference pass to optimize away the unnecessary casts.
   pass_manager->addPass(mlir::TF::CreateTFShapeInferencePass());
   pass_manager->addPass(mlir::TFL::CreateLegalizeTFPass(true));
+  pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(false));
   pass_manager->addPass(mlir::TFL::CreateOptimizePass());
   pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(
       experimental_enable_bitpacked_activations));
