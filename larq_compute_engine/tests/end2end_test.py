@@ -144,7 +144,7 @@ def assert_model_output(model_lce, inputs, outputs, rtol, atol):
     [toy_model, toy_model_sequential, toy_model_int8, lqz.sota.QuickNet],
 )
 def test_simple_model(model_cls):
-    # Test on the OxfordFlowers dataset
+    # Test on the TF flowers dataset
     dataset = (
         tfds.load("tf_flowers", split="train", try_gcs=True)
         .map(preprocess)
