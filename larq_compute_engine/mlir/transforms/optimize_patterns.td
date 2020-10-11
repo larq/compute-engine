@@ -172,3 +172,15 @@ def : Pat<(LQ_QuantizeOp (TFL_MaxPool2DOp: $pool_output $input,
                            $filter_width,
                            $filter_height),
           [(HasOneUse $pool_output)]>;
+
+// This transformation is sometimes useful when there is a bconv2d that takes
+// unipolar inputs, because the unipolar-bconv2d pattern (see
+// `prepare_patterns.td`) pushes a multiply-by-negative-1 op before the
+// LceQuantize, and the LceQuantize op is frequently preceeded by a subtraction
+// (e.g. to threshold the binary quantization at a given value).
+def : Pat<(TFL_MulOp
+              (TFL_SubOp: $sub_output $a, $b, TFL_AF_None),
+              (ConstantOp ConstantAttr<RankedF32ElementsAttr<[]>, "-1.0f">),
+              $act_fn),
+          (TFL_SubOp $b, $a, $act_fn),
+          [(HasOneUse $sub_output)], (addBenefit 10)>;
