@@ -15,6 +15,9 @@ namespace {
 // Prepare LCE operations in functions for subsequent legalization.
 struct PrepareLCE : public PassWrapper<PrepareLCE, FunctionPass> {
   void runOnFunction() override;
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<mlir::TF::LarqDialect>();
+  }
 };
 
 DenseElementsAttr GetConstantVector(Attribute filter, float val) {

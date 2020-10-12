@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/mlir/lite/transforms/passes.h"
 #include "tensorflow/compiler/mlir/tensorflow/transforms/decode_constant.h"
 #include "tensorflow/compiler/mlir/tensorflow/transforms/passes.h"
+#include "tensorflow/compiler/mlir/tensorflow/transforms/tf_saved_model_passes.h"
 
 namespace mlir {
 /// Create a pass to convert from the TFExecutor to the TF control dialect.

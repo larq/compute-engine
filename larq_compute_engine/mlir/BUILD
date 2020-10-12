@@ -117,19 +117,6 @@ cc_library(
     alwayslink = 1,
 )
 
-# Library with tensorflow Lite dialect static initialization.
-cc_library(
-    name = "larq_dialect_registration",
-    srcs = [
-        "ir/dialect_registration.cc",
-    ],
-    deps = [
-        ":larq_compute_engine",
-        "@llvm-project//mlir:IR",
-    ],
-    alwayslink = 1,
-)
-
 cc_library(
     name = "larq_compute_engine_op_removal",
     srcs = [
@@ -247,7 +234,7 @@ cc_library(
         ":larq_compute_engine_optimize",
         ":larq_compute_engine_prepare",
         ":larq_compute_engine_quantize",
-        "@llvm-project//mlir:AllPassesAndDialects",
+        "@llvm-project//mlir:AllPassesAndDialectsNoRegistration",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:QuantOps",
@@ -259,19 +246,17 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_passes",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:decode_constant_pass",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_dialect_registration",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_saved_model_passes",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_passes",
     ],
 )
 
 cc_binary(
     name = "lce-tf-opt",
+    srcs = ["lce_mlir_opt.cc"],
     deps = [
-        ":larq_dialect_registration",
         ":lce_tfl_passes",
-        "@llvm-project//mlir:MlirOptMain",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_dialect_registration",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_dialect_registration",
+        "@llvm-project//mlir:MlirOptLib"
     ],
 )
 
@@ -280,7 +265,6 @@ pybind_extension(
     srcs = ["python/graphdef_tfl_flatbuffer.cc"],
     module_name = "graphdef_tfl_flatbuffer",
     deps = [
-        ":larq_dialect_registration",
         ":lce_tfl_passes",
         "@org_tensorflow//tensorflow/compiler/mlir:op_or_arg_name_mapper",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",

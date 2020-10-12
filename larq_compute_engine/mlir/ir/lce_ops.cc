@@ -4,9 +4,6 @@
 #include "larq_compute_engine/core/bitpacking/bitpack.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
-namespace mlir {
-namespace TF {
-
 static tflite::Padding ConvertPaddingAttr(llvm::StringRef str) {
   return llvm::StringSwitch<tflite::Padding>(str)
       .Case("SAME", tflite::Padding_SAME)
@@ -25,21 +22,24 @@ static tflite::ActivationFunctionType ConvertActivationAttr(
 #define GET_OP_CLASSES
 #include "larq_compute_engine/mlir/ir/lce_ops.cc.inc"
 
+namespace mlir {
+namespace TF {
+
 std::vector<uint8_t> QuantizeOp::buildCustomOptions() { return {}; }
 std::vector<uint8_t> DequantizeOp::buildCustomOptions() { return {}; }
 
 std::vector<uint8_t> Bconv2dOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() {
-    fbb.Int("channels_in", channels_in().getSExtValue());
-    fbb.Int("dilation_height_factor", dilation_height_factor().getSExtValue());
-    fbb.Int("dilation_width_factor", dilation_width_factor().getSExtValue());
+    fbb.Int("channels_in", channels_in());
+    fbb.Int("dilation_height_factor", dilation_height_factor());
+    fbb.Int("dilation_width_factor", dilation_width_factor());
     fbb.Int("fused_activation_function",
             (int)ConvertActivationAttr(fused_activation_function()));
-    fbb.Int("pad_values", pad_values().getSExtValue());
+    fbb.Int("pad_values", pad_values());
     fbb.Int("padding", (int)ConvertPaddingAttr(padding()));
-    fbb.Int("stride_height", stride_height().getSExtValue());
-    fbb.Int("stride_width", stride_width().getSExtValue());
+    fbb.Int("stride_height", stride_height());
+    fbb.Int("stride_width", stride_width());
   });
   fbb.Finish();
   return fbb.GetBuffer();
@@ -49,10 +49,10 @@ std::vector<uint8_t> BMaxPool2dOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() {
     fbb.Int("padding", (int)ConvertPaddingAttr(padding()));
-    fbb.Int("stride_width", stride_width().getSExtValue());
-    fbb.Int("stride_height", stride_height().getSExtValue());
-    fbb.Int("filter_width", filter_width().getSExtValue());
-    fbb.Int("filter_height", filter_height().getSExtValue());
+    fbb.Int("stride_width", stride_width());
+    fbb.Int("stride_height", stride_height());
+    fbb.Int("filter_width", filter_width());
+    fbb.Int("filter_height", filter_height());
   });
   fbb.Finish();
   return fbb.GetBuffer();
@@ -67,8 +67,7 @@ void QuantizeOp::build(OpBuilder& builder, OperationState& state, Value x) {
   state.addTypes(RankedTensorType::get(shape, builder.getIntegerType(32)));
 }
 
-LarqDialect::LarqDialect(MLIRContext* context)
-    : Dialect(getDialectNamespace(), context) {
+void LarqDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "larq_compute_engine/mlir/ir/lce_ops.cc.inc"

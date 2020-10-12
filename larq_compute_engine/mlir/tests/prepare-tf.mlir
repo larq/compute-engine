@@ -48,7 +48,7 @@ func @fuse_scaled_bconv2d(%arg0: tensor<1x112x112x1xi32>) -> tensor<1x112x112x2x
 // CHECK-LABEL: @fuse_dilated_bconv
 func @fuse_dilated_bconv(%arg0: tensor<1x128x128x1xi32>) -> tensor<1x128x128x8xf32> {
   %cst = constant dense<[2, 2]> : tensor<2xi32>
-  %cst_0 = constant dense<2> : tensor<2x2xi32>
+  %cst_0 = constant dense<4> : tensor<2x2xi32>
   %cst_1 = constant dense<1.0> : tensor<5x5x3x8xf32>
   %cst_2 = constant unit
   %0 = "lq.Dequantize"(%arg0) : (tensor<1x128x128x1xi32>) -> tensor<1x128x128x3xf32>

@@ -15,6 +15,7 @@ IntegerAttr getIntegerAttr(Builder builder, int value) {
 
 TEST(LCEOpsSerializationTest, QuantizeTest) {
   MLIRContext context;
+  context.getOrLoadDialect<mlir::TF::LarqDialect>();
   auto* op = Operation::create(
       UnknownLoc::get(&context), OperationName("lq.Quantize", &context),
       llvm::None, llvm::None, llvm::None, llvm::None, 0);
@@ -24,6 +25,7 @@ TEST(LCEOpsSerializationTest, QuantizeTest) {
 
 TEST(LCEOpsSerializationTest, DequantizeTest) {
   MLIRContext context;
+  context.getOrLoadDialect<mlir::TF::LarqDialect>();
   auto* op = Operation::create(
       UnknownLoc::get(&context), OperationName("lq.Dequantize", &context),
       llvm::None, llvm::None, llvm::None, llvm::None, 0);
@@ -33,6 +35,7 @@ TEST(LCEOpsSerializationTest, DequantizeTest) {
 
 TEST(LCEOpsSerializationTest, BConv2dTest) {
   MLIRContext context;
+  context.getOrLoadDialect<mlir::TF::LarqDialect>();
   Builder builder(&context);
   auto op = Operation::create(UnknownLoc::get(&context),
                               OperationName("lq.Bconv2d", &context), llvm::None,
@@ -64,6 +67,7 @@ TEST(LCEOpsSerializationTest, BConv2dTest) {
 
 TEST(LCEOpsSerializationTest, BMaxPool2dTest) {
   MLIRContext context;
+  context.getOrLoadDialect<mlir::TF::LarqDialect>();
   Builder builder(&context);
   auto op = Operation::create(
       UnknownLoc::get(&context), OperationName("lq.BMaxPool2d", &context),
