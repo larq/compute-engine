@@ -14,12 +14,12 @@ config_setting(
 
 py_library(
     name = "compute_engine_py",
-    srcs = ([
+    srcs = [
         "__init__.py",
         "//larq_compute_engine/mlir:__init__.py",
-        "//larq_compute_engine/tflite:__init__.py",
         "//larq_compute_engine/mlir:python/__init__.py",
-    ]),
+        "//larq_compute_engine/tflite:__init__.py",
+    ],
     deps = [
         "//larq_compute_engine/mlir:converter",
         "//larq_compute_engine/tflite/python:interpreter",

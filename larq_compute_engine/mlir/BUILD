@@ -246,8 +246,8 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_passes",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:decode_constant_pass",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_saved_model_passes",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_passes",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_saved_model_passes",
     ],
 )
 
@@ -256,7 +256,7 @@ cc_binary(
     srcs = ["lce_mlir_opt.cc"],
     deps = [
         ":lce_tfl_passes",
-        "@llvm-project//mlir:MlirOptLib"
+        "@llvm-project//mlir:MlirOptLib",
     ],
 )
 
