@@ -23,9 +23,6 @@ struct BinaryMulParams {
 
   OutputTransform<DstScalar> output_transform;
 
-  static constexpr LayoutSupport kLayoutSupport = LayoutSupport::kGeneral;
-  static constexpr ZeroPointSupport kZeroPointSupport =
-      ZeroPointSupport::kGeneral;
   using StandardCppKernelLhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
   using StandardCppKernelRhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
 };
@@ -40,9 +37,6 @@ struct BinaryMulParams<tAccumScalar, TBitpacked> {
 
   OutputTransform<DstScalar> output_transform;
 
-  static constexpr LayoutSupport kLayoutSupport = LayoutSupport::kGeneral;
-  static constexpr ZeroPointSupport kZeroPointSupport =
-      ZeroPointSupport::kGeneral;
   using StandardCppKernelLhsLayout =
       FixedKernelLayout<Order::kColMajor, 1, bitpacking_bitwidth>;
   using StandardCppKernelRhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
