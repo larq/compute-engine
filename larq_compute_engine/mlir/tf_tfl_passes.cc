@@ -17,6 +17,10 @@ CreateTFExecutorToControlDialectConversion();
 }  // namespace mlir
 
 namespace tensorflow {
+namespace {
+// Data layout supported by TFLite.
+const char kTFLiteDataLayout[] = "NHWC";
+}  // namespace
 
 void AddQuantizationPasses(const mlir::TFL::QuantizationSpecs& quant_specs,
                            mlir::OpPassManager* pass_manager) {
@@ -46,6 +50,9 @@ void AddTFToLCETFLConversionPasses(
   standard_pipeline_options.form_clusters = false;
   mlir::TF::CreateTFStandardPipeline(*pass_manager, standard_pipeline_options);
   pass_manager->addPass(mlir::TF::CreateDeviceIndexSelectorPass());
+
+  // Add canonicalize pass to remove no-op session initializer pass.
+  pass_manager->addPass(mlir::createCanonicalizerPass());
 
   pass_manager->addPass(mlir::TF::CreateTFShapeInferencePass());
   pass_manager->addPass(mlir::TF::CreateTFFunctionalControlFlowToRegions());
@@ -111,6 +118,13 @@ void AddTFToLCETFLConversionPasses(
   // constant ops.
   pass_manager->addPass(mlir::tf_saved_model::CreateFreezeGlobalTensorsPass());
 
+  pass_manager->addPass(mlir::TF::CreateTFShapeInferencePass());
+  // Force layout supported by TFLite, this will transpose the data
+  // to match 'kTFLiteDataLayout'
+  mlir::TF::LayoutOptimizationPipelineOptions layout_optimization_options;
+  layout_optimization_options.force_data_format = kTFLiteDataLayout;
+  mlir::TF::CreateLayoutOptimizationPipeline(*pass_manager,
+                                             layout_optimization_options);
   // Inject Larq Compute Engine Ops
   pass_manager->addPass(mlir::TFL::CreatePrepareLCEPass());
   // Prepare for TFLite dialect, rerun canonicalization, and then legalize to
@@ -118,7 +132,17 @@ void AddTFToLCETFLConversionPasses(
   pass_manager->addPass(mlir::TFL::CreatePrepareTFPass(true));
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
   // Add a shape inference pass to optimize away the unnecessary casts.
+  // This also fixes the unranked shapes due to TF ops constant folding.
+  // TODO(fengliuai): remove this pass if TableGen patterns have a better
+  // to control the shapes for the intermediate results.
   pass_manager->addPass(mlir::TF::CreateTFShapeInferencePass());
+  // Inline function calls that left in the graph after folding functional
+  // control flow ops (IfOp, CaseOp).
+  pass_manager->addPass(mlir::createInlinerPass());
+
+  // This pass removes the asset file dependencies in hash table use cases.
+  pass_manager->addPass(mlir::TF::CreateInitTextFileToImportPass());
+
   pass_manager->addPass(mlir::TFL::CreateLegalizeTFPass(true));
   pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(false));
   pass_manager->addPass(mlir::TFL::CreateOptimizePass());
@@ -129,6 +153,7 @@ void AddTFToLCETFLConversionPasses(
   // so that it can target constants introduced once TensorFlow Identity ops
   // are removed during legalization.
   pass_manager->addPass(mlir::TFL::CreateOptimizeFunctionalOpsPass());
+  pass_manager->addPass(mlir::TFL::CreateRaiseCustomOpsPass());
   pass_manager->addPass(mlir::createSymbolDCEPass());
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCSEPass());
