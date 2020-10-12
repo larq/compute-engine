@@ -156,7 +156,7 @@ struct BGemmKernel<ruy::Path::kNeon, DstScalar,
     BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
     MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
                            dst, mul_params, &params);
-    BinaryKernelNeonOutOfOrder4x4(params);
+    BinaryKernelNeon4x4(params);
   }
 };
 #endif
@@ -188,7 +188,7 @@ struct BGemmKernel<ruy::Path::kNeon, DstScalar,
     BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
     MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
                            dst, mul_params, &params);
-    BinaryKernelNeonOutOfOrder8x4(params);
+    BinaryKernelNeon8x4(params);
   }
 };
 
@@ -211,7 +211,7 @@ struct BGemmKernel<ruy::Path::kNeon, DstScalar,
     BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
     MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
                            dst, mul_params, &params);
-    BinaryKernelNeonOutOfOrder4x4(params);
+    BinaryKernelNeon4x4(params);
   }
 };
 #endif  // RUY_OPT(ASM) && RUY_PLATFORM_NEON_64

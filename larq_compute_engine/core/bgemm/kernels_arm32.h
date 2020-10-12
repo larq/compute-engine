@@ -149,8 +149,7 @@ void CheckOffsetsInKernelParams(const Params&) {
 // optimization for this kernel.
 
 template <typename DstScalar>
-void BinaryKernelNeonOutOfOrder4x4(
-    BinaryKernelParams<DstScalar, 4, 4>& params) {
+void BinaryKernelNeon4x4(BinaryKernelParams<DstScalar, 4, 4>& params) {
   CheckOffsetsInKernelParams(params);
   ruy::profiler::ScopeLabel label(
       "Binary Kernel (4x4) (kNeon, optimized for out-of-order cores)");
