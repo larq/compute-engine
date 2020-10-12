@@ -16,7 +16,7 @@ namespace {
 struct PrepareLCE : public PassWrapper<PrepareLCE, FunctionPass> {
   void runOnFunction() override;
   void getDependentDialects(DialectRegistry& registry) const override {
-    registry.insert<mlir::TF::LarqDialect>();
+    registry.insert<mlir::lq::LarqDialect>();
   }
 };
 

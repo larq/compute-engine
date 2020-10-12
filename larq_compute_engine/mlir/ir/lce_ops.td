@@ -46,7 +46,7 @@ def LarqDialect : Dialect {
     TF graphs to be deployed on Larq Compute Engine.
   }];
 
-  let cppNamespace = "::mlir::TF";
+  let cppNamespace = "::mlir::lq";
 }
 
 //===----------------------------------------------------------------------===//

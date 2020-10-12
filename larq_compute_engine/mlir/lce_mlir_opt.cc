@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
   mlir::DialectRegistry registry;
   registry.insert<mlir::StandardOpsDialect, mlir::quant::QuantizationDialect,
                   mlir::TF::TensorFlowDialect, mlir::TFL::TensorFlowLiteDialect,
-                  mlir::TF::LarqDialect>();
+                  mlir::lq::LarqDialect>();
   return failed(mlir::MlirOptMain(
       argc, argv, "Larq Compute Engine pass driver\n", registry));
 }

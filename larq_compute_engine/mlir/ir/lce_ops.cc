@@ -23,7 +23,7 @@ static tflite::ActivationFunctionType ConvertActivationAttr(
 #include "larq_compute_engine/mlir/ir/lce_ops.cc.inc"
 
 namespace mlir {
-namespace TF {
+namespace lq {
 
 std::vector<uint8_t> QuantizeOp::buildCustomOptions() { return {}; }
 std::vector<uint8_t> DequantizeOp::buildCustomOptions() { return {}; }
@@ -73,5 +73,5 @@ void LarqDialect::initialize() {
 #include "larq_compute_engine/mlir/ir/lce_ops.cc.inc"
       >();
 }
-}  // namespace TF
+}  // namespace lq
 }  // namespace mlir
