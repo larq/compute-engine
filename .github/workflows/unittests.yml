@@ -54,8 +54,6 @@ jobs:
         run: bazelisk test larq_compute_engine/tests:cc_tests_aarch64_qemu --config=aarch64 --test_output=all --test_filter="-*BigTest*"
       - name: "Benchmark utility: check it builds successfully"
         run: bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=aarch64 --compilation_mode=fastbuild
-      - name: "ImageNet evaluation utility: check it builds successfully"
-        run: bazelisk build //larq_compute_engine/tflite/tools/accuracy/ilsvrc:imagenet_accuracy_eval --config=aarch64 --compilation_mode=fastbuild
 
   MLIR:
     runs-on: ubuntu-latest
