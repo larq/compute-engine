@@ -250,18 +250,6 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   return kTfLiteOk;
 }
 
-inline PaddingType RuntimePaddingType(TfLitePadding padding) {
-  switch (padding) {
-    case TfLitePadding::kTfLitePaddingSame:
-      return PaddingType::kSame;
-    case TfLitePadding::kTfLitePaddingValid:
-      return PaddingType::kValid;
-    case TfLitePadding::kTfLitePaddingUnknown:
-    default:
-      return PaddingType::kNone;
-  }
-}
-
 inline void GetConvParamsType(const TfLiteBConv2DParams& conv_params,
                               ConvParams& op_params) {
   // Padding
