@@ -3,6 +3,13 @@ package(
     licenses = ["notice"],  # Apache 2.0
 )
 
+exports_files([
+    "test_arm32_binary.sh",
+    "test_aarch64_binary.sh",
+])
+
+load("//larq_compute_engine/tests:qemu_test.bzl", "lce_qemu_test_suite")
+
 py_test(
     name = "end2end_test",
     size = "large",
@@ -29,37 +36,24 @@ test_suite(
     ],
 )
 
-test_suite(
-    name = "cc_tests_arm32",
+lce_qemu_test_suite(
+    name = "arm32_tests",
+    platform = "arm32",
     tests = [
-        "//larq_compute_engine/tflite/tests:cc_tests",
+        "//larq_compute_engine/tflite/tests:bconv2d_test",
+        "//larq_compute_engine/tflite/tests:bmaxpool_test",
+        "//larq_compute_engine/tflite/tests:quantization_test",
     ],
 )
 
-sh_test(
-    name = "cc_tests_arm32_qemu",
-    size = "large",
-    srcs = ["cc_tests_arm32_qemu.sh"],
-    data = [
-        ":cc_tests_arm32",
-        "@arm_compiler//:compiler_pieces",
-    ],
-)
-
-test_suite(
-    name = "cc_tests_aarch64",
+lce_qemu_test_suite(
+    name = "aarch64_tests",
+    platform = "aarch64",
     tests = [
-        "//larq_compute_engine/core/bitpacking/tests:cc_tests_aarch64",
-        "//larq_compute_engine/tflite/tests:cc_tests",
-    ],
-)
-
-sh_test(
-    name = "cc_tests_aarch64_qemu",
-    size = "large",
-    srcs = ["cc_tests_aarch64_qemu.sh"],
-    data = [
-        ":cc_tests_aarch64",
-        "@aarch64_compiler//:aarch64_compiler_pieces",
+        "//larq_compute_engine/core/bitpacking/tests:bitpack_aarch64_test",
+        "//larq_compute_engine/core/bitpacking/tests:bitpack_test",
+        "//larq_compute_engine/tflite/tests:bconv2d_test",
+        "//larq_compute_engine/tflite/tests:bmaxpool_test",
+        "//larq_compute_engine/tflite/tests:quantization_test",
     ],
 )
