@@ -87,7 +87,7 @@ void RunKernel(const std::int32_t block_num_pixels,
       } while (--c_in_index > 0);
     } while (--k_size_index > 0);
 
-    if (channels_out - c_out_index >= 4) {
+    if LCE_LIKELY (channels_out - c_out_index >= 4) {
       output_ptr_1[0] = output_transform.Run(acc_01, c_out_index);
       output_ptr_1[1] = output_transform.Run(acc_11, c_out_index + 1);
       output_ptr_1[2] = output_transform.Run(acc_21, c_out_index + 2);
