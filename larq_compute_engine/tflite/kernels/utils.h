@@ -23,7 +23,7 @@ inline TfLiteFusedActivation ConvertActivation(
   }
 }
 
-// Converts the flatbuffer padding enum to what is used at runtime.
+// Converts the flatbuffer padding enum to TFLite padding
 inline TfLitePadding ConvertPadding(Padding padding) {
   switch (padding) {
     case Padding_SAME:
@@ -32,6 +32,19 @@ inline TfLitePadding ConvertPadding(Padding padding) {
       return kTfLitePaddingValid;
   }
   return kTfLitePaddingUnknown;
+}
+
+// Converts the TFLite padding enum to what is used at runtime.
+inline PaddingType RuntimePaddingType(TfLitePadding padding) {
+  switch (padding) {
+    case TfLitePadding::kTfLitePaddingSame:
+      return PaddingType::kSame;
+    case TfLitePadding::kTfLitePaddingValid:
+      return PaddingType::kValid;
+    case TfLitePadding::kTfLitePaddingUnknown:
+    default:
+      return PaddingType::kNone;
+  }
 }
 
 }  // namespace tflite
