@@ -9,6 +9,14 @@
 namespace compute_engine {
 namespace core {
 
+#if defined(__GNUC__)
+#define LCE_LIKELY(condition) (__builtin_expect(!!(condition), 1))
+#define LCE_UNLIKELY(condition) (__builtin_expect(condition, 0))
+#else
+#define LCE_LIKELY(condition) (condition)
+#define LCE_UNLIKELY(condition) (condition)
+#endif
+
 // In our kernels we may occasionally read (but never write) beyond the end of
 // an array. This is the maximum number of extra bytes that will be read, and
 // should be added as padding to the end of tensor allocations.
