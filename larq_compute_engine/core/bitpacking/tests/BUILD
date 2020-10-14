@@ -41,11 +41,3 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
-
-test_suite(
-    name = "cc_tests_aarch64",
-    tests = [
-        ":bitpack_aarch64_test",
-        ":bitpack_test",
-    ],
-)
