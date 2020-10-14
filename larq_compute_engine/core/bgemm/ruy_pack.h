@@ -45,10 +45,6 @@ struct LceRuyPackImpl<ThePath, FixedKernelLayout<Order::kColMajor, 4, 4>,
                   PMat<TBitpacked>* packed_matrix, int start_col, int end_col) {
     profiler::ScopeLabel label("Pack (ColMajor, 4x4)");
 
-    // Ruy supports collecting column sums during the packing process, which we
-    // have no need for.
-    RUY_DCHECK_EQ(packed_matrix->sums, nullptr);
-
     // Likewise, Ruy supports arbitrary zero points, but we only use true-zero.
     RUY_DCHECK_EQ(src_matrix.zero_point, 0);
 
