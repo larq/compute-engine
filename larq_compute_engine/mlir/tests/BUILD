@@ -19,7 +19,6 @@ cc_test(
     srcs = ["lce_ops_options_test.cc"],
     deps = [
         "//larq_compute_engine/mlir:larq_compute_engine",
-        "//larq_compute_engine/mlir:larq_dialect_registration",
         "@com_google_googletest//:gtest_main",
         "@flatbuffers",
         "@llvm-project//mlir:IR",

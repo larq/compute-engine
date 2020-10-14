@@ -182,8 +182,7 @@ void CheckOffsetsInBinaryKernelParams(const Params&) {
 // is repeated 2 times, using 2x more registers for LHS and RHS.
 
 template <typename DstScalar>
-void BinaryKernelNeonOutOfOrder4x4(
-    const BinaryKernelParams<DstScalar, 4, 4>& params) {
+void BinaryKernelNeon4x4(const BinaryKernelParams<DstScalar, 4, 4>& params) {
   CheckOffsetsInBinaryKernelParams(params);
 
   ruy::profiler::ScopeLabel label(
@@ -697,8 +696,7 @@ IF_FLOAT_ELIF_INT8_OUTPUT(
 // accumulation into the destination registers.
 
 template <typename DstScalar>
-void BinaryKernelNeonOutOfOrder8x4(
-    const BinaryKernelParams<DstScalar, 8, 4>& params) {
+void BinaryKernelNeon8x4(const BinaryKernelParams<DstScalar, 8, 4>& params) {
   CheckOffsetsInBinaryKernelParams(params);
 
   ruy::profiler::ScopeLabel label(

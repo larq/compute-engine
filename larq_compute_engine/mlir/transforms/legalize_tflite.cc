@@ -39,8 +39,8 @@ void LegalizeLCE::runOnFunction() {
   auto func = getFunction();
 
   patterns.insert<
-      LegalizeToCustomOp<TF::QuantizeOp>, LegalizeToCustomOp<TF::DequantizeOp>,
-      LegalizeToCustomOp<TF::Bconv2dOp>, LegalizeToCustomOp<TF::BMaxPool2dOp>>(
+      LegalizeToCustomOp<lq::QuantizeOp>, LegalizeToCustomOp<lq::DequantizeOp>,
+      LegalizeToCustomOp<lq::Bconv2dOp>, LegalizeToCustomOp<lq::BMaxPool2dOp>>(
       ctx);
 
   applyPatternsAndFoldGreedily(func, patterns);

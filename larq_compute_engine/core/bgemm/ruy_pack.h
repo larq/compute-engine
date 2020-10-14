@@ -32,13 +32,13 @@ namespace core {
 namespace bgemm {
 
 using namespace ruy;
-template <Path ThePath, typename FixedKernelLayout>
-struct LceRuyPackImpl
-    : PackImpl<ThePath, FixedKernelLayout, TBitpacked, TBitpacked, TBitpacked> {
-};
+template <Path ThePath, typename FixedKernelLayout, Order SrcOrder>
+struct LceRuyPackImpl : PackImpl<ThePath, FixedKernelLayout, TBitpacked,
+                                 TBitpacked, TBitpacked, SrcOrder> {};
 
 template <Path ThePath>
-struct LceRuyPackImpl<ThePath, FixedKernelLayout<Order::kColMajor, 4, 4>> {
+struct LceRuyPackImpl<ThePath, FixedKernelLayout<Order::kColMajor, 4, 4>,
+                      Order::kColMajor> {
   // This method is derived Ruy's 16x4 column-major int8 packing routine:
   // https://github.com/google/ruy/blob/c9f5f9cecde3d6314df6e7d91517356bf07135eb/ruy/pack_arm.h#L122-L197
   static void Run(Tuning, const Mat<TBitpacked>& src_matrix,
@@ -130,8 +130,13 @@ void RunRuyPack(Tuning tuning, const EMat& src_matrix, PEMat* packed_matrix,
                 int start_col, int end_col) {
   Mat<TBitpacked> src = UneraseType<TBitpacked>(src_matrix);
   PMat<TBitpacked> packed = UneraseType<TBitpacked>(*packed_matrix);
-  LceRuyPackImpl<ThePath, FixedKernelLayout>::Run(tuning, src, &packed,
-                                                  start_col, end_col);
+  if (src.layout.order == Order::kColMajor) {
+    LceRuyPackImpl<ThePath, FixedKernelLayout, Order::kColMajor>::Run(
+        tuning, src, &packed, start_col, end_col);
+  } else {
+    LceRuyPackImpl<ThePath, FixedKernelLayout, Order::kRowMajor>::Run(
+        tuning, src, &packed, start_col, end_col);
+  }
 }
 
 }  // namespace bgemm

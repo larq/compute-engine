@@ -15,24 +15,27 @@ IntegerAttr getIntegerAttr(Builder builder, int value) {
 
 TEST(LCEOpsSerializationTest, QuantizeTest) {
   MLIRContext context;
+  context.getOrLoadDialect<lq::LarqDialect>();
   auto* op = Operation::create(
       UnknownLoc::get(&context), OperationName("lq.Quantize", &context),
       llvm::None, llvm::None, llvm::None, llvm::None, 0);
 
-  ASSERT_EQ(cast<TF::QuantizeOp>(op).buildCustomOptions().size(), 0);
+  ASSERT_EQ(cast<lq::QuantizeOp>(op).buildCustomOptions().size(), 0);
 }
 
 TEST(LCEOpsSerializationTest, DequantizeTest) {
   MLIRContext context;
+  context.getOrLoadDialect<lq::LarqDialect>();
   auto* op = Operation::create(
       UnknownLoc::get(&context), OperationName("lq.Dequantize", &context),
       llvm::None, llvm::None, llvm::None, llvm::None, 0);
 
-  ASSERT_EQ(cast<TF::DequantizeOp>(op).buildCustomOptions().size(), 0);
+  ASSERT_EQ(cast<lq::DequantizeOp>(op).buildCustomOptions().size(), 0);
 }
 
 TEST(LCEOpsSerializationTest, BConv2dTest) {
   MLIRContext context;
+  context.getOrLoadDialect<lq::LarqDialect>();
   Builder builder(&context);
   auto op = Operation::create(UnknownLoc::get(&context),
                               OperationName("lq.Bconv2d", &context), llvm::None,
@@ -48,7 +51,7 @@ TEST(LCEOpsSerializationTest, BConv2dTest) {
   op->setAttr("fused_activation_function", builder.getStringAttr("RELU"));
   op->setAttr("padding", builder.getStringAttr("SAME"));
 
-  std::vector<uint8_t> v = cast<TF::Bconv2dOp>(op).buildCustomOptions();
+  std::vector<uint8_t> v = cast<lq::Bconv2dOp>(op).buildCustomOptions();
   const flexbuffers::Map& m = flexbuffers::GetRoot(v).AsMap();
 
   ASSERT_EQ(m["channels_in"].AsInt32(), 64);
@@ -64,6 +67,7 @@ TEST(LCEOpsSerializationTest, BConv2dTest) {
 
 TEST(LCEOpsSerializationTest, BMaxPool2dTest) {
   MLIRContext context;
+  context.getOrLoadDialect<lq::LarqDialect>();
   Builder builder(&context);
   auto op = Operation::create(
       UnknownLoc::get(&context), OperationName("lq.BMaxPool2d", &context),
@@ -75,7 +79,7 @@ TEST(LCEOpsSerializationTest, BMaxPool2dTest) {
   op->setAttr("filter_width", getIntegerAttr(builder, 3));
   op->setAttr("filter_height", getIntegerAttr(builder, 4));
 
-  std::vector<uint8_t> v = cast<TF::BMaxPool2dOp>(op).buildCustomOptions();
+  std::vector<uint8_t> v = cast<lq::BMaxPool2dOp>(op).buildCustomOptions();
   const flexbuffers::Map& m = flexbuffers::GetRoot(v).AsMap();
 
   ASSERT_EQ((Padding)m["padding"].AsInt32(), Padding_SAME);

@@ -23,10 +23,6 @@ struct BinaryMulParams {
 
   OutputTransform<DstScalar> output_transform;
 
-  static constexpr LoopStructure kLoopStructure = LoopStructure::kAuto;
-  static constexpr LayoutSupport kLayoutSupport = LayoutSupport::kGeneral;
-  static constexpr ZeroPointSupport kZeroPointSupport =
-      ZeroPointSupport::kGeneral;
   using StandardCppKernelLhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
   using StandardCppKernelRhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
 };
@@ -41,10 +37,6 @@ struct BinaryMulParams<tAccumScalar, TBitpacked> {
 
   OutputTransform<DstScalar> output_transform;
 
-  static constexpr LoopStructure kLoopStructure = LoopStructure::kAuto;
-  static constexpr LayoutSupport kLayoutSupport = LayoutSupport::kGeneral;
-  static constexpr ZeroPointSupport kZeroPointSupport =
-      ZeroPointSupport::kGeneral;
   using StandardCppKernelLhsLayout =
       FixedKernelLayout<Order::kColMajor, 1, bitpacking_bitwidth>;
   using StandardCppKernelRhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
@@ -73,7 +65,7 @@ template <typename AccumScalar, typename DstScalar, int LhsCols, int RhsCols>
 inline void MakeBinaryKernelParams(
     const PMat<TBitpacked>& lhs, const PMat<TBitpacked>& rhs, int start_row,
     int start_col, int end_row, int end_col, Mat<DstScalar>* dst,
-    const BinaryMulParams<AccumScalar, DstScalar>& spec,
+    const BinaryMulParams<AccumScalar, DstScalar>& mul_params,
     BinaryKernelParams<DstScalar, LhsCols, RhsCols>* params) {
   RUY_DCHECK_EQ(start_row % LhsCols, 0);
   RUY_DCHECK_EQ(start_col % RhsCols, 0);
@@ -113,8 +105,8 @@ inline void MakeBinaryKernelParams(
                                ? GetBitpackedSize(dst->layout.stride)
                                : dst->layout.stride);
   params->depth = lhs.layout.rows;
-  params->output_transform =
-      spec.output_transform;  // This is a four word copy, but that's okay.
+  // This is a four word copy, but that's okay.
+  params->output_transform = mul_params.output_transform;
 
   RUY_DCHECK_LT(params->last_row, params->dst_rows);
   RUY_DCHECK_LT(params->last_col, params->dst_cols);

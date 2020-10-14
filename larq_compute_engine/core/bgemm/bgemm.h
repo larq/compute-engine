@@ -7,7 +7,9 @@
 #include "ruy/context_get_ctx.h"
 #include "ruy/matrix.h"
 #include "ruy/platform.h"
+#include "ruy/prepare_packed_matrices.h"
 #include "ruy/profiler/instrumentation.h"
+#include "ruy/trmul.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_params.h"
 #include "tensorflow/lite/kernels/cpu_backend_gemm_ruy.h"
@@ -70,16 +72,15 @@ void BGemm(const MatrixParams<TBitpacked>& lhs_params,
   constexpr auto SelectedPath = ruy::Path::kStandardCpp;
 #endif
 
-  ruy::Mat<TBitpacked> transposed_lhs(internal_lhs);
-  Transpose(&transposed_lhs);
-
   ruy::TrMulParams bgemm_trmul_params;
-  PopulateBGemmTrMulParams<SelectedPath>(transposed_lhs, internal_rhs,
-                                         internal_dst, mul_params,
+  PopulateBGemmTrMulParams<SelectedPath>(ruy::Transpose(internal_lhs),
+                                         internal_rhs, internal_dst, mul_params,
                                          &bgemm_trmul_params);
 
-  HandlePrepackedCaching(&bgemm_trmul_params, ruy_ctx);
-  ruy::TrMul(&bgemm_trmul_params, ruy_ctx);
+  ruy::PreparePackedMatrices(ruy_ctx, &bgemm_trmul_params);
+  ruy::TrMul(ruy_ctx, &bgemm_trmul_params);
+
+  ruy_ctx->GetMainAllocator()->FreeAll();
 }
 
 }  // namespace bgemm

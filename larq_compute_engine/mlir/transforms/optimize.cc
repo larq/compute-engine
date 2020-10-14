@@ -200,10 +200,10 @@ llvm::Optional<RankedTensorType> maybeGetBitpackedType(
 }
 
 // TODO: Move to TableGen once enabled by default
-struct SetBitpackedActivations : public OpRewritePattern<TF::QuantizeOp> {
-  using OpRewritePattern<TF::QuantizeOp>::OpRewritePattern;
+struct SetBitpackedActivations : public OpRewritePattern<lq::QuantizeOp> {
+  using OpRewritePattern<lq::QuantizeOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(TF::QuantizeOp quantize_op,
+  LogicalResult matchAndRewrite(lq::QuantizeOp quantize_op,
                                 PatternRewriter& rewriter) const override {
     Operation* input_op = quantize_op.getOperand().getDefiningOp();
 
@@ -211,7 +211,7 @@ struct SetBitpackedActivations : public OpRewritePattern<TF::QuantizeOp> {
     if (!input_op || !input_op->hasOneUse()) return failure();
 
     // Try and match `input_op` to a binary convolution.
-    auto bconv_op = dyn_cast_or_null<TF::Bconv2dOp>(input_op);
+    auto bconv_op = dyn_cast_or_null<lq::Bconv2dOp>(input_op);
     if (!bconv_op) return failure();
 
     // We can't apply this transform if the activation or filters are already
@@ -289,7 +289,7 @@ struct SetBitpackedActivations : public OpRewritePattern<TF::QuantizeOp> {
 
     std::vector<Value> operands = {bconv_op.input(), filter_input, empty_input,
                                    empty_input, thresholds_input};
-    rewriter.replaceOpWithNewOp<TF::Bconv2dOp>(quantize_op, *bitpacked_type,
+    rewriter.replaceOpWithNewOp<lq::Bconv2dOp>(quantize_op, *bitpacked_type,
                                                operands, bconv_op.getAttrs());
 
     return success();

@@ -10,7 +10,7 @@ namespace compute_engine {
 namespace core {
 namespace bgemm {
 
-template <ruy::Path ThePath, typename DstScalar, typename Spec>
+template <ruy::Path ThePath, typename DstScalar, typename MulParams>
 struct BGemmKernel {};
 
 /************************
@@ -18,16 +18,17 @@ struct BGemmKernel {};
  ************************/
 
 // A portable C++ kernel for float/int8 output.
-template <typename DstScalar, typename Spec>
-struct BGemmKernel<ruy::Path::kStandardCpp, DstScalar, Spec> {
-  using AccumScalar = typename Spec::AccumScalar;
-  using LhsLayout = typename Spec::StandardCppKernelLhsLayout;
-  using RhsLayout = typename Spec::StandardCppKernelRhsLayout;
+template <typename DstScalar, typename MulParams>
+struct BGemmKernel<ruy::Path::kStandardCpp, DstScalar, MulParams> {
+  using AccumScalar = typename MulParams::AccumScalar;
+  using LhsLayout = typename MulParams::StandardCppKernelLhsLayout;
+  using RhsLayout = typename MulParams::StandardCppKernelRhsLayout;
   explicit BGemmKernel(ruy::Tuning) {}
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
-           const Spec& spec, int start_row, int start_col, int end_row,
-           int end_col, ruy::Mat<DstScalar>* dst) const {
-    const OutputTransform<DstScalar>& output_transform = spec.output_transform;
+           const MulParams& mul_params, int start_row, int start_col,
+           int end_row, int end_col, ruy::Mat<DstScalar>* dst) const {
+    const OutputTransform<DstScalar>& output_transform =
+        mul_params.output_transform;
 
     int clamped_end_row = std::min(end_row, dst->layout.rows);
     int clamped_end_col = std::min(end_col, dst->layout.cols);
@@ -46,7 +47,7 @@ struct BGemmKernel<ruy::Path::kStandardCpp, DstScalar, Spec> {
     const int depth = lhs.layout.rows;
     for (int i = start_row; i < clamped_end_row; i++) {
       for (int j = start_col; j < clamped_end_col; j++) {
-        using AccumScalar = typename Spec::AccumScalar;
+        using AccumScalar = typename MulParams::AccumScalar;
         AccumScalar accum = 0;
         for (int k = 0; k < depth; k++) {
           TBitpacked lhs_val = Element(lhs, k, i);
@@ -61,16 +62,17 @@ struct BGemmKernel<ruy::Path::kStandardCpp, DstScalar, Spec> {
 };
 
 // A portable C++ kernel for bitpacked output.
-template <typename Spec>
-struct BGemmKernel<ruy::Path::kStandardCpp, TBitpacked, Spec> {
-  using AccumScalar = typename Spec::AccumScalar;
-  using LhsLayout = typename Spec::StandardCppKernelLhsLayout;
-  using RhsLayout = typename Spec::StandardCppKernelRhsLayout;
+template <typename MulParams>
+struct BGemmKernel<ruy::Path::kStandardCpp, TBitpacked, MulParams> {
+  using AccumScalar = typename MulParams::AccumScalar;
+  using LhsLayout = typename MulParams::StandardCppKernelLhsLayout;
+  using RhsLayout = typename MulParams::StandardCppKernelRhsLayout;
   explicit BGemmKernel(ruy::Tuning) {}
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
-           const Spec& spec, int start_row, int start_col, int end_row,
-           int end_col, ruy::Mat<TBitpacked>* dst) const {
-    const OutputTransform<TBitpacked>& output_transform = spec.output_transform;
+           const MulParams& mul_params, int start_row, int start_col,
+           int end_row, int end_col, ruy::Mat<TBitpacked>* dst) const {
+    const OutputTransform<TBitpacked>& output_transform =
+        mul_params.output_transform;
 
     // We are writing bitpacked output (where we bitpack along the channel axis)
     // and so we need to operate on blocks of `bitwidth` channels at a time. As
@@ -156,7 +158,7 @@ struct BGemmKernel<ruy::Path::kNeon, DstScalar,
     BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
     MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
                            dst, mul_params, &params);
-    BinaryKernelNeonOutOfOrder4x4(params);
+    BinaryKernelNeon4x4(params);
   }
 };
 #endif
@@ -188,7 +190,7 @@ struct BGemmKernel<ruy::Path::kNeon, DstScalar,
     BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
     MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
                            dst, mul_params, &params);
-    BinaryKernelNeonOutOfOrder8x4(params);
+    BinaryKernelNeon8x4(params);
   }
 };
 
@@ -211,7 +213,7 @@ struct BGemmKernel<ruy::Path::kNeon, DstScalar,
     BinaryKernelParams<DstScalar, LhsLayout::kCols, RhsLayout::kCols> params;
     MakeBinaryKernelParams(lhs, rhs, start_row, start_col, end_row, end_col,
                            dst, mul_params, &params);
-    BinaryKernelNeonOutOfOrder4x4(params);
+    BinaryKernelNeon4x4(params);
   }
 };
 #endif  // RUY_OPT(ASM) && RUY_PLATFORM_NEON_64
@@ -220,12 +222,13 @@ struct BGemmKernel<ruy::Path::kNeon, DstScalar,
  * Kernel entry point functions *
  ********************************/
 
-template <ruy::Path ThePath, typename DstScalar, typename Spec>
+template <ruy::Path ThePath, typename DstScalar, typename MulParams>
 void RunBGemmKernelTyped(ruy::Tuning tuning, const ruy::PMat<TBitpacked>& lhs,
-                         const ruy::PMat<TBitpacked>& rhs, const Spec& spec,
-                         int start_row, int start_col, int end_row, int end_col,
+                         const ruy::PMat<TBitpacked>& rhs,
+                         const MulParams& mul_params, int start_row,
+                         int start_col, int end_row, int end_col,
                          ruy::Mat<DstScalar>* dst) {
-  using BKernel = BGemmKernel<ThePath, DstScalar, Spec>;
+  using BKernel = BGemmKernel<ThePath, DstScalar, MulParams>;
   BKernel kernel(tuning);
   using LhsLayout = typename BKernel::LhsLayout;
   using RhsLayout = typename BKernel::RhsLayout;
@@ -244,27 +247,28 @@ void RunBGemmKernelTyped(ruy::Tuning tuning, const ruy::PMat<TBitpacked>& lhs,
   RUY_DCHECK_LT(end_col, dst->layout.cols + RhsLayout::kCols);
   RUY_DCHECK_EQ((end_col - start_col) % RhsLayout::kCols, 0);
 #if RUY_OPT(FAT_KERNEL)
-  kernel.Run(lhs, rhs, spec, start_row, start_col, end_row, end_col, dst);
+  kernel.Run(lhs, rhs, mul_params, start_row, start_col, end_row, end_col, dst);
 #else
   for (int col = start_col; col < end_col; col += RhsLayout::kCols) {
     int block_end_col = std::min(col + RhsLayout::kCols, end_col);
     for (int row = start_row; row < end_row; row += LhsLayout::kCols) {
       int block_end_row = std::min(row + LhsLayout::kCols, end_row);
-      kernel.Run(lhs, rhs, spec, row, col, block_end_row, block_end_col, dst);
+      kernel.Run(lhs, rhs, mul_params, row, col, block_end_row, block_end_col,
+                 dst);
     }
   }
 #endif
 }
 
-template <ruy::Path ThePath, typename DstScalar, typename Spec>
+template <ruy::Path ThePath, typename DstScalar, typename MulParams>
 void RunBGemmKernel(ruy::Tuning tuning, const ruy::SidePair<ruy::PEMat>& src,
-                    void* spec, const ruy::SidePair<int>& start,
+                    const void* mul_params, const ruy::SidePair<int>& start,
                     const ruy::SidePair<int>& end, ruy::EMat* dst) {
   ruy::Mat<DstScalar> mdst = ruy::UneraseType<DstScalar>(*dst);
-  RunBGemmKernelTyped<ThePath, DstScalar, Spec>(
+  RunBGemmKernelTyped<ThePath, DstScalar, MulParams>(
       tuning, ruy::UneraseType<TBitpacked>(src[ruy::Side::kLhs]),
       ruy::UneraseType<TBitpacked>(src[ruy::Side::kRhs]),
-      *static_cast<const Spec*>(spec), start[ruy::Side::kLhs],
+      *static_cast<const MulParams*>(mul_params), start[ruy::Side::kLhs],
       start[ruy::Side::kRhs], end[ruy::Side::kLhs], end[ruy::Side::kRhs],
       &mdst);
 }
