@@ -327,7 +327,7 @@ inline void OutputTransformAndLoadNextAndStore(
         [ indirection_buffer ] "r"(indirection_buffer)
       : "memory", "x0", "x1", "x2", "x3", "v0", "v1", "v2", "v3", "v4", "v5");
 
-  if LCE_LIKELY (channels_out - c_out_index >= 8) {
+  if (LCE_LIKELY(channels_out - c_out_index >= 8)) {
     vst1q_f32(output_ptr_3, results[3].val[0]);
     vst1q_f32(output_ptr_3 + 4, results[3].val[1]);
     output_ptr_3 += 8;
@@ -505,7 +505,7 @@ inline void OutputTransformAndLoadNextAndStore(
         [ indirection_buffer ] "r"(indirection_buffer)
       : "memory", "x0", "x1", "x2", "x3", "v0", "v1", "v2", "v3", "v4", "v5");
 
-  if LCE_LIKELY (channels_out - c_out_index >= 8) {
+  if (LCE_LIKELY(channels_out - c_out_index >= 8)) {
     vst1_s8(output_ptr_3, vget_low_s8(results[3].val[0]));
     output_ptr_3 += 8;
     vst1_s8(output_ptr_2, vget_low_s8(results[2].val[0]));

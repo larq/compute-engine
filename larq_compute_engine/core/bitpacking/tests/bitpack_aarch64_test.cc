@@ -1,10 +1,11 @@
+#include "larq_compute_engine/core/bitpacking/bitpack_aarch64.h"
+
 #include <gmock/gmock.h>
 
 #include <array>
 #include <cstdint>
 #include <vector>
 
-#include "larq_compute_engine/core/bitpacking/bitpack_aarch64.h"
 #include "larq_compute_engine/core/bitpacking/bitpack.h"
 #include "larq_compute_engine/core/types.h"
 
@@ -73,4 +74,3 @@ TEST(BitpackingAarch64, Int8_17x4x32) {
 }  // namespace bitpacking
 }  // namespace core
 }  // namespace compute_engine
-
