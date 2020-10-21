@@ -39,6 +39,7 @@ def lce_lit_test(
         srcs = [driver],
         size = size,
         data = data + [test_file],
+        shard_count = 2,
         args = ["$(location %s)" % (test_file,)],
         **kwargs
     )

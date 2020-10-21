@@ -35,10 +35,11 @@ def lce_qemu_test_suite(
         # Finally create a new sh_test target
         native.sh_test(
             name = sh_name,
-            size = "medium",
+            size = "large",
             srcs = [src],
             args = [test_path],
             data = [test, qemu_data],
+            shard_count = 2,
         )
 
         # And add that sh_test target to the list
