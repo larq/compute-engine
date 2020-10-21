@@ -30,7 +30,12 @@ setup(
     packages=find_packages(),
     ext_modules=ext_modules,
     url="https://larq.dev/",
-    install_requires=["flatbuffers>=1.12", "packaging>=19", "tqdm>=4"],
+    install_requires=[
+        "flatbuffers>=1.12",
+        "packaging>=19",
+        "tqdm>=4",
+        "importlib-metadata ~= 2.0 ; python_version<'3.8'",
+    ],
     extras_require={
         "tensorflow": ["tensorflow>=1.14"],
         "tensorflow_gpu": ["tensorflow-gpu>=1.14"],

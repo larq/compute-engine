@@ -5,6 +5,8 @@ from unittest import mock
 import larq_zoo as lqz
 from tensorflow.python.eager import context
 
+sys.modules["importlib.metadata"] = mock.MagicMock()
+sys.modules["importlib_metadata"] = mock.MagicMock()
 sys.modules["larq_compute_engine.mlir._graphdef_tfl_flatbuffer"] = mock.MagicMock()
 sys.modules[
     "larq_compute_engine.tflite.python.interpreter_wrapper_lite"
