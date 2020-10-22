@@ -71,7 +71,7 @@ jobs:
         run: ./configure.sh <<< $'n\n'
         shell: bash
       - name: Install pip dependencies
-        run: pip install tensorflow-cpu~=2.2.0 larq~=0.10.0 larq_zoo~=2.0.0 pytest tensorflow_datasets~=4.0.1 flatbuffers tqdm --no-cache-dir
+        run: pip install tensorflow-cpu~=2.3.0 larq~=0.10.0 larq_zoo~=2.0.0 pytest tensorflow_datasets~=4.0.1 flatbuffers tqdm --no-cache-dir
       - name: Run Interpreter test
         run: bazelisk test larq_compute_engine/tflite/tests:interpreter_test --test_output=all --copt=-O2 --distinct_host_configuration=false $([ -z "$GOOGLE_APPLICATION_CREDENTIALS" ] || echo "--remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu --google_default_credentials")
       - name: Run FileCheck tests
