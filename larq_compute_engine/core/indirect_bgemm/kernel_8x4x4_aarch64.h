@@ -11,15 +11,17 @@
 #include <type_traits>
 
 #include "larq_compute_engine/core/bconv2d/output_transform.h"
+#include "larq_compute_engine/core/indirect_bgemm/kernel.h"
 #include "larq_compute_engine/core/types.h"
 #include "ruy/profiler/instrumentation.h"
-#include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/kernels/internal/types.h"
 
 namespace compute_engine {
 namespace core {
 namespace indirect_bgemm {
 namespace kernel_8x4x4_aarch64 {
+
+#define IF_IS_GROUPED(a) ".if %c[is_grouped]\n\t" a ".endif\n\t"
 
 // This block of instructions takes as input the activation vector registers
 // a_0, ..., a_3 and the weight vector registers w_0, ..., w_7, and computes
@@ -163,13 +165,13 @@ namespace kernel_8x4x4_aarch64 {
  *     // This block is removed in the depth=1 case
  *     // The first set of activations is already loaded, so this +1
  *     // ensures that the first 'block' loads the next set of activations.
- *     a_ptr_0 = indirection_buffer[0] + 1;
- *     a_ptr_1 = indirection_buffer[1] + 1;
- *     a_ptr_2 = indirection_buffer[2] + 1;
- *     a_ptr_3 = indirection_buffer[3] + 1;
- *     indirection_buffer += 4;
+ *     a_ptr_0 = indirection_ptr[0] + 1;
+ *     a_ptr_1 = indirection_ptr[1] + 1;
+ *     a_ptr_2 = indirection_ptr[2] + 1;
+ *     a_ptr_3 = indirection_ptr[3] + 1;
+ *     indirection_ptr += 4;
  *
- *     int ks = kernel_size;
+ *     int fs = filter_size;
  *     do {
  *         // This loop is removed in the depth=1 case
  *         for (int d = 0; d < depth - 1; d++) {
@@ -179,32 +181,38 @@ namespace kernel_8x4x4_aarch64 {
  *         // Before the final inner (depth loop) iteration, set the activation
  *         // pointers so that the activations for the next outer loop iteration
  *         // are loaded correctly.
- *         a_ptr_0 = indirection_buffer[0];
- *         a_ptr_1 = indirection_buffer[1];
- *         a_ptr_2 = indirection_buffer[2];
- *         a_ptr_3 = indirection_buffer[3];
- *         indirection_buffer += 4;
+ *         a_ptr_0 = indirection_ptr[0];
+ *         a_ptr_1 = indirection_ptr[1];
+ *         a_ptr_2 = indirection_ptr[2];
+ *         a_ptr_3 = indirection_ptr[3];
+ *         indirection_ptr += 4;
  *
  *         XOR_POPCOUNT_ACCUM_LOAD_BLOCK_128
- *     } while (--ks > 0);
+ *     } while (--fs > 0);
  */
 
+template <bool IsGrouped>
 inline void AccumulationLoop_Depth2OrMore(
-    std::int32_t conv_kernel_size, const std::int32_t depth,
-    int32x4_t weights[8], int32x4_t activations[4], uint16x8_t accumulators[4],
-    TBitpacked*& weights_ptr, TBitpacked** indirection_buffer) {
+    const std::int32_t filter_size, const std::int32_t depth,
+    const std::int32_t input_depth_offset, int32x4_t weights[8],
+    int32x4_t activations[4], uint16x8_t accumulators[4],
+    const TBitpacked*& weights_ptr, const TBitpacked* const* indirection_ptr) {
   ruy::profiler::ScopeLabel label("Accumulation loop (depth > 1)");
 
   // Declare these variables so we can use named registers in the ASM block.
-  TBitpacked** indirection_buffer_ = indirection_buffer + 4;
-  TBitpacked* a_ptr_0 = indirection_buffer[0] + 4;
-  TBitpacked* a_ptr_1 = indirection_buffer[1] + 4;
-  TBitpacked* a_ptr_2 = indirection_buffer[2] + 4;
-  TBitpacked* a_ptr_3 = indirection_buffer[3] + 4;
+  const TBitpacked* a_ptr_0;
+  const TBitpacked* a_ptr_1;
+  const TBitpacked* a_ptr_2;
+  const TBitpacked* a_ptr_3;
+  std::int32_t fs_index = filter_size;
 
   asm volatile(
-      // w0 is the outer (kernel size) loop counter
-      "mov w0, %w[kernel_size]\n\t"
+      // clang-format off
+
+      // Load activation pointers
+      "ldp %[a_ptr_0], %[a_ptr_1], [%[indirection_ptr]]\n\t"
+      "ldp %[a_ptr_2], %[a_ptr_3], [%[indirection_ptr], #16]\n\t"
+      "add %[indirection_ptr], %[indirection_ptr], #32\n\t"
 
       // w1 is the inner (channels in) loop counter
       "sub w1, %w[depth], #1\n\t"
@@ -215,6 +223,17 @@ inline void AccumulationLoop_Depth2OrMore(
       "movi %[accum_2].8h, #0\n\t"
       "movi %[accum_3].8h, #0\n\t"
 
+      // Offset activation pointers
+      IF_IS_GROUPED(
+          "add %[a_ptr_0], %[a_ptr_0], %[input_depth_offset], lsl #2\n\t"
+          "add %[a_ptr_1], %[a_ptr_1], %[input_depth_offset], lsl #2\n\t"
+          "add %[a_ptr_2], %[a_ptr_2], %[input_depth_offset], lsl #2\n\t"
+          "add %[a_ptr_3], %[a_ptr_3], %[input_depth_offset], lsl #2\n\t")
+      "add %[a_ptr_0], %[a_ptr_0], #16\n\t"
+      "add %[a_ptr_1], %[a_ptr_1], #16\n\t"
+      "add %[a_ptr_2], %[a_ptr_2], #16\n\t"
+      "add %[a_ptr_3], %[a_ptr_3], #16\n\t"
+
       "0:\n\t"  // Loop start label
       "subs w1, w1, #1\n\t"
 
@@ -222,47 +241,57 @@ inline void AccumulationLoop_Depth2OrMore(
 
       "bgt 0b\n\t"  // Inner loop branch
 
-      "ldp %[a_ptr_0], %[a_ptr_1], [%[indirection_buffer]]\n\t"
-      "ldp %[a_ptr_2], %[a_ptr_3], [%[indirection_buffer], #16]\n\t"
-      "add %[indirection_buffer], %[indirection_buffer], #32\n\t"
+      "ldp %[a_ptr_0], %[a_ptr_1], [%[indirection_ptr]]\n\t"
+      "ldp %[a_ptr_2], %[a_ptr_3], [%[indirection_ptr], #16]\n\t"
+      "add %[indirection_ptr], %[indirection_ptr], #32\n\t"
       "sub w1, %w[depth], #1\n\t"
-      "subs w0, w0, #1\n\t"
-
+      "subs %[fs_index], %[fs_index], #1\n\t"
+      IF_IS_GROUPED(
+          "add %[a_ptr_0], %[a_ptr_0], %[input_depth_offset], lsl #2\n\t"
+          "add %[a_ptr_1], %[a_ptr_1], %[input_depth_offset], lsl #2\n\t"
+          "add %[a_ptr_2], %[a_ptr_2], %[input_depth_offset], lsl #2\n\t"
+          "add %[a_ptr_3], %[a_ptr_3], %[input_depth_offset], lsl #2\n\t")
       XOR_POPCOUNT_ACCUM_LOAD_BLOCK_128
 
       "bgt 0b\n\t"  // Outer loop branch
+
+      // clang-format on
       : [accum_0] "=&w"(accumulators[0]), [accum_1] "=&w"(accumulators[1]),
         [accum_2] "=&w"(accumulators[2]), [accum_3] "=&w"(accumulators[3]),
         [w_ptr] "+r"(weights_ptr),
-        [indirection_buffer] "+r"(indirection_buffer_), [a_ptr_0] "+r"(a_ptr_0),
-        [a_ptr_1] "+r"(a_ptr_1), [a_ptr_2] "+r"(a_ptr_2),
-        [a_ptr_3] "+r"(a_ptr_3)
+        [indirection_ptr] "+r"(indirection_ptr), [a_ptr_0] "=&r"(a_ptr_0),
+        [a_ptr_1] "=&r"(a_ptr_1), [a_ptr_2] "=&r"(a_ptr_2),
+        [a_ptr_3] "=&r"(a_ptr_3), [fs_index] "+r"(fs_index)
       : [w_0] "w"(weights[0]), [w_1] "w"(weights[1]), [w_2] "w"(weights[2]),
         [w_3] "w"(weights[3]), [w_4] "w"(weights[4]), [w_5] "w"(weights[5]),
         [w_6] "w"(weights[6]), [w_7] "w"(weights[7]), [a_0] "w"(activations[0]),
         [a_1] "w"(activations[1]), [a_2] "w"(activations[2]),
-        [a_3] "w"(activations[3]), [kernel_size] "r"(conv_kernel_size),
-        [depth] "r"(depth)
-      : "cc", "memory", "x0", "x1", "v0", "v1", "v2", "v3", "v4", "v5", "v6",
+        [a_3] "w"(activations[3]),
+        [depth] "r"(depth), [input_depth_offset] "r"(input_depth_offset),
+        [is_grouped] "i"(IsGrouped)
+      : "cc", "memory", "x1", "v0", "v1", "v2", "v3", "v4", "v5", "v6",
         "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15");
 }
 
-inline void AccumulationLoop_Depth1(std::int32_t conv_kernel_size,
-                                    int32x4_t weights[8],
-                                    int32x4_t activations[4],
-                                    uint16x8_t accumulators[4],
-                                    TBitpacked*& weights_ptr,
-                                    TBitpacked** indirection_buffer) {
+template <bool IsGrouped>
+inline void AccumulationLoop_Depth1(
+    const std::int32_t filter_size, const std::int32_t input_depth_offset,
+    int32x4_t weights[8], int32x4_t activations[4], uint16x8_t accumulators[4],
+    const TBitpacked*& weights_ptr, const TBitpacked* const* indirection_ptr) {
   ruy::profiler::ScopeLabel label("Accumulation loop (depth = 1)");
 
   // Declare these variables so we can use named registers in the ASM block.
-  TBitpacked** indirection_buffer_ = indirection_buffer + 4;
-  TBitpacked* a_ptr_0;
-  TBitpacked* a_ptr_1;
-  TBitpacked* a_ptr_2;
-  TBitpacked* a_ptr_3;
+  const TBitpacked* a_ptr_0;
+  const TBitpacked* a_ptr_1;
+  const TBitpacked* a_ptr_2;
+  const TBitpacked* a_ptr_3;
+  std::int32_t fs_index = filter_size;
 
   asm volatile(
+      // clang-format off
+
+      "add %[indirection_ptr], %[indirection_ptr], #32\n\t"
+
       // Zero-out the accumulator registers
       "movi %[accum_0].8h, #0\n\t"
       "movi %[accum_1].8h, #0\n\t"
@@ -271,26 +300,32 @@ inline void AccumulationLoop_Depth1(std::int32_t conv_kernel_size,
 
       "0:\n\t"  // Loop label
 
-      "ldp %[a_ptr_0], %[a_ptr_1], [%[indirection_buffer]]\n\t"
-      "ldp %[a_ptr_2], %[a_ptr_3], [%[indirection_buffer], #16]\n\t"
-      "add %[indirection_buffer], %[indirection_buffer], #32\n\t"
-      "subs %w[ks_index], %w[ks_index], #1\n\t"
-
+      "ldp %[a_ptr_0], %[a_ptr_1], [%[indirection_ptr]]\n\t"
+      "ldp %[a_ptr_2], %[a_ptr_3], [%[indirection_ptr], #16]\n\t"
+      "add %[indirection_ptr], %[indirection_ptr], #32\n\t"
+      "subs %w[fs_index], %w[fs_index], #1\n\t"
+      IF_IS_GROUPED(
+          "add %[a_ptr_0], %[a_ptr_0], %[input_depth_offset], lsl #2\n\t"
+          "add %[a_ptr_1], %[a_ptr_1], %[input_depth_offset], lsl #2\n\t"
+          "add %[a_ptr_2], %[a_ptr_2], %[input_depth_offset], lsl #2\n\t"
+          "add %[a_ptr_3], %[a_ptr_3], %[input_depth_offset], lsl #2\n\t")
       XOR_POPCOUNT_ACCUM_LOAD_BLOCK_128
 
       "bgt 0b\n\t"  // Loop branch
+
+      // clang-format on
       : [accum_0] "=&w"(accumulators[0]), [accum_1] "=&w"(accumulators[1]),
         [accum_2] "=&w"(accumulators[2]), [accum_3] "=&w"(accumulators[3]),
-        [w_ptr] "+r"(weights_ptr),
-        [indirection_buffer] "+r"(indirection_buffer_),
+        [w_ptr] "+r"(weights_ptr), [indirection_ptr] "+r"(indirection_ptr),
         [a_ptr_0] "=&r"(a_ptr_0), [a_ptr_1] "=&r"(a_ptr_1),
         [a_ptr_2] "=&r"(a_ptr_2), [a_ptr_3] "=&r"(a_ptr_3),
-        [ks_index] "+r"(conv_kernel_size)
+        [fs_index] "+r"(fs_index)
       : [w_0] "w"(weights[0]), [w_1] "w"(weights[1]), [w_2] "w"(weights[2]),
         [w_3] "w"(weights[3]), [w_4] "w"(weights[4]), [w_5] "w"(weights[5]),
         [w_6] "w"(weights[6]), [w_7] "w"(weights[7]), [a_0] "w"(activations[0]),
         [a_1] "w"(activations[1]), [a_2] "w"(activations[2]),
-        [a_3] "w"(activations[3])
+        [a_3] "w"(activations[3]), [input_depth_offset] "r"(input_depth_offset),
+        [is_grouped] "i"(IsGrouped)
       : "cc", "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8",
         "v9", "v10", "v11", "v12", "v13", "v14", "v15");
 }
@@ -308,68 +343,77 @@ inline void AccumulationLoop_Depth1(std::int32_t conv_kernel_size,
 
 // Float output transform
 inline void OutputTransformAndLoadNextAndStore(
-    const std::int32_t c_out_index, const std::int32_t channels_out,
-    uint16x8_t accumulators[4], int32x4_t weights[8], int32x4_t activations[4],
+    std::int32_t& c_out_index, const std::int32_t input_depth_offset,
+    const std::int32_t group_end_output_channel, uint16x8_t accumulators[4],
+    int32x4_t weights[8], int32x4_t activations[4],
     const bconv2d::OutputTransform<float>& output_transform,
-    const TBitpacked* weights_ptr, TBitpacked** indirection_buffer,
+    const TBitpacked* weights_ptr, const TBitpacked* const* indirection_ptr,
     float*& output_ptr_0, float*& output_ptr_1, float*& output_ptr_2,
     float*& output_ptr_3) {
+  static_assert(offsetof(bconv2d::OutputTransform<float>, clamp_min) == 0, "");
+  static_assert(offsetof(bconv2d::OutputTransform<float>, clamp_max) == 4, "");
+  static_assert(offsetof(bconv2d::OutputTransform<float>, multiplier) == 8, "");
+  static_assert(offsetof(bconv2d::OutputTransform<float>, bias) == 16, "");
+
   ruy::profiler::ScopeLabel label("Float output transform and store");
 
   // Declare result registers.
   float32x4x2_t results[4];
 
-  asm("ldp x0, x1, [%[indirection_buffer]]\n\t"
+  asm("ldr x0, [%[output_transform_addr], #8]\n\t"  // Multiplier base address
+      "add x1, %[output_transform_addr], #4\n\t"    // clamp_max address
 
       // Use "unsigned shift left long" instructions to perform the
       // back-transformation left-shift and extend the result to int32.
-      "ld1r {v0.4s}, [%[clamp_min_addr]]\n\t"
+      "ld1r {v0.4s}, [%[output_transform_addr]]\n\t"  // Load clamp_min
       "ushll %[result_00].4s, %[accum_0].4h, #1\n\t"
       "ushll %[result_10].4s, %[accum_1].4h, #1\n\t"
-      "ld1r {v1.4s}, [%[clamp_max_addr]]\n\t"
+      "ld1r {v1.4s}, [x1]\n\t"  // Load clamp_max
       "ushll %[result_20].4s, %[accum_2].4h, #1\n\t"
+      "add x0, x0,  %[c_out_index], lsl #2\n\t"  // Multiplier offset
       "ushll %[result_30].4s, %[accum_3].4h, #1\n\t"
-      "ldr q2, [%[multiplier_addr]]\n\t"
+      "ldp q2, q3, [x0]\n\t"  // Load multipliers
       "ushll2 %[result_31].4s, %[accum_3].8h, #1\n\t"
       "ushll2 %[result_21].4s, %[accum_2].8h, #1\n\t"
-      "ldr q3, [%[multiplier_addr], #16]\n\t"
+      "ldp x0, x1, [%[indirection_ptr]]\n\t"
       "ushll2 %[result_11].4s, %[accum_1].8h, #1\n\t"
       "ushll2 %[result_01].4s, %[accum_0].8h, #1\n\t"
 
-      "ldp x2, x3, [%[indirection_buffer], #16]\n\t"
-
       // Perform clamping
-      "ldr %q[a_0], [x0]\n\t"
+      "ldp x2, x3, [%[indirection_ptr], #16]\n\t"
       "smax %[result_30].4s, %[result_30].4s, v0.4s\n\t"
       "smax %[result_31].4s, %[result_31].4s, v0.4s\n\t"
-      "ldr %q[a_1], [x1]\n\t"
+      "ldr %q[w_0], [%[w_ptr], #-128]\n\t"
       "smax %[result_20].4s, %[result_20].4s, v0.4s\n\t"
       "smax %[result_21].4s, %[result_21].4s, v0.4s\n\t"
-      "ldr %q[a_2], [x2]\n\t"
+      "ldr %q[w_1], [%[w_ptr], #-112]\n\t"
       "smax %[result_10].4s, %[result_10].4s, v0.4s\n\t"
       "smax %[result_11].4s, %[result_11].4s, v0.4s\n\t"
-      "ldr %q[a_3], [x3]\n\t"
+      "ldr %q[a_0], [x0, %[input_depth_offset_bytes]]\n\t"
       "smax %[result_00].4s, %[result_00].4s, v0.4s\n\t"
       "smax %[result_01].4s, %[result_01].4s, v0.4s\n\t"
-      "ldr %q[w_0], [%[w_ptr], #-128]\n\t"
+      "ldr x0, [%[output_transform_addr], #16]\n\t"  // Bias base address
+      "ldr %q[a_1], [x1, %[input_depth_offset_bytes]]\n\t"
       "smin %[result_30].4s, %[result_30].4s, v1.4s\n\t"
       "smin %[result_31].4s, %[result_31].4s, v1.4s\n\t"
-      "ldr q0, [%[bias_addr]]\n\t"
+      "add x0, x0, %[c_out_index], lsl #2\n\t"  // Bias offset
+      "ldr %q[a_2], [x2, %[input_depth_offset_bytes]]\n\t"
       "smin %[result_20].4s, %[result_20].4s, v1.4s\n\t"
       "smin %[result_21].4s, %[result_21].4s, v1.4s\n\t"
-      "ldr %q[w_1], [%[w_ptr], #-112]\n\t"
+      "ldr q0, [x0]\n\t"  // Load biases
       "smin %[result_10].4s, %[result_10].4s, v1.4s\n\t"
       "smin %[result_11].4s, %[result_11].4s, v1.4s\n\t"
-      "ldr %q[w_2], [%[w_ptr], #-96]\n\t"
+      "ldr %q[a_3], [x3, %[input_depth_offset_bytes]]\n\t"
       "smin %[result_00].4s, %[result_00].4s, v1.4s\n\t"
       "smin %[result_01].4s, %[result_01].4s, v1.4s\n\t"
+      "ldr q1, [x0, #16]\n\t"  // Load biases
 
       // Convert to float, multiply by the multiplier, and add the bias. Note
       // that the float conversion instructions ("scvtf") are *very* slow and
       // block the Neon pipeline. It is therefore important for optimal
       // performance to interleave the float multiply and add instructions
       // between the "scvtf" instructions.
-      "ldr q1, [%[bias_addr], #16]\n\t"
+      "ldr %q[w_2], [%[w_ptr], #-96]\n\t"
       "scvtf %[result_30].4s, %[result_30].4s\n\t"
       "scvtf %[result_31].4s, %[result_31].4s\n\t"
       "ldr %q[w_3], [%[w_ptr], #-80]\n\t"
@@ -414,14 +458,13 @@ inline void OutputTransformAndLoadNextAndStore(
       [result_30] "=&w"(results[3].val[0]), [result_31] "=&w"(results[3].val[1])
       : [accum_0] "w"(accumulators[0]), [accum_1] "w"(accumulators[1]),
         [accum_2] "w"(accumulators[2]), [accum_3] "w"(accumulators[3]),
-        [clamp_min_addr] "r"(&output_transform.clamp_min),
-        [clamp_max_addr] "r"(&output_transform.clamp_max),
-        [multiplier_addr] "r"(output_transform.multiplier + c_out_index),
-        [bias_addr] "r"(output_transform.bias + c_out_index),
-        [w_ptr] "r"(weights_ptr), [indirection_buffer] "r"(indirection_buffer)
+        [output_transform_addr] "r"(&output_transform),
+        [c_out_index] "r"(c_out_index), [w_ptr] "r"(weights_ptr),
+        [indirection_ptr] "r"(indirection_ptr),
+        [input_depth_offset_bytes] "r"(4 * input_depth_offset)
       : "memory", "x0", "x1", "x2", "x3", "v0", "v1", "v2", "v3");
 
-  if (LCE_LIKELY(channels_out - c_out_index >= 8)) {
+  if (LCE_LIKELY(group_end_output_channel - c_out_index >= 8)) {
     vst1q_f32(output_ptr_3, results[3].val[0]);
     vst1q_f32(output_ptr_3 + 4, results[3].val[1]);
     output_ptr_3 += 8;
@@ -434,29 +477,31 @@ inline void OutputTransformAndLoadNextAndStore(
     vst1q_f32(output_ptr_0, results[0].val[0]);
     vst1q_f32(output_ptr_0 + 4, results[0].val[1]);
     output_ptr_0 += 8;
+
+    c_out_index += 8;
   } else {
-#define STORE_SINGLE_ELEMENT_LOW(index)                           \
-  vst1q_lane_f32(output_ptr_3 + index, results[3].val[0], index); \
-  vst1q_lane_f32(output_ptr_2 + index, results[2].val[0], index); \
-  vst1q_lane_f32(output_ptr_1 + index, results[1].val[0], index); \
-  vst1q_lane_f32(output_ptr_0 + index, results[0].val[0], index);
-#define STORE_SINGLE_ELEMENT_HIGH(index)                              \
-  vst1q_lane_f32(output_ptr_3 + 4 + index, results[3].val[1], index); \
-  vst1q_lane_f32(output_ptr_2 + 4 + index, results[2].val[1], index); \
-  vst1q_lane_f32(output_ptr_1 + 4 + index, results[1].val[1], index); \
-  vst1q_lane_f32(output_ptr_0 + 4 + index, results[0].val[1], index);
+#define STORE_SINGLE_ELEMENT_LOW(index)                     \
+  vst1q_lane_f32(output_ptr_3++, results[3].val[0], index); \
+  vst1q_lane_f32(output_ptr_2++, results[2].val[0], index); \
+  vst1q_lane_f32(output_ptr_1++, results[1].val[0], index); \
+  vst1q_lane_f32(output_ptr_0++, results[0].val[0], index);
+#define STORE_SINGLE_ELEMENT_HIGH(index)                    \
+  vst1q_lane_f32(output_ptr_3++, results[3].val[1], index); \
+  vst1q_lane_f32(output_ptr_2++, results[2].val[1], index); \
+  vst1q_lane_f32(output_ptr_1++, results[1].val[1], index); \
+  vst1q_lane_f32(output_ptr_0++, results[0].val[1], index);
     STORE_SINGLE_ELEMENT_LOW(0)
-    if (channels_out - c_out_index >= 2) {
+    if (group_end_output_channel - c_out_index >= 2) {
       STORE_SINGLE_ELEMENT_LOW(1)
-      if (channels_out - c_out_index >= 3) {
+      if (group_end_output_channel - c_out_index >= 3) {
         STORE_SINGLE_ELEMENT_LOW(2)
-        if (channels_out - c_out_index >= 4) {
+        if (group_end_output_channel - c_out_index >= 4) {
           STORE_SINGLE_ELEMENT_LOW(3)
-          if (channels_out - c_out_index >= 5) {
+          if (group_end_output_channel - c_out_index >= 5) {
             STORE_SINGLE_ELEMENT_HIGH(0)
-            if (channels_out - c_out_index >= 6) {
+            if (group_end_output_channel - c_out_index >= 6) {
               STORE_SINGLE_ELEMENT_HIGH(1)
-              if (channels_out - c_out_index >= 7) {
+              if (group_end_output_channel - c_out_index >= 7) {
                 STORE_SINGLE_ELEMENT_HIGH(2)
               }
             }
@@ -466,93 +511,108 @@ inline void OutputTransformAndLoadNextAndStore(
     }
 #undef STORE_SINGLE_ELEMENT_LOW
 #undef STORE_SINGLE_ELEMENT_HIGH
+
+    c_out_index = group_end_output_channel;
   }
 }
 
 // Int8 output transform
 inline void OutputTransformAndLoadNextAndStore(
-    const std::int32_t c_out_index, const std::int32_t channels_out,
-    uint16x8_t accumulators[4], int32x4_t weights[8], int32x4_t activations[4],
+    std::int32_t& c_out_index, const std::int32_t input_depth_offset,
+    const std::int32_t group_end_output_channel, uint16x8_t accumulators[4],
+    int32x4_t weights[8], int32x4_t activations[4],
     const bconv2d::OutputTransform<std::int8_t>& output_transform,
-    const TBitpacked* weights_ptr, TBitpacked** indirection_buffer,
+    const TBitpacked* weights_ptr, const TBitpacked* const* indirection_ptr,
     std::int8_t*& output_ptr_0, std::int8_t*& output_ptr_1,
     std::int8_t*& output_ptr_2, std::int8_t*& output_ptr_3) {
+  static_assert(offsetof(bconv2d::OutputTransform<std::int8_t>, clamp_min) == 0,
+                "");
+  static_assert(offsetof(bconv2d::OutputTransform<std::int8_t>, clamp_max) == 4,
+                "");
+  static_assert(
+      offsetof(bconv2d::OutputTransform<std::int8_t>, multiplier) == 8, "");
+  static_assert(offsetof(bconv2d::OutputTransform<std::int8_t>, bias) == 16,
+                "");
+
   ruy::profiler::ScopeLabel label("Int8 output transform and store");
 
   // Declare result registers. These are wider than we need for just the final
   // int8 values, which is necessary for intermediate results.
   int8x16x2_t results[4];
 
-  asm("ldp x0, x1, [%[indirection_buffer]]\n\t"
+  asm("ldr x0, [%[output_transform_addr], #8]\n\t"  // Multiplier base address
+      "add x1, %[output_transform_addr], #4\n\t"    // clamp_max address
 
       // Use "unsigned shift left long" instructions to perform the
       // back-transformation left-shift and extend the result to int32.
-      "ld1r {v0.4s}, [%[clamp_min_addr]]\n\t"
+      "ld1r {v0.4s}, [%[output_transform_addr]]\n\t"  // Load clamp_min
       "ushll %[result_00].4s, %[accum_0].4h, #1\n\t"
       "ushll %[result_10].4s, %[accum_1].4h, #1\n\t"
-      "ld1r {v1.4s}, [%[clamp_max_addr]]\n\t"
+      "ld1r {v1.4s}, [x1]\n\t"  // Load clamp_max
       "ushll %[result_20].4s, %[accum_2].4h, #1\n\t"
+      "add x0, x0,  %[c_out_index], lsl #2\n\t"  // Multiplier offset
       "ushll %[result_30].4s, %[accum_3].4h, #1\n\t"
-      "ldr q2, [%[multiplier_addr]]\n\t"
+      "ldp q2, q3, [x0]\n\t"  // Load multipliers
       "ushll2 %[result_31].4s, %[accum_3].8h, #1\n\t"
       "ushll2 %[result_21].4s, %[accum_2].8h, #1\n\t"
-      "ldr q3, [%[multiplier_addr], #16]\n\t"
+      "ldp x0, x1, [%[indirection_ptr]]\n\t"
       "ushll2 %[result_11].4s, %[accum_1].8h, #1\n\t"
       "ushll2 %[result_01].4s, %[accum_0].8h, #1\n\t"
 
-      "ldp x2, x3, [%[indirection_buffer], #16]\n\t"
-
       // Perform clamping
-      "ldr %q[a_0], [x0]\n\t"
+      "ldp x2, x3, [%[indirection_ptr], #16]\n\t"
       "smax %[result_30].4s, %[result_30].4s, v0.4s\n\t"
       "smax %[result_31].4s, %[result_31].4s, v0.4s\n\t"
-      "ldr %q[a_1], [x1]\n\t"
+      "ldr %q[w_0], [%[w_ptr], #-128]\n\t"
       "smax %[result_20].4s, %[result_20].4s, v0.4s\n\t"
       "smax %[result_21].4s, %[result_21].4s, v0.4s\n\t"
-      "ldr %q[a_2], [x2]\n\t"
+      "ldr %q[w_1], [%[w_ptr], #-112]\n\t"
       "smax %[result_10].4s, %[result_10].4s, v0.4s\n\t"
       "smax %[result_11].4s, %[result_11].4s, v0.4s\n\t"
-      "ldr %q[a_3], [x3]\n\t"
+      "ldr %q[a_0], [x0, %[input_depth_offset_bytes]]\n\t"
       "smax %[result_00].4s, %[result_00].4s, v0.4s\n\t"
       "smax %[result_01].4s, %[result_01].4s, v0.4s\n\t"
-      "ldr %q[w_0], [%[w_ptr], #-128]\n\t"
+      "ldr x0, [%[output_transform_addr], #16]\n\t"  // Bias base address
+      "ldr %q[a_1], [x1, %[input_depth_offset_bytes]]\n\t"
       "smin %[result_30].4s, %[result_30].4s, v1.4s\n\t"
       "smin %[result_31].4s, %[result_31].4s, v1.4s\n\t"
-      "ldr q0, [%[bias_addr]]\n\t"
+      "add x0, x0, %[c_out_index], lsl #2\n\t"  // Bias offset
+      "ldr %q[a_2], [x2, %[input_depth_offset_bytes]]\n\t"
       "smin %[result_20].4s, %[result_20].4s, v1.4s\n\t"
       "smin %[result_21].4s, %[result_21].4s, v1.4s\n\t"
-      "ldr %q[w_1], [%[w_ptr], #-112]\n\t"
+      "ldr q0, [x0]\n\t"  // Load biases
       "smin %[result_10].4s, %[result_10].4s, v1.4s\n\t"
       "smin %[result_11].4s, %[result_11].4s, v1.4s\n\t"
-      "ldr %q[w_2], [%[w_ptr], #-96]\n\t"
+      "ldr %q[a_3], [x3, %[input_depth_offset_bytes]]\n\t"
       "smin %[result_00].4s, %[result_00].4s, v1.4s\n\t"
       "smin %[result_01].4s, %[result_01].4s, v1.4s\n\t"
+      "ldr q1, [x0, #16]\n\t"  // Load biases
 
       // Convert to float, multiply by the multiplier, and add the bias. Note
       // that the float conversion instructions ("scvtf") are *very* slow and
       // block the Neon pipeline. It is therefore important for optimal
       // performance to interleave the float multiply and add instructions
       // between the "scvtf" instructions.
-      "ldr q1, [%[bias_addr], #16]\n\t"
+      "ldr %q[w_2], [%[w_ptr], #-96]\n\t"  // Load weights
       "scvtf %[result_30].4s, %[result_30].4s\n\t"
       "scvtf %[result_31].4s, %[result_31].4s\n\t"
-      "ldr %q[w_3], [%[w_ptr], #-80]\n\t"
+      "ldr %q[w_3], [%[w_ptr], #-80]\n\t"  // Load weights
       "scvtf %[result_20].4s, %[result_20].4s\n\t"
       "fmul %[result_30].4s, %[result_30].4s, v2.4s\n\t"
       "scvtf %[result_21].4s, %[result_21].4s\n\t"
-      "ldr %q[w_4], [%[w_ptr], #-64]\n\t"
+      "ldr %q[w_4], [%[w_ptr], #-64]\n\t"  // Load weights
       "fmul %[result_31].4s, %[result_31].4s, v3.4s\n\t"
       "fadd %[result_30].4s, %[result_30].4s, v0.4s\n\t"
       "scvtf %[result_10].4s, %[result_10].4s\n\t"
-      "ldr %q[w_5], [%[w_ptr], #-48]\n\t"
+      "ldr %q[w_5], [%[w_ptr], #-48]\n\t"  // Load weights
       "fmul %[result_20].4s, %[result_20].4s, v2.4s\n\t"
       "fadd %[result_31].4s, %[result_31].4s, v1.4s\n\t"
       "scvtf %[result_11].4s, %[result_11].4s\n\t"
-      "ldr %q[w_6], [%[w_ptr], #-32]\n\t"
+      "ldr %q[w_6], [%[w_ptr], #-32]\n\t"  // Load weights
       "fmul %[result_21].4s, %[result_21].4s, v3.4s\n\t"
       "fadd %[result_20].4s, %[result_20].4s, v0.4s\n\t"
       "fcvtns %[result_30].4s, %[result_30].4s\n\t"
-      "ldr %q[w_7], [%[w_ptr], #-16]\n\t"
+      "ldr %q[w_7], [%[w_ptr], #-16]\n\t"  // Load weights
       "fmul %[result_10].4s, %[result_10].4s, v2.4s\n\t"
       "fadd %[result_21].4s, %[result_21].4s, v1.4s\n\t"
       "fcvtns %[result_31].4s, %[result_31].4s\n\t"
@@ -598,14 +658,13 @@ inline void OutputTransformAndLoadNextAndStore(
       [result_30] "=&w"(results[3].val[0]), [result_31] "=&w"(results[3].val[1])
       : [accum_0] "w"(accumulators[0]), [accum_1] "w"(accumulators[1]),
         [accum_2] "w"(accumulators[2]), [accum_3] "w"(accumulators[3]),
-        [clamp_min_addr] "r"(&output_transform.clamp_min),
-        [clamp_max_addr] "r"(&output_transform.clamp_max),
-        [multiplier_addr] "r"(output_transform.multiplier + c_out_index),
-        [bias_addr] "r"(output_transform.bias + c_out_index),
-        [w_ptr] "r"(weights_ptr), [indirection_buffer] "r"(indirection_buffer)
+        [output_transform_addr] "r"(&output_transform),
+        [c_out_index] "r"(c_out_index), [w_ptr] "r"(weights_ptr),
+        [indirection_ptr] "r"(indirection_ptr),
+        [input_depth_offset_bytes] "r"(4 * input_depth_offset)
       : "memory", "x0", "x1", "x2", "x3", "v0", "v1", "v2", "v3", "v4", "v5");
 
-  if (LCE_LIKELY(channels_out - c_out_index >= 8)) {
+  if (LCE_LIKELY(group_end_output_channel - c_out_index >= 8)) {
     vst1_s8(output_ptr_3, vget_low_s8(results[3].val[0]));
     output_ptr_3 += 8;
     vst1_s8(output_ptr_2, vget_low_s8(results[2].val[0]));
@@ -614,24 +673,26 @@ inline void OutputTransformAndLoadNextAndStore(
     output_ptr_1 += 8;
     vst1_s8(output_ptr_0, vget_low_s8(results[0].val[0]));
     output_ptr_0 += 8;
+
+    c_out_index += 8;
   } else {
-#define STORE_SINGLE_ELEMENT(index)                                          \
-  vst1_lane_s8(output_ptr_3 + index, vget_low_s8(results[3].val[0]), index); \
-  vst1_lane_s8(output_ptr_2 + index, vget_low_s8(results[2].val[0]), index); \
-  vst1_lane_s8(output_ptr_1 + index, vget_low_s8(results[1].val[0]), index); \
-  vst1_lane_s8(output_ptr_0 + index, vget_low_s8(results[0].val[0]), index);
+#define STORE_SINGLE_ELEMENT(index)                                    \
+  vst1_lane_s8(output_ptr_3++, vget_low_s8(results[3].val[0]), index); \
+  vst1_lane_s8(output_ptr_2++, vget_low_s8(results[2].val[0]), index); \
+  vst1_lane_s8(output_ptr_1++, vget_low_s8(results[1].val[0]), index); \
+  vst1_lane_s8(output_ptr_0++, vget_low_s8(results[0].val[0]), index);
     STORE_SINGLE_ELEMENT(0)
-    if (channels_out - c_out_index >= 2) {
+    if (group_end_output_channel - c_out_index >= 2) {
       STORE_SINGLE_ELEMENT(1)
-      if (channels_out - c_out_index >= 3) {
+      if (group_end_output_channel - c_out_index >= 3) {
         STORE_SINGLE_ELEMENT(2)
-        if (channels_out - c_out_index >= 4) {
+        if (group_end_output_channel - c_out_index >= 4) {
           STORE_SINGLE_ELEMENT(3)
-          if (channels_out - c_out_index >= 5) {
+          if (group_end_output_channel - c_out_index >= 5) {
             STORE_SINGLE_ELEMENT(4)
-            if (channels_out - c_out_index >= 6) {
+            if (group_end_output_channel - c_out_index >= 6) {
               STORE_SINGLE_ELEMENT(5)
-              if (channels_out - c_out_index >= 7) {
+              if (group_end_output_channel - c_out_index >= 7) {
                 STORE_SINGLE_ELEMENT(6)
               }
             }
@@ -640,94 +701,133 @@ inline void OutputTransformAndLoadNextAndStore(
       }
     }
 #undef STORE_SINGLE_ELEMENT
+
+    c_out_index = group_end_output_channel;
   }
 }
+
+#undef IF_IS_GROUPED
+
+}  // namespace kernel_8x4x4_aarch64
 
 /**
  * A 8x4x4 Neon micro-kernel for float or int8 output on Aarch64.
  */
-template <typename DstScalar, bool Depth2OrMore>
-void RunKernel(const std::int32_t block_num_pixels,
-               const std::int32_t conv_kernel_size,
-               const std::int32_t channels_in, const std::int32_t channels_out,
-               const bconv2d::OutputTransform<DstScalar>& output_transform,
-               const TBitpacked* weights_ptr_,
-               const TBitpacked** indirection_buffer_, DstScalar* output_ptr) {
-  // Correctness of this function relies on TBitpacked being four bytes.
+template <typename DstScalar, bool Depth2OrMore, bool IsGrouped>
+struct Kernel8x4x4Aarch64 : Kernel {
+  static_assert(std::is_same<DstScalar, float>::value ||
+                    std::is_same<DstScalar, std::int8_t>::value,
+                "");
   static_assert(sizeof(TBitpacked) == 4, "");
 
-  ruy::profiler::ScopeLabel label(
-      "Indirect BGEMM block (8x4x4, Aarch64 optimised)");
+  const bconv2d::OutputTransform<DstScalar> output_transform;
 
-  TFLITE_DCHECK_GE(block_num_pixels, 1);
-  TFLITE_DCHECK_LE(block_num_pixels, 4);
-  TFLITE_DCHECK_GE(conv_kernel_size, 1);
-  TFLITE_DCHECK_GE(channels_in, 4);
-  TFLITE_DCHECK_EQ(channels_in % 4, 0);
-  TFLITE_DCHECK_GE(channels_out, 1);
+  Kernel8x4x4Aarch64(
+      const bconv2d::BConv2DParams* bconv2d_params,
+      const RuntimeShape& bitpacked_input_shape,
+      const RuntimeShape& output_shape,
+      const bconv2d::OutputTransform<DstScalar>& output_transform)
+      : Kernel(8, 4, 4, bconv2d_params, bitpacked_input_shape, output_shape),
+        output_transform(output_transform) {}
 
-  if (conv_kernel_size < 1 || channels_in < 4 || channels_out < 1) return;
+  void Run(const std::int32_t pixel_start, const std::int32_t pixel_end,
+           void* output_ptr) const override {
+    ruy::profiler::ScopeLabel label(
+        "Indirect BGEMM block (8x4x4, Aarch64 optimised)");
 
-  TBitpacked** indirection_buffer =
-      const_cast<TBitpacked**>(indirection_buffer_);
-  TBitpacked* weights_ptr = const_cast<TBitpacked*>(weights_ptr_);
+    TFLITE_DCHECK_GE(this->input_depth, 1);
+    TFLITE_DCHECK_GE(this->output_channels, 1);
+    TFLITE_DCHECK_GE(this->filter_size, 1);
+    TFLITE_DCHECK_GE(this->groups, 1);
+    TFLITE_DCHECK_EQ(this->input_depth % this->groups, 0);
+    TFLITE_DCHECK_EQ(this->output_channels % this->groups, 0);
 
-  DstScalar* output_ptr_0 = output_ptr;
-  DstScalar* output_ptr_1 = output_ptr + channels_out;
-  DstScalar* output_ptr_2 = output_ptr + 2 * channels_out;
-  DstScalar* output_ptr_3 = output_ptr + 3 * channels_out;
+    const std::int32_t input_depth_per_group = this->input_depth / this->groups;
+    const std::int32_t output_channels_per_group =
+        this->output_channels / this->groups;
 
-  // At the end of the output array we might get a block where the number of
-  // pixels is less than 4. When this happens we set the 'leftover' output
-  // pointer equal to the first output pointer, so that there's no risk of
-  // writing beyond the array bounds. At the end we write to the output array
-  // 'back to front' so that the outputs for the first pixel are written last,
-  // which means that the result will still be correct.
-  if (block_num_pixels < 4) {
-    output_ptr_3 = output_ptr_0;
-    if (block_num_pixels < 3) {
-      output_ptr_2 = output_ptr_0;
-      if (block_num_pixels < 2) {
-        output_ptr_1 = output_ptr_0;
+    if (this->filter_size < 1 || input_depth_per_group < 4 ||
+        output_channels_per_group < 1) {
+      return;
+    }
+
+    for (std::int32_t p_index = pixel_start; p_index < pixel_end;
+         p_index += 4) {
+      const TBitpacked* weights_ptr = this->packed_weights.data();
+      const TBitpacked* const* indirection_ptr =
+          this->indirection_buffer.data() + p_index * this->filter_size;
+      DstScalar* output_ptr_0 = reinterpret_cast<DstScalar*>(output_ptr) +
+                                p_index * this->output_channels;
+      DstScalar* output_ptr_1 = output_ptr_0 + this->output_channels;
+      DstScalar* output_ptr_2 = output_ptr_1 + this->output_channels;
+      DstScalar* output_ptr_3 = output_ptr_2 + this->output_channels;
+
+      // At the end of the output array we might get a block where the number of
+      // pixels is less than 4. When this happens we set the 'leftover' output
+      // pointer equal to the first output pointer, so that there's no risk of
+      // writing beyond the array bounds. At the end we write to the output
+      // array 'back to front' so that the outputs for the first pixel are
+      // written last, which means that the result will still be correct.
+      const std::int32_t remaining_pixels = pixel_end - p_index;
+      if (remaining_pixels < 4) {
+        output_ptr_3 = output_ptr_0;
+        if (remaining_pixels < 3) {
+          output_ptr_2 = output_ptr_0;
+          if (remaining_pixels < 2) {
+            output_ptr_1 = output_ptr_0;
+          }
+        }
       }
+
+      // Pre-load weights and activations.
+      int32x4_t weights[8] = {
+          vld1q_s32(weights_ptr),      vld1q_s32(weights_ptr + 4),
+          vld1q_s32(weights_ptr + 8),  vld1q_s32(weights_ptr + 12),
+          vld1q_s32(weights_ptr + 16), vld1q_s32(weights_ptr + 20),
+          vld1q_s32(weights_ptr + 24), vld1q_s32(weights_ptr + 28)};
+      weights_ptr += 32;
+      int32x4_t activations[4] = {
+          vld1q_s32(indirection_ptr[0]), vld1q_s32(indirection_ptr[1]),
+          vld1q_s32(indirection_ptr[2]), vld1q_s32(indirection_ptr[3])};
+
+      std::int32_t input_depth_offset = 0;
+      std::int32_t group_end_output_channel = output_channels_per_group;
+
+      std::int32_t c_out_index = 0;
+      do {
+        uint16x8_t accumulators[4];
+
+        if (Depth2OrMore) {
+          kernel_8x4x4_aarch64::AccumulationLoop_Depth2OrMore<IsGrouped>(
+              this->filter_size, input_depth_per_group / 4, input_depth_offset,
+              weights, activations, accumulators, weights_ptr, indirection_ptr);
+        } else {
+          kernel_8x4x4_aarch64::AccumulationLoop_Depth1<IsGrouped>(
+              this->filter_size, input_depth_offset, weights, activations,
+              accumulators, weights_ptr, indirection_ptr);
+        }
+
+        std::int32_t next_group_end_output_channel = group_end_output_channel;
+        if (IsGrouped && c_out_index >= group_end_output_channel - 8) {
+          input_depth_offset += input_depth_per_group;
+          next_group_end_output_channel =
+              group_end_output_channel + output_channels_per_group;
+        }
+
+        kernel_8x4x4_aarch64::OutputTransformAndLoadNextAndStore(
+            c_out_index, input_depth_offset, group_end_output_channel,
+            accumulators, weights, activations, output_transform, weights_ptr,
+            indirection_ptr, output_ptr_0, output_ptr_1, output_ptr_2,
+            output_ptr_3);
+
+        if (IsGrouped) {
+          group_end_output_channel = next_group_end_output_channel;
+        }
+      } while (c_out_index < this->output_channels);
     }
   }
+};
 
-  // Pre-load weights and activations.
-  int32x4_t weights[8] = {
-      vld1q_s32(weights_ptr),      vld1q_s32(weights_ptr + 4),
-      vld1q_s32(weights_ptr + 8),  vld1q_s32(weights_ptr + 12),
-      vld1q_s32(weights_ptr + 16), vld1q_s32(weights_ptr + 20),
-      vld1q_s32(weights_ptr + 24), vld1q_s32(weights_ptr + 28)};
-  weights_ptr += 32;
-  int32x4_t activations[4] = {
-      vld1q_s32(indirection_buffer[0]), vld1q_s32(indirection_buffer[1]),
-      vld1q_s32(indirection_buffer[2]), vld1q_s32(indirection_buffer[3])};
-
-  std::int32_t c_out_index = 0;
-  do {
-    // Declare accumulators
-    uint16x8_t accumulators[4];
-
-    if (Depth2OrMore) {
-      AccumulationLoop_Depth2OrMore(conv_kernel_size, channels_in / 4, weights,
-                                    activations, accumulators, weights_ptr,
-                                    indirection_buffer);
-    } else {
-      AccumulationLoop_Depth1(conv_kernel_size, weights, activations,
-                              accumulators, weights_ptr, indirection_buffer);
-    }
-
-    OutputTransformAndLoadNextAndStore(
-        c_out_index, channels_out, accumulators, weights, activations,
-        output_transform, weights_ptr, indirection_buffer, output_ptr_0,
-        output_ptr_1, output_ptr_2, output_ptr_3);
-
-    c_out_index += 8;
-  } while (c_out_index < channels_out);
-}
-
-}  // namespace kernel_8x4x4_aarch64
 }  // namespace indirect_bgemm
 }  // namespace core
 }  // namespace compute_engine

@@ -1,123 +1,195 @@
-
 #ifndef COMPUTE_ENGINE_INDIRECT_BGEMM_KERNEL_H_
 #define COMPUTE_ENGINE_INDIRECT_BGEMM_KERNEL_H_
 
 #include <cstdint>
-#include <type_traits>
+#include <vector>
 
-#ifdef __aarch64__
-#include "larq_compute_engine/core/indirect_bgemm/kernel_8x4x1_aarch64.h"
-#include "larq_compute_engine/core/indirect_bgemm/kernel_8x4x2_aarch64.h"
-#include "larq_compute_engine/core/indirect_bgemm/kernel_8x4x4_aarch64.h"
-#endif
+#include "larq_compute_engine/core/bconv2d/output_transform.h"
 #include "larq_compute_engine/core/bconv2d/params.h"
-#include "larq_compute_engine/core/indirect_bgemm/kernel_4x2_portable.h"
 #include "larq_compute_engine/core/types.h"
-#include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/kernels/internal/types.h"
-
-using namespace tflite;
 
 namespace compute_engine {
 namespace core {
 namespace indirect_bgemm {
 
-template <typename DstScalar>
-struct IndirectBGEMMKernel {
-  using MicroKernelFunction = void(const std::int32_t, const std::int32_t,
-                                   const std::int32_t, const std::int32_t,
-                                   const bconv2d::OutputTransform<DstScalar>&,
-                                   const TBitpacked*, const TBitpacked**,
-                                   DstScalar*);
-  MicroKernelFunction* micro_kernel_function;
+struct Kernel {
   const std::int32_t block_size_output_channels;
   const std::int32_t block_size_pixels;
   const std::int32_t block_size_depth;
-};
 
-// This function allows us to select which kernel to use at runtime based on any
-// parameter we choose: destination scalar; conv params; input/output shapes;
-// even detected CPU features.
-//     It is very important that this function is deterministic, as we rely on
-// the fact that the same kernel is selected for each call to `Eval` (as long as
-// the input shape doesn't change).
-template <typename DstScalar>
-inline IndirectBGEMMKernel<DstScalar> SelectRuntimeKernel(
-    const bconv2d::BConv2DParams* bconv2d_params,
-    const RuntimeShape& bitpacked_input_shape,
-    const RuntimeShape& output_shape) {
-#ifdef __aarch64__
-  // There are optimised assembly kernels for float and int8 output on Aarch64.
-  // They all use int16 accumulators. A different kernel is selected depending
-  // on whether the bitpacked number of input channels is a multiple of 4, 2, or
-  // 1, and whether that multiple is 1 or more than 1.
+  const std::int32_t input_depth;
+  const std::int32_t output_channels;
+  const std::int32_t filter_size;
+  const std::int32_t groups;
+  const std::int32_t num_output_pixels;
 
-  constexpr bool is_float_or_int8 = std::is_same<DstScalar, float>::value ||
-                                    std::is_same<DstScalar, std::int8_t>::value;
-  const int max_accumulator_value = bconv2d_params->filter_height *
-                                    bconv2d_params->filter_width *
-                                    bconv2d_params->channels_in;
-  const bool fits_in_int16_accumulators = max_accumulator_value + 512 < 1 << 16;
+  std::vector<TBitpacked> packed_weights;
+  std::vector<const TBitpacked*> indirection_buffer;
+  std::vector<TBitpacked> zero_buffer;
 
-  if (is_float_or_int8 && fits_in_int16_accumulators) {
-    // This weirdness is required because DstScalar could be `TBitpacked`, but
-    // in many cases RunKernel<TBitpacked, ...> isn't defined. As we can't use
-    // `if constexpr` (C++17), this causes a compile error despite the fact that
-    // we know that within this if block DstScalar must be float or int8.
-    using DS =
-        typename std::conditional<is_float_or_int8, DstScalar, float>::type;
-    using KFn = typename IndirectBGEMMKernel<DstScalar>::MicroKernelFunction;
+  Kernel(const std::int32_t block_size_output_channels,
+         const std::int32_t block_size_pixels,
+         const std::int32_t block_size_depth,
+         const bconv2d::BConv2DParams* bconv2d_params,
+         const RuntimeShape& bitpacked_input_shape,
+         const RuntimeShape& output_shape)
+      : block_size_output_channels(block_size_output_channels),
+        block_size_pixels(block_size_pixels),
+        block_size_depth(block_size_depth),
+        input_depth(bitpacked_input_shape.Dims(3)),
+        output_channels(bconv2d_params->channels_out),
+        filter_size(bconv2d_params->filter_height *
+                    bconv2d_params->filter_width),
+        groups(bconv2d_params->groups),
+        num_output_pixels(bitpacked_input_shape.Dims(0) * output_shape.Dims(1) *
+                          output_shape.Dims(2)) {}
 
-    if (bitpacked_input_shape.Dims(3) % 4 == 0) {
-      if (bitpacked_input_shape.Dims(3) > 4) {
-        return {(KFn*)&kernel_8x4x4_aarch64::RunKernel<DS, true>, 8, 4, 4};
-      } else {
-        return {(KFn*)&kernel_8x4x4_aarch64::RunKernel<DS, false>, 8, 4, 4};
-      }
-    } else if (bitpacked_input_shape.Dims(3) % 2 == 0) {
-      if (bitpacked_input_shape.Dims(3) > 2) {
-        return {(KFn*)&kernel_8x4x2_aarch64::RunKernel<DS, true>, 8, 4, 2};
-      } else {
-        return {(KFn*)&kernel_8x4x2_aarch64::RunKernel<DS, false>, 8, 4, 2};
-      }
-    } else {
-      if (bitpacked_input_shape.Dims(3) > 1) {
-        return {(KFn*)&kernel_8x4x1_aarch64::RunKernel<DS, true>, 8, 4, 1};
-      } else {
-        return {(KFn*)&kernel_8x4x1_aarch64::RunKernel<DS, false>, 8, 4, 1};
+  /**
+   * Pack the weights in the correct order. This procedure is (heavily)
+   * adapted from the following XNNPack function:
+   * https://github.com/google/XNNPACK/blob/80a8ac59849bfdae8d2e1409f5642baa502c0b9e/src/packing.c#L429-L484
+   */
+  void PackWeights(const TBitpacked* weights_ptr) {
+    const std::int32_t input_depth_per_group = input_depth / groups;
+    const std::int32_t output_channels_per_group = output_channels / groups;
+    const std::int32_t rounded_up_output_channels_per_group =
+        block_size_output_channels *
+        ((output_channels_per_group + block_size_output_channels - 1) /
+         block_size_output_channels);
+    packed_weights.resize(groups * rounded_up_output_channels_per_group *
+                              filter_size * input_depth_per_group +
+                          /* padding */ block_size_output_channels *
+                              block_size_depth);
+    std::int32_t packed_weights_index = 0;
+    for (std::int32_t group_id = 0; group_id < groups; group_id++) {
+      for (std::int32_t block_start = 0;
+           block_start < output_channels_per_group;
+           block_start += block_size_output_channels) {
+        const std::int32_t block_size =
+            std::min(output_channels_per_group - block_start,
+                     block_size_output_channels);
+        for (std::int32_t fi = 0; fi < filter_size; fi++) {
+          for (std::int32_t ci = 0; ci < input_depth_per_group;
+               ci += block_size_depth) {
+            for (std::int32_t block_offset = 0; block_offset < block_size;
+                 block_offset++) {
+              for (std::int32_t ci_offset = 0; ci_offset < block_size_depth;
+                   ci_offset++) {
+                const std::int32_t weights_index =
+                    (group_id * output_channels_per_group * filter_size *
+                     input_depth_per_group) +
+                    ((block_start + block_offset) * filter_size *
+                     input_depth_per_group) +
+                    fi * input_depth_per_group + ci + ci_offset;
+                packed_weights.at(packed_weights_index++) =
+                    weights_ptr[weights_index];
+              }
+            }
+            packed_weights_index +=
+                (block_size_output_channels - block_size) * block_size_depth;
+          }
+        }
       }
     }
   }
-#endif
 
-  // Fallback C++ kernel
-  return {&kernel_4x2_portable::RunKernel<DstScalar>, 4, 2, 1};
-}
+  /**
+   * Fill the indirection buffer. This procedure is (heavily) adapted from the
+   * following XNNPack function:
+   * https://github.com/google/XNNPACK/blob/80a8ac59849bfdae8d2e1409f5642baa502c0b9e/src/indirection.c#L18-L76
+   */
+  void FillIndirectionBuffer(const bconv2d::BConv2DParams* bconv2d_params,
+                             const RuntimeShape& bitpacked_input_shape,
+                             const RuntimeShape& output_shape,
+                             const TBitpacked* input_ptr) {
+    const std::int32_t filter_height = bconv2d_params->filter_height;
+    const std::int32_t filter_width = bconv2d_params->filter_width;
+    const std::int32_t stride_height = bconv2d_params->stride_height;
+    const std::int32_t stride_width = bconv2d_params->stride_width;
+    const std::int32_t dilation_height = bconv2d_params->dilation_height_factor;
+    const std::int32_t dilation_width = bconv2d_params->dilation_width_factor;
+    const std::int32_t input_padding_top =
+        bconv2d_params->padding_values.height;
+    const std::int32_t input_padding_left =
+        bconv2d_params->padding_values.width;
+    const std::int32_t batch_size = bitpacked_input_shape.Dims(0);
+    const std::int32_t input_height = bitpacked_input_shape.Dims(1);
+    const std::int32_t input_width = bitpacked_input_shape.Dims(2);
+    const std::int32_t output_height = output_shape.Dims(1);
+    const std::int32_t output_width = output_shape.Dims(2);
+    const std::int32_t output_size = num_output_pixels;
+    const std::int32_t tiled_output_size =
+        block_size_pixels *
+        ((output_size + block_size_pixels - 1) / block_size_pixels);
 
-template <typename DstScalar>
-void RunKernel(const IndirectBGEMMKernel<DstScalar>& kernel,
-               const std::int32_t conv_kernel_size,
-               const std::int32_t bitpacked_input_channels,
-               const std::int32_t output_size,
-               const std::int32_t output_channels,
-               const bconv2d::OutputTransform<DstScalar>& output_transform,
-               const TBitpacked* packed_weights_ptr,
-               const TBitpacked** indirection_buffer, DstScalar* output_ptr) {
-  // TODO: implement multithreading here.
-  for (std::int32_t pixel_start = 0; pixel_start < output_size;
-       pixel_start += kernel.block_size_pixels) {
-    const std::int32_t output_stride =
-        std::is_same<DstScalar, TBitpacked>::value
-            ? bitpacking::GetBitpackedSize(output_channels)
-            : output_channels;
-    kernel.micro_kernel_function(
-        std::min(output_size - pixel_start, kernel.block_size_pixels),
-        conv_kernel_size, bitpacked_input_channels, output_channels,
-        output_transform, packed_weights_ptr,
-        indirection_buffer + pixel_start * conv_kernel_size,
-        output_ptr + pixel_start * output_stride);
+    // Create the indirection buffer with padding (+ block_size_pixels) and fill
+    // it with pointers to the first element of the input, so that the padding
+    // at the end of the array contains pointers to valid memory.
+    indirection_buffer.assign(
+        tiled_output_size * filter_size + block_size_pixels, input_ptr);
+    // Assign the zero buffer that will be used for padding.
+    zero_buffer.assign(filter_size * input_depth, 0);
+
+    for (std::int32_t output_tile_start = 0;
+         output_tile_start < tiled_output_size;
+         output_tile_start += block_size_pixels) {
+      for (std::int32_t output_tile_offset = 0;
+           output_tile_offset < block_size_pixels; output_tile_offset++) {
+        const std::int32_t output_index =
+            std::min(output_tile_start + output_tile_offset, output_size - 1);
+        const std::int32_t batch_index =
+            output_index / (output_height * output_width);
+        const std::int32_t output_x = output_index % output_width;
+        const std::int32_t output_y =
+            (output_index % (output_height * output_width)) / output_width;
+        for (std::int32_t f_y = 0; f_y < filter_height; f_y++) {
+          const std::int32_t input_y = output_y * stride_height +
+                                       f_y * dilation_height -
+                                       input_padding_top;
+          if (0 <= input_y && input_y < input_height) {
+            for (std::int32_t f_x = 0; f_x < filter_width; f_x++) {
+              const std::int32_t input_x = output_x * stride_width +
+                                           f_x * dilation_width -
+                                           input_padding_left;
+              const std::int32_t kernel_index = f_y * filter_width + f_x;
+              const std::int32_t index = output_tile_start * filter_size +
+                                         kernel_index * block_size_pixels +
+                                         output_tile_offset;
+              if (0 <= input_x && input_x < input_width) {
+                indirection_buffer.at(index) =
+                    (input_ptr + (batch_index * input_height * input_width +
+                                  input_y * input_width + input_x) *
+                                     input_depth);
+              } else {
+                indirection_buffer.at(index) = zero_buffer.data();
+              }
+            }
+          } else {
+            for (std::int32_t f_x = 0; f_x < filter_width; f_x++) {
+              const std::int32_t kernel_index = f_y * filter_width + f_x;
+              const std::int32_t index = output_tile_start * filter_size +
+                                         kernel_index * block_size_pixels +
+                                         output_tile_offset;
+              indirection_buffer.at(index) = zero_buffer.data();
+            }
+          }
+        }
+      }
+    }
   }
-}
+
+  // To be implemented by concrete subclasses.
+  virtual void Run(const std::int32_t pixel_start, const std::int32_t pixel_end,
+                   void* output_ptr) const = 0;
+
+  void Dispatch(void* output_ptr) const {
+    // TODO: implement multithreading here.
+    Run(0, num_output_pixels, output_ptr);
+  };
+
+  virtual ~Kernel() {}
+};
 
 }  // namespace indirect_bgemm
 }  // namespace core

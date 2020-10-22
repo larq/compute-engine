@@ -65,7 +65,6 @@ cc_library(
     deps = [
         ":zero_padding_correction",
         "//larq_compute_engine/core/indirect_bgemm:kernels",
-        "//larq_compute_engine/core/indirect_bgemm:prepare",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_context",
         "@org_tensorflow//tensorflow/lite/kernels:cpu_backend_gemm",
         "@org_tensorflow//tensorflow/lite/kernels:padding",

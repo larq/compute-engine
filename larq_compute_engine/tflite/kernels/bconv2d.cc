@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstdint>
+#include <memory>
 
 #include "flatbuffers/flexbuffers.h"
 #include "larq_compute_engine/core/bconv2d/optimized_bgemm.h"
@@ -8,7 +9,7 @@
 #include "larq_compute_engine/core/bconv2d/reference.h"
 #include "larq_compute_engine/core/bconv2d/zero_padding_correction.h"
 #include "larq_compute_engine/core/indirect_bgemm/kernel.h"
-#include "larq_compute_engine/core/indirect_bgemm/prepare.h"
+#include "larq_compute_engine/core/indirect_bgemm/select_kernel.h"
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/tflite/kernels/utils.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
@@ -57,10 +58,8 @@ struct OpData {
   // This is used when we have 'same-zero' padding.
   std::vector<float> padding_buffer;
 
-  // These are used in the 'indirect bgemm' kernels.
-  std::vector<TBitpacked> packed_weights;
-  std::vector<const TBitpacked*> indirection_buffer;
-  std::vector<TBitpacked> zero_buffer;
+  // This is used for the 'indirect bgemm' kernel type.
+  core::indirect_bgemm::Kernel* indirect_bgemm_kernel;
 
   // IDs are the arbitrary identifiers used by TF Lite to identify and access
   // memory buffers. They are unique in the entire TF Lite context.
@@ -133,7 +132,11 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
 }
 
 void Free(TfLiteContext* context, void* buffer) {
-  delete reinterpret_cast<OpData*>(buffer);
+  const OpData* op_data = reinterpret_cast<OpData*>(buffer);
+  if (op_data->indirect_bgemm_kernel) {
+    delete op_data->indirect_bgemm_kernel;
+  }
+  delete op_data;
 }
 
 template <KernelType kernel_type>
@@ -173,7 +176,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     bconv2d_params->groups = 1;
   } else {
     TF_LITE_ENSURE_MSG(
-        context, kernel_type == KernelType::kReference,
+        context, kernel_type != KernelType::kOptimizedBGEMM,
         "Grouped binary convolutions are not supported with this kernel.");
     TF_LITE_ENSURE_EQ(context,
                       GetBitpackedSize(bconv2d_params->channels_in) %
@@ -395,9 +398,9 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
 
 // Fill in the OutputTransform values for float and/or int8 outputs
 template <typename DstScalar>
-void GetOutputTransform(OutputTransform<DstScalar>& output_transform,
-                        TfLiteContext* context, TfLiteNode* node,
-                        OpData* op_data) {
+inline void GetOutputTransform(OutputTransform<DstScalar>& output_transform,
+                               TfLiteContext* context, TfLiteNode* node,
+                               OpData* op_data) {
   static_assert(std::is_same<DstScalar, float>::value ||
                     std::is_same<DstScalar, std::int8_t>::value,
                 "");
@@ -408,9 +411,9 @@ void GetOutputTransform(OutputTransform<DstScalar>& output_transform,
 }
 
 // Fill in the OutputTransform values for bitpacked outputs
-void GetOutputTransform(OutputTransform<TBitpacked>& output_transform,
-                        TfLiteContext* context, TfLiteNode* node,
-                        OpData* op_data) {
+inline void GetOutputTransform(OutputTransform<TBitpacked>& output_transform,
+                               TfLiteContext* context, TfLiteNode* node,
+                               OpData* op_data) {
   const auto* thresholds = GetInput(context, node, 4);
   output_transform.thresholds = GetTensorData<std::int32_t>(thresholds);
 }
@@ -464,10 +467,8 @@ void EvalOptBGEMM(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
 template <typename DstScalar>
 void EvalOptIndirectBGEMM(TfLiteContext* context, TfLiteNode* node,
                           OpData* op_data) {
-  bool kernel_is_initialized = true;
   if (!op_data->one_time_setup_complete) {
     OneTimeSetup(context, node, op_data);
-    kernel_is_initialized = false;
   }
 
   auto* bconv2d_params = &op_data->params;
@@ -479,27 +480,22 @@ void EvalOptIndirectBGEMM(TfLiteContext* context, TfLiteNode* node,
   const auto bitpacked_input_shape = GetTensorShape(input);
   const auto output_shape = GetTensorShape(output);
 
-  const auto kernel = core::indirect_bgemm::SelectRuntimeKernel<DstScalar>(
-      &op_data->params, bitpacked_input_shape, output_shape);
-
-  OutputTransform<DstScalar> output_transform;
-  GetOutputTransform(output_transform, context, node, op_data);
-
-  if (!kernel_is_initialized) {
-    core::indirect_bgemm::FillIndirectionBuffer(
-        kernel.block_size_pixels, bconv2d_params, bitpacked_input_shape,
-        output_shape, GetTensorData<TBitpacked>(input),
-        op_data->indirection_buffer, op_data->zero_buffer);
-    core::indirect_bgemm::PackWeights(
-        kernel.block_size_output_channels, kernel.block_size_depth,
-        bconv2d_params, bitpacked_input_shape, output_shape,
-        GetTensorData<TBitpacked>(filter), op_data->packed_weights);
+  if (!op_data->indirect_bgemm_kernel) {
+    OutputTransform<DstScalar> output_transform;
+    GetOutputTransform(output_transform, context, node, op_data);
+    op_data->indirect_bgemm_kernel = core::indirect_bgemm::SelectRuntimeKernel(
+        &op_data->params, bitpacked_input_shape, output_shape,
+        output_transform);
+    op_data->indirect_bgemm_kernel->PackWeights(
+        GetTensorData<TBitpacked>(filter));
+    op_data->indirect_bgemm_kernel->FillIndirectionBuffer(
+        &op_data->params, bitpacked_input_shape, output_shape,
+        GetTensorData<TBitpacked>(input));
   }
 
   BConv2DOptimizedIndirectBGEMM<DstScalar>(
-      kernel, bconv2d_params, bitpacked_input_shape, output_shape,
-      output_transform, op_data->packed_weights.data(),
-      op_data->indirection_buffer.data(), GetTensorData<DstScalar>(output),
+      op_data->indirect_bgemm_kernel, bconv2d_params, bitpacked_input_shape,
+      output_shape, GetTensorData<DstScalar>(output),
       op_data->padding_buffer.data(), bconv2d_params->pad_value);
 }
 
