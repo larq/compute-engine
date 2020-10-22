@@ -121,7 +121,7 @@ void PrepareLCE::runOnFunction() {
   // replaced with a single Conv op with dilation parameter.
   patterns.insert<ConvertTFDilatedConvOp<TF::Conv2DOp>>(ctx);
 
-  TFL::populateWithGenerated(ctx, &patterns);
+  TFL::populateWithGenerated(ctx, patterns);
   applyPatternsAndFoldGreedily(func, patterns);
 }
 

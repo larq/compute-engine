@@ -301,7 +301,7 @@ void OptimizeLCE::runOnFunction() {
   auto* ctx = &getContext();
   auto func = getFunction();
 
-  TFL::populateWithGenerated(ctx, &patterns);
+  TFL::populateWithGenerated(ctx, patterns);
   if (experimental_enable_bitpacked_activations_) {
     patterns.insert<SetBitpackedActivations>(ctx);
   }

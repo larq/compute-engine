@@ -60,7 +60,7 @@ void BitpackWeightsLCE::runOnFunction() {
   auto* ctx = &getContext();
   auto func = getFunction();
 
-  TFL::populateWithGenerated(ctx, &patterns);
+  TFL::populateWithGenerated(ctx, patterns);
   applyPatternsAndFoldGreedily(func, patterns);
 }
 
