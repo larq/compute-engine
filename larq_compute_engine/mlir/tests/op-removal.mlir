@@ -1,4 +1,4 @@
-// RUN: lce-tf-opt %s -lce-op-removal-tf | FileCheck %s
+// RUN: lce-tf-opt %s -lce-op-removal-tf -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: @snapshot
 func @snapshot(%arg0: tensor<3xi32>) -> tensor<3xi32> {

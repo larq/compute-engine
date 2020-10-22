@@ -1,4 +1,4 @@
-// RUN: lce-tf-opt %s -lce-quantize  | FileCheck %s
+// RUN: lce-tf-opt %s -lce-quantize -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: quantize_bconv2d
 func @quantize_bconv2d(%arg0: tensor<1x224x224x1xi32>, %arg1: tensor<32x3x3x1xi32>, %arg2: none) -> tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>> {
