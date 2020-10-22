@@ -24,7 +24,7 @@ void LCEQuantizePass::runOnFunction() {
   OwningRewritePatternList patterns;
   auto func = getFunction();
   auto* ctx = func.getContext();
-  TFL::populateWithGenerated(ctx, &patterns);
+  TFL::populateWithGenerated(ctx, patterns);
   applyPatternsAndFoldGreedily(func, patterns);
 }
 }  // namespace

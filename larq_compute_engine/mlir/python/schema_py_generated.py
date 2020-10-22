@@ -2044,6 +2044,208 @@ class MirrorPadMode(object):
     SYMMETRIC = 1
 
 
+class SignatureDef(object):
+    __slots__ = ["_tab"]
+
+    @classmethod
+    def GetRootAsSignatureDef(cls, buf, offset):
+        n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, buf, offset)
+        x = SignatureDef()
+        x.Init(buf, n + offset)
+        return x
+
+    @classmethod
+    def SignatureDefBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
+
+    # SignatureDef
+    def Init(self, buf, pos):
+        self._tab = flatbuffers.table.Table(buf, pos)
+
+    # SignatureDef
+    def Inputs(self, j):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
+        if o != 0:
+            x = self._tab.Vector(o)
+            x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
+            x = self._tab.Indirect(x)
+            obj = TensorMap()
+            obj.Init(self._tab.Bytes, x)
+            return obj
+        return None
+
+    # SignatureDef
+    def InputsLength(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
+        if o != 0:
+            return self._tab.VectorLen(o)
+        return 0
+
+    # SignatureDef
+    def InputsIsNone(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
+        return o == 0
+
+    # SignatureDef
+    def Outputs(self, j):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        if o != 0:
+            x = self._tab.Vector(o)
+            x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
+            x = self._tab.Indirect(x)
+            obj = TensorMap()
+            obj.Init(self._tab.Bytes, x)
+            return obj
+        return None
+
+    # SignatureDef
+    def OutputsLength(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        if o != 0:
+            return self._tab.VectorLen(o)
+        return 0
+
+    # SignatureDef
+    def OutputsIsNone(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        return o == 0
+
+    # SignatureDef
+    def MethodName(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        if o != 0:
+            return self._tab.String(o + self._tab.Pos)
+        return None
+
+    # SignatureDef
+    def Key(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
+        if o != 0:
+            return self._tab.String(o + self._tab.Pos)
+        return None
+
+
+def SignatureDefStart(builder):
+    builder.StartObject(4)
+
+
+def SignatureDefAddInputs(builder, inputs):
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(inputs), 0
+    )
+
+
+def SignatureDefStartInputsVector(builder, numElems):
+    return builder.StartVector(4, numElems, 4)
+
+
+def SignatureDefAddOutputs(builder, outputs):
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(outputs), 0
+    )
+
+
+def SignatureDefStartOutputsVector(builder, numElems):
+    return builder.StartVector(4, numElems, 4)
+
+
+def SignatureDefAddMethodName(builder, methodName):
+    builder.PrependUOffsetTRelativeSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(methodName), 0
+    )
+
+
+def SignatureDefAddKey(builder, key):
+    builder.PrependUOffsetTRelativeSlot(
+        3, flatbuffers.number_types.UOffsetTFlags.py_type(key), 0
+    )
+
+
+def SignatureDefEnd(builder):
+    return builder.EndObject()
+
+
+class SignatureDefT(object):
+
+    # SignatureDefT
+    def __init__(self):
+        self.inputs = None  # type: List[TensorMapT]
+        self.outputs = None  # type: List[TensorMapT]
+        self.methodName = None  # type: str
+        self.key = None  # type: str
+
+    @classmethod
+    def InitFromBuf(cls, buf, pos):
+        signatureDef = SignatureDef()
+        signatureDef.Init(buf, pos)
+        return cls.InitFromObj(signatureDef)
+
+    @classmethod
+    def InitFromObj(cls, signatureDef):
+        x = SignatureDefT()
+        x._UnPack(signatureDef)
+        return x
+
+    # SignatureDefT
+    def _UnPack(self, signatureDef):
+        if signatureDef is None:
+            return
+        if not signatureDef.InputsIsNone():
+            self.inputs = []
+            for i in range(signatureDef.InputsLength()):
+                if signatureDef.Inputs(i) is None:
+                    self.inputs.append(None)
+                else:
+                    tensorMap_ = TensorMapT.InitFromObj(signatureDef.Inputs(i))
+                    self.inputs.append(tensorMap_)
+        if not signatureDef.OutputsIsNone():
+            self.outputs = []
+            for i in range(signatureDef.OutputsLength()):
+                if signatureDef.Outputs(i) is None:
+                    self.outputs.append(None)
+                else:
+                    tensorMap_ = TensorMapT.InitFromObj(signatureDef.Outputs(i))
+                    self.outputs.append(tensorMap_)
+        self.methodName = signatureDef.MethodName()
+        self.key = signatureDef.Key()
+
+    # SignatureDefT
+    def Pack(self, builder):
+        if self.inputs is not None:
+            inputslist = []
+            for i in range(len(self.inputs)):
+                inputslist.append(self.inputs[i].Pack(builder))
+            SignatureDefStartInputsVector(builder, len(self.inputs))
+            for i in reversed(range(len(self.inputs))):
+                builder.PrependUOffsetTRelative(inputslist[i])
+            inputs = builder.EndVector(len(self.inputs))
+        if self.outputs is not None:
+            outputslist = []
+            for i in range(len(self.outputs)):
+                outputslist.append(self.outputs[i].Pack(builder))
+            SignatureDefStartOutputsVector(builder, len(self.outputs))
+            for i in reversed(range(len(self.outputs))):
+                builder.PrependUOffsetTRelative(outputslist[i])
+            outputs = builder.EndVector(len(self.outputs))
+        if self.methodName is not None:
+            methodName = builder.CreateString(self.methodName)
+        if self.key is not None:
+            key = builder.CreateString(self.key)
+        SignatureDefStart(builder)
+        if self.inputs is not None:
+            SignatureDefAddInputs(builder, inputs)
+        if self.outputs is not None:
+            SignatureDefAddOutputs(builder, outputs)
+        if self.methodName is not None:
+            SignatureDefAddMethodName(builder, methodName)
+        if self.key is not None:
+            SignatureDefAddKey(builder, key)
+        signatureDef = SignatureDefEnd(builder)
+        return signatureDef
+
+
 class SelectOptions(object):
     __slots__ = ["_tab"]
 
@@ -2803,6 +3005,96 @@ class TopKV2OptionsT(object):
         TopKV2OptionsStart(builder)
         topKV2Options = TopKV2OptionsEnd(builder)
         return topKV2Options
+
+
+class CumsumOptions(object):
+    __slots__ = ["_tab"]
+
+    @classmethod
+    def GetRootAsCumsumOptions(cls, buf, offset):
+        n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, buf, offset)
+        x = CumsumOptions()
+        x.Init(buf, n + offset)
+        return x
+
+    @classmethod
+    def CumsumOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
+
+    # CumsumOptions
+    def Init(self, buf, pos):
+        self._tab = flatbuffers.table.Table(buf, pos)
+
+    # CumsumOptions
+    def Exclusive(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
+        if o != 0:
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
+        return False
+
+    # CumsumOptions
+    def Reverse(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        if o != 0:
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
+        return False
+
+
+def CumsumOptionsStart(builder):
+    builder.StartObject(2)
+
+
+def CumsumOptionsAddExclusive(builder, exclusive):
+    builder.PrependBoolSlot(0, exclusive, 0)
+
+
+def CumsumOptionsAddReverse(builder, reverse):
+    builder.PrependBoolSlot(1, reverse, 0)
+
+
+def CumsumOptionsEnd(builder):
+    return builder.EndObject()
+
+
+class CumsumOptionsT(object):
+
+    # CumsumOptionsT
+    def __init__(self):
+        self.exclusive = False  # type: bool
+        self.reverse = False  # type: bool
+
+    @classmethod
+    def InitFromBuf(cls, buf, pos):
+        cumsumOptions = CumsumOptions()
+        cumsumOptions.Init(buf, pos)
+        return cls.InitFromObj(cumsumOptions)
+
+    @classmethod
+    def InitFromObj(cls, cumsumOptions):
+        x = CumsumOptionsT()
+        x._UnPack(cumsumOptions)
+        return x
+
+    # CumsumOptionsT
+    def _UnPack(self, cumsumOptions):
+        if cumsumOptions is None:
+            return
+        self.exclusive = cumsumOptions.Exclusive()
+        self.reverse = cumsumOptions.Reverse()
+
+    # CumsumOptionsT
+    def Pack(self, builder):
+        CumsumOptionsStart(builder)
+        CumsumOptionsAddExclusive(builder, self.exclusive)
+        CumsumOptionsAddReverse(builder, self.reverse)
+        cumsumOptions = CumsumOptionsEnd(builder)
+        return cumsumOptions
 
 
 class TileOptions(object):
@@ -3722,7 +4014,7 @@ class OperatorT(object):
         self.builtinOptionsType = 0  # type: int
         self.builtinOptions = (
             None
-        )  # type: Union[None, Conv2DOptionsT, DepthwiseConv2DOptionsT, ConcatEmbeddingsOptionsT, LSHProjectionOptionsT, Pool2DOptionsT, SVDFOptionsT, RNNOptionsT, FullyConnectedOptionsT, SoftmaxOptionsT, ConcatenationOptionsT, AddOptionsT, L2NormOptionsT, LocalResponseNormalizationOptionsT, LSTMOptionsT, ResizeBilinearOptionsT, CallOptionsT, ReshapeOptionsT, SkipGramOptionsT, SpaceToDepthOptionsT, EmbeddingLookupSparseOptionsT, MulOptionsT, PadOptionsT, GatherOptionsT, BatchToSpaceNDOptionsT, SpaceToBatchNDOptionsT, TransposeOptionsT, ReducerOptionsT, SubOptionsT, DivOptionsT, SqueezeOptionsT, SequenceRNNOptionsT, StridedSliceOptionsT, ExpOptionsT, TopKV2OptionsT, SplitOptionsT, LogSoftmaxOptionsT, CastOptionsT, DequantizeOptionsT, MaximumMinimumOptionsT, ArgMaxOptionsT, LessOptionsT, NegOptionsT, PadV2OptionsT, GreaterOptionsT, GreaterEqualOptionsT, LessEqualOptionsT, SelectOptionsT, SliceOptionsT, TransposeConvOptionsT, SparseToDenseOptionsT, TileOptionsT, ExpandDimsOptionsT, EqualOptionsT, NotEqualOptionsT, ShapeOptionsT, PowOptionsT, ArgMinOptionsT, FakeQuantOptionsT, PackOptionsT, LogicalOrOptionsT, OneHotOptionsT, LogicalAndOptionsT, LogicalNotOptionsT, UnpackOptionsT, FloorDivOptionsT, SquareOptionsT, ZerosLikeOptionsT, FillOptionsT, BidirectionalSequenceLSTMOptionsT, BidirectionalSequenceRNNOptionsT, UnidirectionalSequenceLSTMOptionsT, FloorModOptionsT, RangeOptionsT, ResizeNearestNeighborOptionsT, LeakyReluOptionsT, SquaredDifferenceOptionsT, MirrorPadOptionsT, AbsOptionsT, SplitVOptionsT, UniqueOptionsT, ReverseV2OptionsT, AddNOptionsT, GatherNdOptionsT, CosOptionsT, WhereOptionsT, RankOptionsT, ReverseSequenceOptionsT, MatrixDiagOptionsT, QuantizeOptionsT, MatrixSetDiagOptionsT, HardSwishOptionsT, IfOptionsT, WhileOptionsT, DepthToSpaceOptionsT, NonMaxSuppressionV4OptionsT, NonMaxSuppressionV5OptionsT, ScatterNdOptionsT, SelectV2OptionsT, DensifyOptionsT, SegmentSumOptionsT, BatchMatMulOptionsT]
+        )  # type: Union[None, Conv2DOptionsT, DepthwiseConv2DOptionsT, ConcatEmbeddingsOptionsT, LSHProjectionOptionsT, Pool2DOptionsT, SVDFOptionsT, RNNOptionsT, FullyConnectedOptionsT, SoftmaxOptionsT, ConcatenationOptionsT, AddOptionsT, L2NormOptionsT, LocalResponseNormalizationOptionsT, LSTMOptionsT, ResizeBilinearOptionsT, CallOptionsT, ReshapeOptionsT, SkipGramOptionsT, SpaceToDepthOptionsT, EmbeddingLookupSparseOptionsT, MulOptionsT, PadOptionsT, GatherOptionsT, BatchToSpaceNDOptionsT, SpaceToBatchNDOptionsT, TransposeOptionsT, ReducerOptionsT, SubOptionsT, DivOptionsT, SqueezeOptionsT, SequenceRNNOptionsT, StridedSliceOptionsT, ExpOptionsT, TopKV2OptionsT, SplitOptionsT, LogSoftmaxOptionsT, CastOptionsT, DequantizeOptionsT, MaximumMinimumOptionsT, ArgMaxOptionsT, LessOptionsT, NegOptionsT, PadV2OptionsT, GreaterOptionsT, GreaterEqualOptionsT, LessEqualOptionsT, SelectOptionsT, SliceOptionsT, TransposeConvOptionsT, SparseToDenseOptionsT, TileOptionsT, ExpandDimsOptionsT, EqualOptionsT, NotEqualOptionsT, ShapeOptionsT, PowOptionsT, ArgMinOptionsT, FakeQuantOptionsT, PackOptionsT, LogicalOrOptionsT, OneHotOptionsT, LogicalAndOptionsT, LogicalNotOptionsT, UnpackOptionsT, FloorDivOptionsT, SquareOptionsT, ZerosLikeOptionsT, FillOptionsT, BidirectionalSequenceLSTMOptionsT, BidirectionalSequenceRNNOptionsT, UnidirectionalSequenceLSTMOptionsT, FloorModOptionsT, RangeOptionsT, ResizeNearestNeighborOptionsT, LeakyReluOptionsT, SquaredDifferenceOptionsT, MirrorPadOptionsT, AbsOptionsT, SplitVOptionsT, UniqueOptionsT, ReverseV2OptionsT, AddNOptionsT, GatherNdOptionsT, CosOptionsT, WhereOptionsT, RankOptionsT, ReverseSequenceOptionsT, MatrixDiagOptionsT, QuantizeOptionsT, MatrixSetDiagOptionsT, HardSwishOptionsT, IfOptionsT, WhileOptionsT, DepthToSpaceOptionsT, NonMaxSuppressionV4OptionsT, NonMaxSuppressionV5OptionsT, ScatterNdOptionsT, SelectV2OptionsT, DensifyOptionsT, SegmentSumOptionsT, BatchMatMulOptionsT, CumsumOptionsT]
         self.customOptions = None  # type: List[int]
         self.customOptionsFormat = 0  # type: int
         self.mutatingVariableInputs = None  # type: List[bool]
@@ -4861,6 +5153,7 @@ class BuiltinOptions(object):
     DensifyOptions = 99
     SegmentSumOptions = 100
     BatchMatMulOptions = 101
+    CumsumOptions = 102
 
 
 def BuiltinOptionsCreator(unionType, table):
@@ -5070,6 +5363,8 @@ def BuiltinOptionsCreator(unionType, table):
         return SegmentSumOptionsT.InitFromBuf(table.Bytes, table.Pos)
     if unionType == BuiltinOptions().BatchMatMulOptions:
         return BatchMatMulOptionsT.InitFromBuf(table.Bytes, table.Pos)
+    if unionType == BuiltinOptions().CumsumOptions:
+        return CumsumOptionsT.InitFromBuf(table.Bytes, table.Pos)
     return None
 
 
@@ -5547,6 +5842,7 @@ class BuiltinOperator(object):
     SEGMENT_SUM = 125
     BATCH_MATMUL = 126
     PLACEHOLDER_FOR_GREATER_OP_CODES = 127
+    CUMSUM = 128
 
 
 class PadV2Options(object):
@@ -5842,9 +6138,33 @@ class Model(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
         return o == 0
 
+    # Model
+    def SignatureDefs(self, j):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
+        if o != 0:
+            x = self._tab.Vector(o)
+            x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
+            x = self._tab.Indirect(x)
+            obj = SignatureDef()
+            obj.Init(self._tab.Bytes, x)
+            return obj
+        return None
+
+    # Model
+    def SignatureDefsLength(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
+        if o != 0:
+            return self._tab.VectorLen(o)
+        return 0
+
+    # Model
+    def SignatureDefsIsNone(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
+        return o == 0
+
 
 def ModelStart(builder):
-    builder.StartObject(7)
+    builder.StartObject(8)
 
 
 def ModelAddVersion(builder, version):
@@ -5907,6 +6227,16 @@ def ModelStartMetadataVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
 
 
+def ModelAddSignatureDefs(builder, signatureDefs):
+    builder.PrependUOffsetTRelativeSlot(
+        7, flatbuffers.number_types.UOffsetTFlags.py_type(signatureDefs), 0
+    )
+
+
+def ModelStartSignatureDefsVector(builder, numElems):
+    return builder.StartVector(4, numElems, 4)
+
+
 def ModelEnd(builder):
     return builder.EndObject()
 
@@ -5922,6 +6252,7 @@ class ModelT(object):
         self.buffers = None  # type: List[BufferT]
         self.metadataBuffer = None  # type: List[int]
         self.metadata = None  # type: List[MetadataT]
+        self.signatureDefs = None  # type: List[SignatureDefT]
 
     @classmethod
     def InitFromBuf(cls, buf, pos):
@@ -5980,6 +6311,14 @@ class ModelT(object):
                 else:
                     metadata_ = MetadataT.InitFromObj(model.Metadata(i))
                     self.metadata.append(metadata_)
+        if not model.SignatureDefsIsNone():
+            self.signatureDefs = []
+            for i in range(model.SignatureDefsLength()):
+                if model.SignatureDefs(i) is None:
+                    self.signatureDefs.append(None)
+                else:
+                    signatureDef_ = SignatureDefT.InitFromObj(model.SignatureDefs(i))
+                    self.signatureDefs.append(signatureDef_)
 
     # ModelT
     def Pack(self, builder):
@@ -6025,6 +6364,14 @@ class ModelT(object):
             for i in reversed(range(len(self.metadata))):
                 builder.PrependUOffsetTRelative(metadatalist[i])
             metadata = builder.EndVector(len(self.metadata))
+        if self.signatureDefs is not None:
+            signatureDefslist = []
+            for i in range(len(self.signatureDefs)):
+                signatureDefslist.append(self.signatureDefs[i].Pack(builder))
+            ModelStartSignatureDefsVector(builder, len(self.signatureDefs))
+            for i in reversed(range(len(self.signatureDefs))):
+                builder.PrependUOffsetTRelative(signatureDefslist[i])
+            signatureDefs = builder.EndVector(len(self.signatureDefs))
         ModelStart(builder)
         ModelAddVersion(builder, self.version)
         if self.operatorCodes is not None:
@@ -6039,6 +6386,8 @@ class ModelT(object):
             ModelAddMetadataBuffer(builder, metadataBuffer)
         if self.metadata is not None:
             ModelAddMetadata(builder, metadata)
+        if self.signatureDefs is not None:
+            ModelAddSignatureDefs(builder, signatureDefs)
         model = ModelEnd(builder)
         return model
 
@@ -8704,6 +9053,99 @@ class GatherOptionsT(object):
         GatherOptionsAddAxis(builder, self.axis)
         gatherOptions = GatherOptionsEnd(builder)
         return gatherOptions
+
+
+class TensorMap(object):
+    __slots__ = ["_tab"]
+
+    @classmethod
+    def GetRootAsTensorMap(cls, buf, offset):
+        n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, buf, offset)
+        x = TensorMap()
+        x.Init(buf, n + offset)
+        return x
+
+    @classmethod
+    def TensorMapBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
+
+    # TensorMap
+    def Init(self, buf, pos):
+        self._tab = flatbuffers.table.Table(buf, pos)
+
+    # TensorMap
+    def Name(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
+        if o != 0:
+            return self._tab.String(o + self._tab.Pos)
+        return None
+
+    # TensorMap
+    def TensorIndex(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        if o != 0:
+            return self._tab.Get(
+                flatbuffers.number_types.Uint32Flags, o + self._tab.Pos
+            )
+        return 0
+
+
+def TensorMapStart(builder):
+    builder.StartObject(2)
+
+
+def TensorMapAddName(builder, name):
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0
+    )
+
+
+def TensorMapAddTensorIndex(builder, tensorIndex):
+    builder.PrependUint32Slot(1, tensorIndex, 0)
+
+
+def TensorMapEnd(builder):
+    return builder.EndObject()
+
+
+class TensorMapT(object):
+
+    # TensorMapT
+    def __init__(self):
+        self.name = None  # type: str
+        self.tensorIndex = 0  # type: int
+
+    @classmethod
+    def InitFromBuf(cls, buf, pos):
+        tensorMap = TensorMap()
+        tensorMap.Init(buf, pos)
+        return cls.InitFromObj(tensorMap)
+
+    @classmethod
+    def InitFromObj(cls, tensorMap):
+        x = TensorMapT()
+        x._UnPack(tensorMap)
+        return x
+
+    # TensorMapT
+    def _UnPack(self, tensorMap):
+        if tensorMap is None:
+            return
+        self.name = tensorMap.Name()
+        self.tensorIndex = tensorMap.TensorIndex()
+
+    # TensorMapT
+    def Pack(self, builder):
+        if self.name is not None:
+            name = builder.CreateString(self.name)
+        TensorMapStart(builder)
+        if self.name is not None:
+            TensorMapAddName(builder, name)
+        TensorMapAddTensorIndex(builder, self.tensorIndex)
+        tensorMap = TensorMapEnd(builder)
+        return tensorMap
 
 
 class MirrorPadOptions(object):
