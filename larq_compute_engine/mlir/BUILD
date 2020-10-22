@@ -278,12 +278,19 @@ pybind_extension(
     ],
 )
 
+genrule(
+    name = "tflite_schema_py",
+    srcs = ["@org_tensorflow//tensorflow/lite/python:schema_py"],
+    outs = ["python/tflite_schema.py"],
+    cmd = "cp $< $@",
+)
+
 py_library(
     name = "converter",
     srcs = [
         "python/converter.py",
-        "python/schema_py_generated.py",
         "python/util.py",
+        ":tflite_schema_py",
     ],
     deps = [
         ":_graphdef_tfl_flatbuffer",
@@ -293,7 +300,6 @@ py_library(
 exports_files([
     "python/converter.py",
     "python/util.py",
-    "python/schema_py_generated.py",
     "__init__.py",
     "python/__init__.py",
 ])
