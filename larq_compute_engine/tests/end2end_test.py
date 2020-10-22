@@ -182,7 +182,7 @@ def test_simple_model(model_cls):
         atol = 0.001
 
     # Test on a single batch of images
-    inputs = next(tfds.as_numpy(dataset.map(lambda *data: data[0]).take(1)))
+    inputs = next(dataset.map(lambda *data: data[0]).take(1).as_numpy_iterator())
     outputs = model(inputs).numpy()
     assert_model_output(model_lce, inputs, outputs, rtol, atol)
 
