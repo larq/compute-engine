@@ -112,7 +112,7 @@ inline void BConv2DOptimizedBGEMM(
   // output tensor with zeroes in advance so that the BGEMM doesn't have to
   // worry about doing the padding.
   if (std::is_same<DstScalar, TBitpacked>::value &&
-      output_shape.Dims(3) % 32 != 0) {
+      output_shape.Dims(3) % bitpacking_bitwidth != 0) {
     std::fill(
         output_data,
         output_data + FlatSizeSkipDim(output_shape, 3) *
