@@ -11,6 +11,7 @@ sys.modules["larq_compute_engine.mlir._graphdef_tfl_flatbuffer"] = mock.MagicMoc
 sys.modules[
     "larq_compute_engine.tflite.python.interpreter_wrapper_lite"
 ] = mock.MagicMock()
+sys.modules["larq_compute_engine.mlir.python.tflite_schema"] = mock.MagicMock()
 
 from larq_compute_engine.mlir.python.converter import convert_keras_model
 from larq_compute_engine.mlir._graphdef_tfl_flatbuffer import (

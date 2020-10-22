@@ -3,7 +3,7 @@ import copy
 import flatbuffers
 import tensorflow as tf
 
-from larq_compute_engine.mlir.python import schema_py_generated as tflite_schema
+from larq_compute_engine.mlir.python import tflite_schema
 
 
 _MAP_TFLITE_ENUM_TO_TF_TYPES = {
