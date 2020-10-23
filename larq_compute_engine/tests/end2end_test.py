@@ -139,19 +139,24 @@ def assert_model_output(model_lce, inputs, outputs, rtol, atol):
     np.testing.assert_allclose(actual_outputs, outputs, rtol=rtol, atol=atol)
 
 
+@pytest.fixture(scope="module")
+def dataset():
+    return (
+        tfds.load("tf_flowers", split="train", try_gcs=True)
+        .map(preprocess, num_parallel_calls=2)
+        .take(100)
+        .cache()
+        .shuffle(100)
+        .batch(10)
+        .prefetch(1)
+    )
+
+
 @pytest.mark.parametrize(
     "model_cls",
     [toy_model, toy_model_sequential, toy_model_int8, lqz.sota.QuickNetSmall],
 )
-def test_simple_model(model_cls):
-    # Test on the TF flowers dataset
-    dataset = (
-        tfds.load("tf_flowers", split="train", try_gcs=True)
-        .map(preprocess)
-        .shuffle(100)
-        .batch(10)
-    )
-
+def test_simple_model(dataset, model_cls):
     model = model_cls(weights="imagenet")
 
     # For the untrained models, do a very small amount of training so that the
@@ -162,7 +167,7 @@ def test_simple_model(model_cls):
             optimizer=tf.keras.optimizers.Adam(1e-4),
             loss="sparse_categorical_crossentropy",
         )
-        model.fit(dataset, epochs=1, steps_per_epoch=10)
+        model.fit(dataset, epochs=1)
 
     model_lce = convert_keras_model(
         model, experimental_enable_bitpacked_activations=True
@@ -182,9 +187,9 @@ def test_simple_model(model_cls):
         atol = 0.001
 
     # Test on a single batch of images
-    inputs = next(dataset.map(lambda *data: data[0]).take(1).as_numpy_iterator())
+    inputs = next(iter(dataset.take(1)))[0]
     outputs = model(inputs).numpy()
-    assert_model_output(model_lce, inputs, outputs, rtol, atol)
+    assert_model_output(model_lce, inputs.numpy(), outputs, rtol, atol)
 
     # Test on some random inputs
     input_shape = (10, *model.input.shape[1:])
