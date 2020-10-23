@@ -141,7 +141,7 @@ def assert_model_output(model_lce, inputs, outputs, rtol, atol):
 
 @pytest.mark.parametrize(
     "model_cls",
-    [toy_model, toy_model_sequential, toy_model_int8, lqz.sota.QuickNet],
+    [toy_model, toy_model_sequential, toy_model_int8, lqz.sota.QuickNetSmall],
 )
 def test_simple_model(model_cls):
     # Test on the TF flowers dataset
@@ -157,7 +157,7 @@ def test_simple_model(model_cls):
     # For the untrained models, do a very small amount of training so that the
     # batch norm stats (and, less importantly, the weights) have sensible
     # values.
-    if model_cls != lqz.sota.QuickNet:
+    if model_cls != lqz.sota.QuickNetSmall:
         model.compile(
             optimizer=tf.keras.optimizers.Adam(1e-4),
             loss="sparse_categorical_crossentropy",
@@ -168,8 +168,8 @@ def test_simple_model(model_cls):
         model, experimental_enable_bitpacked_activations=True
     )
 
-    if model_cls == lqz.sota.QuickNet:
-        # Since QuickNet is a deep model we are more tolerant of error.
+    if model_cls == lqz.sota.QuickNetSmall:
+        # Since QuickNetSmall is a deep model we are more tolerant of error.
         rtol = 0.05
         atol = 0.2
     elif model_cls == toy_model_int8:
@@ -182,7 +182,7 @@ def test_simple_model(model_cls):
         atol = 0.001
 
     # Test on a single batch of images
-    inputs = next(tfds.as_numpy(dataset.map(lambda *data: data[0]).take(1)))
+    inputs = next(dataset.map(lambda *data: data[0]).take(1).as_numpy_iterator())
     outputs = model(inputs).numpy()
     assert_model_output(model_lce, inputs, outputs, rtol, atol)
 
