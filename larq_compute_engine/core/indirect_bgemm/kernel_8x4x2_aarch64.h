@@ -184,17 +184,17 @@ inline void AccumulationLoop_Depth2OrMore(
       XOR_POPCOUNT_ACCUM_LOAD_BLOCK_64
 
       "bgt 0b\n\t"  // Outer loop branch
-      : [ accum_0 ] "=&w"(accumulators[0]), [ accum_1 ] "=&w"(accumulators[1]),
-        [ accum_2 ] "=&w"(accumulators[2]), [ accum_3 ] "=&w"(accumulators[3]),
-        [ w_ptr ] "+r"(weights_ptr),
-        [ indirection_buffer ] "+r"(indirection_buffer_),
-        [ a_ptr_0 ] "+r"(a_ptr_0), [ a_ptr_1 ] "+r"(a_ptr_1),
-        [ a_ptr_2 ] "+r"(a_ptr_2), [ a_ptr_3 ] "+r"(a_ptr_3)
-      : [ w_0 ] "w"(weights[0]), [ w_1 ] "w"(weights[1]),
-        [ w_2 ] "w"(weights[2]), [ w_3 ] "w"(weights[3]),
-        [ a_0 ] "w"(activations[0]), [ a_1 ] "w"(activations[1]),
-        [ a_2 ] "w"(activations[2]), [ a_3 ] "w"(activations[3]),
-        [ kernel_size ] "r"(conv_kernel_size), [ depth ] "r"(depth)
+      : [accum_0] "=&w"(accumulators[0]), [accum_1] "=&w"(accumulators[1]),
+        [accum_2] "=&w"(accumulators[2]), [accum_3] "=&w"(accumulators[3]),
+        [w_ptr] "+r"(weights_ptr),
+        [indirection_buffer] "+r"(indirection_buffer_), [a_ptr_0] "+r"(a_ptr_0),
+        [a_ptr_1] "+r"(a_ptr_1), [a_ptr_2] "+r"(a_ptr_2),
+        [a_ptr_3] "+r"(a_ptr_3)
+      : [w_0] "w"(weights[0]), [w_1] "w"(weights[1]), [w_2] "w"(weights[2]),
+        [w_3] "w"(weights[3]), [a_0] "w"(activations[0]),
+        [a_1] "w"(activations[1]), [a_2] "w"(activations[2]),
+        [a_3] "w"(activations[3]), [kernel_size] "r"(conv_kernel_size),
+        [depth] "r"(depth)
       : "cc", "memory", "x0", "x1", "v0", "v1", "v2", "v3", "v4", "v5", "v6",
         "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15");
 }
@@ -231,17 +231,17 @@ inline void AccumulationLoop_Depth1(std::int32_t conv_kernel_size,
       XOR_POPCOUNT_ACCUM_LOAD_BLOCK_64
 
       "bgt 0b\n\t"  // Loop branch
-      : [ accum_0 ] "=&w"(accumulators[0]), [ accum_1 ] "=&w"(accumulators[1]),
-        [ accum_2 ] "=&w"(accumulators[2]), [ accum_3 ] "=&w"(accumulators[3]),
-        [ w_ptr ] "+r"(weights_ptr),
-        [ indirection_buffer ] "+r"(indirection_buffer_),
-        [ a_ptr_0 ] "=&r"(a_ptr_0), [ a_ptr_1 ] "=&r"(a_ptr_1),
-        [ a_ptr_2 ] "=&r"(a_ptr_2), [ a_ptr_3 ] "=&r"(a_ptr_3),
-        [ ks_index ] "+r"(conv_kernel_size)
-      : [ w_0 ] "w"(weights[0]), [ w_1 ] "w"(weights[1]),
-        [ w_2 ] "w"(weights[2]), [ w_3 ] "w"(weights[3]),
-        [ a_0 ] "w"(activations[0]), [ a_1 ] "w"(activations[1]),
-        [ a_2 ] "w"(activations[2]), [ a_3 ] "w"(activations[3])
+      : [accum_0] "=&w"(accumulators[0]), [accum_1] "=&w"(accumulators[1]),
+        [accum_2] "=&w"(accumulators[2]), [accum_3] "=&w"(accumulators[3]),
+        [w_ptr] "+r"(weights_ptr),
+        [indirection_buffer] "+r"(indirection_buffer_),
+        [a_ptr_0] "=&r"(a_ptr_0), [a_ptr_1] "=&r"(a_ptr_1),
+        [a_ptr_2] "=&r"(a_ptr_2), [a_ptr_3] "=&r"(a_ptr_3),
+        [ks_index] "+r"(conv_kernel_size)
+      : [w_0] "w"(weights[0]), [w_1] "w"(weights[1]), [w_2] "w"(weights[2]),
+        [w_3] "w"(weights[3]), [a_0] "w"(activations[0]),
+        [a_1] "w"(activations[1]), [a_2] "w"(activations[2]),
+        [a_3] "w"(activations[3])
       : "cc", "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8",
         "v9", "v10", "v11", "v12", "v13", "v14", "v15");
 }
@@ -350,26 +350,24 @@ inline void OutputTransformAndLoadNextAndStore(
       "fadd %[result_11].4s, %[result_11].4s, v5.4s\n\t"
       "fadd %[result_00].4s, %[result_00].4s, v4.4s\n\t"
       "fadd %[result_01].4s, %[result_01].4s, v5.4s\n\t"
-      : [ w_0 ] "=&w"(weights[0]), [ w_1 ] "=&w"(weights[1]),
-        [ w_2 ] "=&w"(weights[2]), [ w_3 ] "=&w"(weights[3]),
-        [ a_0 ] "=&w"(activations[0]), [ a_1 ] "=&w"(activations[1]),
-        [ a_2 ] "=&w"(activations[2]), [ a_3 ] "=&w"(activations[3]),
-        [ result_00 ] "=&w"(results[0].val[0]),
-        [ result_01 ] "=&w"(results[0].val[1]),
-        [ result_10 ] "=&w"(results[1].val[0]),
-        [ result_11 ] "=&w"(results[1].val[1]),
-        [ result_20 ] "=&w"(results[2].val[0]),
-        [ result_21 ] "=&w"(results[2].val[1]),
-        [ result_30 ] "=&w"(results[3].val[0]),
-        [ result_31 ] "=&w"(results[3].val[1])
-      : [ accum_0 ] "w"(accumulators[0]), [ accum_1 ] "w"(accumulators[1]),
-        [ accum_2 ] "w"(accumulators[2]), [ accum_3 ] "w"(accumulators[3]),
-        [ clamp_min_addr ] "r"(&output_transform.clamp_min),
-        [ clamp_max_addr ] "r"(&output_transform.clamp_max),
-        [ multiplier_addr ] "r"(output_transform.multiplier + c_out_index),
-        [ bias_addr ] "r"(output_transform.bias + c_out_index),
-        [ w_ptr ] "r"(weights_ptr),
-        [ indirection_buffer ] "r"(indirection_buffer)
+      :
+      [w_0] "=&w"(weights[0]), [w_1] "=&w"(weights[1]), [w_2] "=&w"(weights[2]),
+      [w_3] "=&w"(weights[3]), [a_0] "=&w"(activations[0]),
+      [a_1] "=&w"(activations[1]), [a_2] "=&w"(activations[2]),
+      [a_3] "=&w"(activations[3]), [result_00] "=&w"(results[0].val[0]),
+      [result_01] "=&w"(results[0].val[1]),
+      [result_10] "=&w"(results[1].val[0]),
+      [result_11] "=&w"(results[1].val[1]),
+      [result_20] "=&w"(results[2].val[0]),
+      [result_21] "=&w"(results[2].val[1]),
+      [result_30] "=&w"(results[3].val[0]), [result_31] "=&w"(results[3].val[1])
+      : [accum_0] "w"(accumulators[0]), [accum_1] "w"(accumulators[1]),
+        [accum_2] "w"(accumulators[2]), [accum_3] "w"(accumulators[3]),
+        [clamp_min_addr] "r"(&output_transform.clamp_min),
+        [clamp_max_addr] "r"(&output_transform.clamp_max),
+        [multiplier_addr] "r"(output_transform.multiplier + c_out_index),
+        [bias_addr] "r"(output_transform.bias + c_out_index),
+        [w_ptr] "r"(weights_ptr), [indirection_buffer] "r"(indirection_buffer)
       : "memory", "x0", "x1", "x2", "x3", "v0", "v1", "v2", "v3", "v4", "v5");
 
   if (LCE_LIKELY(channels_out - c_out_index >= 8)) {
@@ -535,26 +533,24 @@ inline void OutputTransformAndLoadNextAndStore(
       "sqxtn2 %[result_00].8h, %[result_01].4s\n\t"
       "sqxtn %[result_10].8b, %[result_10].8h\n\t"
       "sqxtn %[result_00].8b, %[result_00].8h\n\t"
-      : [ w_0 ] "=&w"(weights[0]), [ w_1 ] "=&w"(weights[1]),
-        [ w_2 ] "=&w"(weights[2]), [ w_3 ] "=&w"(weights[3]),
-        [ a_0 ] "=&w"(activations[0]), [ a_1 ] "=&w"(activations[1]),
-        [ a_2 ] "=&w"(activations[2]), [ a_3 ] "=&w"(activations[3]),
-        [ result_00 ] "=&w"(results[0].val[0]),
-        [ result_01 ] "=&w"(results[0].val[1]),
-        [ result_10 ] "=&w"(results[1].val[0]),
-        [ result_11 ] "=&w"(results[1].val[1]),
-        [ result_20 ] "=&w"(results[2].val[0]),
-        [ result_21 ] "=&w"(results[2].val[1]),
-        [ result_30 ] "=&w"(results[3].val[0]),
-        [ result_31 ] "=&w"(results[3].val[1])
-      : [ accum_0 ] "w"(accumulators[0]), [ accum_1 ] "w"(accumulators[1]),
-        [ accum_2 ] "w"(accumulators[2]), [ accum_3 ] "w"(accumulators[3]),
-        [ clamp_min_addr ] "r"(&output_transform.clamp_min),
-        [ clamp_max_addr ] "r"(&output_transform.clamp_max),
-        [ multiplier_addr ] "r"(output_transform.multiplier + c_out_index),
-        [ bias_addr ] "r"(output_transform.bias + c_out_index),
-        [ w_ptr ] "r"(weights_ptr),
-        [ indirection_buffer ] "r"(indirection_buffer)
+      :
+      [w_0] "=&w"(weights[0]), [w_1] "=&w"(weights[1]), [w_2] "=&w"(weights[2]),
+      [w_3] "=&w"(weights[3]), [a_0] "=&w"(activations[0]),
+      [a_1] "=&w"(activations[1]), [a_2] "=&w"(activations[2]),
+      [a_3] "=&w"(activations[3]), [result_00] "=&w"(results[0].val[0]),
+      [result_01] "=&w"(results[0].val[1]),
+      [result_10] "=&w"(results[1].val[0]),
+      [result_11] "=&w"(results[1].val[1]),
+      [result_20] "=&w"(results[2].val[0]),
+      [result_21] "=&w"(results[2].val[1]),
+      [result_30] "=&w"(results[3].val[0]), [result_31] "=&w"(results[3].val[1])
+      : [accum_0] "w"(accumulators[0]), [accum_1] "w"(accumulators[1]),
+        [accum_2] "w"(accumulators[2]), [accum_3] "w"(accumulators[3]),
+        [clamp_min_addr] "r"(&output_transform.clamp_min),
+        [clamp_max_addr] "r"(&output_transform.clamp_max),
+        [multiplier_addr] "r"(output_transform.multiplier + c_out_index),
+        [bias_addr] "r"(output_transform.bias + c_out_index),
+        [w_ptr] "r"(weights_ptr), [indirection_buffer] "r"(indirection_buffer)
       : "memory", "x0", "x1", "x2", "x3", "v0", "v1", "v2", "v3", "v4", "v5");
 
   if (LCE_LIKELY(channels_out - c_out_index >= 8)) {
