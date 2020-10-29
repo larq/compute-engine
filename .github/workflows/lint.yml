@@ -18,8 +18,8 @@ jobs:
           python-version: 3.8
       - name: Install Lint Dependencies
         run: |
-          pip install pyflakes==2.2.0 black==20.8b1
-          sudo wget -O /usr/local/bin/buildifier https://github.com/bazelbuild/buildtools/releases/download/3.4.0/buildifier
+          pip install pyflakes==2.2.0 black==20.8b1 --no-cache-dir
+          sudo wget -O /usr/local/bin/buildifier https://github.com/bazelbuild/buildtools/releases/download/3.5.0/buildifier
           sudo chmod +x /usr/local/bin/buildifier
       - name: Run PyFlakes
         run: pyflakes larq_compute_engine
@@ -27,5 +27,7 @@ jobs:
         run: black larq_compute_engine --check --target-version py36 --exclude 'build/|buck-out/|dzzist/|_build/|\.git/|\.hg/|\.mypy_cache/|\.tox/|\.venv/|larq/snapshots/'
       - name: clang-format lint
         uses: DoozyX/clang-format-lint-action@v0.11
+        with:
+          clangFormatVersion: 11
       - name: Lint bazel files
         run: buildifier -mode=check -r ./
