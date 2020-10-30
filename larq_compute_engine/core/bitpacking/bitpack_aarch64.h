@@ -218,7 +218,7 @@ inline void bitpack_aarch64_4x32(const float* input, std::size_t num_blocks,
 
       "st1 {v0.4s}, [%[out_ptr]], #16\n"
 
-      : [ in_ptr ] "+r"(input), [ n ] "+r"(num_blocks), [ out_ptr ] "+r"(output)
+      : [in_ptr] "+r"(input), [n] "+r"(num_blocks), [out_ptr] "+r"(output)
       :
       : "cc", "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8",
         "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18",
@@ -369,8 +369,8 @@ inline void bitpack_aarch64_4x32(const std::int8_t* input,
 
       "st1 {v8.4s}, [%[out_ptr]], #16\n"
 
-      : [ in_ptr ] "+r"(input), [ n ] "+r"(num_blocks), [ out_ptr ] "+r"(output)
-      : [ zero_byte ] "r"(zero_byte)
+      : [in_ptr] "+r"(input), [n] "+r"(num_blocks), [out_ptr] "+r"(output)
+      : [zero_byte] "r"(zero_byte)
       : "cc", "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8",
         "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18",
         "v19", "v31");

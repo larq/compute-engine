@@ -17,7 +17,7 @@ namespace bconv2d {
 inline std::int8_t saturate(std::int32_t x) {
 #ifdef __arm__
   std::int8_t y;
-  asm("ssat %[y], #8, %[x]\n" : [ y ] "=r"(y) : [ x ] "r"(x));
+  asm("ssat %[y], #8, %[x]\n" : [y] "=r"(y) : [x] "r"(x));
   return y;
 #else
   x = std::min<std::int32_t>(x, std::numeric_limits<std::int8_t>::max());
@@ -35,8 +35,8 @@ inline std::int32_t round(float x) {
   std::int32_t y;
   asm("vcvtr.s32.f32 %[x], %[x] \n"
       "vmov %[y], %[x] \n"
-      : [ y ] "=r"(y)
-      : [ x ] "t"(x));  // The "t" means `x` will be in an FPU register
+      : [y] "=r"(y)
+      : [x] "t"(x));  // The "t" means `x` will be in an FPU register
   return y;
 #else
   return tflite::TfLiteRound(x);
