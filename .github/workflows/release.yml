@@ -155,7 +155,7 @@ jobs:
       - name: Build manylinux2010 wheels
         run: |
           docker run -e PYTHON_VERSION=${{ matrix.python-version }} -v ${PWD}:/compute-engine -w /compute-engine \
-            tensorflow/tensorflow:2.3.0-custom-op-ubuntu16 \
+            tensorflow/tensorflow:custom-op-ubuntu16 \
             .github/tools/release_linux.sh
 
           sudo apt-get -y -qq install patchelf --no-install-recommends
