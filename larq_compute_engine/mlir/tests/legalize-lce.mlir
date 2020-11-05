@@ -1,4 +1,4 @@
-// RUN: lce-tf-opt %s -tfl-legalize-lce | FileCheck %s
+// RUN: lce-tf-opt %s -tfl-legalize-lce -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: @legalize_bconv2d
 func @legalize_bconv2d(%arg0: tensor<256x32x32x1xi32>, %arg1: tensor<16x3x3x3xf32>, %arg2: tensor<16xf32>, %arg3: tensor<16xf32>, %arg4: none) -> tensor<256x30x30x16xf32> {

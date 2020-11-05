@@ -1,3 +1,4 @@
+#include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
@@ -11,6 +12,8 @@ namespace mlir {
 namespace TFL {
 
 namespace {
+
+using compute_engine::core::bitpacking_bitwidth;
 
 // Prepare LCE operations in functions for subsequent legalization.
 struct PrepareLCE : public PassWrapper<PrepareLCE, FunctionPass> {
@@ -99,6 +102,37 @@ bool IsSamePadding(Attribute paddings_attr, Value input, Value output,
          pad_width_right == (pad_width + 1) / 2 &&
          paddings.getValue<int>({3, 0}) == 0 &&
          paddings.getValue<int>({3, 1}) == 0;
+}
+
+// Verify that the filter shape is compatible with the input shape. Will fail if
+// any other type is passed. Will emit an error and return false if the two
+// shapes are incompatible (specifically, if the shapes imply a grouped
+// convolution with a group-shape that is not a multiple of 32).
+bool HasValidFilterShape(Value input_val, Value filter_val) {
+  auto input_type = input_val.getType().cast<ShapedType>();
+  auto input_shape_vector = input_type.getShape();
+  auto total_input_channels = input_shape_vector[input_shape_vector.size() - 1];
+  auto filter_type = filter_val.getType().cast<ShapedType>();
+  auto filter_shape_vector = filter_type.getShape();
+  auto filter_input_channels =
+      filter_shape_vector[filter_shape_vector.size() - 2];
+  if (total_input_channels % filter_input_channels != 0) {
+    mlir::emitError(filter_val.getLoc())
+        << "Filter dimensions invalid: the number of filter input channels "
+        << filter_input_channels
+        << " does not divide the total number of input channels "
+        << total_input_channels << "\n";
+    return false;
+  }
+  auto num_groups = total_input_channels / filter_input_channels;
+  if (num_groups > 1 && filter_input_channels % bitpacking_bitwidth != 0) {
+    mlir::emitError(filter_val.getLoc())
+        << "Invalid binary grouped convolution: the number of input channels "
+           "per-group must be a multiple of "
+        << bitpacking_bitwidth << ", but is " << filter_input_channels << "\n";
+    return false;
+  }
+  return true;
 }
 
 // Returns the number of channels of a shaped tensor. Will fail if any other

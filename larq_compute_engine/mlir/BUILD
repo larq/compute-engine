@@ -144,6 +144,7 @@ cc_library(
     ],
     deps = [
         ":larq_compute_engine",
+        "//larq_compute_engine/core:types",
         "@llvm-project//mlir:StandardOps",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_legalize_tf",
