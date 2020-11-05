@@ -13,7 +13,7 @@ namespace bconv2d {
 template <typename AccumScalar, typename DstScalar>
 inline void BConv2DOptimizedIndirectBGEMM(
     const indirect_bgemm::IndirectBGEMMKernel<DstScalar> kernel,
-    const compute_engine::tflite::bconv2d::TfLiteBConv2DParams* conv_params,
+    const BConv2DParams* bconv2d_params,
     const RuntimeShape& bitpacked_input_shape, const RuntimeShape& output_shape,
     const OutputTransform<DstScalar>& output_transform,
     const TBitpacked* packed_weights, const TBitpacked** indirection_buffer,
@@ -24,31 +24,31 @@ inline void BConv2DOptimizedIndirectBGEMM(
   ruy::profiler::ScopeLabel label("BConv2D (optimized, indirect BGEMM)");
 
   const std::int32_t conv_kernel_size =
-      conv_params->filter_height * conv_params->filter_width;
+      bconv2d_params->filter_height * bconv2d_params->filter_width;
   const std::int32_t bitpacked_input_channels = bitpacked_input_shape.Dims(3);
   const std::int32_t output_size =
       output_shape.Dims(0) * output_shape.Dims(1) * output_shape.Dims(2);
-  const std::int32_t output_channels = conv_params->channels_out;
+  const std::int32_t output_channels = bconv2d_params->channels_out;
 
   indirect_bgemm::RunKernel(kernel, conv_kernel_size, bitpacked_input_channels,
                             output_size, output_channels, output_transform,
                             packed_weights, indirection_buffer, output_data);
 
   if (std::is_same<DstScalar, float>::value &&
-      conv_params->padding_type == TfLitePadding::kTfLitePaddingSame &&
+      bconv2d_params->padding_type == TfLitePadding::kTfLitePaddingSame &&
       pad_value == 0) {
     ruy::profiler::ScopeLabel label("Zero padding correction");
 
-    const int stride_width = conv_params->stride_width;
-    const int stride_height = conv_params->stride_height;
-    const int dilation_width_factor = conv_params->dilation_width_factor;
-    const int dilation_height_factor = conv_params->dilation_height_factor;
+    const int stride_width = bconv2d_params->stride_width;
+    const int stride_height = bconv2d_params->stride_height;
+    const int dilation_width_factor = bconv2d_params->dilation_width_factor;
+    const int dilation_height_factor = bconv2d_params->dilation_height_factor;
     const int batches = MatchingDim(bitpacked_input_shape, 0, output_shape, 0);
-    const int input_depth = conv_params->channels_in;
+    const int input_depth = bconv2d_params->channels_in;
     const int input_width = bitpacked_input_shape.Dims(2);
     const int input_height = bitpacked_input_shape.Dims(1);
-    const int filter_height = conv_params->filter_height;
-    const int filter_width = conv_params->filter_width;
+    const int filter_height = bconv2d_params->filter_height;
+    const int filter_width = bconv2d_params->filter_width;
     const int output_depth = output_shape.Dims(3);
     const int output_width = output_shape.Dims(2);
     const int output_height = output_shape.Dims(1);

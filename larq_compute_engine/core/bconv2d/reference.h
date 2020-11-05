@@ -22,6 +22,7 @@ limitations under the License.
 #define COMPUTE_ENGINE_CORE_BCONV2D_REFERENCE_H_
 
 #include "larq_compute_engine/core/bconv2d/output_transform.h"
+#include "larq_compute_engine/core/bconv2d/params.h"
 #include "tensorflow/lite/kernels/internal/common.h"
 #include "tensorflow/lite/kernels/internal/types.h"
 
@@ -29,30 +30,27 @@ namespace compute_engine {
 namespace core {
 namespace bconv2d {
 
-using namespace tflite;
-
 template <typename AccumScalar, typename DstScalar,
           OutputTransformDetails details>
 inline void BConv2DReference(
-    const ConvParams& params, const RuntimeShape& packed_input_shape,
+    const BConv2DParams* bconv2d_params, const RuntimeShape& packed_input_shape,
     const TBitpacked* packed_input_data,
     const RuntimeShape& packed_filter_shape,
     const TBitpacked* packed_filter_data,
     const OutputTransform<DstScalar, details>& output_transform,
-    const RuntimeShape& output_shape, DstScalar* output_data,
-    const int pad_value) {
+    const RuntimeShape& output_shape, DstScalar* output_data) {
   static_assert(std::is_same<DstScalar, float>::value ||
                     std::is_same<DstScalar, TBitpacked>::value ||
                     std::is_same<DstScalar, std::int8_t>::value,
                 "The reference implementation supports either float "
                 "output, bitpacked output or 8-bit quantized output.");
 
-  const int stride_width = params.stride_width;
-  const int stride_height = params.stride_height;
-  const int dilation_width_factor = params.dilation_width_factor;
-  const int dilation_height_factor = params.dilation_height_factor;
-  const int pad_width = params.padding_values.width;
-  const int pad_height = params.padding_values.height;
+  const int stride_width = bconv2d_params->stride_width;
+  const int stride_height = bconv2d_params->stride_height;
+  const int dilation_width_factor = bconv2d_params->dilation_width_factor;
+  const int dilation_height_factor = bconv2d_params->dilation_height_factor;
+  const int pad_width = bconv2d_params->padding_values.width;
+  const int pad_height = bconv2d_params->padding_values.height;
 
   TFLITE_DCHECK_EQ(packed_input_shape.DimensionsCount(), 4);
   TFLITE_DCHECK_EQ(packed_filter_shape.DimensionsCount(), 4);
@@ -68,6 +66,7 @@ inline void BConv2DReference(
   const int filter_width = packed_filter_shape.Dims(2);
   const int output_height = output_shape.Dims(1);
   const int output_width = output_shape.Dims(2);
+
   for (int batch = 0; batch < batches; ++batch) {
     for (int out_y = 0; out_y < output_height; ++out_y) {
       for (int out_x = 0; out_x < output_width; ++out_x) {

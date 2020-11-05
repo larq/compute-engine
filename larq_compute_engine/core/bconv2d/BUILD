@@ -3,6 +3,17 @@ licenses(["notice"])  # Apache 2.0
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "params",
+    hdrs = [
+        "params.h",
+    ],
+    deps = [
+        "//larq_compute_engine/core:types",
+        "@org_tensorflow//tensorflow/lite:builtin_op_data",
+    ],
+)
+
+cc_library(
     name = "output_transform",
     hdrs = [
         "output_transform.h",

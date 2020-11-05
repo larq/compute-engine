@@ -9,7 +9,7 @@ cc_library(
     ],
     deps = [
         "//larq_compute_engine/core:types",
-        "//larq_compute_engine/tflite/kernels:bconv2d_params",
+        "//larq_compute_engine/core/bconv2d:params",
         "@org_tensorflow//tensorflow/lite/kernels/internal:types",
     ],
 )
@@ -26,7 +26,7 @@ cc_library(
     deps = [
         "//larq_compute_engine/core:types",
         "//larq_compute_engine/core/bconv2d:output_transform",
-        "//larq_compute_engine/tflite/kernels:bconv2d_params",
+        "//larq_compute_engine/core/bconv2d:params",
         "@org_tensorflow//tensorflow/lite/kernels/internal:types",
         "@ruy//ruy/profiler:instrumentation",
     ],

@@ -3,8 +3,8 @@
 
 #include <cstdint>
 
+#include "larq_compute_engine/core/bconv2d/params.h"
 #include "larq_compute_engine/core/types.h"
-#include "larq_compute_engine/tflite/kernels/bconv2d_params.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/kernels/internal/types.h"
 
@@ -17,7 +17,7 @@ namespace indirect_bgemm {
 // This function is (heavily) adapted from this XNNPack function:
 // https://github.com/google/XNNPACK/blob/80a8ac59849bfdae8d2e1409f5642baa502c0b9e/src/indirection.c#L18-L76
 void FillIndirectionBuffer(const int block_size_pixels,
-                           const TfLiteBConv2DParams* conv_params,
+                           const bconv2d::BConv2DParams* bconv2d_params,
                            const RuntimeShape& bitpacked_input_shape,
                            const RuntimeShape& output_shape,
                            const TBitpacked* input_ptr,
@@ -25,14 +25,14 @@ void FillIndirectionBuffer(const int block_size_pixels,
                            std::vector<TBitpacked>& zero_buffer) {
   using std::int32_t;
 
-  const int32_t kernel_height = conv_params->filter_height;
-  const int32_t kernel_width = conv_params->filter_width;
-  const int32_t stride_height = conv_params->stride_height;
-  const int32_t stride_width = conv_params->stride_width;
-  const int32_t dilation_height = conv_params->dilation_height_factor;
-  const int32_t dilation_width = conv_params->dilation_width_factor;
-  const int32_t input_padding_top = conv_params->padding_values.height;
-  const int32_t input_padding_left = conv_params->padding_values.width;
+  const int32_t kernel_height = bconv2d_params->filter_height;
+  const int32_t kernel_width = bconv2d_params->filter_width;
+  const int32_t stride_height = bconv2d_params->stride_height;
+  const int32_t stride_width = bconv2d_params->stride_width;
+  const int32_t dilation_height = bconv2d_params->dilation_height_factor;
+  const int32_t dilation_width = bconv2d_params->dilation_width_factor;
+  const int32_t input_padding_top = bconv2d_params->padding_values.height;
+  const int32_t input_padding_left = bconv2d_params->padding_values.width;
 
   const int32_t batch_size = bitpacked_input_shape.Dims(0);
   const int32_t input_height = bitpacked_input_shape.Dims(1);
@@ -105,7 +105,7 @@ void FillIndirectionBuffer(const int block_size_pixels,
 // https://github.com/google/XNNPACK/blob/80a8ac59849bfdae8d2e1409f5642baa502c0b9e/src/packing.c#L429-L484
 void PackWeights(const int block_size_output_channels,
                  const int block_size_depth,
-                 const TfLiteBConv2DParams* conv_params,
+                 const bconv2d::BConv2DParams* bconv2d_params,
                  const RuntimeShape& bitpacked_input_shape,
                  const RuntimeShape& output_shape,
                  const TBitpacked* weights_ptr,
@@ -113,9 +113,9 @@ void PackWeights(const int block_size_output_channels,
   using std::int32_t;
 
   const int32_t bitpacked_input_channels = bitpacked_input_shape.Dims(3);
-  const int32_t output_channels = conv_params->channels_out;
+  const int32_t output_channels = bconv2d_params->channels_out;
   const int32_t kernel_size =
-      conv_params->filter_height * conv_params->filter_width;
+      bconv2d_params->filter_height * bconv2d_params->filter_width;
 
   assert(bitpacked_input_channels % block_size_depth == 0);
 

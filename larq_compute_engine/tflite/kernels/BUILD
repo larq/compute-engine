@@ -8,29 +8,6 @@ package(
 )
 
 cc_library(
-    name = "bconv2d_params",
-    hdrs = [
-        "bconv2d_params.h",
-    ],
-    deps = [
-        "//larq_compute_engine/core:types",
-    ],
-)
-
-cc_library(
-    name = "bconv2d_output_transform_utils",
-    hdrs = [
-        "bconv2d_output_transform_utils.h",
-    ],
-    deps = [
-        ":bconv2d_params",
-        "//larq_compute_engine/core:types",
-        "//larq_compute_engine/core/bconv2d:output_transform",
-        "@org_tensorflow//tensorflow/lite/kernels/internal:tensor",
-    ],
-)
-
-cc_library(
     name = "utils",
     hdrs = [
         "utils.h",
@@ -53,12 +30,11 @@ cc_library(
     ],
     copts = tflite_copts() + tf_opts_nortti_if_android(),
     deps = [
-        ":bconv2d_output_transform_utils",
-        ":bconv2d_params",
         ":utils",
         "//larq_compute_engine/core:bmaxpool",
         "//larq_compute_engine/core/bconv2d:optimized_bgemm",
         "//larq_compute_engine/core/bconv2d:optimized_indirect_bgemm",
+        "//larq_compute_engine/core/bconv2d:params",
         "//larq_compute_engine/core/bconv2d:reference",
         "//larq_compute_engine/core/bitpacking:bitpack",
         "//larq_compute_engine/core/bitpacking:utils",

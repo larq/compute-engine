@@ -10,9 +10,9 @@
 #include "larq_compute_engine/core/indirect_bgemm/kernel_8x4x2_aarch64.h"
 #include "larq_compute_engine/core/indirect_bgemm/kernel_8x4x4_aarch64.h"
 #endif
+#include "larq_compute_engine/core/bconv2d/params.h"
 #include "larq_compute_engine/core/indirect_bgemm/kernel_4x2_portable.h"
 #include "larq_compute_engine/core/types.h"
-#include "larq_compute_engine/tflite/kernels/bconv2d_params.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/kernels/internal/types.h"
 
@@ -21,8 +21,6 @@ using namespace tflite;
 namespace compute_engine {
 namespace core {
 namespace indirect_bgemm {
-
-using compute_engine::tflite::bconv2d::TfLiteBConv2DParams;
 
 template <typename DstScalar>
 struct IndirectBGEMMKernel {
@@ -45,7 +43,7 @@ struct IndirectBGEMMKernel {
 // the input shape doesn't change).
 template <typename DstScalar>
 inline IndirectBGEMMKernel<DstScalar> SelectRuntimeKernel(
-    const TfLiteBConv2DParams* conv_params,
+    const bconv2d::BConv2DParams* bconv2d_params,
     const RuntimeShape& bitpacked_input_shape,
     const RuntimeShape& output_shape) {
 #ifdef __aarch64__
@@ -56,9 +54,9 @@ inline IndirectBGEMMKernel<DstScalar> SelectRuntimeKernel(
 
   constexpr bool is_float_or_int8 = std::is_same<DstScalar, float>::value ||
                                     std::is_same<DstScalar, std::int8_t>::value;
-  const int max_accumulator_value = conv_params->filter_height *
-                                    conv_params->filter_width *
-                                    conv_params->channels_in;
+  const int max_accumulator_value = bconv2d_params->filter_height *
+                                    bconv2d_params->filter_width *
+                                    bconv2d_params->channels_in;
   const bool fits_in_int16_accumulators = max_accumulator_value + 512 < 1 << 16;
 
   if (is_float_or_int8 && fits_in_int16_accumulators) {
