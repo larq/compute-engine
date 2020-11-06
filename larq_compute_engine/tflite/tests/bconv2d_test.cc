@@ -751,7 +751,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST(BConv2DTests, ReluErrorDeathTest) {
   LceTensor<TBitpacked> input_tensor({1, 16, 16, 2});
-  LceTensor<TBitpacked> packed_filter_tensor({128, 3, 3, 64});
+  LceTensor<TBitpacked> packed_filter_tensor({128, 3, 3, 2});
   LceTensor<float> post_tensor({128});
   LceTensor<std::int32_t> threshold_tensor({128});
   LceTensor<float> output_tensor;
@@ -788,7 +788,7 @@ TEST(BConv2DTests, ReluErrorDeathTest) {
 
 TEST(BConv2DTests, Int8ErrorDeathTest) {
   LceTensor<TBitpacked> input_tensor({1, 16, 16, 2});
-  LceTensor<TBitpacked> packed_filter_tensor({128, 3, 3, 64});
+  LceTensor<TBitpacked> packed_filter_tensor({128, 3, 3, 2});
   LceTensor<float> post_tensor({128});
   LceTensor<std::int32_t> threshold_tensor;
   LceTensor<std::int8_t> output_tensor;
