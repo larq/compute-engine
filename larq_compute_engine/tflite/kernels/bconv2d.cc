@@ -176,6 +176,25 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   bconv2d_params->filter_height = SizeOfDimension(filter, 1);
   bconv2d_params->filter_width = SizeOfDimension(filter, 2);
 
+  if (SizeOfDimension(filter, 3) ==
+      GetBitpackedSize(bconv2d_params->channels_in)) {
+    bconv2d_params->groups = 1;
+  } else {
+    TF_LITE_ENSURE_MSG(
+        context, kernel_type == KernelType::kReference,
+        "Grouped binary convolutions are not supported with this kernel.");
+    TF_LITE_ENSURE_EQ(context,
+                      GetBitpackedSize(bconv2d_params->channels_in) %
+                          SizeOfDimension(filter, 3),
+                      0);
+    const std::int32_t groups = GetBitpackedSize(bconv2d_params->channels_in) /
+                                SizeOfDimension(filter, 3);
+    const std::int32_t group_size = bconv2d_params->channels_in / groups;
+    TF_LITE_ENSURE_EQ(context, group_size % core::bitpacking_bitwidth, 0);
+    TF_LITE_ENSURE_EQ(context, bconv2d_params->channels_out % groups, 0);
+    bconv2d_params->groups = groups;
+  }
+
   // Compute the padding and output values (height, width)
   int out_width, out_height;
   bconv2d_params->padding_values = ComputePaddingHeightWidth(
@@ -273,7 +292,8 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     }
 
     // Resize the im2col tensor
-    int bitpacked_channels_in = GetBitpackedSize(bconv2d_params->channels_in);
+    const std::int32_t bitpacked_channels_in =
+        GetBitpackedSize(bconv2d_params->channels_in);
     TfLiteIntArray* im2col_size = TfLiteIntArrayCopy(output_shape);
     im2col_size->data[3] = bitpacked_channels_in *
                            bconv2d_params->filter_height *
@@ -321,6 +341,11 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
   const auto* post_activation_bias = GetInput(context, node, 3);
   const auto* output = GetOutput(context, node, 0);
 
+  // Division is safe because at this point we know that channels_in is a
+  // multiple of the number of groups.
+  const std::int32_t channels_in_per_group =
+      bconv2d_params->channels_in / bconv2d_params->groups;
+
   // For 'same-zero' padding, compute the padding-correction.
   if (bconv2d_params->padding_type == kTfLitePaddingSame &&
       bconv2d_params->pad_value == 0) {
@@ -331,7 +356,7 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
     zero_padding_correction::CacheCorrectionValues(
         GetTensorData<TBitpacked>(filter), bconv2d_params->filter_height,
         bconv2d_params->filter_width, bconv2d_params->channels_out,
-        bconv2d_params->channels_in, bconv2d_params->dilation_height_factor,
+        channels_in_per_group, bconv2d_params->dilation_height_factor,
         bconv2d_params->dilation_width_factor,
         GetTensorData<float>(post_activation_multiplier),
         op_data->padding_buffer.data());
@@ -346,9 +371,8 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
                                           LCE_EXTRA_BYTES / sizeof(float));
 
     const auto filter_shape = GetTensorShape(GetInput(context, node, 1));
-    const std::int32_t backtransform_add = filter_shape.Dims(1) *
-                                           filter_shape.Dims(2) *
-                                           bconv2d_params->channels_in;
+    const std::int32_t backtransform_add =
+        filter_shape.Dims(1) * filter_shape.Dims(2) * channels_in_per_group;
     const double output_scale =
         output->type == kTfLiteInt8 ? output->params.scale : 1.0f;
     const double output_zero_point =

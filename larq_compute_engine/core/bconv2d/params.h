@@ -15,6 +15,7 @@ struct BConv2DParams {
   std::int32_t filter_height;
   std::int32_t channels_in;
   std::int32_t channels_out;
+  std::int32_t groups;
 
   // Strides
   std::int32_t stride_height;

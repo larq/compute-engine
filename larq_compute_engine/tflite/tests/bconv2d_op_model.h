@@ -42,9 +42,6 @@ class BaseBConv2DOpModel : public SingleOpModel {
 
     flexbuffers::Builder fbb;
     fbb.Map([&]() {
-      // This attribute is necessary because if the filters are bitpacked and
-      // we're reading bitpacked input then we don't have access to the original
-      // 'true' number of input channels.
       fbb.Int("channels_in", channels_in);
       fbb.Int("stride_height", stride_height);
       fbb.Int("stride_width", stride_width);
