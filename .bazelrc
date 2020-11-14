@@ -10,6 +10,9 @@ common --experimental_repo_remote_exec
 
 build --copt=-DTFLITE_WITH_RUY
 
+# Disable MKL
+build --define=enable_mkl=false --define=build_with_mkl=false --define=tensorflow_mkldnn_contraction_kernel=0
+
 # By default, build TF in C++ 14 mode.
 build:android --cxxopt=-std=c++14
 build:android --host_cxxopt=-std=c++14
