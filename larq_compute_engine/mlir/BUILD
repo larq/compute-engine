@@ -235,7 +235,6 @@ cc_library(
         ":larq_compute_engine_optimize",
         ":larq_compute_engine_prepare",
         ":larq_compute_engine_quantize",
-        "@llvm-project//mlir:AllPassesAndDialectsNoRegistration",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:QuantOps",
