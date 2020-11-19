@@ -496,16 +496,22 @@ void runTest(const TestParam& param) {
   const auto is_reference_registration =
       (registration == compute_engine::tflite::Register_BCONV_2D_REF);
 
+  const bool reference_supports_zero_padding = is_reference_registration &&
+                                               !write_bitpacked_output &&
+                                               (input_depth % 2 == 0);
+
   if (padding == Padding_SAME &&
-      (is_reference_registration || activation == ActivationFunctionType_RELU ||
-       write_bitpacked_output || int8_output)) {
+      (groups > 1 || activation == ActivationFunctionType_RELU ||
+       write_bitpacked_output ||
+       (int8_output && !reference_supports_zero_padding))) {
     // Zero-padding is not supported in combination with:
-    // - The reference implementation
+    // - Grouped convolutions
     // - Fused ReLu
     // - Writing bitpacked output
-    // - Int8 output
-    // We could use `EXPECT_DEATH` here but it is extremely slow. Therefore we
-    // have a separate test below, and here we just skip.
+    // - Int8 output, except for reference kernel with channels_in % 2 == 0
+    // We could use `EXPECT_DEATH` here but it is
+    // extremely slow. Therefore we have a separate test below, and here we just
+    // skip.
     GTEST_SKIP();
     return;
   }

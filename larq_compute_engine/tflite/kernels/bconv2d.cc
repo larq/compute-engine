@@ -230,20 +230,18 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   if (output->type == kTfLiteInt8) {
     TF_LITE_ENSURE_EQ(context, output->quantization.type,
                       kTfLiteAffineQuantization);
-    TF_LITE_ENSURE_MSG(
-        context,
-        bconv2d_params->padding_type != kTfLitePaddingSame ||
-            bconv2d_params->pad_value == 1,
-        "8-bit quantization is only supported with valid or one-padding");
+
+    if (kernel_type != KernelType::kReference ||
+        bconv2d_params->channels_in % 2 != 0) {
+      TF_LITE_ENSURE_MSG(
+          context,
+          bconv2d_params->padding_type != kTfLitePaddingSame ||
+              bconv2d_params->pad_value == 1,
+          "8-bit quantization is only supported with valid or one-padding");
+    }
   }
 
-  if (kernel_type == KernelType::kReference) {
-    TF_LITE_ENSURE_MSG(
-        context,
-        bconv2d_params->padding_type != kTfLitePaddingSame ||
-            bconv2d_params->pad_value == 1,
-        "The reference kernel only supports valid or one-padding.");
-  } else if (kernel_type == KernelType::kOptimizedIndirectBGEMM) {
+  if (kernel_type == KernelType::kOptimizedIndirectBGEMM) {
     TF_LITE_ENSURE_MSG(
         context, input->allocation_type != kTfLiteDynamic,
         "The input tensor must not have dynamic allocation type");
@@ -333,7 +331,8 @@ inline void GetConvParamsType(const OpData* op_data,
   conv2d_params.quantized_activation_max = op_data->output_transform_clamp_max;
 }
 
-void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
+void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data,
+                  KernelType kernel_type) {
   const auto* bconv2d_params = &op_data->params;
 
   const auto* filter = GetInput(context, node, 1);
@@ -374,9 +373,20 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
     const std::int32_t backtransform_add =
         filter_shape.Dims(1) * filter_shape.Dims(2) * channels_in_per_group;
     const double output_scale =
-        output->type == kTfLiteInt8 ? output->params.scale : 1.0f;
+        output->type == kTfLiteInt8 ? output->params.scale : 1.0;
     const double output_zero_point =
-        output->type == kTfLiteInt8 ? output->params.zero_point : 0.0f;
+        output->type == kTfLiteInt8 ? output->params.zero_point : 0.0;
+
+    // For zero-padding, the backtransform is pixel-dependent, and therefore
+    // done by the kernel
+    // We still require the normal `backtransform_add` below in the
+    // `nominal_clamp`
+    const std::int32_t fused_backtransform_add =
+        (bconv2d_params->padding_type == kTfLitePaddingSame &&
+         bconv2d_params->pad_value == 0 &&
+         kernel_type == KernelType::kReference)
+            ? 0
+            : backtransform_add;
 
     for (int i = 0; i < bconv2d_params->channels_out; ++i) {
       const double post_mul =
@@ -384,7 +394,8 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
       const double post_bias = GetTensorData<float>(post_activation_bias)[i];
       op_data->output_transform_multiplier.at(i) = -1 * post_mul / output_scale;
       op_data->output_transform_bias.at(i) =
-          (post_bias + static_cast<double>(backtransform_add) * post_mul) /
+          (post_bias +
+           static_cast<double>(fused_backtransform_add) * post_mul) /
               output_scale +
           output_zero_point;
     }
@@ -395,9 +406,9 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
     nominal_clamp_min = std::max(nominal_clamp_min, -1 * backtransform_add);
     nominal_clamp_max = std::min(nominal_clamp_max, backtransform_add);
     op_data->output_transform_clamp_min =
-        -1 * nominal_clamp_max + backtransform_add;
+        -1 * nominal_clamp_max + fused_backtransform_add;
     op_data->output_transform_clamp_max =
-        -1 * nominal_clamp_min + backtransform_add;
+        -1 * nominal_clamp_min + fused_backtransform_add;
   }
 
   op_data->one_time_setup_complete = true;
@@ -428,7 +439,7 @@ void GetOutputTransform(OutputTransform<TBitpacked>& output_transform,
 template <typename AccumScalar, typename DstScalar>
 void EvalOptBGEMM(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
   if (!op_data->one_time_setup_complete) {
-    OneTimeSetup(context, node, op_data);
+    OneTimeSetup(context, node, op_data, KernelType::kOptimizedBGEMM);
   }
 
   auto* bconv2d_params = &op_data->params;
@@ -476,7 +487,7 @@ void EvalOptIndirectBGEMM(TfLiteContext* context, TfLiteNode* node,
                           OpData* op_data) {
   bool kernel_is_initialized = true;
   if (!op_data->one_time_setup_complete) {
-    OneTimeSetup(context, node, op_data);
+    OneTimeSetup(context, node, op_data, KernelType::kOptimizedIndirectBGEMM);
     kernel_is_initialized = false;
   }
 
@@ -516,7 +527,7 @@ void EvalOptIndirectBGEMM(TfLiteContext* context, TfLiteNode* node,
 template <typename DstScalar>
 void EvalRef(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
   if (!op_data->one_time_setup_complete) {
-    OneTimeSetup(context, node, op_data);
+    OneTimeSetup(context, node, op_data, KernelType::kReference);
   }
 
   const auto* input = GetInput(context, node, 0);
