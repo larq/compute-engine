@@ -26,10 +26,10 @@ inline void RegisterLCECustomOps(::tflite::MutableOpResolver* resolver,
                       compute_engine::tflite::Register_DEQUANTIZE());
   if (use_reference_bconv) {
     resolver->AddCustom("LceBconv2d",
-                        compute_engine::tflite::Register_BCONV_2D());
+                        compute_engine::tflite::Register_BCONV_2D_REF());
   } else {
     resolver->AddCustom("LceBconv2d",
-                        compute_engine::tflite::Register_BCONV_2D_REF());
+                        compute_engine::tflite::Register_BCONV_2D());
   }
   resolver->AddCustom("LceBMaxPool2d",
                       compute_engine::tflite::Register_BMAXPOOL_2D());
