@@ -43,6 +43,7 @@ class Interpreter:
     # Arguments
         flatbuffer_model: A serialized Larq Compute Engine model in the flatbuffer format.
         num_threads: The number of threads used by the interpreter.
+        use_reference_bconv: When True, uses the reference implementation of LceBconv2d.
 
     # Attributes
         input_types: Returns a list of input types.
@@ -51,9 +52,14 @@ class Interpreter:
         output_shapes: Returns a list of output shapes.
     """
 
-    def __init__(self, flatbuffer_model: bytes, num_threads: int = 1):
+    def __init__(
+        self,
+        flatbuffer_model: bytes,
+        num_threads: int = 1,
+        use_reference_bconv: bool = False,
+    ):
         self.interpreter = interpreter_wrapper_lite.LiteInterpreter(
-            flatbuffer_model, num_threads
+            flatbuffer_model, num_threads, use_reference_bconv
         )
 
     @property

@@ -13,17 +13,24 @@ namespace tflite {
 TfLiteRegistration* Register_QUANTIZE();
 TfLiteRegistration* Register_DEQUANTIZE();
 TfLiteRegistration* Register_BCONV_2D();
+TfLiteRegistration* Register_BCONV_2D_REF();
 TfLiteRegistration* Register_BMAXPOOL_2D();
 
 // By calling this function on TF lite mutable op resolver, all LCE custom ops
 // will be registerd to the op resolver.
-inline void RegisterLCECustomOps(::tflite::MutableOpResolver* resolver) {
+inline void RegisterLCECustomOps(::tflite::MutableOpResolver* resolver,
+                                 const bool use_reference_bconv = false) {
   resolver->AddCustom("LceQuantize",
                       compute_engine::tflite::Register_QUANTIZE());
   resolver->AddCustom("LceDequantize",
                       compute_engine::tflite::Register_DEQUANTIZE());
-  resolver->AddCustom("LceBconv2d",
-                      compute_engine::tflite::Register_BCONV_2D());
+  if (use_reference_bconv) {
+    resolver->AddCustom("LceBconv2d",
+                        compute_engine::tflite::Register_BCONV_2D_REF());
+  } else {
+    resolver->AddCustom("LceBconv2d",
+                        compute_engine::tflite::Register_BCONV_2D());
+  }
   resolver->AddCustom("LceBMaxPool2d",
                       compute_engine::tflite::Register_BMAXPOOL_2D());
 };

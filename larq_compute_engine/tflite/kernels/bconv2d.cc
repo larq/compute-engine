@@ -124,14 +124,6 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
 
   op_data->fused_activation_function = ConvertActivation(
       (ActivationFunctionType)m["fused_activation_function"].AsInt32());
-  if (bconv2d_params->padding_type == kTfLitePaddingSame &&
-      bconv2d_params->pad_value != 1 &&
-      op_data->fused_activation_function != kTfLiteActNone) {
-    TF_LITE_KERNEL_LOG(
-        context,
-        "Fused activations are only supported with valid or one-padding.");
-    return op_data;
-  }
 
   // It's not possible to return an error code in this method. If we get to here
   // without returning early, initialisation has succeeded without error, and so
@@ -195,6 +187,20 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     bconv2d_params->groups = groups;
   }
 
+  if (bconv2d_params->padding_type == kTfLitePaddingSame &&
+      bconv2d_params->pad_value == 0) {
+    TF_LITE_ENSURE_MSG(
+        context,
+        (kernel_type == KernelType::kReference &&
+         bconv2d_params->channels_in % 2 == 0) ||
+            (kernel_type != KernelType::kReference &&
+             output->type == kTfLiteFloat32 &&
+             op_data->fused_activation_function == kTfLiteActNone),
+        "Zero-padding is only supported by the reference kernel with an even "
+        "number of input channels, or when using "
+        "float output with no fused activation function.");
+  }
+
   // Compute the padding and output values (height, width)
   int out_width, out_height;
   bconv2d_params->padding_values = ComputePaddingHeightWidth(
@@ -210,11 +216,6 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     TF_LITE_ENSURE_EQ(context, thresholds->type, kTfLiteInt32);
     TF_LITE_ENSURE_EQ(context, SizeOfDimension(thresholds, 0),
                       bconv2d_params->channels_out);
-    TF_LITE_ENSURE_MSG(context,
-                       bconv2d_params->padding_type != kTfLitePaddingSame ||
-                           bconv2d_params->pad_value == 1,
-                       "Writing bitpacked output is only supported with "
-                       "valid or one-padding.");
   } else {
     TF_LITE_ENSURE_EQ(context, post_activation_multiplier->type,
                       kTfLiteFloat32);
@@ -230,20 +231,9 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   if (output->type == kTfLiteInt8) {
     TF_LITE_ENSURE_EQ(context, output->quantization.type,
                       kTfLiteAffineQuantization);
-    TF_LITE_ENSURE_MSG(
-        context,
-        bconv2d_params->padding_type != kTfLitePaddingSame ||
-            bconv2d_params->pad_value == 1,
-        "8-bit quantization is only supported with valid or one-padding");
   }
 
-  if (kernel_type == KernelType::kReference) {
-    TF_LITE_ENSURE_MSG(
-        context,
-        bconv2d_params->padding_type != kTfLitePaddingSame ||
-            bconv2d_params->pad_value == 1,
-        "The reference kernel only supports valid or one-padding.");
-  } else if (kernel_type == KernelType::kOptimizedIndirectBGEMM) {
+  if (kernel_type == KernelType::kOptimizedIndirectBGEMM) {
     TF_LITE_ENSURE_MSG(
         context, input->allocation_type != kTfLiteDynamic,
         "The input tensor must not have dynamic allocation type");
@@ -374,9 +364,9 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
     const std::int32_t backtransform_add =
         filter_shape.Dims(1) * filter_shape.Dims(2) * channels_in_per_group;
     const double output_scale =
-        output->type == kTfLiteInt8 ? output->params.scale : 1.0f;
+        output->type == kTfLiteInt8 ? output->params.scale : 1.0;
     const double output_zero_point =
-        output->type == kTfLiteInt8 ? output->params.zero_point : 0.0f;
+        output->type == kTfLiteInt8 ? output->params.zero_point : 0.0;
 
     for (int i = 0; i < bconv2d_params->channels_out; ++i) {
       const double post_mul =
