@@ -187,6 +187,20 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     bconv2d_params->groups = groups;
   }
 
+  if (bconv2d_params->padding_type == kTfLitePaddingSame &&
+      bconv2d_params->pad_value == 0) {
+    TF_LITE_ENSURE_MSG(
+        context,
+        (kernel_type == KernelType::kReference &&
+         bconv2d_params->channels_in % 2 == 0) ||
+            (kernel_type != KernelType::kReference &&
+             output->type == kTfLiteFloat32 &&
+             op_data->fused_activation_function == kTfLiteActNone),
+        "Zero-padding is only supported by the reference kernel with an even "
+        "number of input channels, or when using "
+        "float output with no fused activation function.");
+  }
+
   // Compute the padding and output values (height, width)
   int out_width, out_height;
   bconv2d_params->padding_values = ComputePaddingHeightWidth(
@@ -202,12 +216,6 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     TF_LITE_ENSURE_EQ(context, thresholds->type, kTfLiteInt32);
     TF_LITE_ENSURE_EQ(context, SizeOfDimension(thresholds, 0),
                       bconv2d_params->channels_out);
-    TF_LITE_ENSURE_MSG(context,
-                       kernel_type == KernelType::kReference ||
-                           bconv2d_params->padding_type != kTfLitePaddingSame ||
-                           bconv2d_params->pad_value == 1,
-                       "Writing bitpacked output is only supported by the "
-                       "reference kernel, or with valid or one-padding.");
   } else {
     TF_LITE_ENSURE_EQ(context, post_activation_multiplier->type,
                       kTfLiteFloat32);
@@ -223,14 +231,6 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   if (output->type == kTfLiteInt8) {
     TF_LITE_ENSURE_EQ(context, output->quantization.type,
                       kTfLiteAffineQuantization);
-
-    TF_LITE_ENSURE_MSG(context,
-                       (kernel_type == KernelType::kReference &&
-                        bconv2d_params->channels_in % 2 == 0) ||
-                           bconv2d_params->padding_type != kTfLitePaddingSame ||
-                           bconv2d_params->pad_value == 1,
-                       "8-bit quantization is only supported by the reference "
-                       "kernel, or with valid or one-padding");
   }
 
   if (kernel_type == KernelType::kOptimizedIndirectBGEMM) {
@@ -238,15 +238,6 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
         context, input->allocation_type != kTfLiteDynamic,
         "The input tensor must not have dynamic allocation type");
   }
-
-  TF_LITE_ENSURE_MSG(context,
-                     (kernel_type == KernelType::kReference &&
-                      bconv2d_params->channels_in % 2 == 0) ||
-                         bconv2d_params->padding_type != kTfLitePaddingSame ||
-                         bconv2d_params->pad_value == 1 ||
-                         op_data->fused_activation_function == kTfLiteActNone,
-                     "Fused activations are only supported by the reference "
-                     "kernel, or with valid or one-padding.");
 
   // Determine the output dimensions and allocate the output buffer
   TfLiteIntArray* output_shape = TfLiteIntArrayCreate(4);

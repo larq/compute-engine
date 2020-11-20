@@ -455,6 +455,7 @@ void runTest(const TestParam& param) {
   constexpr bool write_bitpacked_output =
       std::is_same<TOutput, TBitpacked>::value;
   constexpr bool int8_output = std::is_same<TOutput, std::int8_t>::value;
+  constexpr bool float_output = std::is_same<TOutput, float>::value;
 
   const Padding builtin_padding =
       (padding == Padding_ONE ? Padding_VALID : padding);
@@ -492,28 +493,20 @@ void runTest(const TestParam& param) {
   const int bitpacked_filters_num_elem =
       filter_count * filter_height * filter_width * packed_channels_per_group;
 
-  // the reference implementation only support one-padding
   const auto is_reference_registration =
       (registration == compute_engine::tflite::Register_BCONV_2D_REF);
 
-  const bool reference_supports_zero_padding =
-      is_reference_registration && (input_depth % 2 == 0);
-
-  if (padding == Padding_SAME && !reference_supports_zero_padding) {
-    if (groups > 1 || activation == ActivationFunctionType_RELU ||
-        write_bitpacked_output || int8_output) {
-      // Zero-padding is supported in the reference kernel as long as the number
-      // of input channels is even.
-      // For all other kernels, it is not supported in combination with:
-      // - Grouped convolutions
-      // - Fused ReLu
-      // - Writing bitpacked output
-      // - Int8 output
-      // We could use `EXPECT_DEATH` here but it is
-      // extremely slow. Therefore we have a separate test below, and here we
-      // just skip.
-      GTEST_SKIP();
-      return;
+  if (padding == Padding_SAME) {
+    if (is_reference_registration) {
+      if (input_depth % 2 != 0) GTEST_SKIP();
+    } else {
+      if (!float_output || activation == ActivationFunctionType_RELU) {
+        // We could use `EXPECT_DEATH` here but it is
+        // extremely slow. Therefore we have a separate test below, and here we
+        // just skip.
+        GTEST_SKIP();
+        return;
+      }
     }
   }
 
@@ -881,8 +874,7 @@ TEST(BConv2DTests, ReluErrorDeathTest) {
             threshold_tensor, 64, 1, 1, Padding_SAME, 0,
             ActivationFunctionType_RELU, 1, 1, 1);
       },
-      "Fused activations are only supported by the reference kernel, or with "
-      "valid or one-padding.");
+      "Zero-padding is only supported by");
 
   // Test if writing bitpacked output throws an error in combination with
   // zero-padding.
@@ -894,8 +886,7 @@ TEST(BConv2DTests, ReluErrorDeathTest) {
             post_tensor, threshold_tensor, 64, 1, 1, Padding_SAME, 0,
             ActivationFunctionType_NONE, 1, 1, 1);
       },
-      "Writing bitpacked output is only supported by the reference kernel, or "
-      "with valid or one-padding.");
+      "Zero-padding is only supported by");
 }
 
 TEST(BConv2DTests, Int8ErrorDeathTest) {
@@ -919,8 +910,7 @@ TEST(BConv2DTests, Int8ErrorDeathTest) {
             threshold_tensor, 64, 1, 1, Padding_SAME, 0,
             ActivationFunctionType_NONE, 1, 1, 1);
       },
-      "8-bit quantization is only supported by the reference kernel, or with "
-      "valid or one-padding.");
+      "Zero-padding is only supported by");
 }
 
 }  // namespace testing
