@@ -124,14 +124,6 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
 
   op_data->fused_activation_function = ConvertActivation(
       (ActivationFunctionType)m["fused_activation_function"].AsInt32());
-  if (bconv2d_params->padding_type == kTfLitePaddingSame &&
-      bconv2d_params->pad_value != 1 &&
-      op_data->fused_activation_function != kTfLiteActNone) {
-    TF_LITE_KERNEL_LOG(
-        context,
-        "Fused activations are only supported with valid or one-padding.");
-    return op_data;
-  }
 
   // It's not possible to return an error code in this method. If we get to here
   // without returning early, initialisation has succeeded without error, and so
@@ -211,10 +203,11 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     TF_LITE_ENSURE_EQ(context, SizeOfDimension(thresholds, 0),
                       bconv2d_params->channels_out);
     TF_LITE_ENSURE_MSG(context,
-                       bconv2d_params->padding_type != kTfLitePaddingSame ||
+                       kernel_type == KernelType::kReference ||
+                           bconv2d_params->padding_type != kTfLitePaddingSame ||
                            bconv2d_params->pad_value == 1,
-                       "Writing bitpacked output is only supported with "
-                       "valid or one-padding.");
+                       "Writing bitpacked output is only supported by the "
+                       "reference kernel, or with valid or one-padding.");
   } else {
     TF_LITE_ENSURE_EQ(context, post_activation_multiplier->type,
                       kTfLiteFloat32);
@@ -231,14 +224,13 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     TF_LITE_ENSURE_EQ(context, output->quantization.type,
                       kTfLiteAffineQuantization);
 
-    if (kernel_type != KernelType::kReference ||
-        bconv2d_params->channels_in % 2 != 0) {
-      TF_LITE_ENSURE_MSG(
-          context,
-          bconv2d_params->padding_type != kTfLitePaddingSame ||
-              bconv2d_params->pad_value == 1,
-          "8-bit quantization is only supported with valid or one-padding");
-    }
+    TF_LITE_ENSURE_MSG(context,
+                       (kernel_type == KernelType::kReference &&
+                        bconv2d_params->channels_in % 2 == 0) ||
+                           bconv2d_params->padding_type != kTfLitePaddingSame ||
+                           bconv2d_params->pad_value == 1,
+                       "8-bit quantization is only supported by the reference "
+                       "kernel, or with valid or one-padding");
   }
 
   if (kernel_type == KernelType::kOptimizedIndirectBGEMM) {
@@ -246,6 +238,15 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
         context, input->allocation_type != kTfLiteDynamic,
         "The input tensor must not have dynamic allocation type");
   }
+
+  TF_LITE_ENSURE_MSG(context,
+                     (kernel_type == KernelType::kReference &&
+                      bconv2d_params->channels_in % 2 == 0) ||
+                         bconv2d_params->padding_type != kTfLitePaddingSame ||
+                         bconv2d_params->pad_value == 1 ||
+                         op_data->fused_activation_function == kTfLiteActNone,
+                     "Fused activations are only supported by the reference "
+                     "kernel, or with valid or one-padding.");
 
   // Determine the output dimensions and allocate the output buffer
   TfLiteIntArray* output_shape = TfLiteIntArrayCreate(4);
@@ -331,8 +332,7 @@ inline void GetConvParamsType(const OpData* op_data,
   conv2d_params.quantized_activation_max = op_data->output_transform_clamp_max;
 }
 
-void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data,
-                  KernelType kernel_type) {
+void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
   const auto* bconv2d_params = &op_data->params;
 
   const auto* filter = GetInput(context, node, 1);
@@ -377,25 +377,13 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data,
     const double output_zero_point =
         output->type == kTfLiteInt8 ? output->params.zero_point : 0.0;
 
-    // For zero-padding, the backtransform is pixel-dependent, and therefore
-    // done by the kernel
-    // We still require the normal `backtransform_add` below in the
-    // `nominal_clamp`
-    const std::int32_t fused_backtransform_add =
-        (bconv2d_params->padding_type == kTfLitePaddingSame &&
-         bconv2d_params->pad_value == 0 &&
-         kernel_type == KernelType::kReference)
-            ? 0
-            : backtransform_add;
-
     for (int i = 0; i < bconv2d_params->channels_out; ++i) {
       const double post_mul =
           GetTensorData<float>(post_activation_multiplier)[i];
       const double post_bias = GetTensorData<float>(post_activation_bias)[i];
       op_data->output_transform_multiplier.at(i) = -1 * post_mul / output_scale;
       op_data->output_transform_bias.at(i) =
-          (post_bias +
-           static_cast<double>(fused_backtransform_add) * post_mul) /
+          (post_bias + static_cast<double>(backtransform_add) * post_mul) /
               output_scale +
           output_zero_point;
     }
@@ -406,9 +394,9 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data,
     nominal_clamp_min = std::max(nominal_clamp_min, -1 * backtransform_add);
     nominal_clamp_max = std::min(nominal_clamp_max, backtransform_add);
     op_data->output_transform_clamp_min =
-        -1 * nominal_clamp_max + fused_backtransform_add;
+        -1 * nominal_clamp_max + backtransform_add;
     op_data->output_transform_clamp_max =
-        -1 * nominal_clamp_min + fused_backtransform_add;
+        -1 * nominal_clamp_min + backtransform_add;
   }
 
   op_data->one_time_setup_complete = true;
@@ -439,7 +427,7 @@ void GetOutputTransform(OutputTransform<TBitpacked>& output_transform,
 template <typename AccumScalar, typename DstScalar>
 void EvalOptBGEMM(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
   if (!op_data->one_time_setup_complete) {
-    OneTimeSetup(context, node, op_data, KernelType::kOptimizedBGEMM);
+    OneTimeSetup(context, node, op_data);
   }
 
   auto* bconv2d_params = &op_data->params;
@@ -487,7 +475,7 @@ void EvalOptIndirectBGEMM(TfLiteContext* context, TfLiteNode* node,
                           OpData* op_data) {
   bool kernel_is_initialized = true;
   if (!op_data->one_time_setup_complete) {
-    OneTimeSetup(context, node, op_data, KernelType::kOptimizedIndirectBGEMM);
+    OneTimeSetup(context, node, op_data);
     kernel_is_initialized = false;
   }
 
@@ -527,7 +515,7 @@ void EvalOptIndirectBGEMM(TfLiteContext* context, TfLiteNode* node,
 template <typename DstScalar>
 void EvalRef(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
   if (!op_data->one_time_setup_complete) {
-    OneTimeSetup(context, node, op_data, KernelType::kReference);
+    OneTimeSetup(context, node, op_data);
   }
 
   const auto* input = GetInput(context, node, 0);

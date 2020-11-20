@@ -134,7 +134,9 @@ def preprocess(data):
 
 
 def assert_model_output(model_lce, inputs, outputs, rtol, atol):
-    interpreter = Interpreter(model_lce, num_threads=min(os.cpu_count(), 4))
+    interpreter = Interpreter(
+        model_lce, num_threads=min(os.cpu_count(), 4), use_reference_bconv=False
+    )
     actual_outputs = interpreter.predict(inputs)
     np.testing.assert_allclose(actual_outputs, outputs, rtol=rtol, atol=atol)
 

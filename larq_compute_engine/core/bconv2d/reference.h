@@ -71,6 +71,11 @@ inline void BConv2DReference(
       bconv2d_params->padding_type == kTfLitePaddingSame &&
       bconv2d_params->pad_value == 0;
 
+  // For n channels, a popcount of n/2 of the {0,1} bits would correspond to 0
+  // in the {-1,1} representation. So n/2 can be considered the 'zero point'.
+  const int binary_zero_point =
+      (bconv2d_params->channels_in / bconv2d_params->groups) / 2;
+
   TFLITE_DCHECK_EQ(input_depth_per_group * bconv2d_params->groups,
                    packed_input_shape.Dims(3));
   TFLITE_DCHECK_EQ(output_depth_per_group * bconv2d_params->groups,
@@ -86,22 +91,19 @@ inline void BConv2DReference(
           const int in_y_origin = (out_y * stride_height) - pad_height;
           const int group = out_channel / output_depth_per_group;
           AccumScalar accum = AccumScalar(0);
-          int inside_positions = 0;
           for (int filter_y = 0; filter_y < filter_height; ++filter_y) {
             for (int filter_x = 0; filter_x < filter_width; ++filter_x) {
               const int in_x = in_x_origin + dilation_width_factor * filter_x;
               const int in_y = in_y_origin + dilation_height_factor * filter_y;
-              bool inside = ((in_x >= 0) && (in_x < input_width) &&
-                             (in_y >= 0) && (in_y < input_height));
-              if (inside) {
-                ++inside_positions;
-              } else if (zero_padding) {
+              const bool inside = ((in_x >= 0) && (in_x < input_width) &&
+                                   (in_y >= 0) && (in_y < input_height));
+              if (zero_padding && !inside) {
+                accum += binary_zero_point;
                 continue;
               }
               for (int in_channel = 0; in_channel < input_depth_per_group;
                    ++in_channel) {
-                // bitpacked 0 represents a +1
-                TBitpacked input_value = 0;
+                TBitpacked input_value = 0;  // represents a +1
                 if (inside) {
                   input_value = packed_input_data[Offset(
                       packed_input_shape, batch, in_y, in_x,
@@ -114,17 +116,6 @@ inline void BConv2DReference(
               }
             }
           }
-          if (zero_padding) {
-            // Apply the backtransform
-            accum =
-                (inside_positions * bconv2d_params->channels_in) - 2 * accum;
-            // When pad_value == 0, the backtransform addition has been removed
-            // from the OutputTransform, but it will still multiply by -2, so
-            // here we cancel that out to avoid having to write a separate
-            // OutputTransform for only this use case.
-            accum = -accum / 2;
-          }
-
           // Are we writing bitpacked output?
           if (std::is_same<DstScalar, TBitpacked>::value) {
             bool bit = output_transform.Run(accum, out_channel);
