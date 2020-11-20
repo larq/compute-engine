@@ -498,7 +498,10 @@ void runTest(const TestParam& param) {
 
   if (padding == Padding_SAME) {
     if (is_reference_registration) {
-      if (input_depth % 2 != 0) GTEST_SKIP();
+      if (input_depth % 2 != 0) {
+        GTEST_SKIP();
+        return;
+      }
     } else {
       if (!float_output || activation == ActivationFunctionType_RELU) {
         // We could use `EXPECT_DEATH` here but it is
