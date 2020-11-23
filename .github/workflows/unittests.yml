@@ -68,7 +68,7 @@ jobs:
         with:
           service_account_key: ${{ secrets.gcs_bazel_cache }}
           export_default_credentials: true
-      - uses: actions/setup-python@v2.1.4
+      - uses: actions/setup-python@v2
         with:
           python-version: 3.8
       - name: Configure Bazel
