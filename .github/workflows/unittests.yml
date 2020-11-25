@@ -74,6 +74,10 @@ jobs:
       - name: Configure Bazel
         run: ./configure.sh <<< $'n\n'
         shell: bash
+      - name: Set bazel cache
+        run: echo -e 'build --remote_upload_local_results=false\n' >> .bazelrc.user
+        if: github.ref != 'refs/heads/master'
+        shell: bash
       - name: Install pip dependencies
         run: pip install tensorflow-cpu~=2.3.0 larq~=0.10.0 larq_zoo~=2.0.0 pytest tensorflow_datasets~=4.0.1 flatbuffers tqdm --no-cache-dir
       - name: Run Interpreter test
