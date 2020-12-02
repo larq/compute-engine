@@ -97,7 +97,7 @@ struct BGemmKernel<ruy::Path::kStandardCpp, TBitpacked, MulParams> {
     RUY_DCHECK_LE(clamped_end_col, end_col);
     RUY_DCHECK_LE(end_col - clamped_end_col, RhsLayout::kCols);
 
-    RUY_DCHECK_EQ(dst->layout.order, Order::kColMajor);
+    RUY_DCHECK_EQ(dst->layout.order, ruy::Order::kColMajor);
 
     ruy::profiler::ScopeLabel label(
         "Binary Kernel (Standard Cpp), Bitpacked Output.");
@@ -145,8 +145,8 @@ template <typename DstScalar>
 struct BGemmKernel<ruy::Path::kNeon, DstScalar,
                    BinaryMulParams<std::int32_t, DstScalar>> {
   Tuning tuning = Tuning::kAuto;
-  using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
-  using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
+  using LhsLayout = FixedKernelLayout<ruy::Order::kColMajor, 4, 4>;
+  using RhsLayout = FixedKernelLayout<ruy::Order::kColMajor, 4, 4>;
   explicit BGemmKernel(Tuning tuning_) : tuning(tuning_) {}
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
            const BinaryMulParams<std::int32_t, DstScalar>& mul_params,
@@ -176,8 +176,8 @@ template <typename DstScalar>
 struct BGemmKernel<ruy::Path::kNeon, DstScalar,
                    BinaryMulParams<std::int16_t, DstScalar>> {
   Tuning tuning = Tuning::kAuto;
-  using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 8>;
-  using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
+  using LhsLayout = FixedKernelLayout<ruy::Order::kColMajor, 4, 8>;
+  using RhsLayout = FixedKernelLayout<ruy::Order::kColMajor, 4, 4>;
   explicit BGemmKernel(Tuning tuning_) : tuning(tuning_) {}
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
            const BinaryMulParams<std::int16_t, DstScalar>& mul_params,
@@ -200,8 +200,8 @@ template <typename DstScalar>
 struct BGemmKernel<ruy::Path::kNeon, DstScalar,
                    BinaryMulParams<std::int32_t, DstScalar>> {
   Tuning tuning = Tuning::kAuto;
-  using LhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
-  using RhsLayout = FixedKernelLayout<Order::kColMajor, 4, 4>;
+  using LhsLayout = FixedKernelLayout<ruy::Order::kColMajor, 4, 4>;
+  using RhsLayout = FixedKernelLayout<ruy::Order::kColMajor, 4, 4>;
   explicit BGemmKernel(Tuning tuning_) : tuning(tuning_) {}
   void Run(const ruy::PMat<TBitpacked>& lhs, const ruy::PMat<TBitpacked>& rhs,
            const BinaryMulParams<std::int32_t, DstScalar>& mul_params,

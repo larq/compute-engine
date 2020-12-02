@@ -187,12 +187,14 @@ jobs:
           export PYTHON_BIN_PATH=$(which python)
           export BAZEL_VC="C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/"
 
+          mkdir C:/bazel_cache
+
           python --version
           python -m pip install wheel setuptools numpy six --no-cache-dir
 
           ./configure.sh
 
-          bazelisk --output_base=cache build :build_pip_pkg --copt=/arch:AVX --enable_runfiles --define=override_eigen_strong_inline=true
+          bazelisk --output_base=C:/bazel_cache build :build_pip_pkg --copt=/arch:AVX --enable_runfiles --define=override_eigen_strong_inline=true
           bazel-bin/build_pip_pkg wheelhouse
 
         shell: bash
