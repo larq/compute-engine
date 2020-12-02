@@ -10,6 +10,7 @@ namespace core {
 namespace bgemm {
 
 using namespace ruy;
+using ruy::Order;  // To fix Windows build
 
 using namespace bitpacking;
 using bconv2d::OutputTransform;

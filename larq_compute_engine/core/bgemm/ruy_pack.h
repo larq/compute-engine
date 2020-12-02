@@ -32,6 +32,8 @@ namespace core {
 namespace bgemm {
 
 using namespace ruy;
+using ruy::Order;  // To fix Windows build
+
 template <Path ThePath, typename FixedKernelLayout, Order SrcOrder>
 struct LceRuyPackImpl : PackImpl<ThePath, FixedKernelLayout, TBitpacked,
                                  TBitpacked, TBitpacked, SrcOrder> {};
