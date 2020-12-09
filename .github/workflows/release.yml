@@ -5,9 +5,11 @@ on:
     types: [published]
     tags:
       - v*
-  push:
-    branches:
-      - "releases/nightly"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version of the form 1.0.0(.devYYYY.MM.DD)'
+        required: true
 
 env:
   IMAGE_NAME: dev
@@ -127,6 +129,8 @@ jobs:
           python --version
           python -m pip install delocate wheel setuptools numpy six --no-cache-dir
 
+          export LCE_RELEASE_VERSION=${{ github.event.inputs.version }}
+
           ./configure.sh
 
           bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
@@ -154,7 +158,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Build manylinux2010 wheels
         run: |
-          docker run -e PYTHON_VERSION=${{ matrix.python-version }} -v ${PWD}:/compute-engine -w /compute-engine \
+          docker run -e PYTHON_VERSION=${{ matrix.python-version }}
+            -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }}
+            -v ${PWD}:/compute-engine -w /compute-engine \
             tensorflow/tensorflow:custom-op-ubuntu16 \
             .github/tools/release_linux.sh
 
@@ -184,6 +190,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Build Windows wheels
         run: |
+          export LCE_RELEASE_VERSION=${{ github.event.inputs.version }}
           export PYTHON_BIN_PATH=$(which python)
           export BAZEL_VC="C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/"
 
@@ -205,7 +212,7 @@ jobs:
 
   upload-wheels:
     name: Publish wheels to PyPi
-    if: github.event_name != 'push'
+    if: github.event_name == 'release'
     needs: [manylinux-release-wheel, macos-release-wheel]
     runs-on: ubuntu-latest
     steps:
