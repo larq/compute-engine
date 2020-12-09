@@ -1,7 +1,8 @@
 """Setup for pip package."""
-
-from setuptools import dist, Extension, find_packages, setup
+import os
 from sys import platform
+
+from setuptools import Extension, dist, find_packages, setup
 
 
 def readme():
@@ -20,7 +21,7 @@ ext_modules = [Extension("_foo", ["stub.cc"])] if platform.startswith("linux") e
 
 setup(
     name="larq-compute-engine",
-    version="0.4.3",
+    version=os.getenv("LCE_RELEASE_VERSION", "0.4.3"),
     python_requires=">=3.6",
     description="Highly optimized inference engine for binarized neural networks.",
     long_description=readme(),
