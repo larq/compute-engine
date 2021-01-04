@@ -1,9 +1,8 @@
 from typing import Iterator, List, Tuple, Union
 
 import numpy as np
-from tqdm import tqdm
-
 from larq_compute_engine.tflite.python import interpreter_wrapper_lite
+from tqdm import tqdm
 
 __all__ = ["Interpreter"]
 
@@ -32,12 +31,12 @@ def data_generator(x: Union[Data, Iterator[Data]]) -> Iterator[List[np.ndarray]]
 
 class Interpreter:
     """Interpreter interface for Larq Compute Engine Models.
-    
+
     !!! warning
         The Larq Compute Engine is optimized for ARM v8, which is used by devices
         such as a Raspberry Pi or Android phones. Running this interpreter on any
         other architecture (e.g. x86) will fall back on the reference kernels, meaning
-        it will return correct outputs, but is not optimized for speed in any way! 
+        it will return correct outputs, but is not optimized for speed in any way!
 
     !!! example
         ```python
