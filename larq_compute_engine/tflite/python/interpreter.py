@@ -1,8 +1,9 @@
 from typing import Iterator, List, Tuple, Union
 
 import numpy as np
-from larq_compute_engine.tflite.python import interpreter_wrapper_lite
 from tqdm import tqdm
+
+from larq_compute_engine.tflite.python import interpreter_wrapper_lite
 
 __all__ = ["Interpreter"]
 
