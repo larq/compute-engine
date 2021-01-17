@@ -23,8 +23,8 @@ struct BinaryMulParams {
 
   OutputTransform<DstScalar> output_transform;
 
-  using StandardCppKernelLhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
-  using StandardCppKernelRhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
+  using StandardCppKernelLhsLayout = FixedKernelLayout<ruy::Order::kColMajor, 1, 1>;
+  using StandardCppKernelRhsLayout = FixedKernelLayout<ruy::Order::kColMajor, 1, 1>;
 };
 
 // A specialisation for the writing-bitpacked-output case, where the C++ LHS
@@ -38,8 +38,8 @@ struct BinaryMulParams<tAccumScalar, TBitpacked> {
   OutputTransform<DstScalar> output_transform;
 
   using StandardCppKernelLhsLayout =
-      FixedKernelLayout<Order::kColMajor, 1, bitpacking_bitwidth>;
-  using StandardCppKernelRhsLayout = FixedKernelLayout<Order::kColMajor, 1, 1>;
+      FixedKernelLayout<ruy::Order::kColMajor, 1, bitpacking_bitwidth>;
+  using StandardCppKernelRhsLayout = FixedKernelLayout<ruy::Order::kColMajor, 1, 1>;
 };
 
 template <typename DstScalar, int LhsCols, int RhsCols>

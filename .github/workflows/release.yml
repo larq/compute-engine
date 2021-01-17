@@ -178,24 +178,35 @@ jobs:
       matrix:
         python-version: [3.6, 3.7, 3.8]
     steps:
+      - name: Configure Pagefile
+        uses: al-cheb/configure-pagefile-action@v1.2
+        with:
+          minimum-size: 8
+          maximum-size: 8
+          disk-root: "D:"
+      - name: Pagefile size
+        run: |
+          (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
+        shell: pwsh
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2.1.4
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build Windows wheels
         run: |
-          export PYTHON_BIN_PATH=$(which python)
-          export BAZEL_VC="C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/"
+          $Env:PYTHON_BIN_PATH = Get-Command python | Select-Object -ExpandProperty Definition
+          $Env:BAZEL_VC = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC"
+          set PreferredToolArchitecture=x64
 
           python --version
           python -m pip install wheel setuptools numpy six --no-cache-dir
 
-          ./configure.sh
+          "" | python configure.py
 
-          bazelisk --output_base=cache build :build_pip_pkg --copt=/arch:AVX --enable_runfiles --define=override_eigen_strong_inline=true
+          bazelisk --windows_enable_symlinks --output_base=cache build :build_pip_pkg --enable_runfiles --discard_analysis_cache --local_ram_resources=2048
           bazel-bin/build_pip_pkg wheelhouse
 
-        shell: bash
+        shell: pwsh
       - uses: actions/upload-artifact@v2.2.0
         with:
           name: ${{ runner.os }}-wheels
