@@ -8,5 +8,6 @@ RUN pip install six numpy --no-cache-dir
 WORKDIR /compute-engine
 COPY . .
 RUN ./third_party/install_android.sh
-RUN yes n | ./configure.sh
+ENV MANYLINUX2010=1
+RUN python configure.py <<< ""
 RUN bazelisk --version

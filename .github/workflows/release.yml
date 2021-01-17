@@ -29,7 +29,7 @@ jobs:
           path: /tmp/lce_android
           key: ${{ runner.os }}-${{ hashFiles('**/third_party/install_android.sh') }}
       - name: Configure Bazel
-        run: ./configure.sh <<< $'n\n'
+        run: python configure.py <<< ""
         shell: bash
       - name: Install pip dependencies
         run: pip install numpy six --no-cache-dir
@@ -99,7 +99,7 @@ jobs:
           path: /tmp/lce_android
           key: ${{ runner.os }}-${{ hashFiles('**/third_party/install_android.sh') }}
       - name: Configure Bazel
-        run: ./configure.sh <<< $'n\n'
+        run: python configure.py <<< ""
         shell: bash
       - name: Install pip dependencies
         run: pip install numpy six --no-cache-dir
@@ -131,7 +131,7 @@ jobs:
 
           export LCE_RELEASE_VERSION=${{ github.event.inputs.version }}
 
-          ./configure.sh
+          python configure.py <<< ""
 
           bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
           bazel-bin/build_pip_pkg artifacts --plat-name macosx_10_13_x86_64
@@ -199,7 +199,7 @@ jobs:
           python --version
           python -m pip install wheel setuptools numpy six --no-cache-dir
 
-          ./configure.sh
+          python configure.py <<< ""
 
           bazelisk --output_base=C:/bazel_cache build :build_pip_pkg --copt=/arch:AVX --enable_runfiles --define=override_eigen_strong_inline=true
           bazel-bin/build_pip_pkg wheelhouse
