@@ -31,6 +31,7 @@ class TestConverter(unittest.TestCase):
             [[1, 224, 224, 3]],
             ["Identity"],
             False,
+            "arm",
             None,
             False,
         )
@@ -38,6 +39,20 @@ class TestConverter(unittest.TestCase):
     def test_wrong_arg(self):
         with self.assertRaises(ValueError):
             convert_keras_model("./model.h5")
+
+    def test_target_arg(self):
+        with context.eager_mode():
+            model = lqz.sota.QuickNet(weights=None)
+
+            # These should work
+            convert_keras_model(model, target="arm")
+            convert_keras_model(model, target="xcore")
+
+            # Anything else shouldn't
+            with self.assertRaises(
+                ValueError, msg='Expected `target` to be "arm" or "xcore"'
+            ):
+                convert_keras_model(model, target="x86")
 
 
 if __name__ == "__main__":

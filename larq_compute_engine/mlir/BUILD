@@ -36,12 +36,29 @@ gentbl(
 )
 
 gentbl(
-    name = "prepare_lce_inc_gen",
+    name = "prepare_lce_target_arm_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "transforms/generated_prepare.inc"),
+        ("-gen-rewriters", "transforms/generated_prepare_target_arm.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "transforms/prepare_patterns.td",
+    td_file = "transforms/prepare_patterns_target_arm.td",
+    td_srcs = [
+        "ir/lce_ops.td",
+        "transforms/op_removal_patterns.td",
+        "transforms/prepare_patterns_common.td",
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    ],
+)
+
+gentbl(
+    name = "prepare_lce_target_other_inc_gen",
+    tbl_outs = [
+        ("-gen-rewriters", "transforms/generated_prepare_target_other.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "transforms/prepare_patterns_common.td",
     td_srcs = [
         "ir/lce_ops.td",
         "transforms/op_removal_patterns.td",
@@ -52,12 +69,27 @@ gentbl(
 )
 
 gentbl(
-    name = "optimize_lce_inc_gen",
+    name = "optimize_lce_target_arm_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "transforms/generated_optimize.inc"),
+        ("-gen-rewriters", "transforms/generated_optimize_target_arm.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "transforms/optimize_patterns.td",
+    td_file = "transforms/optimize_patterns_target_arm.td",
+    td_srcs = [
+        "ir/lce_ops.td",
+        "transforms/optimize_patterns_common.td",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+        "@llvm-project//mlir:StdOpsTdFiles",
+    ],
+)
+
+gentbl(
+    name = "optimize_lce_target_other_inc_gen",
+    tbl_outs = [
+        ("-gen-rewriters", "transforms/generated_optimize_target_other.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "transforms/optimize_patterns_common.td",
     td_srcs = [
         "ir/lce_ops.td",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
@@ -136,7 +168,8 @@ cc_library(
 cc_library(
     name = "larq_compute_engine_prepare",
     srcs = [
-        "transforms/generated_prepare.inc",
+        "transforms/generated_prepare_target_arm.inc",
+        "transforms/generated_prepare_target_other.inc",
         "transforms/prepare_tf.cc",
     ],
     hdrs = [
@@ -157,7 +190,8 @@ cc_library(
 cc_library(
     name = "larq_compute_engine_optimize",
     srcs = [
-        "transforms/generated_optimize.inc",
+        "transforms/generated_optimize_target_arm.inc",
+        "transforms/generated_optimize_target_other.inc",
         "transforms/optimize.cc",
     ],
     hdrs = [

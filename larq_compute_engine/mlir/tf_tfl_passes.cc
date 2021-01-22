@@ -1,6 +1,5 @@
 #include "larq_compute_engine/mlir/tf_tfl_passes.h"
 
-#include "larq_compute_engine/mlir/transforms/passes.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
 #include "tensorflow/compiler/mlir/lite/quantization/quantization_config.h"
@@ -43,8 +42,8 @@ void AddQuantizationPasses(const mlir::TFL::QuantizationSpecs& quant_specs,
 
 void AddTFToLCETFLConversionPasses(
     const mlir::TFL::QuantizationSpecs& quant_specs,
-    mlir::OpPassManager* pass_manager,
-    bool experimental_enable_bitpacked_activations) {
+    mlir::OpPassManager* pass_manager, const LCETarget target,
+    const bool experimental_enable_bitpacked_activations) {
   mlir::TF::StandardPipelineOptions standard_pipeline_options;
   standard_pipeline_options.enable_inliner = false;
   standard_pipeline_options.form_clusters = false;
@@ -126,7 +125,7 @@ void AddTFToLCETFLConversionPasses(
   mlir::TF::CreateLayoutOptimizationPipeline(*pass_manager,
                                              layout_optimization_options);
   // Inject Larq Compute Engine Ops
-  pass_manager->addPass(mlir::TFL::CreatePrepareLCEPass());
+  pass_manager->addPass(mlir::TFL::CreatePrepareLCEPass(target));
   // Prepare for TFLite dialect, rerun canonicalization, and then legalize to
   // the TFLite dialect.
   pass_manager->addPass(mlir::TFL::CreatePrepareTFPass(true));
@@ -144,10 +143,10 @@ void AddTFToLCETFLConversionPasses(
   pass_manager->addPass(mlir::TF::CreateInitTextFileToImportPass());
 
   pass_manager->addPass(mlir::TFL::CreateLegalizeTFPass(true));
-  pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(false));
+  pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(target, false));
   pass_manager->addPass(mlir::TFL::CreateOptimizePass());
   pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(
-      experimental_enable_bitpacked_activations));
+      target, experimental_enable_bitpacked_activations));
   pass_manager->addPass(mlir::TFL::CreateBitpackWeightsLCEPass());
   // This pass operates on TensorFlow ops but is triggered after legalization
   // so that it can target constants introduced once TensorFlow Identity ops
