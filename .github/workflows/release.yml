@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version of the form 1.0.0(.devYYYY.MM.DD)'
+        description: 'Version of the form 1.0.0(.devYYYYMMDD)'
         required: true
 
 env:
