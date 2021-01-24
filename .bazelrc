@@ -57,6 +57,15 @@ build:macos --config=noaws --config=nogcp --config=nohdfs --config=nonccl
 build:windows --copt=/D_USE_MATH_DEFINES
 build:windows --host_copt=/D_USE_MATH_DEFINES
 
+# Config to use a mostly-static build and disable modular op registration
+# support (this will revert to loading TensorFlow with RTLD_GLOBAL in Python).
+# By default, TensorFlow will build with a dependence on
+# //tensorflow:libtensorflow_framework.so.
+build:monolithic --define framework_shared_object=false
+
+# On windows, we still link everything into a single DLL.
+build:windows --config=monolithic
+
 # Make sure to include as little of windows.h as possible
 build:windows --copt=-DWIN32_LEAN_AND_MEAN
 build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
@@ -75,15 +84,15 @@ build:windows --linkopt=/OPT:REF
 build:windows --host_linkopt=/OPT:REF
 build:windows --linkopt=/OPT:ICF
 build:windows --host_linkopt=/OPT:ICF
-
 build:windows --copt=/d2ReducedOptimizeHugeFunctions
 build:windows --host_copt=/d2ReducedOptimizeHugeFunctions
+build:windows --experimental_strict_action_env=true
 
 # Verbose failure logs when something goes wrong
 build:windows --verbose_failures
 
 # Suppress C++ compiler warnings, otherwise build logs become 10s of MBs.
-build:windows --copt=/w
+build:windows --copt=/W0
 
 # On windows, we never cross compile
 build:windows --distinct_host_configuration=false

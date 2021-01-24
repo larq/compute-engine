@@ -161,7 +161,7 @@ jobs:
           docker run -e PYTHON_VERSION=${{ matrix.python-version }} \
             -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }} \
             -v ${PWD}:/compute-engine -w /compute-engine \
-            tensorflow/tensorflow:custom-op-ubuntu16 \
+            tensorflow/tensorflow:2.2.0-custom-op-ubuntu16 \
             .github/tools/release_linux.sh
 
           sudo apt-get -y -qq install patchelf --no-install-recommends
@@ -184,27 +184,33 @@ jobs:
       matrix:
         python-version: [3.6, 3.7, 3.8]
     steps:
+      - name: Configure Pagefile
+        uses: al-cheb/configure-pagefile-action@v1.2
+        with:
+          minimum-size: 4GB
+      - name: Pagefile size
+        run: |
+          (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
+        shell: pwsh
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build Windows wheels
         run: |
-          export LCE_RELEASE_VERSION=${{ github.event.inputs.version }}
-          export PYTHON_BIN_PATH=$(which python)
-          export BAZEL_VC="C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/"
-
-          mkdir C:/bazel_cache
+          $Env:BAZEL_VC = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC"
+          set PreferredToolArchitecture=x64
 
           python --version
           python -m pip install wheel setuptools numpy six --no-cache-dir
 
-          ./configure.py
+          "" | python configure.py
 
-          bazelisk --output_base=C:/bazel_cache build :build_pip_pkg --copt=/arch:AVX --enable_runfiles --define=override_eigen_strong_inline=true
+          bazelisk --output_base=C:\build_output build :build_pip_pkg --enable_runfiles --discard_analysis_cache --notrack_incremental_state --nokeep_state_after_build --nouse_action_cache --local_ram_resources=4096
           bazel-bin/build_pip_pkg wheelhouse
-
-        shell: bash
+        env:
+          LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
+        shell: pwsh
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels
@@ -213,7 +219,7 @@ jobs:
   upload-wheels:
     name: Publish wheels to PyPi
     if: github.event_name == 'release'
-    needs: [manylinux-release-wheel, macos-release-wheel]
+    needs: [manylinux-release-wheel, macos-release-wheel, windows-release-wheel]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v2
