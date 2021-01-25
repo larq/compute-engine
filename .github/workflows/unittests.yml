@@ -22,7 +22,7 @@ jobs:
           curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.7.4/bazelisk-linux-amd64 > bazelisk
           chmod +x bazelisk
       - name: Configure Bazel
-        run: python configure.py <<< ""
+        run: ./configure.py
         shell: bash
         env:
           MANYLINUX2010: 1
@@ -46,7 +46,7 @@ jobs:
         with:
           python-version: 3.8
       - name: Configure Bazel
-        run: python configure.py <<< ""
+        run: ./configure.py
         shell: bash
       - name: Install pip dependencies
         run: pip install numpy six --no-cache-dir
@@ -74,7 +74,7 @@ jobs:
         with:
           python-version: 3.8
       - name: Configure Bazel
-        run: python configure.py <<< ""
+        run: ./configure.py
         shell: bash
       - name: Set bazel cache
         run: echo -e 'build --remote_upload_local_results=false\n' >> .bazelrc.user
@@ -122,7 +122,7 @@ jobs:
           path: /tmp/lce_android
           key: ${{ runner.os }}-${{ hashFiles('**/third_party/install_android.sh') }}
       - name: Configure Bazel
-        run: python configure.py <<< ""
+        run: ./configure.py
         shell: bash
       - name: Install pip dependencies
         run: pip install numpy six --no-cache-dir

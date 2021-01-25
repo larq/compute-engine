@@ -9,5 +9,5 @@ WORKDIR /compute-engine
 COPY . .
 RUN ./third_party/install_android.sh
 ENV MANYLINUX2010=1
-RUN python configure.py <<< ""
+RUN ./configure.py
 RUN bazelisk --version

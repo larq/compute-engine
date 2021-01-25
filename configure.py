@@ -224,7 +224,7 @@ def get_python_path(environ_cp, python_bin_path):
 
 
 def get_python_version(python_bin_path):
-    """Get the python major version."""
+    """Get the python version."""
     return run_shell([python_bin_path, "-c", "import sys; print(sys.version[:3])"])
 
 
@@ -277,8 +277,8 @@ def setup_python(environ_cp):
         environ_cp["PYTHON_LIB_PATH"] = python_lib_path
 
     python_version = get_python_version(python_bin_path)
-    if python_version[0] == "2":
-        write_to_bazelrc("build --host_force_python=PY2")
+    if int(python_version[0]) < 3:
+        raise ValueError("Python versions prior to 3.x are unsupported.")
     print(
         f"Configuring builds with Python {python_version} support. To use a different "
         "Python version, re-run configuration inside a virtual environment or pass "
@@ -356,13 +356,6 @@ def maybe_set_manylinux_toolchain(environ_cp):
 
 def set_windows_build_flags(environ_cp):
     """Set Windows specific build options."""
-
-    # First available in VS 16.4. Speeds up Windows compile times by a lot. See
-    # https://groups.google.com/a/tensorflow.org/d/topic/build/SsW98Eo7l3o/discussion
-    # pylint: disable=line-too-long
-    write_to_bazelrc(
-        "build --copt=/d2ReducedOptimizeHugeFunctions --host_copt=/d2ReducedOptimizeHugeFunctions"
-    )
 
     if get_var(
         environ_cp,
