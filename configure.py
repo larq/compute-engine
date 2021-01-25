@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright 2017 The TensorFlow Authors. All Rights Reserved.
 # Modifications copyright (C) 2021 Larq Contributors.
