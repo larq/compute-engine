@@ -55,10 +55,7 @@ def write_action_env_to_bazelrc(var_name, var):
 
 def get_input(question):
     try:
-        try:
-            answer = raw_input(question)
-        except NameError:
-            answer = input(question)  # pylint: disable=bad-builtin
+        answer = input(question)
     except EOFError:
         answer = ""
     return answer
