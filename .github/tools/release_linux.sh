@@ -29,7 +29,8 @@ chmod +x /usr/bin/bazelisk
 
 python -m pip install numpy six --no-cache-dir
 
-yes | ./configure.sh
+export MANYLINUX2010=1
+./configure.py
 
 # Build
 bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --distinct_host_configuration=false
