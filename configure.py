@@ -224,9 +224,9 @@ def get_python_path(environ_cp, python_bin_path):
     return paths
 
 
-def get_python_major_version(python_bin_path):
+def get_python_version(python_bin_path):
     """Get the python major version."""
-    return run_shell([python_bin_path, "-c", "import sys; print(sys.version[0])"])
+    return run_shell([python_bin_path, "-c", "import sys; print(sys.version[:3])"])
 
 
 def setup_python(environ_cp):
@@ -277,9 +277,14 @@ def setup_python(environ_cp):
                 python_lib_path = default_python_lib_path
         environ_cp["PYTHON_LIB_PATH"] = python_lib_path
 
-    python_major_version = get_python_major_version(python_bin_path)
-    if python_major_version == "2":
+    python_version = get_python_version(python_bin_path)
+    if python_version[0] == "2":
         write_to_bazelrc("build --host_force_python=PY2")
+    print(
+        f"Configuring builds with Python {python_version} support. To use a different "
+        "Python version, re-run configuration inside a virtual environment or pass "
+        "different binary/lib paths when prompted.\n"
+    )
 
     # Convert python path to Windows style before writing into bazel.rc
     if is_windows() or is_cygwin():
