@@ -1,5 +1,6 @@
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
+#include "larq_compute_engine/mlir/transforms/passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -17,10 +18,20 @@ using compute_engine::core::bitpacking_bitwidth;
 
 // Prepare LCE operations in functions for subsequent legalization.
 struct PrepareLCE : public PassWrapper<PrepareLCE, FunctionPass> {
+  PrepareLCE() = default;
+  PrepareLCE(const PrepareLCE& pass) {}
+  PrepareLCE(const LCETarget target) { target_.setValue(target); }
+
   void runOnFunction() override;
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<mlir::lq::LarqDialect>();
   }
+
+ private:
+  Option<LCETarget> target_{
+      *this, "target", llvm::cl::desc("Platform to target."),
+      llvm::cl::values(clEnumValN(LCETarget::ARM, "arm", "ARM target"),
+                       clEnumValN(LCETarget::XCORE, "xcore", "XCORE target"))};
 };
 
 DenseElementsAttr GetConstantVector(Attribute filter, float val) {
@@ -143,7 +154,13 @@ IntegerAttr GetNumChannels(Builder& b, Value output_val) {
   return b.getI32IntegerAttr(shape_vector[shape_vector.size() - 1]);
 }
 
-#include "larq_compute_engine/mlir/transforms/generated_prepare.inc"
+namespace target_arm {
+#include "larq_compute_engine/mlir/transforms/generated_prepare_target_arm.inc"
+}
+
+namespace target_other {
+#include "larq_compute_engine/mlir/transforms/generated_prepare_target_other.inc"
+}
 
 void PrepareLCE::runOnFunction() {
   OwningRewritePatternList patterns;
@@ -155,18 +172,24 @@ void PrepareLCE::runOnFunction() {
   // replaced with a single Conv op with dilation parameter.
   patterns.insert<ConvertTFDilatedConvOp<TF::Conv2DOp>>(ctx);
 
-  TFL::populateWithGenerated(ctx, patterns);
+  if (target_ == LCETarget::ARM) {
+    target_arm::populateWithGenerated(ctx, patterns);
+  } else {
+    target_other::populateWithGenerated(ctx, patterns);
+  }
+
   applyPatternsAndFoldGreedily(func, patterns);
 }
 
 }  // namespace
 
 // Creates an instance of the TensorFlow dialect PrepareLCE pass.
-std::unique_ptr<OperationPass<FuncOp>> CreatePrepareLCEPass() {
-  return std::make_unique<PrepareLCE>();
+std::unique_ptr<OperationPass<FuncOp>> CreatePrepareLCEPass(
+    const LCETarget target) {
+  return std::make_unique<PrepareLCE>(target);
 }
 
-static PassRegistration<PrepareLCE> pass("tfl-prepare-lce", "Inject LCE Ops");
+static PassRegistration<PrepareLCE> pass("tfl-prepare-lce", "Inject LCE Ops.");
 
 }  // namespace TFL
 }  // namespace mlir

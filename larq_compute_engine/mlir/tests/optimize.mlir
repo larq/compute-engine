@@ -1,4 +1,5 @@
-// RUN: lce-tf-opt %s -tfl-optimize-lce -verify-diagnostics | FileCheck %s
+// RUN: lce-tf-opt %s -tfl-optimize-lce=target=arm -verify-diagnostics | FileCheck %s --check-prefixes CHECK,CHECK-ARM
+// RUN: lce-tf-opt %s -tfl-optimize-lce=target=xcore -verify-diagnostics | FileCheck %s --check-prefixes CHECK,CHECK-XCORE
 
 // CHECK-LABEL: @fuse_add_into_bconv2d
 func @fuse_add_into_bconv2d(%arg0: tensor<256x32x32x1xi32>, %arg1: tensor<16x3x3x3xf32>, %arg2: tensor<16xf32>, %arg3: none) -> tensor<256x30x30x16xf32> {
@@ -12,7 +13,6 @@ func @fuse_add_into_bconv2d(%arg0: tensor<256x32x32x1xi32>, %arg1: tensor<16x3x3
   // CHECK-NEXT: %0 = "lq.Bconv2d"(%arg0, %arg1, %arg2, %cst, %arg3)
   // CHECK-NEXT: return %0
 }
-
 
 // CHECK-LABEL: @fuse_sub_into_bconv2d
 func @fuse_sub_into_bconv2d(%arg0: tensor<256x32x32x1xi32>, %arg1: tensor<16x3x3x3xf32>, %arg2: tensor<16xf32>, %arg3: none) -> tensor<256x30x30x16xf32> {
@@ -144,15 +144,19 @@ func @do_not_fuse_relu_into_bconv2d_no_post_activation_multiplier(%arg0: tensor<
   // CHECK-NEXT: return %1
 }
 
-// CHECK-LABEL: @reorder_maxpool_2d_quantize
-func @reorder_maxpool_2d_quantize(%arg0: tensor<256x32x32x65xf32>) -> tensor<256x16x8x3xi32> {
+// CHECK-LABEL: @target_specific_reorder_maxpool_2d_quantize
+func @target_specific_reorder_maxpool_2d_quantize(%arg0: tensor<256x32x32x65xf32>) -> tensor<256x16x8x3xi32> {
   %0 = "tfl.max_pool_2d"(%arg0) {filter_height = 3 : i32, filter_width = 2 : i32, fused_activation_function = "NONE", padding = "SAME", stride_h = 2 : i32, stride_w = 4 : i32} : (tensor<256x32x32x65xf32>) -> tensor<256x16x8x65xf32>
   %1 = "lq.Quantize"(%0) : (tensor<256x16x8x65xf32>) -> tensor<256x16x8x3xi32>
   return %1 : tensor<256x16x8x3xi32>
 
-  // CHECK-NEXT: %0 = "lq.Quantize"(%arg0) : (tensor<256x32x32x65xf32>) -> tensor<256x32x32x3xi32>
-  // CHECK-NEXT: %1 = "lq.BMaxPool2d"(%0) {filter_height = 3 : i32, filter_width = 2 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 4 : i32} : (tensor<256x32x32x3xi32>) -> tensor<256x16x8x3xi32>
-  // CHECK-NEXT: return %1
+  // CHECK-ARM-NEXT: %0 = "lq.Quantize"(%arg0) : (tensor<256x32x32x65xf32>) -> tensor<256x32x32x3xi32>
+  // CHECK-ARM-NEXT: %1 = "lq.BMaxPool2d"(%0) {filter_height = 3 : i32, filter_width = 2 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 4 : i32} : (tensor<256x32x32x3xi32>) -> tensor<256x16x8x3xi32>
+  // CHECK-ARM-NEXT: return %1
+
+  // CHECK-XCORE-NEXT: %0 = "tfl.max_pool_2d"(%arg0) {filter_height = 3 : i32, filter_width = 2 : i32, fused_activation_function = "NONE", padding = "SAME", stride_h = 2 : i32, stride_w = 4 : i32} : (tensor<256x32x32x65xf32>) -> tensor<256x16x8x65xf32>
+  // CHECK-XCORE-NEXT: %1 = "lq.Quantize"(%0) : (tensor<256x16x8x65xf32>) -> tensor<256x16x8x3xi32>
+  // CHECK-XCORE-NEXT: return %1
 }
 
 // CHECK-LABEL: @do_not_reorder_maxpool_2d_quantize_multiple_uses

@@ -41,14 +41,17 @@ def ValidFilterShape : Constraint<CPred<"HasValidFilterShape($0, $1)">>;
 def IsDataFormatNHWC : ConstantAttr<TF_ConvnetDataFormatAttr, "NHWC">;
 def CreateNoneAttrValue : NativeCodeCall<"$_builder.getUnitAttr()">;
 
-def : Pat<(TF_Conv2DOp
-              (LQ_DequantizeOp: $dequantized_input $input),
-              (ConstantOp: $filter_op $filter),
+// All targets support this pattern with "VALID" padding, but only the "arm"
+// target supports it with "SAME" padding.
+class PrepareBConvPadValue0Pat<string padding_type> :
+      Pat<(TF_Conv2DOp
+              (LQ_DequantizeOp:$dequantized_input $input),
+              (ConstantOp:$filter_op $filter),
               IsIntList1XY1:$strides,
               $use_cudnn,
-              $padding,
+              ConstantAttr<StrAttr, padding_type>:$padding,
               $explicit_padding,
-              IsDataFormatNHWC: $data_format,
+              IsDataFormatNHWC:$data_format,
               IsIntList1XY1:$dilations),
           (LQ_Bconv2dOp
               $input,
@@ -71,6 +74,7 @@ def : Pat<(TF_Conv2DOp
           [(BinaryFilter $filter),
            (ValidFilterShape $dequantized_input, $filter_op)],
           (addBenefit 90)>;
+def : PrepareBConvPadValue0Pat<"VALID">;
 
 def ConstFloatValueIsOne : Constraint<
   CPred<"$0.isa<DenseElementsAttr>() && "
@@ -81,10 +85,10 @@ def SamePadding : Constraint<CPred<"IsSamePadding($0, $1, $2, $3)">>;
 
 def : Pat<(TF_Conv2DOp:$output
               (TF_PadV2Op
-                  (LQ_DequantizeOp: $dequantized_input $input),
+                  (LQ_DequantizeOp:$dequantized_input $input),
                   (ConstantOp $paddings),
                   (ConstantOp $pad_values)),
-              (ConstantOp: $filter_op $filter),
+              (ConstantOp:$filter_op $filter),
               IsIntList1XY1:$strides,
               $use_cudnn,
               ConstantAttr<StrAttr, "VALID">,

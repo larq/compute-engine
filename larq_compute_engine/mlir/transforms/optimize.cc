@@ -2,6 +2,7 @@
 
 #include "larq_compute_engine/core/bitpacking/bitpack.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
+#include "larq_compute_engine/mlir/transforms/passes.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -18,17 +19,27 @@ namespace {
 
 // Optimize LCE operations in functions.
 struct OptimizeLCE : public PassWrapper<OptimizeLCE, FunctionPass> {
- public:
-  // The default value must be true so that we can run with the optimisation in
-  // the file-check tests.
-  explicit OptimizeLCE() : experimental_enable_bitpacked_activations_(true) {}
-  explicit OptimizeLCE(bool experimental_enable_bitpacked_activations)
-      : experimental_enable_bitpacked_activations_(
-            experimental_enable_bitpacked_activations) {}
+  OptimizeLCE() = default;
+  OptimizeLCE(const OptimizeLCE& pass) {}
+  OptimizeLCE(const LCETarget target,
+              const bool experimental_enable_bitpacked_activations) {
+    target_.setValue(target);
+    experimental_enable_bitpacked_activations_.setValue(
+        experimental_enable_bitpacked_activations);
+  }
+
   void runOnFunction() override;
 
  private:
-  bool experimental_enable_bitpacked_activations_;
+  Option<LCETarget> target_{
+      *this, "target", llvm::cl::desc("Platform to target."),
+      llvm::cl::values(clEnumValN(LCETarget::ARM, "arm", "ARM target"),
+                       clEnumValN(LCETarget::XCORE, "xcore", "XCORE target"))};
+  Option<bool> experimental_enable_bitpacked_activations_{
+      *this, "experimental-enable-bitpacked-activations",
+      llvm::cl::desc("Include patterns to allow binary convolutions to output "
+                     "bitpacked activations."),
+      llvm::cl::init(true)};
 };
 
 bool IsConstantValue(Attribute values, float expected_value) {
@@ -40,7 +51,13 @@ bool IsConstantValue(Attribute values, float expected_value) {
   return true;
 }
 
-#include "larq_compute_engine/mlir/transforms/generated_optimize.inc"
+namespace target_arm {
+#include "larq_compute_engine/mlir/transforms/generated_optimize_target_arm.inc"
+}
+
+namespace target_other {
+#include "larq_compute_engine/mlir/transforms/generated_optimize_target_other.inc"
+}
 
 /**
  * =================================================
@@ -301,10 +318,15 @@ void OptimizeLCE::runOnFunction() {
   auto* ctx = &getContext();
   auto func = getFunction();
 
-  TFL::populateWithGenerated(ctx, patterns);
+  if (target_ == LCETarget::ARM) {
+    target_arm::populateWithGenerated(ctx, patterns);
+  } else {
+    target_other::populateWithGenerated(ctx, patterns);
+  }
   if (experimental_enable_bitpacked_activations_) {
     patterns.insert<SetBitpackedActivations>(ctx);
   }
+
   applyPatternsAndFoldGreedily(func, patterns);
 }
 
@@ -312,9 +334,10 @@ void OptimizeLCE::runOnFunction() {
 
 // Creates an instance of the TensorFlow dialect OptimizeLCE pass.
 std::unique_ptr<OperationPass<FuncOp>> CreateOptimizeLCEPass(
-    bool experimental_enable_bitpacked_activations) {
+    const LCETarget target,
+    const bool experimental_enable_bitpacked_activations) {
   return std::make_unique<OptimizeLCE>(
-      experimental_enable_bitpacked_activations);
+      target, experimental_enable_bitpacked_activations);
 }
 
 static PassRegistration<OptimizeLCE> pass(

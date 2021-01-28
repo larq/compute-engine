@@ -3,6 +3,8 @@
 
 #include "mlir/Pass/Pass.h"
 
+enum LCETarget { ARM = 0, XCORE = 1 };
+
 namespace mlir {
 namespace TFL {
 
@@ -10,11 +12,11 @@ namespace TFL {
 std::unique_ptr<OperationPass<FuncOp>> CreateOpRemovalPass();
 
 // Creates an instance of the TensorFlow dialect PrepareLCE pass.
-std::unique_ptr<OperationPass<FuncOp>> CreatePrepareLCEPass();
+std::unique_ptr<OperationPass<FuncOp>> CreatePrepareLCEPass(LCETarget target);
 
 // Creates an instance of the TensorFlow dialect OptimizeLCE pass.
 std::unique_ptr<OperationPass<FuncOp>> CreateOptimizeLCEPass(
-    bool experimental_enable_bitpacked_activations);
+    LCETarget target, bool experimental_enable_bitpacked_activations);
 
 // Creates an instance of the TensorFlow dialect BitpackWeightsLCE pass.
 std::unique_ptr<OperationPass<FuncOp>> CreateBitpackWeightsLCEPass();

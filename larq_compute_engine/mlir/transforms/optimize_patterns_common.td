@@ -9,6 +9,8 @@ def F32ElementsAttr : ElementsAttrBase<
 // Checks if the value has only one user.
 def HasOneUse : Constraint<CPred<"$0.hasOneUse()">>;
 
+class ConstantValue<string val> : AttrConstraint<CPred<"IsConstantValue($_self, " # val # ")">>;
+
 // TODO: Check shapes before fusing
 multiclass FuseAddOrSubWithBConv2D<dag binaryOp> {
   def : Pat<(binaryOp
@@ -83,13 +85,11 @@ multiclass FuseMulOrDivWithBConv2D<dag binaryOp> {
                 $stride_width),
             [(HasOneUse $conv_output)], (addBenefit 100)>;
 }
-
 foreach binaryOp = [TFL_DivOp, TFL_MulOp] in
   defm : FuseMulOrDivWithBConv2D<binaryOp>;
 
-class ConstantValue<string val> : AttrConstraint<CPred<"IsConstantValue($_self, " # val # ")">>;
 
-// Fuse activation function into BConv2D
+// Fuse an activation function into the BConv2D.
 multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
   def : Pat<(ActFnOp
                 (LQ_Bconv2dOp:$conv_output
@@ -152,23 +152,7 @@ multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
                 $stride_width),
             [(HasOneUse $conv_output)], (addBenefit 100)>;
 }
-
 foreach actFnPair = [[TFL_ReluOp, TFL_AF_Relu],
                      [TFL_Relu1Op, TFL_AF_Relu1],
                      [TFL_Relu6Op, TFL_AF_Relu6]] in
   defm : FuseActFnIntoConvOpPat<actFnPair[0], actFnPair[1]>;
-
-def : Pat<(LQ_QuantizeOp (TFL_MaxPool2DOp: $pool_output $input,
-                                           $padding,
-                                           $stride_w,
-                                           $stride_h,
-                                           $filter_width,
-                                           $filter_height,
-                                           $fused_activation_function)),
-          (LQ_BMaxPool2dOp (LQ_QuantizeOp $input),
-                           $padding,
-                           $stride_w,
-                           $stride_h,
-                           $filter_width,
-                           $filter_height),
-          [(HasOneUse $pool_output)]>;

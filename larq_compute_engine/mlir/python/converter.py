@@ -55,6 +55,7 @@ def convert_keras_model(
     *,  # Require remaining arguments to be keyword-only.
     inference_input_type: tf.DType = tf.float32,
     inference_output_type: tf.DType = tf.float32,
+    target: str = "arm",
     experimental_default_int8_range: Optional[Tuple[float, float]] = None,
     experimental_enable_bitpacked_activations: bool = False,
 ) -> bytes:
@@ -73,6 +74,7 @@ def convert_keras_model(
             must be either `tf.float32` or `tf.int8`.
         inference_output_type: Data type of the output layer. Defaults to `tf.float32`,
             must be either `tf.float32` or `tf.int8`.
+        target: Target hardware platform. Must be "arm" or "xcore".
         experimental_default_int8_range: Tuple of integers representing `(min, max)`
             range values for all arrays without a specified range. Intended for
             experimenting with quantization via "dummy quantization". (default None)
@@ -98,6 +100,8 @@ def convert_keras_model(
             "Expected `inference_output_type` to be either `tf.float32` or `tf.int8`, "
             f"got {inference_output_type}."
         )
+    if target not in ("arm", "xcore"):
+        raise ValueError(f'Expected `target` to be "arm" or "xcore", but got {target}.')
 
     if not tf.executing_eagerly():
         raise RuntimeError(
@@ -147,6 +151,7 @@ def convert_keras_model(
         [tensor.shape.as_list() for tensor in input_tensors],
         [get_tensor_name(tensor) for tensor in output_tensors],
         should_quantize,
+        target,
         experimental_default_int8_range,
         experimental_enable_bitpacked_activations,
     )
