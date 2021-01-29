@@ -1,6 +1,7 @@
 name: lce-release
 
 on:
+  pull_request: {}
   release:
     types: [published]
     tags:
@@ -124,6 +125,8 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - run: |
+          echo "${{ github.event.inputs.version }}"
       - name: Build macOS wheels
         run: |
           python --version
@@ -196,6 +199,11 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - name: read-var
+        run: |
+          python -c "import os; print('\'' + os.getenv('LCE_RELEASE_VERSION', 'x') + '\'');"
+        env:
+          LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
       - name: Build Windows wheels
         run: |
           $Env:BAZEL_VC = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC"
