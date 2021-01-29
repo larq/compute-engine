@@ -129,8 +129,6 @@ jobs:
           python --version
           python -m pip install delocate wheel setuptools numpy six --no-cache-dir
 
-          export LCE_RELEASE_VERSION=${{ github.event.inputs.version }}
-
           ./configure.py
 
           bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
@@ -139,6 +137,8 @@ jobs:
           for f in artifacts/*.whl; do
             delocate-wheel -w wheelhouse $f
           done
+        env:
+          LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
         shell: bash
       - uses: actions/upload-artifact@v2
         with:
