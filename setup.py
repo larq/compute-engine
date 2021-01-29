@@ -17,11 +17,19 @@ class BinaryDistribution(dist.Distribution):
         return True
 
 
+def get_version_number(default):
+    # The `or default` is because on CI the `getenv` can return the empty string.
+    version = os.getenv("LCE_RELEASE_VERSION", default) or default
+    if "." not in version:
+        raise ValueError(f"Invalid version: {version}")
+    return version
+
+
 ext_modules = [Extension("_foo", ["stub.cc"])] if platform.startswith("linux") else []
 
 setup(
     name="larq-compute-engine",
-    version=os.getenv("LCE_RELEASE_VERSION", "0.5.0"),
+    version=get_version_number(default="0.5.0"),
     python_requires=">=3.6",
     description="Highly optimized inference engine for binarized neural networks.",
     long_description=readme(),
