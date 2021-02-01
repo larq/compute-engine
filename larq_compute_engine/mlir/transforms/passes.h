@@ -15,8 +15,7 @@ std::unique_ptr<OperationPass<FuncOp>> CreateOpRemovalPass();
 std::unique_ptr<OperationPass<FuncOp>> CreatePrepareLCEPass(LCETarget target);
 
 // Creates an instance of the TensorFlow dialect OptimizeLCE pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateOptimizeLCEPass(
-    LCETarget target, bool experimental_enable_bitpacked_activations);
+std::unique_ptr<OperationPass<FuncOp>> CreateOptimizeLCEPass(LCETarget target);
 
 // Creates an instance of the TensorFlow dialect BitpackWeightsLCE pass.
 std::unique_ptr<OperationPass<FuncOp>> CreateBitpackWeightsLCEPass();

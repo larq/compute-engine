@@ -42,8 +42,7 @@ void AddQuantizationPasses(const mlir::TFL::QuantizationSpecs& quant_specs,
 
 void AddTFToLCETFLConversionPasses(
     const mlir::TFL::QuantizationSpecs& quant_specs,
-    mlir::OpPassManager* pass_manager, const LCETarget target,
-    const bool experimental_enable_bitpacked_activations) {
+    mlir::OpPassManager* pass_manager, const LCETarget target) {
   mlir::TF::StandardPipelineOptions standard_pipeline_options;
   standard_pipeline_options.enable_inliner = false;
   standard_pipeline_options.form_clusters = false;
@@ -143,10 +142,9 @@ void AddTFToLCETFLConversionPasses(
   pass_manager->addPass(mlir::TF::CreateInitTextFileToImportPass());
 
   pass_manager->addPass(mlir::TFL::CreateLegalizeTFPass(true));
-  pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(target, false));
+  pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(target));
   pass_manager->addPass(mlir::TFL::CreateOptimizePass());
-  pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(
-      target, experimental_enable_bitpacked_activations));
+  pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(target));
   pass_manager->addPass(mlir::TFL::CreateBitpackWeightsLCEPass());
   // This pass operates on TensorFlow ops but is triggered after legalization
   // so that it can target constants introduced once TensorFlow Identity ops

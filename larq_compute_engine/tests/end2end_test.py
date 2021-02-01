@@ -171,9 +171,7 @@ def test_simple_model(dataset, model_cls):
         )
         model.fit(dataset, epochs=1)
 
-    model_lce = convert_keras_model(
-        model, experimental_enable_bitpacked_activations=True
-    )
+    model_lce = convert_keras_model(model)
 
     if model_cls == lqz.sota.QuickNetSmall:
         # Since QuickNetSmall is a deep model we are more tolerant of error.
