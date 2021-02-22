@@ -113,6 +113,12 @@ def convert_keras_model(
             "Using `experimental_default_int8_range` as fallback quantization stats. "
             "This should only be used for latency tests."
         )
+    if hasattr(model, "dtype_policy") and model.dtype_policy.name == "mixed_float16":
+        raise RuntimeError(
+            "Mixed precision float16 models are not supported by the TFLite converted, "
+            "please convert them to float32 first. See also: "
+            "https://github.com/tensorflow/tensorflow/issues/46380"
+        )
     func = concrete_function_from_keras_model(model)
     if version.parse(tf.__version__) >= version.parse("1.15"):
         frozen_func = convert_variables_to_constants_v2(func, lower_control_flow=False)
