@@ -115,7 +115,7 @@ def convert_keras_model(
         )
     if hasattr(model, "dtype_policy") and model.dtype_policy.name != "float32":
         raise RuntimeError(
-            "Mixed precision float16 models are not supported by the TFLite converted, "
+            "Mixed precision float16 models are not supported by the TFLite converter, "
             "please convert them to float32 first. See also: "
             "https://github.com/tensorflow/tensorflow/issues/46380"
         )
