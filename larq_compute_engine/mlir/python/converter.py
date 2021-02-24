@@ -41,13 +41,20 @@ def _contains_training_quant_op(graph_def):
     training_quant_ops = {
         "FakeQuantWithMinMaxVars",
         "FakeQuantWithMinMaxVarsPerChannel",
+        "FakeQuantWithMinMaxArgs",
+        "FakeQuantWithMinMaxArgsPerChannel",
         "QuantizeAndDequantizeV2",
         "QuantizeAndDequantizeV3",
     }
 
-    return any(
-        op in node_def.name for op in training_quant_ops for node_def in graph_def.node
-    )
+    for node_def in graph_def.node:
+        if node_def.op in training_quant_ops:
+            return True
+    for function in graph_def.library.function:
+        for node_def in function.node_def:
+            if node_def.op in training_quant_ops:
+                return True
+    return False
 
 
 def convert_keras_model(
