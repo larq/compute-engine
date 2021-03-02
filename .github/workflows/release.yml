@@ -39,11 +39,11 @@ jobs:
       - run: mkdir benchmark-binaries
       - name: Build Benchmark utility for AArch64
         run: |
-          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=aarch64 -c opt --copt=-O3
+          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=aarch64 -c opt --copt=-O3 --features=fully_static_link
           cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_aarch64
       - name: Build Benchmark utility for AArch32
         run: |
-          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=rpi3 -c opt --copt=-O3
+          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=rpi3 -c opt --copt=-O3 --features=fully_static_link
           cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_aarch32
       - name: Build Benchmark utility for Android
         run: |
