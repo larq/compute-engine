@@ -202,3 +202,78 @@ def modify_integer_quantized_model_io_type(
 
     # Convert the model to a bytearray
     return _convert_model_from_object_to_bytearray(model)
+
+
+def strip_lcedequantize_ops(model):
+    """Strip the LceDequantize ops to directly output bitpacked tf.int32 tensors."""
+    # Convert the model to an object
+    model = _convert_model_from_bytearray_to_object(model)
+    
+    if len(model.subgraphs) > 1:
+        raise ValueError(
+            "Model must only have one subgraph. Instead, it has "
+            "{} subgraphs.".format(len(model.subgraphs))
+        )
+
+    ## Find the LceDequantize operators
+    subgraph = model.subgraphs[0]
+    tensors = subgraph.tensors
+    operators = subgraph.operators
+    remove_tensors_idxs = set()
+
+    # Ensure model has at least one LceDequantize operator
+    lce_dequant_opcode_idx = None
+    for idx, opcode in enumerate(model.operatorCodes):
+        if opcode.customCode == b'LceDequantize':
+            lce_dequant_opcode_idx = idx
+        if lce_dequant_opcode_idx is not None:
+            break
+    if lce_dequant_opcode_idx is None:
+        raise ValueError(
+            "Model does not contain any LceDequantize operators."
+        )
+
+    # Ensure model outputs are dequantized
+    lce_output_dequant_ops = []
+    for op in operators:
+        # Find output LceDequantize operator
+        if op.opcodeIndex == lce_dequant_opcode_idx and op.outputs[0] in subgraph.outputs:
+            pos, float_tensor, int_tensor = (
+                "output",
+                tensors[op.outputs[0]],
+                tensors[op.inputs[0]],
+            )
+            lce_output_dequant_ops.append(op)
+        # Otherwise, ignore
+        else:
+            continue
+        # If found, validate the input/output tensor type
+        if float_tensor.type != tflite_schema.TensorType.FLOAT32:
+            raise ValueError(
+                "Model {} type must be tf.float32. Expected type for tensor with "
+                "name '{}' is tf.float32, instead type is tf.{}".format(
+                    pos,
+                    float_tensor.name,
+                    _convert_tflite_enum_type_to_tf_type(float_tensor.type).name,
+                )
+            )
+        if int_tensor.type != tflite_schema.TensorType.INT32:
+            raise ValueError(
+                "Expected type for tensor with "
+                "name '{}' is tf.int32, instead type is tf.{}".format(
+                    int_tensor.name,
+                    _convert_tflite_enum_type_to_tf_type(int_tensor.type).name,
+                )
+            )
+        
+    # Remove the LceDequantize operators
+    for op in lce_output_dequant_ops:
+        subgraph.outputs[subgraph.outputs == op.outputs[0]] = op.inputs[0]
+        remove_tensors_idxs.add(op.outputs[0])
+        operators.remove(op)
+
+    # Remove tensors marked for deletion.
+    _remove_tensors_from_model(model, remove_tensors_idxs)
+
+    # Convert the model to a bytearray
+    return _convert_model_from_object_to_bytearray(model)
