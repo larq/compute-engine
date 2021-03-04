@@ -231,7 +231,7 @@ def strip_lcedequantize_ops(model):
     """Strip the LceDequantize ops to directly output bitpacked tf.int32 tensors."""
     # Convert the model to an object
     model = _convert_model_from_bytearray_to_object(model)
-    
+
     if len(model.subgraphs) > 1:
         raise ValueError(
             "Model must only have one subgraph. Instead, it has "
@@ -247,20 +247,21 @@ def strip_lcedequantize_ops(model):
     # Ensure model has at least one LceDequantize operator
     lce_dequant_opcode_idx = None
     for idx, opcode in enumerate(model.operatorCodes):
-        if opcode.customCode == b'LceDequantize':
+        if opcode.customCode == b"LceDequantize":
             lce_dequant_opcode_idx = idx
         if lce_dequant_opcode_idx is not None:
             break
     if lce_dequant_opcode_idx is None:
-        raise ValueError(
-            "Model does not contain any LceDequantize operators."
-        )
+        raise ValueError("Model does not contain any LceDequantize operators.")
 
     # Ensure model outputs are dequantized
     lce_output_dequant_ops = []
     for op in operators:
         # Find output LceDequantize operator
-        if op.opcodeIndex == lce_dequant_opcode_idx and op.outputs[0] in subgraph.outputs:
+        if (
+            op.opcodeIndex == lce_dequant_opcode_idx
+            and op.outputs[0] in subgraph.outputs
+        ):
             pos, float_tensor, int_tensor = (
                 "output",
                 tensors[op.outputs[0]],
@@ -288,7 +289,7 @@ def strip_lcedequantize_ops(model):
                     _convert_tflite_enum_type_to_tf_type(int_tensor.type).name,
                 )
             )
-        
+
     # Remove the LceDequantize operators
     for op in lce_output_dequant_ops:
         subgraph.outputs[subgraph.outputs == op.outputs[0]] = op.inputs[0]
