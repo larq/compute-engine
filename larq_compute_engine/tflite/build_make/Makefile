@@ -57,6 +57,10 @@ INCLUDES := \
 # This is at the end so any globally-installed frameworks like protobuf don't
 # override local versions in the source tree.
 INCLUDES += -I/usr/local/include
+OPENCV_DIR := /usr/include/opencv4
+INCLUDES += -I$(OPENCV_DIR)
+
+DETECTION_LIBRARIES := -lopencv_core -lopencv_videoio -lopencv_highgui -lopencv_imgproc
 
 # These are the default libraries needed, but they can be added to or
 # overridden by the platform-specific settings in target makefiles.
@@ -119,6 +123,9 @@ LCE_EXAMPLE_SRCS := \
 LCE_BENCHMARK_SRCS := \
 	larq_compute_engine/tflite/benchmark/lce_benchmark_main.cc
 
+LCE_DETECTION_SRCS := \
+	examples/detection.cc
+
 # These target-specific makefiles should modify or replace options like
 # CXXFLAGS or LIBS to work for a specific targeted architecture. All logic
 # based on platforms or architectures should happen within these files, to
@@ -136,6 +143,7 @@ CORE_LIB := $(LIBDIR)$(CORE_LIB_NAME)
 BENCHMARK_LIB := $(LIBDIR)$(BENCHMARK_LIB_NAME)
 LCE_EXAMPLE_BINARY := $(BINDIR)lce_minimal
 LCE_BENCHMARK_BINARY := $(BINDIR)lce_benchmark
+LCE_DETECTION_BINARY := $(BINDIR)lce_detection
 
 CXX := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}g++
 CC := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}gcc
@@ -150,8 +158,11 @@ $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LCE_EXAMPLE_SRCS))))
 LCE_BENCHMARK_OBJS := $(addprefix $(OBJDIR), \
 $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LCE_BENCHMARK_SRCS))))
 
+LCE_DETECTION_OBJS := $(addprefix $(OBJDIR), \
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LCE_DETECTION_SRCS))))
+
 # The target that's compiled if there's no command-line arguments.
-all: $(LCE_EXAMPLE_BINARY) $(LCE_BENCHMARK_BINARY)
+all: $(LCE_EXAMPLE_BINARY) $(LCE_BENCHMARK_BINARY) $(LCE_DETECTION_BINARY)
 
 # For normal manually-created TensorFlow Lite C++ source files.
 $(OBJDIR)%.o: %.cpp
@@ -170,6 +181,12 @@ $(OBJDIR)%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
+$(LCE_DETECTION_BINARY): $(LCE_CORE_OBJS) $(LCE_DETECTION_OBJS) $(CORE_LIB)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) \
+	-o $(LCE_DETECTION_BINARY) $(LCE_CORE_OBJS) $(LCE_DETECTION_OBJS) \
+	$(LIBFLAGS) $(CORE_LIB) $(LDFLAGS) $(LIBS) $(DETECTION_LIBRARIES)
+	
 $(LCE_EXAMPLE_BINARY): $(LCE_CORE_OBJS) $(LCE_EXAMPLE_OBJS) $(CORE_LIB)
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) \
