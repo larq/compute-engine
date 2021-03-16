@@ -85,7 +85,7 @@ jobs:
           asset_content_type: application/octet-stream
 
   android-aar:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
         with:
