@@ -18,7 +18,9 @@ cc_binary(
             "-pie",  # Android 5.0 and later supports only PIE
             "-lm",  # some builtin ops, e.g., tanh, need -lm
         ],
-        "//conditions:default": [],
+        "//conditions:default": [
+            "-lm",
+        ],
     }),
     deps = [
         "//larq_compute_engine/tflite/kernels:lce_op_kernels",
