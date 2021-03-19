@@ -19,6 +19,7 @@ cc_binary(
             "-lm",  # some builtin ops, e.g., tanh, need -lm
         ],
         "//conditions:default": [
+            "-lstdc++",
             "-lm",
         ],
     }),
