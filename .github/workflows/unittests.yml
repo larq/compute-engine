@@ -74,20 +74,27 @@ jobs:
         with:
           python-version: 3.8
       - name: Configure Bazel
-        run: ./configure.py
+        run: |
+          ./configure.py
+          echo -e 'build --distinct_host_configuration=false' >> .bazelrc.user
+          echo -e 'build --copt=-O2' >> .bazelrc.user
+          if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
+            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu' >> .bazelrc.user
+            echo -e 'build --google_default_credentials' >> .bazelrc.user
+          fi
         shell: bash
       - name: Set bazel cache
-        run: echo -e 'build --remote_upload_local_results=false\n' >> .bazelrc.user
+        run: echo -e 'build --remote_upload_local_results=false' >> .bazelrc.user
         if: github.ref != 'refs/heads/master'
         shell: bash
       - name: Install pip dependencies
         run: pip install tensorflow-cpu~=2.4 larq~=0.11 larq_zoo~=2.0 pytest tensorflow_datasets~=4.2 flatbuffers tqdm --no-cache-dir
       - name: Run Interpreter test
-        run: bazelisk test larq_compute_engine/tflite/tests:interpreter_test --test_output=all --copt=-O2 --distinct_host_configuration=false $([ -z "$GOOGLE_APPLICATION_CREDENTIALS" ] || echo "--remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu --google_default_credentials")
+        run: bazelisk test larq_compute_engine/tflite/tests:interpreter_test --test_output=all
       - name: Run FileCheck tests
-        run: bazelisk test larq_compute_engine/mlir/tests:all --test_output=all --copt=-O2 --distinct_host_configuration=false $([ -z "$GOOGLE_APPLICATION_CREDENTIALS" ] || echo "--remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu --google_default_credentials")
+        run: bazelisk test larq_compute_engine/mlir/tests:all --test_output=all
       - name: Run End2End tests
-        run: bazelisk test larq_compute_engine/tests:end2end_test --test_output=all --copt=-O2 --distinct_host_configuration=false $([ -z "$GOOGLE_APPLICATION_CREDENTIALS" ] || echo "--remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu --google_default_credentials")
+        run: bazelisk test larq_compute_engine/tests:end2end_test --test_output=all
 
   ConverterPython:
     runs-on: ubuntu-latest
