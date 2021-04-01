@@ -74,10 +74,8 @@ jobs:
         with:
           python-version: 3.8
       - name: Configure Bazel
-        run: ./configure.py
-        shell: bash
-      - name: Set bazel flags
         run: |
+          ./configure.py
           echo -e 'build --distinct_host_configuration=false' >> .bazelrc.user
           echo -e 'build --copt=-O2' >> .bazelrc.user
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
@@ -85,7 +83,7 @@ jobs:
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
         shell: bash
-      - name: Set bazel cache upload flag
+      - name: Set bazel cache
         run: echo -e 'build --remote_upload_local_results=false' >> .bazelrc.user
         if: github.ref != 'refs/heads/master'
         shell: bash
