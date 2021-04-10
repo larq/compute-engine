@@ -4,6 +4,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
 namespace TFL {
@@ -56,12 +57,11 @@ DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
 #include "larq_compute_engine/mlir/transforms/generated_bitpack_weights.inc"
 
 void BitpackWeightsLCE::runOnFunction() {
-  OwningRewritePatternList patterns;
-  auto* ctx = &getContext();
+  OwningRewritePatternList patterns(&getContext());
   auto func = getFunction();
 
-  TFL::populateWithGenerated(ctx, patterns);
-  applyPatternsAndFoldGreedily(func, patterns);
+  TFL::populateWithGenerated(patterns);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
 }  // namespace

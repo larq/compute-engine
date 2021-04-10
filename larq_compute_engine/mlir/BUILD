@@ -16,6 +16,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "ir/lce_ops.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
@@ -29,6 +30,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/op_removal_patterns.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
@@ -42,6 +44,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/prepare_patterns_target_arm.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "ir/lce_ops.td",
         "transforms/op_removal_patterns.td",
@@ -59,6 +62,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/prepare_patterns_common.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "ir/lce_ops.td",
         "transforms/op_removal_patterns.td",
@@ -75,6 +79,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/optimize_patterns_target_arm.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "ir/lce_ops.td",
         "transforms/optimize_patterns_common.td",
@@ -90,6 +95,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/optimize_patterns_common.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "ir/lce_ops.td",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
@@ -104,9 +110,9 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/bitpack_weights_patterns.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "ir/lce_ops.td",
-        "transforms/bitpack_weights_patterns.td",
         "transforms/op_removal_patterns.td",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
@@ -121,6 +127,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/quantize_patterns.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "ir/lce_ops.td",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",

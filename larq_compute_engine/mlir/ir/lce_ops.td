@@ -81,9 +81,7 @@ Converts floating point or integer tensors to binarized bitpacked tensors.
     TensorOf<[I32]>:$y
   );
 
-  let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &state, Value x"
-  >];
+  let builders = [OpBuilder<(ins "Value":$x)>];
 }
 
 def LQ_DequantizeOp : LQ_Op<"Dequantize", [NoSideEffect]> {

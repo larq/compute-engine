@@ -1,109 +1,34 @@
-build --spawn_strategy=standalone
-build --strategy=Genrule=standalone
-build -c opt
+################################################################
+# Config from TensorFlow's .bazelrc.                           #
+#                                                              #
+# This is copied directly, with some irrelevant parts removed. #
+################################################################
 
-# Disable visibility checks (works around some private deps in TensorFlow).
-build --nocheck_visibility
+# Default build options. These are applied first and unconditionally.
 
-# For compatibility with TensorFlow config
-common --experimental_repo_remote_exec
+# The following line opts in to modular op registration support by default.
+build --define framework_shared_object=true
 
-build --copt=-DTFLITE_WITH_RUY
-
-# Disable MKL
-build --define=enable_mkl=false --define=build_with_mkl=false --define=tensorflow_mkldnn_contraction_kernel=0
-
-# By default, build TF in C++ 14 mode.
-build:android --cxxopt=-std=c++14
-build:android --host_cxxopt=-std=c++14
-build:linux --cxxopt=-std=c++14
-build:linux --host_cxxopt=-std=c++14
-build:macos --cxxopt=-std=c++14
-build:macos --host_cxxopt=-std=c++14
-build:windows --cxxopt=/std:c++14
-build:windows --host_cxxopt=/std:c++14
-
-# These can be activated using --config=rpi3 and --config=aarch64
-build:rpi3 --crosstool_top=@local_config_arm_compiler//:toolchain
-build:rpi3 --cpu=armeabi
-build:rpi3 --copt=-march=armv7-a --copt=-mfpu=neon-vfpv4 --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR --copt=-fno-tree-pre --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 --define=raspberry_pi_with_neon=true --define=framework_shared_object=false --copt=-funsafe-math-optimizations --copt=-ftree-vectorize --copt=-fomit-frame-pointer --verbose_failures
-
-build:aarch64 --crosstool_top=@local_config_arm_compiler//:toolchain
-build:aarch64 --cpu=aarch64
-build:aarch64 --copt=-march=armv8-a --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR --copt=-fno-tree-pre --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 --define=framework_shared_object=false --copt=-funsafe-math-optimizations --copt=-ftree-vectorize --copt=-fomit-frame-pointer --verbose_failures
-
-# Options to build TensorFlow 1.x or 2.x.
-build:v1 --define=tf_api_version=1
-build:v2 --define=tf_api_version=2
-test:v1 --action_env=TF2_BEHAVIOR=0
-test:v2 --action_env=TF2_BEHAVIOR=1
-
-build --config=v2
-test --config=v2 --compilation_mode=fastbuild
-
-build --define=grpc_no_ares=true
-
-# Options to disable default on features
-build:noaws --define=no_aws_support=true
-build:nogcp --define=no_gcp_support=true
-build:nohdfs --define=no_hdfs_support=true
-build:nonccl --define=no_nccl_support=true
-
-build:linux --config=noaws --config=nogcp --config=nohdfs --config=nonccl
-build:macos --config=noaws --config=nogcp --config=nohdfs --config=nonccl
-
-# Tensorflow uses M_* math constants that only get defined by MSVC headers if
-# _USE_MATH_DEFINES is defined.
-build:windows --copt=/D_USE_MATH_DEFINES
-build:windows --host_copt=/D_USE_MATH_DEFINES
-
-# Config to use a mostly-static build and disable modular op registration
-# support (this will revert to loading TensorFlow with RTLD_GLOBAL in Python).
-# By default, TensorFlow will build with a dependence on
-# //tensorflow:libtensorflow_framework.so.
-build:monolithic --define framework_shared_object=false
-
-# On windows, we still link everything into a single DLL.
-build:windows --config=monolithic
-
-# Make sure to include as little of windows.h as possible
-build:windows --copt=-DWIN32_LEAN_AND_MEAN
-build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
-build:windows --copt=-DNOGDI
-build:windows --host_copt=-DNOGDI
-
-# MSVC (Windows): Standards-conformant preprocessor mode
-# See https://docs.microsoft.com/en-us/cpp/build/reference/zc-preprocessor
-build:windows --copt=/Zc:preprocessor
-build:windows --host_copt=/Zc:preprocessor
-
-# Misc build options we need for windows.
-build:windows --linkopt=/DEBUG
-build:windows --host_linkopt=/DEBUG
-build:windows --linkopt=/OPT:REF
-build:windows --host_linkopt=/OPT:REF
-build:windows --linkopt=/OPT:ICF
-build:windows --host_linkopt=/OPT:ICF
-build:windows --copt=/d2ReducedOptimizeHugeFunctions
-build:windows --host_copt=/d2ReducedOptimizeHugeFunctions
-build:windows --experimental_strict_action_env=true
-
-# Verbose failure logs when something goes wrong
-build:windows --verbose_failures
-
-# Suppress C++ compiler warnings, otherwise build logs become 10s of MBs.
-build:windows --copt=/W0
-
-# On windows, we never cross compile
-build:windows --distinct_host_configuration=false
+# For workaround https://github.com/bazelbuild/bazel/issues/8772 with Bazel >= 0.29.1
+build --java_toolchain=@tf_toolchains//toolchains/java:tf_java_toolchain
+build --host_java_toolchain=@tf_toolchains//toolchains/java:tf_java_toolchain
 
 build --define=use_fast_cpp_protos=true
 build --define=allow_oversize_protos=true
 
-# Enable using platform specific build settings, except when cross-compiling for
-# mobile platforms.
+build --spawn_strategy=standalone
+build -c opt
+
+build --define=grpc_no_ares=true
+
 build --enable_platform_specific_config
-build:android --noenable_platform_specific_config
+
+# Enable XLA support by default.
+build --define=with_xla_support=true
+
+build --config=v2
+
+# Default options should come above this line.
 
 # Android configs. Bazel needs to have --cpu and --fat_apk_cpu both set to the
 # target CPU to build transient dependencies correctly. See
@@ -123,7 +48,178 @@ build:android_x86_64 --config=android
 build:android_x86_64 --cpu=x86_64
 build:android_x86_64 --fat_apk_cpu=x86_64
 
-# Default options should come above this line
+# Sets the default Apple platform to macOS.
+build:macos --apple_platform_type=macos
+
+# gRPC on MacOS requires this #define
+build:macos --copt=-DGRPC_BAZEL_BUILD
+
+# Settings for MacOS on ARM CPUs.
+build:macos_arm64 --cpu=darwin_arm64
+
+# Config to use a mostly-static build and disable modular op registration
+# support (this will revert to loading TensorFlow with RTLD_GLOBAL in Python).
+# By default, TensorFlow will build with a dependence on
+# //tensorflow:libtensorflow_framework.so.
+build:monolithic --define framework_shared_object=false
+
+# Options to disable default on features
+build:noaws --define=no_aws_support=true
+build:nogcp --define=no_gcp_support=true
+build:nohdfs --define=no_hdfs_support=true
+build:nonccl --define=no_nccl_support=true
+
+# Modular TF build options
+build:dynamic_kernels --define=dynamic_loaded_kernels=true
+build:dynamic_kernels --copt=-DAUTOLOAD_DYNAMIC_KERNELS
+
+# Don't trigger --config=<host platform> when cross-compiling.
+build:android --noenable_platform_specific_config
+
+# Tensorflow uses M_* math constants that only get defined by MSVC headers if
+# _USE_MATH_DEFINES is defined.
+build:windows --copt=/D_USE_MATH_DEFINES
+build:windows --host_copt=/D_USE_MATH_DEFINES
+
+# Default paths for TF_SYSTEM_LIBS
+build:linux --define=PREFIX=/usr
+build:linux --define=LIBDIR=$(PREFIX)/lib
+build:linux --define=INCLUDEDIR=$(PREFIX)/include
+build:linux --define=PROTOBUF_INCLUDE_PATH=$(PREFIX)/include
+build:macos --define=PREFIX=/usr
+build:macos --define=LIBDIR=$(PREFIX)/lib
+build:macos --define=INCLUDEDIR=$(PREFIX)/include
+build:macos --define=PROTOBUF_INCLUDE_PATH=$(PREFIX)/include
+# TF_SYSTEM_LIBS do not work on windows.
+
+# By default, build LCE in C++ 14 mode.
+build:android --cxxopt=-std=c++14
+build:android --host_cxxopt=-std=c++14
+build:linux --cxxopt=-std=c++14
+build:linux --host_cxxopt=-std=c++14
+build:macos --cxxopt=-std=c++14
+build:macos --host_cxxopt=-std=c++14
+build:windows --cxxopt=/std:c++14
+build:windows --host_cxxopt=/std:c++14
+
+# On windows, we still link everything into a single DLL.
+build:windows --config=monolithic
+
+# On linux, we dynamically link small amount of kernels
+build:linux --config=dynamic_kernels
+
+# Make sure to include as little of windows.h as possible
+build:windows --copt=-DWIN32_LEAN_AND_MEAN
+build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
+build:windows --copt=-DNOGDI
+build:windows --host_copt=-DNOGDI
+
+# MSVC (Windows): Standards-conformant preprocessor mode
+# See https://docs.microsoft.com/en-us/cpp/preprocessor/preprocessor-experimental-overview
+build:windows --copt=/experimental:preprocessor
+build:windows --host_copt=/experimental:preprocessor
+
+# Misc build options we need for windows.
+build:windows --linkopt=/DEBUG
+build:windows --host_linkopt=/DEBUG
+build:windows --linkopt=/OPT:REF
+build:windows --host_linkopt=/OPT:REF
+build:windows --linkopt=/OPT:ICF
+build:windows --host_linkopt=/OPT:ICF
+
+# Verbose failure logs when something goes wrong
+build:windows --verbose_failures
+
+# On windows, we never cross compile
+build:windows --distinct_host_configuration=false
+
+# Options to build TensorFlow 1.x or 2.x.
+build:v1 --define=tf_api_version=1 --action_env=TF2_BEHAVIOR=0
+build:v2 --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
+
+# Flag to enable remote config
+common --experimental_repo_remote_exec
+
+# Address sanitizer
+# CC=clang bazel build --config asan
+build:asan --strip=never
+build:asan --copt -fsanitize=address
+build:asan --copt -DADDRESS_SANITIZER
+build:asan --copt -g
+build:asan --copt -O3
+build:asan --copt -fno-omit-frame-pointer
+build:asan --linkopt -fsanitize=address
+
+# Memory sanitizer
+# CC=clang bazel build --config msan
+build:msan --strip=never
+build:msan --copt -fsanitize=memory
+build:msan --copt -DADDRESS_SANITIZER
+build:msan --copt -g
+build:msan --copt -O3
+build:msan --copt -fno-omit-frame-pointer
+build:msan --linkopt -fsanitize=memory
+
+# Undefined Behavior Sanitizer
+# CC=clang bazel build --config ubsan
+build:ubsan --strip=never
+build:ubsan --copt -fsanitize=undefined
+build:ubsan --copt -g
+build:ubsan --copt -O3
+build:ubsan --copt -fno-omit-frame-pointer
+build:ubsan --linkopt -fsanitize=undefined
+build:ubsan --linkopt -lubsan
+
+#######################
+# LCE specific config #
+#######################
+
+# Prevent invalid caching if input files are modified during a build.
+build --experimental_guard_against_concurrent_changes
+
+# Disable visibility checks (works around some private deps in TensorFlow)
+build --nocheck_visibility
+
+# Make sure tests are quick and -DNDEBUG is *not* set
+test --compilation_mode=fastbuild
+
+# Enable Ruy
+build --copt=-DTFLITE_WITH_RUY
+
+# Disable XLA
+build --define=with_xla_support=false
+
+# Disable MKL
+build --define=enable_mkl=false --define=build_with_mkl=false --define=tensorflow_mkldnn_contraction_kernel=0
+
+# Config for a 32-bit Raspberry Pi - can be activated using --config=rpi3
+build:rpi3 --crosstool_top=@local_config_arm_compiler//:toolchain
+build:rpi3 --cpu=armeabi
+build:rpi3 --copt=-march=armv7-a --copt=-mfpu=neon-vfpv4 --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR --copt=-fno-tree-pre --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 --define=raspberry_pi_with_neon=true --define=framework_shared_object=false --copt=-funsafe-math-optimizations --copt=-ftree-vectorize --copt=-fomit-frame-pointer --verbose_failures
+
+# Config for 64-bit ARM - can be activated using --config=aarch64
+build:aarch64 --crosstool_top=@local_config_arm_compiler//:toolchain
+build:aarch64 --cpu=aarch64
+build:aarch64 --copt=-march=armv8-a --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR --copt=-fno-tree-pre --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 --define=framework_shared_object=false --copt=-funsafe-math-optimizations --copt=-ftree-vectorize --copt=-fomit-frame-pointer --verbose_failures
+
+# Disable unnecesary features
+build --config=noaws --config=nogcp --config=nohdfs --config=nonccl
+
+# Extra build options we need for windows.
+build:windows --copt=/d2ReducedOptimizeHugeFunctions
+build:windows --host_copt=/d2ReducedOptimizeHugeFunctions
+build:windows --experimental_strict_action_env=true
+
+# Disable certain warnings that come from TF code and pollute logs
+build:android --copt=-Wno-deprecated-declarations
+build:linux --copt=-Wno-deprecated-declarations
+build:linux --host_copt=-Wno-deprecated-declarations
+build:macos --copt=-Wno-deprecated-declarations
+
+# Windows generates *a lot* of warnings; disable them all.
+build:windows --copt=/W0
+
+# Config-specific options should come above this line.
 
 # Options from ./configure
 try-import %workspace%/.lce_configure.bazelrc
