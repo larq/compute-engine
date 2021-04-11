@@ -410,7 +410,7 @@ def set_cc_opt_flags(environ_cp):
 
 def maybe_set_manylinux_toolchain(environ_cp):
     write_to_bazelrc(
-        "build:manylinux2010 --crosstool_top=//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.1:toolchain"
+        "build:manylinux2010 --crosstool_top=@org_tensorflow//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.1:toolchain"
     )
     if get_var(
         environ_cp,
