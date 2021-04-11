@@ -177,6 +177,9 @@ build:ubsan --linkopt -lubsan
 # Prevent invalid caching if input files are modified during a build.
 build --experimental_guard_against_concurrent_changes
 
+# Allow up to 10 Mb of logging
+build --experimental_ui_max_stdouterr_bytes=10485760
+
 # Disable visibility checks (works around some private deps in TensorFlow)
 build --nocheck_visibility
 
