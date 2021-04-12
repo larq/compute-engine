@@ -115,9 +115,9 @@ build:windows --copt=-DNOGDI
 build:windows --host_copt=-DNOGDI
 
 # MSVC (Windows): Standards-conformant preprocessor mode
-# See https://docs.microsoft.com/en-us/cpp/preprocessor/preprocessor-experimental-overview
-build:windows --copt=/experimental:preprocessor
-build:windows --host_copt=/experimental:preprocessor
+# See https://docs.microsoft.com/en-us/cpp/build/reference/zc-preprocessor
+build:windows --copt=/Zc:preprocessor
+build:windows --host_copt=/Zc:preprocessor
 
 # Misc build options we need for windows.
 build:windows --linkopt=/DEBUG
@@ -139,6 +139,14 @@ build:v2 --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
 
 # Flag to enable remote config
 common --experimental_repo_remote_exec
+
+# TFLite build configs for generic embedded Linux
+build:elinux --crosstool_top=@local_config_embedded_arm//:toolchain
+build:elinux --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
+build:elinux_aarch64 --config=elinux
+build:elinux_aarch64 --cpu=aarch64
+build:elinux_armhf --config=elinux
+build:elinux_armhf --cpu=armhf
 
 # Address sanitizer
 # CC=clang bazel build --config asan
@@ -196,26 +204,22 @@ build --define=with_xla_support=false
 build --define=enable_mkl=false --define=build_with_mkl=false --define=tensorflow_mkldnn_contraction_kernel=0
 
 # Config for a 32-bit Raspberry Pi - can be activated using --config=rpi3
-build:rpi3 --crosstool_top=@local_config_arm_compiler//:toolchain
-build:rpi3 --cpu=armeabi
+build:rpi3 --config=elinux_armhf
 build:rpi3 --copt=-march=armv7-a --copt=-mfpu=neon-vfpv4 --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR --copt=-fno-tree-pre --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 --define=raspberry_pi_with_neon=true --define=framework_shared_object=false --copt=-funsafe-math-optimizations --copt=-ftree-vectorize --copt=-fomit-frame-pointer --verbose_failures
 
 # Config for 64-bit ARM - can be activated using --config=aarch64
-build:aarch64 --crosstool_top=@local_config_arm_compiler//:toolchain
-build:aarch64 --cpu=aarch64
+build:aarch64 --config=elinux_aarch64
 build:aarch64 --copt=-march=armv8-a --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR --copt=-fno-tree-pre --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 --define=framework_shared_object=false --copt=-funsafe-math-optimizations --copt=-ftree-vectorize --copt=-fomit-frame-pointer --verbose_failures
 
 # Disable unnecesary features
 build --config=noaws --config=nogcp --config=nohdfs --config=nonccl
 
 # Extra build options we need for windows.
-build:windows --copt=/d2ReducedOptimizeHugeFunctions
-build:windows --host_copt=/d2ReducedOptimizeHugeFunctions
 build:windows --experimental_strict_action_env=true
 
 # Disable certain warnings that come from TF code and pollute logs
 build:android --copt=-Wno-deprecated-declarations
-build:linux --copt=-Wno-deprecated-declarations
+build:linux --copt=-Wno-deprecated-declarationsq
 build:linux --host_copt=-Wno-deprecated-declarations
 build:macos --copt=-Wno-deprecated-declarations
 

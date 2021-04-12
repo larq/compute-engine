@@ -431,6 +431,13 @@ def maybe_set_manylinux_toolchain(environ_cp):
 def set_windows_build_flags(environ_cp):
     """Set Windows specific build options."""
 
+    # First available in VS 16.4. Speeds up Windows compile times by a lot. See
+    # https://groups.google.com/a/tensorflow.org/d/topic/build/SsW98Eo7l3o/discussion
+    # pylint: disable=line-too-long
+    write_to_bazelrc(
+        "build --copt=/d2ReducedOptimizeHugeFunctions --host_copt=/d2ReducedOptimizeHugeFunctions"
+    )
+
     if get_var(
         environ_cp,
         "LCE_OVERRIDE_EIGEN_STRONG_INLINE",
