@@ -1,5 +1,5 @@
 load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl")
-load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension")
+load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension", "tf_cc_binary")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -292,7 +292,7 @@ cc_library(
     ],
 )
 
-cc_binary(
+tf_cc_binary(
     name = "lce-tf-opt",
     srcs = ["lce_mlir_opt.cc"],
     deps = [
