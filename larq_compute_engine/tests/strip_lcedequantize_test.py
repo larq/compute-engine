@@ -1,7 +1,6 @@
 import sys
 
 import larq as lq
-import numpy as np
 import pytest
 import tensorflow as tf
 
@@ -12,8 +11,8 @@ from larq_compute_engine.tflite.python.interpreter import Interpreter
 
 def toy_model_sign(**kwargs):
     img = tf.keras.layers.Input(shape=(224, 224, 3))
-    x = larq.layers.QuantConv2D(256, kernel_size=3, strides=1, padding="same", pad_values=1, input_quantizer="ste_sign", kernel_quantizer="ste_sign", kernel_constraint="weight_clip")(img)
-    x = larq.quantizers.SteSign()(x)
+    x = lq.layers.QuantConv2D(256, kernel_size=3, strides=1, padding="same", pad_values=1, input_quantizer="ste_sign", kernel_quantizer="ste_sign", kernel_constraint="weight_clip")(img)
+    x = lq.quantizers.SteSign()(x)
     return tf.keras.Model(inputs = img, outputs = x)
 
 def quant(x):
@@ -22,8 +21,8 @@ def quant(x):
 def toy_model_int8_sign(**kwargs):
     img = tf.keras.layers.Input(shape=(224, 224, 3))
     x = quant(img)
-    x = larq.layers.QuantConv2D(256, kernel_size=3, strides=1, padding="same", pad_values=1, input_quantizer="ste_sign", kernel_quantizer="ste_sign", kernel_constraint="weight_clip")(img)
-    x = larq.quantizers.SteSign()(x)
+    x = lq.layers.QuantConv2D(256, kernel_size=3, strides=1, padding="same", pad_values=1, input_quantizer="ste_sign", kernel_quantizer="ste_sign", kernel_constraint="weight_clip")(img)
+    x = lq.quantizers.SteSign()(x)
     x = quant(x)
     return tf.keras.Model(inputs = img, outputs = x)
 
@@ -31,7 +30,7 @@ def toy_model_int8_sign(**kwargs):
 @pytest.mark.parametrize("model_cls", [toy_model_sign, toy_model_int8_sign])
 @pytest.mark.parametrize("inference_input_type", [tf.int8, tf.float32])
 @pytest.mark.parametrize("inference_output_type", [tf.int8, tf.float32])
-def test_lcedequantize_input_output(model_cls, inference_input_type, inference_output_type):
+def test_strip_lcedequantize_ops(model_cls, inference_input_type, inference_output_type):
     model_lce = convert_keras_model(
         model_cls(),
         inference_input_type=inference_input_type,
