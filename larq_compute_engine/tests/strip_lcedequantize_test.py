@@ -35,7 +35,7 @@ def test_strip_lcedequantize_ops(model_cls, inference_input_type, inference_outp
         model_cls(),
         inference_input_type=inference_input_type,
         inference_output_type=inference_output_type,
-        experimental_default_int8_range=(-6.0, 6.0) if model_cls == toy_model else None,
+        experimental_default_int8_range=(-6.0, 6.0) if model_cls == toy_model_sign else None,
         experimental_enable_bitpacked_activations=True
     )
     model_lce = strip_lcedequantize_ops(model_lce)
