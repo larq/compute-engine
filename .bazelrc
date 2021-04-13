@@ -81,17 +81,6 @@ build:android --noenable_platform_specific_config
 build:windows --copt=/D_USE_MATH_DEFINES
 build:windows --host_copt=/D_USE_MATH_DEFINES
 
-# Default paths for TF_SYSTEM_LIBS
-build:linux --define=PREFIX=/usr
-build:linux --define=LIBDIR=$(PREFIX)/lib
-build:linux --define=INCLUDEDIR=$(PREFIX)/include
-build:linux --define=PROTOBUF_INCLUDE_PATH=$(PREFIX)/include
-build:macos --define=PREFIX=/usr
-build:macos --define=LIBDIR=$(PREFIX)/lib
-build:macos --define=INCLUDEDIR=$(PREFIX)/include
-build:macos --define=PROTOBUF_INCLUDE_PATH=$(PREFIX)/include
-# TF_SYSTEM_LIBS do not work on windows.
-
 # By default, build LCE in C++ 14 mode.
 build:android --cxxopt=-std=c++14
 build:android --host_cxxopt=-std=c++14
@@ -214,7 +203,7 @@ build:rpi3 --copt=-march=armv7-a --copt=-mfpu=neon-vfpv4 --copt=-std=gnu++11 --c
 build:aarch64 --config=elinux_aarch64
 build:aarch64 --copt=-march=armv8-a --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR --copt=-fno-tree-pre --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 --copt=-funsafe-math-optimizations --copt=-ftree-vectorize --copt=-fomit-frame-pointer --verbose_failures
 
-# Disable unnecesary features
+# Disable unnecessary features
 build --config=noaws --config=nogcp --config=nohdfs --config=nonccl
 
 # Extra build options we need for windows.
