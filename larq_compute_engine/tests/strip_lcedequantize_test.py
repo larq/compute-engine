@@ -11,32 +11,56 @@ from larq_compute_engine.tflite.python.interpreter import Interpreter
 
 def toy_model_sign(**kwargs):
     img = tf.keras.layers.Input(shape=(224, 224, 3))
-    x = lq.layers.QuantConv2D(256, kernel_size=3, strides=1, padding="same", pad_values=1, input_quantizer="ste_sign", kernel_quantizer="ste_sign", kernel_constraint="weight_clip")(img)
+    x = lq.layers.QuantConv2D(
+        256,
+        kernel_size=3,
+        strides=1,
+        padding="same",
+        pad_values=1,
+        input_quantizer="ste_sign",
+        kernel_quantizer="ste_sign",
+        kernel_constraint="weight_clip",
+    )(img)
     x = lq.quantizers.SteSign()(x)
-    return tf.keras.Model(inputs = img, outputs = x)
+    return tf.keras.Model(inputs=img, outputs=x)
+
 
 def quant(x):
     return tf.quantization.fake_quant_with_min_max_vars(x, -3.0, 3.0)
 
+
 def toy_model_int8_sign(**kwargs):
     img = tf.keras.layers.Input(shape=(224, 224, 3))
     x = quant(img)
-    x = lq.layers.QuantConv2D(256, kernel_size=3, strides=1, padding="same", pad_values=1, input_quantizer="ste_sign", kernel_quantizer="ste_sign", kernel_constraint="weight_clip")(img)
+    x = lq.layers.QuantConv2D(
+        256,
+        kernel_size=3,
+        strides=1,
+        padding="same",
+        pad_values=1,
+        input_quantizer="ste_sign",
+        kernel_quantizer="ste_sign",
+        kernel_constraint="weight_clip",
+    )(img)
     x = lq.quantizers.SteSign()(x)
     x = quant(x)
-    return tf.keras.Model(inputs = img, outputs = x)
+    return tf.keras.Model(inputs=img, outputs=x)
 
 
 @pytest.mark.parametrize("model_cls", [toy_model_sign, toy_model_int8_sign])
 @pytest.mark.parametrize("inference_input_type", [tf.int8, tf.float32])
 @pytest.mark.parametrize("inference_output_type", [tf.int8, tf.float32])
-def test_strip_lcedequantize_ops(model_cls, inference_input_type, inference_output_type):
+def test_strip_lcedequantize_ops(
+    model_cls, inference_input_type, inference_output_type
+):
     model_lce = convert_keras_model(
         model_cls(),
         inference_input_type=inference_input_type,
         inference_output_type=inference_output_type,
-        experimental_default_int8_range=(-6.0, 6.0) if model_cls == toy_model_sign else None,
-        experimental_enable_bitpacked_activations=True
+        experimental_default_int8_range=(-6.0, 6.0)
+        if model_cls == toy_model_sign
+        else None,
+        experimental_enable_bitpacked_activations=True,
     )
     model_lce = strip_lcedequantize_ops(model_lce)
     interpreter = Interpreter(model_lce)
