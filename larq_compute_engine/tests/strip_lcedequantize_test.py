@@ -39,7 +39,7 @@ def test_strip_lcedequantize_ops(model_cls, inference_input_type, inference_outp
         experimental_enable_bitpacked_activations=True
     )
     model_lce = strip_lcedequantize_ops(model_lce)
-    interpreter = tf.lite.Interpreter(model_content=model_lce)
+    interpreter = Interpreter(model_lce)
     input_details = interpreter.get_input_details()
     assert len(input_details) == 1
     assert input_details[0]["dtype"] == inference_input_type.as_numpy_dtype
