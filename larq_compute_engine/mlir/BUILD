@@ -308,8 +308,8 @@ pybind_extension(
     deps = [
         ":lce_tfl_passes",
         "@org_tensorflow//tensorflow/compiler/mlir:op_or_arg_name_mapper",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tf_to_tfl_flatbuffer",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_graphdef",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:import_utils",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:mlir_roundtrip_flags",
