@@ -44,7 +44,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends qemu-user
       - uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: 3.9
       - name: Configure Bazel
         run: ./configure.py
         shell: bash
@@ -72,7 +72,7 @@ jobs:
           export_default_credentials: true
       - uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: 3.9
       - name: Configure Bazel
         run: |
           ./configure.py
@@ -88,7 +88,7 @@ jobs:
         if: github.ref != 'refs/heads/master'
         shell: bash
       - name: Install pip dependencies
-        run: pip install tensorflow-cpu~=2.4 larq~=0.11 larq_zoo~=2.0 pytest tensorflow_datasets~=4.2 flatbuffers tqdm --no-cache-dir
+        run: pip install tensorflow-cpu~=2.5.0rc1 larq~=0.11 larq_zoo~=2.0 pytest tensorflow_datasets~=4.2 flatbuffers tqdm --no-cache-dir
       - name: Run Interpreter test
         run: bazelisk test larq_compute_engine/tflite/tests:interpreter_test --test_output=all
       - name: Run FileCheck tests
@@ -100,7 +100,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        tf-version: [1.14.0, 1.15.5, 2.0.4, 2.1.3, 2.2.2, 2.3.2, 2.4.1, 2.5.0rc0]
+        tf-version: [1.14.0, 1.15.5, 2.0.4, 2.1.3, 2.2.2, 2.3.2, 2.4.1, 2.5.0rc1]
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
       - uses: actions/checkout@v2
@@ -122,7 +122,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: 3.9
       - uses: actions/cache@v2.1.4
         id: cache
         with:
