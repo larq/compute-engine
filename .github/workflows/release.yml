@@ -176,7 +176,7 @@ jobs:
           docker run -e PYTHON_VERSION=${{ matrix.python-version }} \
             -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }} \
             -v ${PWD}:/compute-engine -w /compute-engine \
-            tensorflow/tensorflow:2.2.0-custom-op-ubuntu16 \
+            tensorflow/tensorflow:nightly-custom-op-ubuntu16 \
             .github/tools/release_linux.sh
 
           sudo apt-get -y -qq install patchelf --no-install-recommends
