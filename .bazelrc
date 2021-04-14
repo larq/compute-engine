@@ -33,11 +33,12 @@ build:rpi3 --copt=-march=armv7-a --copt=-mfpu=neon-vfpv4 --copt=-std=gnu++11 --c
 build:aarch64 --config=elinux_aarch64
 build:aarch64 --copt=-march=armv8-a --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR --copt=-fno-tree-pre --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 --copt=-funsafe-math-optimizations --copt=-ftree-vectorize --copt=-fomit-frame-pointer --verbose_failures
 
-# Disable unnecessary features
-build --config=nohdfs --config=nonccl
-# Can't currently disable aws/gcp on Windows: https://github.com/tensorflow/tensorflow/pull/48525
-build:linux --config=noaws --config=nogcp
-build:macos --config=noaws --config=nogcp
+# Disable unnecessary features. Can't currently disable AWS/GCP on Windows, see
+# https://github.com/tensorflow/tensorflow/pull/48525. Bazel throws a tantrum if
+# `--config=nohdfs` or `--config=nonccl` are set when building for Windows,
+# but they aren't supported there anyway.
+build:linux --config=nohdfs --config=nonccl --config=noaws --config=nogcp
+build:macos --config=nohdfs --config=nonccl --config=noaws --config=nogcp
 
 # Extra build options we need for windows.
 build:windows --experimental_strict_action_env=true
