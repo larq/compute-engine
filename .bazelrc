@@ -34,7 +34,10 @@ build:aarch64 --config=elinux_aarch64
 build:aarch64 --copt=-march=armv8-a --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR --copt=-DS_IWRITE=S_IWUSR --copt=-fno-tree-pre --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 --copt=-U__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 --copt=-funsafe-math-optimizations --copt=-ftree-vectorize --copt=-fomit-frame-pointer --verbose_failures
 
 # Disable unnecessary features
-build --config=noaws --config=nogcp --config=nohdfs --config=nonccl
+build --config=nohdfs --config=nonccl
+# Can't currently disable aws/gcp on Windows: https://github.com/tensorflow/tensorflow/pull/48525
+build:linux --config=noaws --config=nogcp
+build:macos --config=noaws --config=nogcp
 
 # Extra build options we need for windows.
 build:windows --experimental_strict_action_env=true
