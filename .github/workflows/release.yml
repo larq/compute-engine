@@ -165,7 +165,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.6, 3.7, 3.8]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -176,7 +176,7 @@ jobs:
           docker run -e PYTHON_VERSION=${{ matrix.python-version }} \
             -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }} \
             -v ${PWD}:/compute-engine -w /compute-engine \
-            tensorflow/tensorflow:nightly-custom-op-ubuntu16 \
+            tensorflow/tensorflow:2.2.0-custom-op-ubuntu16 \
             .github/tools/release_linux.sh
 
           sudo apt-get -y -qq install patchelf --no-install-recommends
@@ -202,7 +202,7 @@ jobs:
       - name: Configure Pagefile
         uses: al-cheb/configure-pagefile-action@v1.2
         with:
-          minimum-size: 4GB
+          minimum-size: 8GB
       - name: Pagefile size
         run: |
           (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
