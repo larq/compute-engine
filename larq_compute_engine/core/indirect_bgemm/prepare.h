@@ -112,45 +112,52 @@ void PackWeights(const int block_size_output_channels,
                  std::vector<TBitpacked>& packed_weights) {
   using std::int32_t;
 
-  const int32_t bitpacked_input_channels = bitpacked_input_shape.Dims(3);
-  const int32_t output_channels = bconv2d_params->channels_out;
   const int32_t kernel_size =
       bconv2d_params->filter_height * bconv2d_params->filter_width;
+  const int32_t groups = bconv2d_params->groups;
+  const int32_t input_depth_per_group = bitpacked_input_shape.Dims(3) / groups;
+  const int32_t output_channels_per_group =
+      bconv2d_params->channels_out / groups;
 
-  assert(bitpacked_input_channels % block_size_depth == 0);
+  assert(input_depth_per_group % block_size_depth == 0);
 
-  const int32_t rounded_up_output_channels =
+  const int32_t rounded_up_output_channels_per_group =
       block_size_output_channels *
-      ((output_channels + block_size_output_channels - 1) /
+      ((output_channels_per_group + block_size_output_channels - 1) /
        block_size_output_channels);
 
-  packed_weights.resize(
-      rounded_up_output_channels * kernel_size * bitpacked_input_channels +
-      /* padding */ block_size_output_channels * block_size_depth);
+  packed_weights.resize(groups * rounded_up_output_channels_per_group *
+                            kernel_size * input_depth_per_group +
+                        /* padding */ block_size_output_channels *
+                            block_size_depth);
 
   int32_t packed_weights_index = 0;
 
-  for (int32_t block_start = 0; block_start < output_channels;
-       block_start += block_size_output_channels) {
-    const int32_t block_size =
-        std::min(output_channels - block_start, block_size_output_channels);
-    for (int32_t ki = 0; ki < kernel_size; ki++) {
-      for (int32_t ci = 0; ci < bitpacked_input_channels;
-           ci += block_size_depth) {
-        for (int32_t block_offset = 0; block_offset < block_size;
-             block_offset++) {
-          for (int32_t ci_offset = 0; ci_offset < block_size_depth;
-               ci_offset++) {
-            const int32_t weights_index =
-                (block_start + block_offset) * kernel_size *
-                    bitpacked_input_channels +
-                ki * bitpacked_input_channels + ci + ci_offset;
-            packed_weights.at(packed_weights_index++) =
-                weights_ptr[weights_index];
+  for (int32_t group_id = 0; group_id < groups; group_id++) {
+    for (int32_t block_start = 0; block_start < output_channels_per_group;
+         block_start += block_size_output_channels) {
+      const int32_t block_size = std::min(
+          output_channels_per_group - block_start, block_size_output_channels);
+      for (int32_t ki = 0; ki < kernel_size; ki++) {
+        for (int32_t ci = 0; ci < input_depth_per_group;
+             ci += block_size_depth) {
+          for (int32_t block_offset = 0; block_offset < block_size;
+               block_offset++) {
+            for (int32_t ci_offset = 0; ci_offset < block_size_depth;
+                 ci_offset++) {
+              const int32_t weights_index =
+                  (group_id * output_channels_per_group * kernel_size *
+                   input_depth_per_group) +
+                  ((block_start + block_offset) * kernel_size *
+                   input_depth_per_group) +
+                  ki * input_depth_per_group + ci + ci_offset;
+              packed_weights.at(packed_weights_index++) =
+                  weights_ptr[weights_index];
+            }
           }
+          packed_weights_index +=
+              (block_size_output_channels - block_size) * block_size_depth;
         }
-        packed_weights_index +=
-            (block_size_output_channels - block_size) * block_size_depth;
       }
     }
   }

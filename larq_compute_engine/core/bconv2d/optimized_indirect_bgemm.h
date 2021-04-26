@@ -25,13 +25,26 @@ inline void BConv2DOptimizedIndirectBGEMM(
 
   const std::int32_t conv_kernel_size =
       bconv2d_params->filter_height * bconv2d_params->filter_width;
-  const std::int32_t bitpacked_input_channels = bitpacked_input_shape.Dims(3);
   const std::int32_t output_size =
       output_shape.Dims(0) * output_shape.Dims(1) * output_shape.Dims(2);
-  const std::int32_t output_channels = bconv2d_params->channels_out;
+  const int32_t groups = bconv2d_params->groups;
+  const int32_t input_depth = bitpacked_input_shape.Dims(3);
+  const int32_t output_channels = bconv2d_params->channels_out;
 
-  indirect_bgemm::RunKernel(kernel, conv_kernel_size, bitpacked_input_channels,
-                            output_size, output_channels, output_transform,
+  // If writing bitpacked output with a channel count that isn't a multiple of
+  // 32 (i.e. where padding bits will be required in the output), fill the
+  // output tensor with zeroes in advance so that the BGEMM doesn't have to
+  // worry about doing the padding.
+  if (std::is_same<DstScalar, TBitpacked>::value &&
+      output_channels % bitpacking_bitwidth != 0) {
+    std::fill(output_data,
+              output_data +
+                  output_size * bitpacking::GetBitpackedSize(output_channels),
+              TBitpacked(0));
+  }
+
+  indirect_bgemm::RunKernel(kernel, output_size, conv_kernel_size, groups,
+                            input_depth, output_channels, output_transform,
                             packed_weights, indirection_buffer, output_data);
 
   if (std::is_same<DstScalar, float>::value &&
@@ -44,7 +57,8 @@ inline void BConv2DOptimizedIndirectBGEMM(
     const int dilation_width_factor = bconv2d_params->dilation_width_factor;
     const int dilation_height_factor = bconv2d_params->dilation_height_factor;
     const int batches = MatchingDim(bitpacked_input_shape, 0, output_shape, 0);
-    const int input_depth = bconv2d_params->channels_in;
+    const int input_depth_per_group =
+        bconv2d_params->channels_in / bconv2d_params->groups;
     const int input_width = bitpacked_input_shape.Dims(2);
     const int input_height = bitpacked_input_shape.Dims(1);
     const int filter_height = bconv2d_params->filter_height;
@@ -54,8 +68,8 @@ inline void BConv2DOptimizedIndirectBGEMM(
     const int output_height = output_shape.Dims(1);
 
     zero_padding_correction::ApplyCorrection(
-        batches, input_height, input_width, input_depth, filter_height,
-        filter_width, output_depth, stride_height, stride_width,
+        batches, input_height, input_width, input_depth_per_group,
+        filter_height, filter_width, output_depth, stride_height, stride_width,
         dilation_height_factor, dilation_width_factor,
         reinterpret_cast<float*>(output_data), output_height, output_width,
         padding_buffer);

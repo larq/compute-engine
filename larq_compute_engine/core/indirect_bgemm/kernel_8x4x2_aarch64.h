@@ -21,6 +21,8 @@ namespace core {
 namespace indirect_bgemm {
 namespace kernel_8x4x2_aarch64 {
 
+#define IF_IS_GROUPED(a) ".if %c[is_grouped]\n\t" a ".endif\n\t"
+
 // This block of instructions takes as input the activation vector registers
 // a_0, ..., a_3 and the weight vector registers w_0, ..., w_3, and computes
 // 'binary multiplication and accumulation' (BMLA) using XOR and popcount
@@ -142,22 +144,35 @@ namespace kernel_8x4x2_aarch64 {
  *     } while (--ks > 0);
  */
 
+template <bool IsGrouped>
 inline void AccumulationLoop_Depth2OrMore(
-    std::int32_t conv_kernel_size, const std::int32_t depth,
-    int32x4_t weights[4], int32x4_t activations[4], uint16x8_t accumulators[4],
+    const std::int32_t conv_kernel_size, const std::int32_t depth,
+    const std::int32_t input_depth_offset, int32x4_t weights[4],
+    int32x4_t activations[4], uint16x8_t accumulators[4],
     TBitpacked*& weights_ptr, TBitpacked** indirection_buffer) {
   ruy::profiler::ScopeLabel label("Accumulation loop (depth > 1)");
 
   // Declare these variables so we can use named registers in the ASM block.
   TBitpacked** indirection_buffer_ = indirection_buffer + 4;
-  TBitpacked* a_ptr_0 = indirection_buffer[0] + 2;
-  TBitpacked* a_ptr_1 = indirection_buffer[1] + 2;
-  TBitpacked* a_ptr_2 = indirection_buffer[2] + 2;
-  TBitpacked* a_ptr_3 = indirection_buffer[3] + 2;
+  TBitpacked* a_ptr_0;
+  TBitpacked* a_ptr_1;
+  TBitpacked* a_ptr_2;
+  TBitpacked* a_ptr_3;
+  if (IsGrouped) {
+    a_ptr_0 = indirection_buffer[0] + input_depth_offset + 2;
+    a_ptr_1 = indirection_buffer[1] + input_depth_offset + 2;
+    a_ptr_2 = indirection_buffer[2] + input_depth_offset + 2;
+    a_ptr_3 = indirection_buffer[3] + input_depth_offset + 2;
+  } else {
+    a_ptr_0 = indirection_buffer[0] + 2;
+    a_ptr_1 = indirection_buffer[1] + 2;
+    a_ptr_2 = indirection_buffer[2] + 2;
+    a_ptr_3 = indirection_buffer[3] + 2;
+  }
+  std::int32_t ks_index = conv_kernel_size;
 
   asm volatile(
-      // w0 is the outer (kernel size) loop counter
-      "mov w0, %w[kernel_size]\n\t"
+      // clang-format off
 
       // w1 is the inner (depth) loop counter
       "sub w1, %w[depth], #1\n\t"
@@ -179,32 +194,38 @@ inline void AccumulationLoop_Depth2OrMore(
       "ldp %[a_ptr_2], %[a_ptr_3], [%[indirection_buffer], #16]\n\t"
       "add %[indirection_buffer], %[indirection_buffer], #32\n\t"
       "sub w1, %w[depth], #1\n\t"
-      "subs w0, w0, #1\n\t"
-
+      "subs %[ks_index], %[ks_index], #1\n\t"
+      IF_IS_GROUPED(
+          "add %[a_ptr_0], %[a_ptr_0], %[input_depth_offset], lsl #2\n"
+          "add %[a_ptr_1], %[a_ptr_1], %[input_depth_offset], lsl #2\n"
+          "add %[a_ptr_2], %[a_ptr_2], %[input_depth_offset], lsl #2\n"
+          "add %[a_ptr_3], %[a_ptr_3], %[input_depth_offset], lsl #2\n")
       XOR_POPCOUNT_ACCUM_LOAD_BLOCK_64
 
       "bgt 0b\n\t"  // Outer loop branch
+
+      // clang-format on
       : [accum_0] "=&w"(accumulators[0]), [accum_1] "=&w"(accumulators[1]),
         [accum_2] "=&w"(accumulators[2]), [accum_3] "=&w"(accumulators[3]),
         [w_ptr] "+r"(weights_ptr),
         [indirection_buffer] "+r"(indirection_buffer_), [a_ptr_0] "+r"(a_ptr_0),
         [a_ptr_1] "+r"(a_ptr_1), [a_ptr_2] "+r"(a_ptr_2),
-        [a_ptr_3] "+r"(a_ptr_3)
+        [a_ptr_3] "+r"(a_ptr_3), [ks_index] "+r"(ks_index)
       : [w_0] "w"(weights[0]), [w_1] "w"(weights[1]), [w_2] "w"(weights[2]),
         [w_3] "w"(weights[3]), [a_0] "w"(activations[0]),
         [a_1] "w"(activations[1]), [a_2] "w"(activations[2]),
-        [a_3] "w"(activations[3]), [kernel_size] "r"(conv_kernel_size),
-        [depth] "r"(depth)
-      : "cc", "memory", "x0", "x1", "v0", "v1", "v2", "v3", "v4", "v5", "v6",
-        "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15");
+        [a_3] "w"(activations[3]), [depth] "r"(depth),
+        [input_depth_offset] "r"(input_depth_offset),
+        [is_grouped] "i"(IsGrouped)
+      : "cc", "memory", "x1", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7",
+        "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15");
 }
 
-inline void AccumulationLoop_Depth1(std::int32_t conv_kernel_size,
-                                    int32x4_t weights[4],
-                                    int32x4_t activations[4],
-                                    uint16x8_t accumulators[4],
-                                    TBitpacked*& weights_ptr,
-                                    TBitpacked** indirection_buffer) {
+template <bool IsGrouped>
+inline void AccumulationLoop_Depth1(
+    const std::int32_t conv_kernel_size, const std::int32_t input_depth_offset,
+    int32x4_t weights[4], int32x4_t activations[4], uint16x8_t accumulators[4],
+    TBitpacked*& weights_ptr, TBitpacked** indirection_buffer) {
   ruy::profiler::ScopeLabel label("Accumulation loop (depth = 1)");
 
   // Declare these variables so we can use named registers in the ASM block.
@@ -213,8 +234,11 @@ inline void AccumulationLoop_Depth1(std::int32_t conv_kernel_size,
   TBitpacked* a_ptr_1;
   TBitpacked* a_ptr_2;
   TBitpacked* a_ptr_3;
+  std::int32_t ks_index = conv_kernel_size;
 
   asm volatile(
+      // clang-format off
+
       // Zero-out the accumulator registers
       "movi %[accum_0].8h, #0\n\t"
       "movi %[accum_1].8h, #0\n\t"
@@ -227,21 +251,28 @@ inline void AccumulationLoop_Depth1(std::int32_t conv_kernel_size,
       "ldp %[a_ptr_2], %[a_ptr_3], [%[indirection_buffer], #16]\n\t"
       "add %[indirection_buffer], %[indirection_buffer], #32\n\t"
       "subs %w[ks_index], %w[ks_index], #1\n\t"
-
+      IF_IS_GROUPED(
+          "add %[a_ptr_0], %[a_ptr_0], %[input_depth_offset], lsl #2\n"
+          "add %[a_ptr_1], %[a_ptr_1], %[input_depth_offset], lsl #2\n"
+          "add %[a_ptr_2], %[a_ptr_2], %[input_depth_offset], lsl #2\n"
+          "add %[a_ptr_3], %[a_ptr_3], %[input_depth_offset], lsl #2\n")
       XOR_POPCOUNT_ACCUM_LOAD_BLOCK_64
 
       "bgt 0b\n\t"  // Loop branch
+
+      // clang-format on
       : [accum_0] "=&w"(accumulators[0]), [accum_1] "=&w"(accumulators[1]),
         [accum_2] "=&w"(accumulators[2]), [accum_3] "=&w"(accumulators[3]),
         [w_ptr] "+r"(weights_ptr),
         [indirection_buffer] "+r"(indirection_buffer_),
         [a_ptr_0] "=&r"(a_ptr_0), [a_ptr_1] "=&r"(a_ptr_1),
         [a_ptr_2] "=&r"(a_ptr_2), [a_ptr_3] "=&r"(a_ptr_3),
-        [ks_index] "+r"(conv_kernel_size)
+        [ks_index] "+r"(ks_index)
       : [w_0] "w"(weights[0]), [w_1] "w"(weights[1]), [w_2] "w"(weights[2]),
         [w_3] "w"(weights[3]), [a_0] "w"(activations[0]),
         [a_1] "w"(activations[1]), [a_2] "w"(activations[2]),
-        [a_3] "w"(activations[3])
+        [a_3] "w"(activations[3]), [input_depth_offset] "r"(input_depth_offset),
+        [is_grouped] "i"(IsGrouped)
       : "cc", "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8",
         "v9", "v10", "v11", "v12", "v13", "v14", "v15");
 }
@@ -258,9 +289,11 @@ inline void AccumulationLoop_Depth1(std::int32_t conv_kernel_size,
  */
 
 // Float output transform
+template <bool IsGrouped>
 inline void OutputTransformAndLoadNextAndStore(
-    const std::int32_t c_out_index, const std::int32_t channels_out,
-    uint16x8_t accumulators[4], int32x4_t weights[4], int32x4_t activations[4],
+    std::int32_t& c_out_index, const std::int32_t input_depth_offset,
+    const std::int32_t group_end_output_channel, uint16x8_t accumulators[4],
+    int32x4_t weights[4], int32x4_t activations[4],
     const bconv2d::OutputTransform<float>& output_transform,
     const TBitpacked* weights_ptr, TBitpacked** indirection_buffer,
     float*& output_ptr_0, float*& output_ptr_1, float*& output_ptr_2,
@@ -271,6 +304,7 @@ inline void OutputTransformAndLoadNextAndStore(
   float32x4x2_t results[4];
 
   asm("ldp x0, x1, [%[indirection_buffer]]\n\t"
+      "ldp x2, x3, [%[indirection_buffer], #16]\n\t"
 
       // Use "unsigned shift left long" instructions to perform the
       // back-transformation left-shift and extend the result to int32.
@@ -287,7 +321,10 @@ inline void OutputTransformAndLoadNextAndStore(
       "ushll2 %[result_11].4s, %[accum_1].8h, #1\n\t"
       "ushll2 %[result_01].4s, %[accum_0].8h, #1\n\t"
 
-      "ldp x2, x3, [%[indirection_buffer], #16]\n\t"
+      IF_IS_GROUPED("add x0, x0, %[input_depth_offset], lsl #2\n"
+                    "add x1, x1, %[input_depth_offset], lsl #2\n"
+                    "add x2, x2, %[input_depth_offset], lsl #2\n"
+                    "add x3, x3, %[input_depth_offset], lsl #2\n")
 
       // Perform clamping
       "ldr q4, [%[bias_addr]]\n\t"
@@ -367,10 +404,12 @@ inline void OutputTransformAndLoadNextAndStore(
         [clamp_max_addr] "r"(&output_transform.clamp_max),
         [multiplier_addr] "r"(output_transform.multiplier + c_out_index),
         [bias_addr] "r"(output_transform.bias + c_out_index),
-        [w_ptr] "r"(weights_ptr), [indirection_buffer] "r"(indirection_buffer)
+        [w_ptr] "r"(weights_ptr), [indirection_buffer] "r"(indirection_buffer),
+        [input_depth_offset] "r"(input_depth_offset),
+        [is_grouped] "i"(IsGrouped)
       : "memory", "x0", "x1", "x2", "x3", "v0", "v1", "v2", "v3", "v4", "v5");
 
-  if (LCE_LIKELY(channels_out - c_out_index >= 8)) {
+  if (LCE_LIKELY(group_end_output_channel - c_out_index >= 8)) {
     vst1q_f32(output_ptr_3, results[3].val[0]);
     vst1q_f32(output_ptr_3 + 4, results[3].val[1]);
     output_ptr_3 += 8;
@@ -383,29 +422,31 @@ inline void OutputTransformAndLoadNextAndStore(
     vst1q_f32(output_ptr_0, results[0].val[0]);
     vst1q_f32(output_ptr_0 + 4, results[0].val[1]);
     output_ptr_0 += 8;
+
+    c_out_index += 8;
   } else {
-#define STORE_SINGLE_ELEMENT_LOW(index)                           \
-  vst1q_lane_f32(output_ptr_3 + index, results[3].val[0], index); \
-  vst1q_lane_f32(output_ptr_2 + index, results[2].val[0], index); \
-  vst1q_lane_f32(output_ptr_1 + index, results[1].val[0], index); \
-  vst1q_lane_f32(output_ptr_0 + index, results[0].val[0], index);
-#define STORE_SINGLE_ELEMENT_HIGH(index)                              \
-  vst1q_lane_f32(output_ptr_3 + 4 + index, results[3].val[1], index); \
-  vst1q_lane_f32(output_ptr_2 + 4 + index, results[2].val[1], index); \
-  vst1q_lane_f32(output_ptr_1 + 4 + index, results[1].val[1], index); \
-  vst1q_lane_f32(output_ptr_0 + 4 + index, results[0].val[1], index);
+#define STORE_SINGLE_ELEMENT_LOW(index)                     \
+  vst1q_lane_f32(output_ptr_3++, results[3].val[0], index); \
+  vst1q_lane_f32(output_ptr_2++, results[2].val[0], index); \
+  vst1q_lane_f32(output_ptr_1++, results[1].val[0], index); \
+  vst1q_lane_f32(output_ptr_0++, results[0].val[0], index);
+#define STORE_SINGLE_ELEMENT_HIGH(index)                    \
+  vst1q_lane_f32(output_ptr_3++, results[3].val[1], index); \
+  vst1q_lane_f32(output_ptr_2++, results[2].val[1], index); \
+  vst1q_lane_f32(output_ptr_1++, results[1].val[1], index); \
+  vst1q_lane_f32(output_ptr_0++, results[0].val[1], index);
     STORE_SINGLE_ELEMENT_LOW(0)
-    if (channels_out - c_out_index >= 2) {
+    if (group_end_output_channel - c_out_index >= 2) {
       STORE_SINGLE_ELEMENT_LOW(1)
-      if (channels_out - c_out_index >= 3) {
+      if (group_end_output_channel - c_out_index >= 3) {
         STORE_SINGLE_ELEMENT_LOW(2)
-        if (channels_out - c_out_index >= 4) {
+        if (group_end_output_channel - c_out_index >= 4) {
           STORE_SINGLE_ELEMENT_LOW(3)
-          if (channels_out - c_out_index >= 5) {
+          if (group_end_output_channel - c_out_index >= 5) {
             STORE_SINGLE_ELEMENT_HIGH(0)
-            if (channels_out - c_out_index >= 6) {
+            if (group_end_output_channel - c_out_index >= 6) {
               STORE_SINGLE_ELEMENT_HIGH(1)
-              if (channels_out - c_out_index >= 7) {
+              if (group_end_output_channel - c_out_index >= 7) {
                 STORE_SINGLE_ELEMENT_HIGH(2)
               }
             }
@@ -415,13 +456,17 @@ inline void OutputTransformAndLoadNextAndStore(
     }
 #undef STORE_SINGLE_ELEMENT_LOW
 #undef STORE_SINGLE_ELEMENT_HIGH
+
+    c_out_index = group_end_output_channel;
   }
 }
 
 // Int8 output transform
+template <bool IsGrouped>
 inline void OutputTransformAndLoadNextAndStore(
-    const std::int32_t c_out_index, const std::int32_t channels_out,
-    uint16x8_t accumulators[4], int32x4_t weights[4], int32x4_t activations[4],
+    std::int32_t& c_out_index, const std::int32_t input_depth_offset,
+    const std::int32_t group_end_output_channel, uint16x8_t accumulators[4],
+    int32x4_t weights[4], int32x4_t activations[4],
     const bconv2d::OutputTransform<std::int8_t>& output_transform,
     const TBitpacked* weights_ptr, TBitpacked** indirection_buffer,
     std::int8_t*& output_ptr_0, std::int8_t*& output_ptr_1,
@@ -433,6 +478,7 @@ inline void OutputTransformAndLoadNextAndStore(
   int8x16x2_t results[4];
 
   asm("ldp x0, x1, [%[indirection_buffer]]\n\t"
+      "ldp x2, x3, [%[indirection_buffer], #16]\n\t"
 
       // Use "unsigned shift left long" instructions to perform the
       // back-transformation left-shift and extend the result to int32.
@@ -449,7 +495,10 @@ inline void OutputTransformAndLoadNextAndStore(
       "ushll2 %[result_11].4s, %[accum_1].8h, #1\n\t"
       "ushll2 %[result_01].4s, %[accum_0].8h, #1\n\t"
 
-      "ldp x2, x3, [%[indirection_buffer], #16]\n\t"
+      IF_IS_GROUPED("add x0, x0, %[input_depth_offset], lsl #2\n"
+                    "add x1, x1, %[input_depth_offset], lsl #2\n"
+                    "add x2, x2, %[input_depth_offset], lsl #2\n"
+                    "add x3, x3, %[input_depth_offset], lsl #2\n")
 
       // Perform clamping
       "ldr q4, [%[bias_addr]]\n\t"
@@ -550,10 +599,12 @@ inline void OutputTransformAndLoadNextAndStore(
         [clamp_max_addr] "r"(&output_transform.clamp_max),
         [multiplier_addr] "r"(output_transform.multiplier + c_out_index),
         [bias_addr] "r"(output_transform.bias + c_out_index),
-        [w_ptr] "r"(weights_ptr), [indirection_buffer] "r"(indirection_buffer)
+        [w_ptr] "r"(weights_ptr), [indirection_buffer] "r"(indirection_buffer),
+        [input_depth_offset] "r"(input_depth_offset),
+        [is_grouped] "i"(IsGrouped)
       : "memory", "x0", "x1", "x2", "x3", "v0", "v1", "v2", "v3", "v4", "v5");
 
-  if (LCE_LIKELY(channels_out - c_out_index >= 8)) {
+  if (LCE_LIKELY(group_end_output_channel - c_out_index >= 8)) {
     vst1_s8(output_ptr_3, vget_low_s8(results[3].val[0]));
     output_ptr_3 += 8;
     vst1_s8(output_ptr_2, vget_low_s8(results[2].val[0]));
@@ -562,24 +613,26 @@ inline void OutputTransformAndLoadNextAndStore(
     output_ptr_1 += 8;
     vst1_s8(output_ptr_0, vget_low_s8(results[0].val[0]));
     output_ptr_0 += 8;
+
+    c_out_index += 8;
   } else {
-#define STORE_SINGLE_ELEMENT(index)                                          \
-  vst1_lane_s8(output_ptr_3 + index, vget_low_s8(results[3].val[0]), index); \
-  vst1_lane_s8(output_ptr_2 + index, vget_low_s8(results[2].val[0]), index); \
-  vst1_lane_s8(output_ptr_1 + index, vget_low_s8(results[1].val[0]), index); \
-  vst1_lane_s8(output_ptr_0 + index, vget_low_s8(results[0].val[0]), index);
+#define STORE_SINGLE_ELEMENT(index)                                    \
+  vst1_lane_s8(output_ptr_3++, vget_low_s8(results[3].val[0]), index); \
+  vst1_lane_s8(output_ptr_2++, vget_low_s8(results[2].val[0]), index); \
+  vst1_lane_s8(output_ptr_1++, vget_low_s8(results[1].val[0]), index); \
+  vst1_lane_s8(output_ptr_0++, vget_low_s8(results[0].val[0]), index);
     STORE_SINGLE_ELEMENT(0)
-    if (channels_out - c_out_index >= 2) {
+    if (group_end_output_channel - c_out_index >= 2) {
       STORE_SINGLE_ELEMENT(1)
-      if (channels_out - c_out_index >= 3) {
+      if (group_end_output_channel - c_out_index >= 3) {
         STORE_SINGLE_ELEMENT(2)
-        if (channels_out - c_out_index >= 4) {
+        if (group_end_output_channel - c_out_index >= 4) {
           STORE_SINGLE_ELEMENT(3)
-          if (channels_out - c_out_index >= 5) {
+          if (group_end_output_channel - c_out_index >= 5) {
             STORE_SINGLE_ELEMENT(4)
-            if (channels_out - c_out_index >= 6) {
+            if (group_end_output_channel - c_out_index >= 6) {
               STORE_SINGLE_ELEMENT(5)
-              if (channels_out - c_out_index >= 7) {
+              if (group_end_output_channel - c_out_index >= 7) {
                 STORE_SINGLE_ELEMENT(6)
               }
             }
@@ -588,16 +641,21 @@ inline void OutputTransformAndLoadNextAndStore(
       }
     }
 #undef STORE_SINGLE_ELEMENT
+
+    c_out_index = group_end_output_channel;
   }
 }
+
+#undef IF_IS_GROUPED
 
 /**
  * A 8x4x2 Neon micro-kernel for float or int8 output on Aarch64.
  */
-template <typename DstScalar, bool Depth2OrMore>
+template <typename DstScalar, bool Depth2OrMore, bool IsGrouped>
 void RunKernel(const std::int32_t block_num_pixels,
-               const std::int32_t conv_kernel_size,
-               const std::int32_t channels_in, const std::int32_t channels_out,
+               const std::int32_t conv_kernel_size, const std::int32_t groups,
+               const std::int32_t input_depth,
+               const std::int32_t output_channels,
                const bconv2d::OutputTransform<DstScalar>& output_transform,
                const TBitpacked* weights_ptr_,
                const TBitpacked** indirection_buffer_, DstScalar* output_ptr) {
@@ -610,20 +668,28 @@ void RunKernel(const std::int32_t block_num_pixels,
   TFLITE_DCHECK_GE(block_num_pixels, 1);
   TFLITE_DCHECK_LE(block_num_pixels, 4);
   TFLITE_DCHECK_GE(conv_kernel_size, 1);
-  TFLITE_DCHECK_GE(channels_in, 2);
-  TFLITE_DCHECK_EQ(channels_in % 2, 0);
-  TFLITE_DCHECK_GE(channels_out, 1);
+  TFLITE_DCHECK_GE(groups, 1);
+  TFLITE_DCHECK_GE(input_depth, 1);
+  TFLITE_DCHECK_GE(output_channels, 1);
+  TFLITE_DCHECK_EQ(input_depth % groups, 0);
+  TFLITE_DCHECK_EQ(output_channels % groups, 0);
 
-  if (conv_kernel_size < 1 || channels_in < 2 || channels_out < 1) return;
+  const std::int32_t input_depth_per_group = input_depth / groups;
+  const std::int32_t output_channels_per_group = output_channels / groups;
+
+  if (conv_kernel_size < 1 || input_depth_per_group < 2 ||
+      output_channels_per_group < 1) {
+    return;
+  }
 
   TBitpacked** indirection_buffer =
       const_cast<TBitpacked**>(indirection_buffer_);
   TBitpacked* weights_ptr = const_cast<TBitpacked*>(weights_ptr_);
 
   DstScalar* output_ptr_0 = output_ptr;
-  DstScalar* output_ptr_1 = output_ptr + channels_out;
-  DstScalar* output_ptr_2 = output_ptr + 2 * channels_out;
-  DstScalar* output_ptr_3 = output_ptr + 3 * channels_out;
+  DstScalar* output_ptr_1 = output_ptr + output_channels;
+  DstScalar* output_ptr_2 = output_ptr + 2 * output_channels;
+  DstScalar* output_ptr_3 = output_ptr + 3 * output_channels;
 
   // At the end of the output array we might get a block where the number of
   // pixels is less than 4. When this happens we set the 'leftover' output
@@ -656,26 +722,39 @@ void RunKernel(const std::int32_t block_num_pixels,
       vreinterpretq_s32_s64(
           vld1q_dup_s64((std::int64_t*)indirection_buffer[3]))};
 
+  std::int32_t input_depth_offset = 0;
+  std::int32_t group_end_output_channel = output_channels_per_group;
+
   std::int32_t c_out_index = 0;
   do {
     uint16x8_t accumulators[4];
 
     if (Depth2OrMore) {
-      AccumulationLoop_Depth2OrMore(conv_kernel_size, channels_in / 2, weights,
-                                    activations, accumulators, weights_ptr,
-                                    indirection_buffer);
+      AccumulationLoop_Depth2OrMore<IsGrouped>(
+          conv_kernel_size, input_depth_per_group / 2, input_depth_offset,
+          weights, activations, accumulators, weights_ptr, indirection_buffer);
     } else {
-      AccumulationLoop_Depth1(conv_kernel_size, weights, activations,
-                              accumulators, weights_ptr, indirection_buffer);
+      AccumulationLoop_Depth1<IsGrouped>(conv_kernel_size, input_depth_offset,
+                                         weights, activations, accumulators,
+                                         weights_ptr, indirection_buffer);
     }
 
-    OutputTransformAndLoadNextAndStore(
-        c_out_index, channels_out, accumulators, weights, activations,
-        output_transform, weights_ptr, indirection_buffer, output_ptr_0,
-        output_ptr_1, output_ptr_2, output_ptr_3);
+    std::int32_t next_group_end_output_channel = group_end_output_channel;
+    if (IsGrouped && c_out_index >= group_end_output_channel - 8) {
+      input_depth_offset += input_depth_per_group;
+      next_group_end_output_channel =
+          group_end_output_channel + output_channels_per_group;
+    }
 
-    c_out_index += 8;
-  } while (c_out_index < channels_out);
+    OutputTransformAndLoadNextAndStore<IsGrouped>(
+        c_out_index, input_depth_offset, group_end_output_channel, accumulators,
+        weights, activations, output_transform, weights_ptr, indirection_buffer,
+        output_ptr_0, output_ptr_1, output_ptr_2, output_ptr_3);
+
+    if (IsGrouped) {
+      group_end_output_channel = next_group_end_output_channel;
+    }
+  } while (c_out_index < output_channels);
 }
 
 }  // namespace kernel_8x4x2_aarch64

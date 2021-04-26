@@ -173,7 +173,7 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     bconv2d_params->groups = 1;
   } else {
     TF_LITE_ENSURE_MSG(
-        context, kernel_type == KernelType::kReference,
+        context, kernel_type != KernelType::kOptimizedBGEMM,
         "Grouped binary convolutions are not supported with this kernel.");
     TF_LITE_ENSURE_EQ(context,
                       GetBitpackedSize(bconv2d_params->channels_in) %
