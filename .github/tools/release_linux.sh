@@ -19,12 +19,14 @@ ln -sf /usr/include/x86_64-linux-gnu/python3.7m /dt7/usr/include/x86_64-linux-gn
 ln -sf /usr/include/x86_64-linux-gnu/python3.7m /dt8/usr/include/x86_64-linux-gnu/python3.7m || true
 ln -sf /usr/include/x86_64-linux-gnu/python3.8 /dt7/usr/include/x86_64-linux-gnu/python3.8 || true
 ln -sf /usr/include/x86_64-linux-gnu/python3.8 /dt8/usr/include/x86_64-linux-gnu/python3.8 || true
+ln -sf /usr/include/x86_64-linux-gnu/python3.9 /dt7/usr/include/x86_64-linux-gnu/python3.9 || true
+ln -sf /usr/include/x86_64-linux-gnu/python3.9 /dt8/usr/include/x86_64-linux-gnu/python3.9 || true
 
 curl https://bootstrap.pypa.io/get-pip.py | python
 python --version
 python -m pip --version
 
-curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.7.4/bazelisk-linux-amd64 > /usr/bin/bazelisk
+curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.8.0/bazelisk-linux-amd64 > /usr/bin/bazelisk
 chmod +x /usr/bin/bazelisk
 
 python -m pip install numpy six --no-cache-dir
