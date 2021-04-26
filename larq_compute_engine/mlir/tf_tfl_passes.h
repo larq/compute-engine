@@ -12,8 +12,7 @@ namespace tensorflow {
 // Add the TF to TFLite passes into a pass_manager.
 void AddTFToLCETFLConversionPasses(
     const mlir::TFL::QuantizationSpecs& quant_specs,
-    mlir::OpPassManager* pass_manager, const LCETarget target = LCETarget::ARM,
-    const bool experimental_enable_bitpacked_activations = false);
+    mlir::OpPassManager* pass_manager, const LCETarget target = LCETarget::ARM);
 
 }  // namespace tensorflow
 

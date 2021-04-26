@@ -21,12 +21,7 @@ namespace {
 struct OptimizeLCE : public PassWrapper<OptimizeLCE, FunctionPass> {
   OptimizeLCE() = default;
   OptimizeLCE(const OptimizeLCE& pass) {}
-  OptimizeLCE(const LCETarget target,
-              const bool experimental_enable_bitpacked_activations) {
-    target_.setValue(target);
-    experimental_enable_bitpacked_activations_.setValue(
-        experimental_enable_bitpacked_activations);
-  }
+  OptimizeLCE(const LCETarget target) { target_.setValue(target); }
 
   void runOnFunction() override;
 
@@ -35,11 +30,6 @@ struct OptimizeLCE : public PassWrapper<OptimizeLCE, FunctionPass> {
       *this, "target", llvm::cl::desc("Platform to target."),
       llvm::cl::values(clEnumValN(LCETarget::ARM, "arm", "ARM target"),
                        clEnumValN(LCETarget::XCORE, "xcore", "XCORE target"))};
-  Option<bool> experimental_enable_bitpacked_activations_{
-      *this, "experimental-enable-bitpacked-activations",
-      llvm::cl::desc("Include patterns to allow binary convolutions to output "
-                     "bitpacked activations."),
-      llvm::cl::init(true)};
 };
 
 bool IsConstantValue(Attribute values, float expected_value) {
@@ -49,14 +39,6 @@ bool IsConstantValue(Attribute values, float expected_value) {
     if (value != expected_value) return false;
   }
   return true;
-}
-
-namespace target_arm {
-#include "larq_compute_engine/mlir/transforms/generated_optimize_target_arm.inc"
-}
-
-namespace target_other {
-#include "larq_compute_engine/mlir/transforms/generated_optimize_target_other.inc"
 }
 
 /**
@@ -138,17 +120,23 @@ namespace target_other {
  * Implementation
  * --------------
  *
- * The function below accepts the constants a, c, C, a vector of 𝛄, and a vector
- * of 𝛃. It writes the computed thresholds into the vector `thresholds`, and
- * writes -1 or 1 into the vector `filter_per_channel_multipliers` to either
- * flip or not flip the convolution weights, as required if 𝛄 < 0.
+ * The function below accepts the constants a, c, C, a vector of 𝛄, and a
+ * vector of 𝛃. It writes the computed thresholds into the vector `thresholds`.
+ * It is assumed that when these computed thresholds are used, the filter
+ * weights are first multiplied by the sign of corresponding channel multiplier
+ * (this performs the weight flipping that is required in the 𝛄 < 0 case). The
+ * output of the binary convolution using these thresholds *will not* be correct
+ * if this does not happen! Currently, this filter weight flipping is part of
+ * the rewrite pattern `WriteBitpackedActivationsPat` in
+ * `optimize_patterns_common.td`.
  */
 void ComputeWriteBitpackedOutputThresholds(
-    const float backtransform_add, const float clamp_min, const float clamp_max,
-    const DenseElementsAttr& multipliers, const DenseElementsAttr& biases,
-    std::vector<std::int32_t>& thresholds,
-    std::vector<std::int32_t>& filter_per_channel_multipliers) {
-  assert(thresholds.size() == 0 && filter_per_channel_multipliers.size() == 0);
+    Builder& builder, const float backtransform_add, const float clamp_min,
+    const float clamp_max, const DenseElementsAttr& multipliers,
+    const DenseElementsAttr& biases, std::vector<Attribute>& thresholds) {
+  assert(thresholds.size() == 0);
+
+  const auto element_type = builder.getIntegerType(32);
 
   constexpr std::int32_t neg_inf = std::numeric_limits<std::int32_t>::min();
   constexpr std::int32_t pos_inf = std::numeric_limits<std::int32_t>::max();
@@ -161,11 +149,12 @@ void ComputeWriteBitpackedOutputThresholds(
 
     // Check for the 𝛄 = 0 special case.
     if (mult == 0.0f) {
-      filter_per_channel_multipliers.push_back(1.0f);
       if (bias < 0.0f) {
-        thresholds.push_back(neg_inf);  // We need to always write a 1-bit.
+        thresholds.push_back(IntegerAttr::get(
+            element_type, neg_inf));  // We need to always write a 1-bit.
       } else {
-        thresholds.push_back(pos_inf);  // We need to always write a 0-bit.
+        thresholds.push_back(IntegerAttr::get(
+            element_type, pos_inf));  // We need to always write a 0-bit.
       }
       continue;
     }
@@ -174,11 +163,9 @@ void ComputeWriteBitpackedOutputThresholds(
     if (mult > 0.0f) {
       effective_clamp_min = clamp_min;
       effective_clamp_max = clamp_max;
-      filter_per_channel_multipliers.push_back(1.0f);
     } else {
       effective_clamp_min = -1 * clamp_max;
       effective_clamp_max = -1 * clamp_min;
-      filter_per_channel_multipliers.push_back(-1.0f);
     }
 
     const float output_range_start =
@@ -188,130 +175,86 @@ void ComputeWriteBitpackedOutputThresholds(
 
     // Check for the clamping range not crossing zero special case.
     if (output_range_start < 0 && output_range_end < 0) {
-      thresholds.push_back(neg_inf);  // We need to always write a 1-bit.
+      thresholds.push_back(IntegerAttr::get(
+          element_type, neg_inf));  // We need to always write a 1-bit.
       continue;
     }
     if (output_range_start >= 0 && output_range_end >= 0) {
-      thresholds.push_back(pos_inf);  // We need to always write a 0-bit.
+      thresholds.push_back(IntegerAttr::get(
+          element_type, pos_inf));  // We need to always write a 0-bit.
       continue;
     }
 
     // The general case.
-    thresholds.push_back(
-        std::floor(0.5 * (bias / std::abs(mult) + backtransform_add)));
+    thresholds.push_back(IntegerAttr::get(
+        element_type,
+        std::floor(0.5 * (bias / std::abs(mult) + backtransform_add))));
   }
 }
 
-llvm::Optional<RankedTensorType> maybeGetBitpackedType(
-    PatternRewriter& rewriter, ShapedType existing_type) {
-  if (existing_type.getElementType().isInteger(32)) return llvm::None;
+DenseElementsAttr GetSignsOfVectorAndBroadcast4D(Attribute vector_attr) {
+  const auto vector = vector_attr.cast<DenseElementsAttr>();
+  const auto vector_type = vector_attr.getType().cast<ShapedType>();
+  assert(vector_type.getShape().size() == 1);
+  const auto vector_length = vector_type.getShape()[0];
+  const auto element_type = vector_type.getElementType();
 
-  const auto existing_shape = existing_type.getShape();
-  if (existing_shape.size() != 4) return llvm::None;
+  std::vector<Attribute> signs(vector_length);
+  for (std::size_t i = 0; i < vector_length; ++i) {
+    const auto sign = vector.getValue<float>({i}) >= 0.0f ? 1.0f : -1.0f;
+    signs[i] = FloatAttr::get(element_type, sign);
+  }
 
-  const auto packed_channels =
-      compute_engine::core::bitpacking::GetBitpackedSize(existing_shape[3]);
-  return RankedTensorType::get({existing_shape[0], existing_shape[1],
-                                existing_shape[2], packed_channels},
-                               rewriter.getIntegerType(32));
+  const RankedTensorType type =
+      RankedTensorType::get({vector_length, 1, 1, 1}, element_type);
+  return DenseElementsAttr::get(type, signs);
 }
 
-// TODO: Move to TableGen once enabled by default
-struct SetBitpackedActivations : public OpRewritePattern<lq::QuantizeOp> {
-  using OpRewritePattern<lq::QuantizeOp>::OpRewritePattern;
+DenseElementsAttr GetBitpackedOutputThresholds(
+    Builder& builder, Attribute filter_attr,
+    Attribute post_activation_multiplier_attr,
+    Attribute post_activation_bias_attr,
+    Attribute fused_activation_function_attr) {
+  const auto post_activation_multiplier =
+      post_activation_multiplier_attr.cast<DenseElementsAttr>();
+  const auto post_activation_bias =
+      post_activation_bias_attr.cast<DenseElementsAttr>();
+  const auto fused_activation_function =
+      fused_activation_function_attr.cast<StringAttr>().getValue();
 
-  LogicalResult matchAndRewrite(lq::QuantizeOp quantize_op,
-                                PatternRewriter& rewriter) const override {
-    Operation* input_op = quantize_op.getOperand().getDefiningOp();
+  // Compute the constants `backtransform_add` and `clamp_min/max`.
+  const auto filter_type = filter_attr.getType().cast<ShapedType>();
+  const auto filter_shape = filter_type.getShape();
+  const std::int32_t backtransform_add =
+      filter_shape[1] * filter_shape[2] * filter_shape[3];
+  const auto clamp_min_max =
+      llvm::StringSwitch<std::pair<std::int32_t, std::int32_t>>(
+          fused_activation_function)
+          .Case("RELU", {0, backtransform_add})
+          .Case("RELU_N1_TO_1", {-1, 1})
+          .Case("RELU6", {0, 6})
+          .Default({-1 * backtransform_add, backtransform_add});
+  const std::int32_t clamp_min = std::get<0>(clamp_min_max);
+  const std::int32_t clamp_max = std::get<1>(clamp_min_max);
 
-    // If the input op has more than one use, we can't apply an optimisation.
-    if (!input_op || !input_op->hasOneUse()) return failure();
+  std::vector<Attribute> thresholds;
+  ComputeWriteBitpackedOutputThresholds(
+      builder, static_cast<float>(backtransform_add),
+      static_cast<float>(clamp_min), static_cast<float>(clamp_max),
+      post_activation_multiplier, post_activation_bias, thresholds);
 
-    // Try and match `input_op` to a binary convolution.
-    auto bconv_op = dyn_cast_or_null<lq::Bconv2dOp>(input_op);
-    if (!bconv_op) return failure();
+  const RankedTensorType type = RankedTensorType::get(
+      {(std::int32_t)thresholds.size()}, builder.getIntegerType(32));
+  return DenseElementsAttr::get(type, thresholds);
+}
 
-    // We can't apply this transform if the activation or filters are already
-    // bitpacked, or with 'same zero' padding.
-    const auto bconv_type = bconv_op.getType().cast<ShapedType>();
-    const auto filter_type = bconv_op.filter().getType().cast<ShapedType>();
-    const auto bitpacked_type = maybeGetBitpackedType(rewriter, bconv_type);
-    if (!bconv_type.getElementType().isF32() ||
-        !filter_type.getElementType().isF32() || !bitpacked_type ||
-        (bconv_op.padding() == "SAME" && bconv_op.pad_values() != 1)) {
-      return failure();
-    }
+namespace target_arm {
+#include "larq_compute_engine/mlir/transforms/generated_optimize_target_arm.inc"
+}
 
-    // As the inner bconv op will be writing bitpacked output, we need to
-    // compute the thresholds for writing a 1-bit or a 0-bit.
-
-    // Compute the constants `backtransform_add` and `clamp_min/max`.
-    const auto filter_shape = filter_type.getShape();
-    const std::int32_t backtransform_add =
-        filter_shape[1] * filter_shape[2] * filter_shape[3];
-    const auto clamp_min_max =
-        llvm::StringSwitch<std::pair<std::int32_t, std::int32_t>>(
-            bconv_op.fused_activation_function())
-            .Case("RELU", {0, backtransform_add})
-            .Case("RELU_N1_TO_1", {-1, 1})
-            .Case("RELU6", {0, 6})
-            .Default({-1 * backtransform_add, backtransform_add});
-    const std::int32_t clamp_min = std::get<0>(clamp_min_max);
-    const std::int32_t clamp_max = std::get<1>(clamp_min_max);
-
-    // This is a nice trick taken from TF code: the `m_Constant` pattern
-    // takes an `Attribute` as an argument. It tries to match a
-    // constant-foldable `Value` and writes the value to the attribute if
-    // the match succeeds.
-    DenseElementsAttr filters, multipliers, biases;
-    if (!matchPattern(bconv_op.filter(), m_Constant(&filters)) ||
-        !matchPattern(bconv_op.post_activation_multiplier(),
-                      m_Constant(&multipliers)) ||
-        !matchPattern(bconv_op.post_activation_bias(), m_Constant(&biases))) {
-      return failure();
-    }
-
-    std::vector<std::int32_t> thresholds, filter_per_channel_multipliers;
-    ComputeWriteBitpackedOutputThresholds(
-        static_cast<float>(backtransform_add), static_cast<float>(clamp_min),
-        static_cast<float>(clamp_max), multipliers, biases, thresholds,
-        filter_per_channel_multipliers);
-
-    // Compute new filter values by folding in the per-channel multipliers.
-    std::vector<float> new_filter_values(filter_shape[0] * filter_shape[1] *
-                                         filter_shape[2] * filter_shape[3]);
-    int i = 0;
-    for (float value : filters.getValues<float>()) {
-      float multiplier = filter_per_channel_multipliers[i / (filter_shape[1] *
-                                                             filter_shape[2] *
-                                                             filter_shape[3])];
-      new_filter_values[i++] = value * multiplier;
-    }
-
-    // Create new inputs for the inner bconv op.
-    Value filter_input = rewriter.create<ConstantOp>(
-        bconv_op.filter().getLoc(),
-        DenseElementsAttr::get<float>(filter_type, new_filter_values));
-    RankedTensorType thresholds_type =
-        RankedTensorType::get({filter_shape[0]}, rewriter.getIntegerType(32));
-    Value thresholds_input = rewriter.create<ConstantOp>(
-        bconv_op.output_threshold().getLoc(),
-        DenseElementsAttr::get<std::int32_t>(thresholds_type, thresholds));
-
-    // We need an empty input with which to overwrite the
-    // `post_activation_multiplier` and `post_activation_bias` (which are no
-    // longer needed, having computed the thresholds).
-    Value empty_input = rewriter.create<ConstantOp>(
-        bconv_op.getLoc(), rewriter.getNoneType(), rewriter.getUnitAttr());
-
-    std::vector<Value> operands = {bconv_op.input(), filter_input, empty_input,
-                                   empty_input, thresholds_input};
-    rewriter.replaceOpWithNewOp<lq::Bconv2dOp>(quantize_op, *bitpacked_type,
-                                               operands, bconv_op.getAttrs());
-
-    return success();
-  };
-};
+namespace target_other {
+#include "larq_compute_engine/mlir/transforms/generated_optimize_target_other.inc"
+}
 
 void OptimizeLCE::runOnFunction() {
   OwningRewritePatternList patterns;
@@ -323,9 +266,6 @@ void OptimizeLCE::runOnFunction() {
   } else {
     target_other::populateWithGenerated(ctx, patterns);
   }
-  if (experimental_enable_bitpacked_activations_) {
-    patterns.insert<SetBitpackedActivations>(ctx);
-  }
 
   applyPatternsAndFoldGreedily(func, patterns);
 }
@@ -334,10 +274,8 @@ void OptimizeLCE::runOnFunction() {
 
 // Creates an instance of the TensorFlow dialect OptimizeLCE pass.
 std::unique_ptr<OperationPass<FuncOp>> CreateOptimizeLCEPass(
-    const LCETarget target,
-    const bool experimental_enable_bitpacked_activations) {
-  return std::make_unique<OptimizeLCE>(
-      target, experimental_enable_bitpacked_activations);
+    const LCETarget target) {
+  return std::make_unique<OptimizeLCE>(target);
 }
 
 static PassRegistration<OptimizeLCE> pass(

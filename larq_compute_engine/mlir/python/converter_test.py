@@ -33,7 +33,6 @@ class TestConverter(unittest.TestCase):
             False,
             "arm",
             None,
-            False,
         )
 
     def test_wrong_arg(self):

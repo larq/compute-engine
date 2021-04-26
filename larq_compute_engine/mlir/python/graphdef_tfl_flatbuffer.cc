@@ -41,8 +41,7 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
     const std::vector<string>& input_dtypes,
     const std::vector<std::vector<int>>& input_shapes,
     const std::vector<string>& output_arrays, const bool should_quantize,
-    const std::string& target_str, const pybind11::object& default_ranges,
-    const bool experimental_enable_bitpacked_activations) {
+    const std::string& target_str, const pybind11::object& default_ranges) {
   GraphDef graphdef;
   if (!tensorflow::LoadProtoFromBuffer(std::string(graphdef_bytes), &graphdef)
            .ok()) {
@@ -96,8 +95,7 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
     }
   }
   mlir::PassManager pm(&context);
-  tensorflow::AddTFToLCETFLConversionPasses(
-      quant_specs, &pm, target, experimental_enable_bitpacked_activations);
+  tensorflow::AddTFToLCETFLConversionPasses(quant_specs, &pm, target);
 
   // Convert back to outlined while format for export back to flatbuffer.
   pm.addPass(mlir::TFL::CreateWhileOutlinePass());

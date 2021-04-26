@@ -28,9 +28,7 @@ def model_fn():
     type=click.Path(writable=True, resolve_path=True),
 )
 def convert_model(outfile):
-    model_lce = convert_keras_model(
-        model_fn(), experimental_enable_bitpacked_activations=True
-    )
+    model_lce = convert_keras_model(model_fn())
     with open(outfile, "wb") as f:
         f.write(model_lce)
 

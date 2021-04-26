@@ -156,3 +156,50 @@ foreach actFnPair = [[TFL_ReluOp, TFL_AF_Relu],
                      [TFL_Relu1Op, TFL_AF_Relu1],
                      [TFL_Relu6Op, TFL_AF_Relu6]] in
   defm : FuseActFnIntoConvOpPat<actFnPair[0], actFnPair[1]>;
+
+def CreateNoneAttrValue : NativeCodeCall<"$_builder.getUnitAttr()">;
+def GetSignsOfVectorAndBroadcast4D : NativeCodeCall<"GetSignsOfVectorAndBroadcast4D($0)">;
+def GetBitpackedOutputThresholds : NativeCodeCall<"GetBitpackedOutputThresholds($_builder, $0, $1, $2, $3)">;
+
+class WriteBitpackedActivationsPat<string padding_type, string pad_values> :
+      Pat<(LQ_QuantizeOp
+              (LQ_Bconv2dOp:$output
+                  $input,
+                  (ConstantOp F32ElementsAttr:$filter),
+                  (ConstantOp F32ElementsAttr:$post_activation_multiplier),
+                  (ConstantOp F32ElementsAttr:$post_activation_bias),
+                  (ConstantOp UnitAttr),
+                  $channels_in,
+                  $dilation_height_factor,
+                  $dilation_width_factor,
+                  $fused_activation_function,
+                  ConstantAttr<I32Attr, pad_values>,
+                  ConstantAttr<StrAttr, padding_type>,
+                  $stride_height,
+                  $stride_width)),
+          (LQ_Bconv2dOp
+              $input,
+              (TFL_MulOp
+                  (ConstantOp $filter),
+                  (ConstantOp
+                      (GetSignsOfVectorAndBroadcast4D $post_activation_multiplier)),
+                  TFL_AF_None),
+              (ConstantOp (CreateNoneAttrValue)),
+              (ConstantOp (CreateNoneAttrValue)),
+              (ConstantOp
+                  (GetBitpackedOutputThresholds
+                      $filter,
+                      $post_activation_multiplier,
+                      $post_activation_bias,
+                      $fused_activation_function)),
+              $channels_in,
+              $dilation_height_factor,
+              $dilation_width_factor,
+              $fused_activation_function,
+              ConstantAttr<I32Attr, pad_values>,
+              ConstantAttr<StrAttr, padding_type>,
+              $stride_height,
+              $stride_width),
+          [(HasOneUse $output)], (addBenefit 10)>;
+def : WriteBitpackedActivationsPat<"VALID", "0">;
+def : WriteBitpackedActivationsPat<"SAME", "1">;
