@@ -35,7 +35,7 @@ export MANYLINUX2010=1
 ./configure.py
 
 # Build
-bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --distinct_host_configuration=false
+bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --distinct_host_configuration=false --discard_analysis_cache --notrack_incremental_state --nokeep_state_after_build --nouse_action_cache --local_ram_resources=4096
 
 # Package Whl
 bazel-bin/build_pip_pkg artifacts
