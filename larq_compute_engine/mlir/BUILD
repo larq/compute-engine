@@ -19,7 +19,7 @@ gentbl(
     td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_td_files",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@llvm-project//mlir:SideEffectTdFiles",
     ],
 )
 
@@ -150,7 +150,7 @@ cc_library(
         "//larq_compute_engine/core/bitpacking:bitpack",
         "@flatbuffers",
         "@llvm-project//mlir:QuantOps",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
+        "@llvm-project//mlir:SideEffects",
         "@org_tensorflow//tensorflow/lite/schema:schema_fbs",
     ],
     alwayslink = 1,
@@ -228,6 +228,7 @@ cc_library(
         "//larq_compute_engine/core:types",
         "//larq_compute_engine/core/bitpacking:bitpack",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
     ],
     alwayslink = 1,
 )
