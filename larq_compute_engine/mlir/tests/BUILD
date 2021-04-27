@@ -18,6 +18,7 @@ lce_lit_test_suite(
 tf_cc_test(
     name = "lce_ops_options_test",
     srcs = ["lce_ops_options_test.cc"],
+    linkopts = ["-ldl"],
     deps = [
         "//larq_compute_engine/mlir:larq_compute_engine",
         "@com_google_googletest//:gtest_main",
