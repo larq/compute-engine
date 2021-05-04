@@ -2,6 +2,6 @@
 
 set -e
 
-export QEMU_LD_PREFIX="external/arm_compiler/arm-rpi-linux-gnueabihf/sysroot"
+export QEMU_LD_PREFIX="external/armhf_linux_toolchain/arm-linux-gnueabihf/libc"
 
 qemu-arm "$1"

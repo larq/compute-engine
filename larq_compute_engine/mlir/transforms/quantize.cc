@@ -3,6 +3,7 @@
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 namespace mlir {
@@ -21,11 +22,10 @@ struct LCEQuantizePass : public PassWrapper<LCEQuantizePass, FunctionPass> {
 #include "larq_compute_engine/mlir/transforms/generated_quantize.inc"
 
 void LCEQuantizePass::runOnFunction() {
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(&getContext());
   auto func = getFunction();
-  auto* ctx = func.getContext();
-  TFL::populateWithGenerated(ctx, patterns);
-  applyPatternsAndFoldGreedily(func, patterns);
+  TFL::populateWithGenerated(patterns);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 }  // namespace
 

@@ -10,6 +10,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 namespace mlir {
@@ -307,27 +308,27 @@ struct SetBitpackedActivations : public OpRewritePattern<lq::QuantizeOp> {
     std::vector<Value> operands = {bconv_op.input(), filter_input, empty_input,
                                    empty_input, thresholds_input};
     rewriter.replaceOpWithNewOp<lq::Bconv2dOp>(quantize_op, *bitpacked_type,
-                                               operands, bconv_op.getAttrs());
+                                               operands, bconv_op->getAttrs());
 
     return success();
   };
 };
 
 void OptimizeLCE::runOnFunction() {
-  OwningRewritePatternList patterns;
   auto* ctx = &getContext();
+  OwningRewritePatternList patterns(ctx);
   auto func = getFunction();
 
   if (target_ == LCETarget::ARM) {
-    target_arm::populateWithGenerated(ctx, patterns);
+    target_arm::populateWithGenerated(patterns);
   } else {
-    target_other::populateWithGenerated(ctx, patterns);
+    target_other::populateWithGenerated(patterns);
   }
   if (experimental_enable_bitpacked_activations_) {
     patterns.insert<SetBitpackedActivations>(ctx);
   }
 
-  applyPatternsAndFoldGreedily(func, patterns);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
 }  // namespace

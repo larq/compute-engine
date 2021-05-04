@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: 3.9
       - uses: actions/cache@v2.1.5
         id: cache
         with:
@@ -39,11 +39,11 @@ jobs:
       - run: mkdir benchmark-binaries
       - name: Build Benchmark utility for AArch64
         run: |
-          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=aarch64 -c opt --copt=-O3 --features=fully_static_link
+          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=aarch64 -c opt --copt=-O3
           cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_aarch64
       - name: Build Benchmark utility for AArch32
         run: |
-          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=rpi3 -c opt --copt=-O3 --features=fully_static_link
+          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=rpi3 -c opt --copt=-O3
           cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_aarch32
       - name: Build Benchmark utility for Android
         run: |
@@ -133,7 +133,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -165,7 +165,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -197,12 +197,12 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
     steps:
       - name: Configure Pagefile
         uses: al-cheb/configure-pagefile-action@v1.2
         with:
-          minimum-size: 4GB
+          minimum-size: 8GB
       - name: Pagefile size
         run: |
           (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
@@ -221,7 +221,7 @@ jobs:
 
           "" | python configure.py
 
-          bazelisk --output_base=C:\build_output build :build_pip_pkg --enable_runfiles --discard_analysis_cache --notrack_incremental_state --nokeep_state_after_build --nouse_action_cache --local_ram_resources=4096
+          bazelisk --output_base=C:\build_output build :build_pip_pkg --compilation_mode=fastbuild --enable_runfiles --discard_analysis_cache --notrack_incremental_state --nokeep_state_after_build --nouse_action_cache --local_ram_resources=4096
           bazel-bin/build_pip_pkg wheelhouse
         env:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}

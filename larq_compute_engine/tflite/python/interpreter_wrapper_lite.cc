@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "larq_compute_engine/tflite/kernels/lce_ops_register.h"
 #include "larq_compute_engine/tflite/python/interpreter_wrapper_utils.h"
 #include "tensorflow/lite/interpreter.h"

@@ -4,6 +4,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "tensorflow/compiler/mlir/lite/transforms/dilated_conv.h"
 #include "tensorflow/compiler/mlir/lite/utils/validators.h"
@@ -163,8 +164,8 @@ namespace target_other {
 }
 
 void PrepareLCE::runOnFunction() {
-  OwningRewritePatternList patterns;
   auto* ctx = &getContext();
+  OwningRewritePatternList patterns(ctx);
   auto func = getFunction();
 
   // This pattern will try to identify and optimize for dilated convolution.
@@ -173,12 +174,12 @@ void PrepareLCE::runOnFunction() {
   patterns.insert<ConvertTFDilatedConvOp<TF::Conv2DOp>>(ctx);
 
   if (target_ == LCETarget::ARM) {
-    target_arm::populateWithGenerated(ctx, patterns);
+    target_arm::populateWithGenerated(patterns);
   } else {
-    target_other::populateWithGenerated(ctx, patterns);
+    target_other::populateWithGenerated(patterns);
   }
 
-  applyPatternsAndFoldGreedily(func, patterns);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
 }  // namespace

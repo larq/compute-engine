@@ -76,7 +76,7 @@ def get_from_env_or_user_or_default(environ_cp, var_name, ask_for_var, var_defau
     ask for user input. If no input is provided, the default is used.
     Args:
       environ_cp: copy of the os.environ.
-      var_name: string for name of environment variable, e.g. "TF_NEED_CUDA".
+      var_name: string for name of environment variable, e.g. "LCE_NEED_CUDA".
       ask_for_var: string for how to ask for user input.
       var_default: default value string.
     Returns:
@@ -288,6 +288,8 @@ def get_python_path(environ_cp, python_bin_path):
         ]
 
     all_paths = set(python_paths + library_paths)
+    # Sort set so order is deterministic
+    all_paths = sorted(all_paths)
 
     paths = []
     for path in all_paths:
@@ -404,12 +406,11 @@ def set_cc_opt_flags(environ_cp):
     for opt in cc_opt_flags.split():
         write_to_bazelrc("build:opt --copt=%s" % opt)
         write_to_bazelrc("build:opt --host_copt=%s" % opt)
-    write_to_bazelrc("build:opt --define with_default_optimizations=true")
 
 
 def maybe_set_manylinux_toolchain(environ_cp):
     write_to_bazelrc(
-        "build:manylinux2010 --crosstool_top=//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.1:toolchain"
+        "build:manylinux2010 --crosstool_top=@org_tensorflow//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda11.2:toolchain"
     )
     if get_var(
         environ_cp,
@@ -429,6 +430,13 @@ def maybe_set_manylinux_toolchain(environ_cp):
 
 def set_windows_build_flags(environ_cp):
     """Set Windows specific build options."""
+
+    # First available in VS 16.4. Speeds up Windows compile times by a lot. See
+    # https://groups.google.com/a/tensorflow.org/d/topic/build/SsW98Eo7l3o/discussion
+    # pylint: disable=line-too-long
+    write_to_bazelrc(
+        "build --copt=/d2ReducedOptimizeHugeFunctions --host_copt=/d2ReducedOptimizeHugeFunctions"
+    )
 
     if get_var(
         environ_cp,

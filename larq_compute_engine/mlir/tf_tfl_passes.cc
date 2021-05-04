@@ -128,7 +128,7 @@ void AddTFToLCETFLConversionPasses(
   pass_manager->addPass(mlir::TFL::CreatePrepareLCEPass(target));
   // Prepare for TFLite dialect, rerun canonicalization, and then legalize to
   // the TFLite dialect.
-  pass_manager->addPass(mlir::TFL::CreatePrepareTFPass(true));
+  pass_manager->addPass(mlir::TFL::CreatePrepareTFPass(true, false));
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
   // Add a shape inference pass to optimize away the unnecessary casts.
   // This also fixes the unranked shapes due to TF ops constant folding.
@@ -144,7 +144,7 @@ void AddTFToLCETFLConversionPasses(
 
   pass_manager->addPass(mlir::TFL::CreateLegalizeTFPass(true));
   pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(target, false));
-  pass_manager->addPass(mlir::TFL::CreateOptimizePass());
+  pass_manager->addPass(mlir::TFL::CreateOptimizePass(true));
   pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(
       target, experimental_enable_bitpacked_activations));
   pass_manager->addPass(mlir::TFL::CreateBitpackWeightsLCEPass());
