@@ -36,7 +36,7 @@ build:aarch64 --copt=-march=armv8-a --copt=-std=gnu++11 --copt=-DS_IREAD=S_IRUSR
 # Disable unnecessary features.
 build:linux --config=nohdfs --config=nonccl --config=noaws --config=nogcp
 build:macos --config=nohdfs --config=nonccl --config=noaws --config=nogcp
-build:windows --config=nohdfs --config=nonccl --config=noaws --config=nogcp
+build:windows --config=noaws --config=nogcp
 
 # Extra build options we need for windows.
 build:windows --experimental_strict_action_env=true
