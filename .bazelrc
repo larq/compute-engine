@@ -1,6 +1,9 @@
 # Import TensorFlow's configuration first.
 try-import %workspace%/.tensorflow.bazelrc
 
+# Just testing
+build --define mobile=true
+
 # Prevent invalid caching if input files are modified during a build.
 build --experimental_guard_against_concurrent_changes
 
