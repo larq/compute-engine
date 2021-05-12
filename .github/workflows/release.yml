@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v2.2.2
         with:
           python-version: 3.8
       - uses: actions/cache@v2.1.5
@@ -90,7 +90,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v2.2.2
         with:
           python-version: 3.8
       - uses: actions/cache@v2.1.5
@@ -136,7 +136,7 @@ jobs:
         python-version: [3.6, 3.7, 3.8]
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v2.2.2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build macOS wheels
@@ -168,7 +168,7 @@ jobs:
         python-version: [3.6, 3.7, 3.8]
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v2.2.2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build manylinux2010 wheels
@@ -208,7 +208,7 @@ jobs:
           (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
         shell: pwsh
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v2.2.2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build Windows wheels
