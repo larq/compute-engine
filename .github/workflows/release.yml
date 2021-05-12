@@ -55,7 +55,7 @@ jobs:
           path: benchmark-binaries
       - name: Upload Release Asset AArch64
         if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -65,7 +65,7 @@ jobs:
           asset_content_type: application/octet-stream
       - name: Upload Release Asset AArch32
         if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -75,7 +75,7 @@ jobs:
           asset_content_type: application/octet-stream
       - name: Upload Release Asset Android
         if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -119,7 +119,7 @@ jobs:
           echo "ASSET_NAME=${ASSET_NAME}" >> $GITHUB_ENV
       - name: Upload Release Asset
         if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
