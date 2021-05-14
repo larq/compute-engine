@@ -63,7 +63,10 @@ bool IsBinaryFilter(Attribute filter_attr) {
   if (!filter_attr.isa<DenseElementsAttr>()) return false;
   auto filter = filter_attr.cast<DenseElementsAttr>();
 
-  auto shape = filter_attr.getType().cast<ShapedType>().getShape();
+  auto filter_type = filter_attr.getType().cast<ShapedType>();
+  auto element_type = filter_type.getElementType();
+  if (!element_type.isF32()) return false;
+  auto shape = filter_type.getShape();
   if (shape.size() != 4) return false;
 
   for (std::size_t h = 0; h < shape[0]; ++h) {
