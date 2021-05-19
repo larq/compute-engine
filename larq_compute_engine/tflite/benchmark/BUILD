@@ -14,7 +14,10 @@ tf_cc_binary(
         "lce_benchmark_main.cc",
     ],
     copts = tflite_copts() + tflite_copts_warnings(),
-    features = ["fully_static_link"],
+    features = select({
+        "@org_tensorflow//tensorflow:android": [],
+        "//conditions:default": ["fully_static_link"],
+    }),
     linkopts = tflite_linkopts() + select({
         "@org_tensorflow//tensorflow:android": [
             "-pie",  # Android 5.0 and later supports only PIE
