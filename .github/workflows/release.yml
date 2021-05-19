@@ -224,7 +224,7 @@ jobs:
 
           "" | python configure.py
 
-          bazelisk --output_base=C:\build_output build :build_pip_pkg --compilation_mode=fastbuild --enable_runfiles --discard_analysis_cache --notrack_incremental_state --nokeep_state_after_build --nouse_action_cache --local_ram_resources=4096
+          bazelisk --output_base=C:\build_output build :build_pip_pkg --enable_runfiles --discard_analysis_cache --notrack_incremental_state --nokeep_state_after_build --nouse_action_cache --local_ram_resources=4096
           bazel-bin/build_pip_pkg wheelhouse
         env:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
