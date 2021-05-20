@@ -3,7 +3,7 @@ name: Tests
 on:
   push:
     branches:
-      - master
+      - main
   pull_request: {}
 
 jobs:
@@ -85,7 +85,7 @@ jobs:
         shell: bash
       - name: Set bazel cache
         run: echo -e 'build --remote_upload_local_results=false' >> .bazelrc.user
-        if: github.ref != 'refs/heads/master'
+        if: github.ref != 'refs/heads/main'
         shell: bash
       - name: Install pip dependencies
         run: pip install tensorflow-cpu~=2.5.0 larq~=0.11 larq_zoo~=2.0 pytest tensorflow_datasets~=4.2 flatbuffers tqdm --no-cache-dir
