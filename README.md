@@ -1,6 +1,6 @@
 # Larq Compute Engine <img src="https://user-images.githubusercontent.com/13285808/74535800-84017780-4f2e-11ea-9169-52f5ac83d685.png" alt="larq logo" height="80px" align="right" />
 
-[![Tests](https://github.com/larq/compute-engine/workflows/Tests/badge.svg)](https://github.com/larq/compute-engine/actions?workflow=Tests) [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/larq-compute-engine.svg)](https://pypi.org/project/larq-compute-engine/) [![PyPI](https://img.shields.io/pypi/v/larq-compute-engine.svg)](https://pypi.org/project/larq-compute-engine/) [![PyPI - License](https://img.shields.io/pypi/l/larq-compute-engine.svg)](https://github.com/larq/compute-engine/blob/master/LICENSE)
+[![Tests](https://github.com/larq/compute-engine/workflows/Tests/badge.svg)](https://github.com/larq/compute-engine/actions?workflow=Tests) [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/larq-compute-engine.svg)](https://pypi.org/project/larq-compute-engine/) [![PyPI](https://img.shields.io/pypi/v/larq-compute-engine.svg)](https://pypi.org/project/larq-compute-engine/) [![PyPI - License](https://img.shields.io/pypi/l/larq-compute-engine.svg)](https://github.com/larq/compute-engine/blob/main/LICENSE)
 
 Larq Compute Engine (LCE) is a highly optimized inference engine for deploying
 extremely quantized neural networks, such as
@@ -70,7 +70,7 @@ board:
 
 Benchmarked on August 21st, 2020 with LCE custom
 [TFLite Model Benchmark Tool](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/tools/benchmark)
-(see [here](https://github.com/larq/compute-engine/tree/master/larq_compute_engine/tflite/benchmark))
+(see [here](https://github.com/larq/compute-engine/tree/main/larq_compute_engine/tflite/benchmark))
 and BNN models with randomized inputs.
 
 ## Getting started
@@ -101,7 +101,7 @@ Follow these steps to deploy a BNN with LCE:
   application with Larq.
 - If you're a mobile developer, visit [Android quickstart](https://docs.larq.dev/compute-engine/quickstart_android).
 - See our build instructions for Raspberry Pi and 64-bit ARM-based boards [here](https://docs.larq.dev/compute-engine/build/arm).
-- Try our [example programs](https://github.com/larq/compute-engine/tree/master/examples).
+- Try our [example programs](https://github.com/larq/compute-engine/tree/main/examples).
 
 ## About
 

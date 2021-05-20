@@ -1,6 +1,6 @@
 
 <!-- Thank you for your contribution!
-Please review https://github.com/larq/compute-engine/blob/master/CONTRIBUTING.md before opening a pull request. -->
+Please review https://github.com/larq/compute-engine/blob/main/CONTRIBUTING.md before opening a pull request. -->
 
 ## What do these changes do?
 <!-- Please give a short brief about these changes. -->
