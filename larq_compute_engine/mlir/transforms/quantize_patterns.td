@@ -65,3 +65,7 @@ def : Pat<(TFL_QuantizeOp
               $stride_height,
               $stride_width),
           [(HasOneUse $output)]>;
+
+def : Pat<(TFL_QuantizeOp (LQ_DequantizeOp:$output $input), $qtype),
+          (LQ_DequantizeOp $input),
+          [(HasOneUse $output)]>;
