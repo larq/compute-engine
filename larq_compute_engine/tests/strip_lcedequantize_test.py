@@ -6,7 +6,6 @@ import tensorflow as tf
 
 from larq_compute_engine.mlir.python.converter import convert_keras_model
 from larq_compute_engine.mlir.python.util import strip_lcedequantize_ops
-from larq_compute_engine.tflite.python.interpreter import Interpreter
 
 
 def toy_model_sign(**kwargs):
@@ -63,7 +62,7 @@ def test_strip_lcedequantize_ops(
         experimental_enable_bitpacked_activations=True,
     )
     model_lce = strip_lcedequantize_ops(model_lce)
-    interpreter = Interpreter(model_lce)
+    interpreter = tf.lite.Interpreter(model_content=model_lce)
     input_details = interpreter.get_input_details()
     assert len(input_details) == 1
     assert input_details[0]["dtype"] == inference_input_type.as_numpy_dtype
