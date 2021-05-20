@@ -1,6 +1,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.h"
 
 namespace mlir {
@@ -17,12 +18,11 @@ struct OpRemoval : public PassWrapper<OpRemoval, FunctionPass> {
 #include "larq_compute_engine/mlir/transforms/generated_op_removal.inc"
 
 void OpRemoval::runOnFunction() {
-  OwningRewritePatternList patterns;
-  auto* ctx = &getContext();
+  OwningRewritePatternList patterns(&getContext());
   auto func = getFunction();
 
-  TFL::populateWithGenerated(ctx, patterns);
-  applyPatternsAndFoldGreedily(func, patterns);
+  TFL::populateWithGenerated(patterns);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
 }  // namespace

@@ -3,17 +3,18 @@ def lce_qemu_test_suite(
         platform,
         tests):
     """Test a set of C/C++ binaries using qemu.
-      Args:
-        name: a unique name for this rule.
-        platform: either "arm32" or "aarch64"
-        tests: list of cc_test targets
-      """
+
+    Args:
+      name: a unique name for this rule.
+      platform: either "arm32" or "aarch64"
+      tests: list of cc_test targets
+    """
     if platform == "arm32":
         src = "//larq_compute_engine/tests:test_arm32_binary.sh"
-        qemu_data = "@arm_compiler//:compiler_pieces"
+        qemu_data = "@local_config_embedded_arm//:armhf_toolchain_all_files"
     elif platform == "aarch64":
         src = "//larq_compute_engine/tests:test_aarch64_binary.sh"
-        qemu_data = "@aarch64_compiler//:aarch64_compiler_pieces"
+        qemu_data = "@local_config_embedded_arm//:aarch64_toolchain_all_files"
     else:
         fail("Invalid platform name in lce_qemu_test_suite", platform)
 

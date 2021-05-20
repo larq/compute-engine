@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 include "mlir/IR/OpBase.td"
-include "tensorflow/compiler/mlir/tensorflow/ir/tf_op_base.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "tensorflow/compiler/mlir/lite/quantization/quantization.td"
 
 #ifndef TFL_OPS
@@ -81,9 +81,7 @@ Converts floating point or integer tensors to binarized bitpacked tensors.
     TensorOf<[I32]>:$y
   );
 
-  let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &state, Value x"
-  >];
+  let builders = [OpBuilder<(ins "Value":$x)>];
 }
 
 def LQ_DequantizeOp : LQ_Op<"Dequantize", [NoSideEffect]> {
