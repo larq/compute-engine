@@ -1,6 +1,7 @@
 #include <exception>
 
 #include "larq_compute_engine/mlir/tf_tfl_passes.h"
+#include "larq_compute_engine/mlir/tf_to_tfl_flatbuffer.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "mlir/IR/MLIRContext.h"
@@ -10,7 +11,6 @@
 #include "pybind11/pytypes.h"
 #include "pybind11/stl.h"
 #include "tensorflow/compiler/mlir/lite/quantization/quantization_config.h"
-#include "tensorflow/compiler/mlir/lite/tf_to_tfl_flatbuffer.h"
 #include "tensorflow/compiler/mlir/lite/transforms/passes.h"
 #include "tensorflow/compiler/mlir/op_or_arg_name_mapper.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/import_model.h"
@@ -23,17 +23,6 @@
 #include "tensorflow/core/protobuf/graph_debug_info.pb.h"
 
 namespace tensorflow {
-
-// Truncates names to a maximum length of ~50 characters since LCE op location
-// names can be very long otherwise.
-class TruncateOpOrArgLocNameMapper : public OpOrArgLocNameMapper {
- protected:
-  std::string GetName(OpOrVal op_or_val) override {
-    auto name = OpOrArgLocNameMapper::GetName(op_or_val);
-    if (name.length() > 50) return name.substr(0, 50);
-    return name;
-  }
-};
 
 pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
     const pybind11::bytes& graphdef_bytes,
@@ -118,11 +107,8 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
   pm.addPass(mlir::TFL::CreateRuntimeVerifyPass());
 
   std::string result;
-  auto status = ConvertTFExecutorToTFLOrFlatbuffer(
-      module->get(), /*export_to_mlir=*/false, /*emit_builtin_tflite_ops=*/true,
-      /*emit_select_tf_ops=*/false, /*emit_custom_ops=*/true,
-      /*select_user_tf_ops=*/{}, quant_specs, /*saved_model_tags=*/{}, &result,
-      &pm);
+  auto status = ConvertTFExecutorToFlatbuffer(
+      module->get(), /*export_to_mlir=*/false, &result, &pm);
 
   if (!status.ok()) {
     throw std::runtime_error("Could not translate to flatbuffer.");
