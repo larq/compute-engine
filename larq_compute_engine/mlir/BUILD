@@ -293,6 +293,23 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "tf_to_tfl_flatbuffer",
+    srcs = ["tf_to_tfl_flatbuffer.cc"],
+    hdrs = [
+        "tf_to_tfl_flatbuffer.h",
+    ],
+    deps = [
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Pass",
+        "@org_tensorflow//tensorflow/compiler/mlir:op_or_arg_name_mapper",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:error_util",
+        "@org_tensorflow//tensorflow/stream_executor/lib",
+    ],
+)
+
 tf_cc_binary(
     name = "lce-tf-opt",
     srcs = ["lce_mlir_opt.cc"],
@@ -308,9 +325,8 @@ pybind_extension(
     module_name = "graphdef_tfl_flatbuffer",
     deps = [
         ":lce_tfl_passes",
-        "@org_tensorflow//tensorflow/compiler/mlir:op_or_arg_name_mapper",
+        ":tf_to_tfl_flatbuffer",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tf_to_tfl_flatbuffer",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_graphdef",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:import_utils",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:mlir_roundtrip_flags",
