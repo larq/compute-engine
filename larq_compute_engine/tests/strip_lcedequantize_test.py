@@ -68,7 +68,10 @@ def test_strip_lcedequantize_ops(
     assert input_details[0]["dtype"] == inference_input_type.as_numpy_dtype
     output_details = interpreter.get_output_details()
     assert len(output_details) == 1
-    assert output_details[0]["dtype"] == tf.int32.as_numpy_dtype if inference_output_type == tf.float32 else inference_output_type.as_numpy_dtype
+    if inference_output_type == tf.float32:
+        assert output_details[0]["dtype"] == tf.int32.as_numpy_dtype
+    else:
+        assert output_details[0]["dtype"] == inference_output_type.as_numpy_dtype
 
 
 if __name__ == "__main__":
