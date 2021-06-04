@@ -148,7 +148,7 @@ namespace kernel_8x4x2_aarch64 {
 template <bool IsGrouped>
 inline void AccumulationLoop_Depth2OrMore(
     const std::int32_t filter_size, const std::int32_t depth,
-    const std::int32_t input_depth_offset, int32x4_t weights[4],
+    const std::size_t input_depth_offset, int32x4_t weights[4],
     int32x4_t activations[4], uint16x8_t accumulators[4],
     const TBitpacked*& weights_ptr, const TBitpacked* const* indirection_ptr) {
   ruy::profiler::ScopeLabel label("Accumulation loop (depth > 1)");
@@ -169,7 +169,7 @@ inline void AccumulationLoop_Depth2OrMore(
     a_ptr_2 = indirection_ptr[2] + 2;
     a_ptr_3 = indirection_ptr[3] + 2;
   }
-  std::int32_t fs_index = filter_size;
+  auto fs_index = filter_size;
 
   asm volatile(
       // clang-format off
@@ -196,7 +196,7 @@ inline void AccumulationLoop_Depth2OrMore(
       "ldp %[a_ptr_2], %[a_ptr_3], [%[indirection_ptr], #16]\n\t"
       "add %[indirection_ptr], %[indirection_ptr], #32\n\t"
       "sub w1, %w[depth], #1\n\t"
-      "subs %[fs_index], %[fs_index], #1\n\t"
+      "subs %w[fs_index], %w[fs_index], #1\n\t"
       IF_IS_GROUPED(
           "add %[a_ptr_0], %[a_ptr_0], %[input_depth_offset], lsl #2\n"
           "add %[a_ptr_1], %[a_ptr_1], %[input_depth_offset], lsl #2\n"
@@ -225,7 +225,7 @@ inline void AccumulationLoop_Depth2OrMore(
 
 template <bool IsGrouped>
 inline void AccumulationLoop_Depth1(
-    const std::int32_t filter_size, const std::int32_t input_depth_offset,
+    const std::int32_t filter_size, const std::size_t input_depth_offset,
     int32x4_t weights[4], int32x4_t activations[4], uint16x8_t accumulators[4],
     const TBitpacked*& weights_ptr, const TBitpacked* const* indirection_ptr) {
   ruy::profiler::ScopeLabel label("Accumulation loop (depth = 1)");
@@ -235,7 +235,7 @@ inline void AccumulationLoop_Depth1(
   const TBitpacked* a_ptr_1;
   const TBitpacked* a_ptr_2;
   const TBitpacked* a_ptr_3;
-  std::int32_t fs_index = filter_size;
+  auto fs_index = filter_size;
 
   asm volatile(
       // clang-format off
@@ -293,7 +293,7 @@ inline void AccumulationLoop_Depth1(
 // Float output transform
 template <bool IsGrouped>
 inline void OutputTransformAndLoadNextAndStore(
-    std::int32_t& c_out_index, const std::int32_t input_depth_offset,
+    std::int32_t& c_out_index, const std::size_t input_depth_offset,
     const std::int32_t group_end_output_channel, uint16x8_t accumulators[4],
     int32x4_t weights[4], int32x4_t activations[4],
     const bconv2d::OutputTransform<float>& output_transform,
@@ -466,7 +466,7 @@ inline void OutputTransformAndLoadNextAndStore(
 // Int8 output transform
 template <bool IsGrouped>
 inline void OutputTransformAndLoadNextAndStore(
-    std::int32_t& c_out_index, const std::int32_t input_depth_offset,
+    std::int32_t& c_out_index, const std::size_t input_depth_offset,
     const std::int32_t group_end_output_channel, uint16x8_t accumulators[4],
     int32x4_t weights[4], int32x4_t activations[4],
     const bconv2d::OutputTransform<std::int8_t>& output_transform,
@@ -685,9 +685,8 @@ class Kernel8x4x2Aarch64 : public Kernel {
     TFLITE_DCHECK_EQ(this->input_depth % this->groups, 0);
     TFLITE_DCHECK_EQ(this->output_channels % this->groups, 0);
 
-    const std::int32_t input_depth_per_group = this->input_depth / this->groups;
-    const std::int32_t output_channels_per_group =
-        this->output_channels / this->groups;
+    const auto input_depth_per_group = this->input_depth / this->groups;
+    const auto output_channels_per_group = this->output_channels / this->groups;
 
     if (this->filter_size < 1 || input_depth_per_group < 1 ||
         output_channels_per_group < 1) {
@@ -699,11 +698,11 @@ class Kernel8x4x2Aarch64 : public Kernel {
       const TBitpacked* weights_ptr = this->packed_weights.data();
       const TBitpacked* const* indirection_ptr =
           this->indirection_buffer.data() + p_index * this->filter_size;
-      DstScalar* output_ptr_0 = reinterpret_cast<DstScalar*>(output_ptr) +
-                                p_index * this->output_channels;
-      DstScalar* output_ptr_1 = output_ptr_0 + this->output_channels;
-      DstScalar* output_ptr_2 = output_ptr_1 + this->output_channels;
-      DstScalar* output_ptr_3 = output_ptr_2 + this->output_channels;
+      auto output_ptr_0 = reinterpret_cast<DstScalar*>(output_ptr) +
+                          p_index * this->output_channels;
+      auto output_ptr_1 = output_ptr_0 + this->output_channels;
+      auto output_ptr_2 = output_ptr_1 + this->output_channels;
+      auto output_ptr_3 = output_ptr_2 + this->output_channels;
 
       // At the end of the output array we might get a block where the number of
       // pixels is less than 4. When this happens we set the 'leftover' output
@@ -737,7 +736,7 @@ class Kernel8x4x2Aarch64 : public Kernel {
           vreinterpretq_s32_s64(
               vld1q_dup_s64((std::int64_t*)indirection_ptr[3]))};
 
-      std::int32_t input_depth_offset = 0;
+      std::size_t input_depth_offset = 0;
       std::int32_t group_end_output_channel = output_channels_per_group;
 
       std::int32_t c_out_index = 0;

@@ -46,18 +46,17 @@ class Kernel4x2Portable : public Kernel {
     TFLITE_DCHECK_EQ(this->input_depth % this->groups, 0);
     TFLITE_DCHECK_EQ(this->output_channels % this->groups, 0);
 
-    const std::int32_t input_depth_per_group = this->input_depth / this->groups;
-    const std::int32_t output_channels_per_group =
-        this->output_channels / this->groups;
+    const auto input_depth_per_group = this->input_depth / this->groups;
+    const auto output_channels_per_group = this->output_channels / this->groups;
 
     for (std::int32_t p_index = pixel_start; p_index < pixel_end;
          p_index += 2) {
       const TBitpacked* weights_ptr = this->packed_weights.data();
       const TBitpacked* const* indirection_ptr =
           this->indirection_buffer.data() + p_index * this->filter_size;
-      DstScalar* output_ptr_0 = reinterpret_cast<DstScalar*>(output_ptr) +
-                                p_index * this->output_channels;
-      DstScalar* output_ptr_1 = output_ptr_0 + this->output_channels;
+      auto output_ptr_0 = reinterpret_cast<DstScalar*>(output_ptr) +
+                          p_index * this->output_channels;
+      auto output_ptr_1 = output_ptr_0 + this->output_channels;
 
       // At the end of the output array we might get a block where the number of
       // pixels is less than 2, if the overall output size is not a multiple
@@ -70,7 +69,7 @@ class Kernel4x2Portable : public Kernel {
         output_ptr_1 = output_ptr_0;
       }
 
-      std::int32_t input_depth_offset = 0;
+      std::size_t input_depth_offset = 0;
       std::int32_t group_end_output_channel = output_channels_per_group;
 
       std::int32_t c_out_index = 0;
@@ -185,19 +184,18 @@ class Kernel4x2Portable<TBitpacked> : public Kernel {
     TFLITE_DCHECK_EQ(this->input_depth % this->groups, 0);
     TFLITE_DCHECK_EQ(this->output_channels % this->groups, 0);
 
-    const std::int32_t input_depth_per_group = this->input_depth / this->groups;
-    const std::int32_t output_channels_per_group =
-        this->output_channels / this->groups;
+    const auto input_depth_per_group = this->input_depth / this->groups;
+    const auto output_channels_per_group = this->output_channels / this->groups;
 
     for (std::int32_t p_index = pixel_start; p_index < pixel_end;
          p_index += 2) {
       const TBitpacked* weights_ptr = this->packed_weights.data();
       const TBitpacked* const* indirection_ptr =
           this->indirection_buffer.data() + p_index * this->filter_size;
-      TBitpacked* output_ptr_0 =
+      auto output_ptr_0 =
           reinterpret_cast<TBitpacked*>(output_ptr) +
           p_index * bitpacking::GetBitpackedSize(this->output_channels);
-      TBitpacked* output_ptr_1 =
+      auto output_ptr_1 =
           output_ptr_0 + bitpacking::GetBitpackedSize(this->output_channels);
 
       // At the end of the output array we might get a block where the number of
@@ -215,7 +213,7 @@ class Kernel4x2Portable<TBitpacked> : public Kernel {
       // bitpacked value when the columns are full.
       TBitpacked output_col_0 = 0, output_col_1 = 0;
 
-      std::int32_t input_depth_offset = 0;
+      std::size_t input_depth_offset = 0;
       std::int32_t group_end_output_channel = output_channels_per_group;
 
       std::int32_t c_out_index = 0;

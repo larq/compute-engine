@@ -52,9 +52,9 @@ class Kernel {
    * https://github.com/google/XNNPACK/blob/80a8ac59849bfdae8d2e1409f5642baa502c0b9e/src/packing.c#L429-L484
    */
   void PackWeights(const TBitpacked* weights_ptr) {
-    const std::int32_t input_depth_per_group = input_depth / groups;
-    const std::int32_t output_channels_per_group = output_channels / groups;
-    const std::int32_t rounded_up_output_channels_per_group =
+    const auto input_depth_per_group = input_depth / groups;
+    const auto output_channels_per_group = output_channels / groups;
+    const auto rounded_up_output_channels_per_group =
         Ceil(output_channels_per_group, block_size_output_channels);
     packed_weights.resize(groups * rounded_up_output_channels_per_group *
                               filter_size * input_depth_per_group +
@@ -102,22 +102,20 @@ class Kernel {
                              const RuntimeShape& bitpacked_input_shape,
                              const RuntimeShape& output_shape,
                              const TBitpacked* input_ptr) {
-    const std::int32_t filter_height = bconv2d_params->filter_height;
-    const std::int32_t filter_width = bconv2d_params->filter_width;
-    const std::int32_t stride_height = bconv2d_params->stride_height;
-    const std::int32_t stride_width = bconv2d_params->stride_width;
-    const std::int32_t dilation_height = bconv2d_params->dilation_height_factor;
-    const std::int32_t dilation_width = bconv2d_params->dilation_width_factor;
-    const std::int32_t input_padding_top =
-        bconv2d_params->padding_values.height;
-    const std::int32_t input_padding_left =
-        bconv2d_params->padding_values.width;
-    const std::int32_t input_height = bitpacked_input_shape.Dims(1);
-    const std::int32_t input_width = bitpacked_input_shape.Dims(2);
-    const std::int32_t output_height = output_shape.Dims(1);
-    const std::int32_t output_width = output_shape.Dims(2);
-    const std::int32_t output_size = num_output_pixels;
-    const std::int32_t tiled_output_size = Ceil(output_size, block_size_pixels);
+    const auto filter_height = bconv2d_params->filter_height;
+    const auto filter_width = bconv2d_params->filter_width;
+    const auto stride_height = bconv2d_params->stride_height;
+    const auto stride_width = bconv2d_params->stride_width;
+    const auto dilation_height = bconv2d_params->dilation_height_factor;
+    const auto dilation_width = bconv2d_params->dilation_width_factor;
+    const auto input_padding_top = bconv2d_params->padding_values.height;
+    const auto input_padding_left = bconv2d_params->padding_values.width;
+    const auto input_height = bitpacked_input_shape.Dims(1);
+    const auto input_width = bitpacked_input_shape.Dims(2);
+    const auto output_height = output_shape.Dims(1);
+    const auto output_width = output_shape.Dims(2);
+    const auto output_size = num_output_pixels;
+    const auto tiled_output_size = Ceil(output_size, block_size_pixels);
 
     // Create the indirection buffer with padding (+ block_size_pixels) and fill
     // it with pointers to the first element of the input, so that the padding
