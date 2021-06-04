@@ -31,6 +31,23 @@ inline int xor_popcount(const TBitpacked& a, const TBitpacked& b) {
   return std::bitset<bitpacking_bitwidth>(a ^ b).count();
 }
 
+// Check that 0 <= index < limit using a single comparison, assuming
+// that 0 <= limit if Index is signed.  Intended for use in performance
+// critical contexts where 0 <= index < limit is almost always true.
+inline bool FastBoundsCheck(const int index, const int limit) {
+  return LCE_LIKELY((unsigned)index < (unsigned)limit);
+}
+
+template <typename T, typename S>
+constexpr T CeilDiv(T a, S b) {
+  return (a + b - 1) / b;
+}
+
+template <typename T, typename S>
+constexpr T Ceil(T a, S b) {
+  return CeilDiv(a, b) * b;
+}
+
 }  // namespace core
 }  // namespace compute_engine
 

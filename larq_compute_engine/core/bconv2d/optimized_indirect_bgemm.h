@@ -22,7 +22,7 @@ inline void BConv2DOptimizedIndirectBGEMM(
   // output tensor with zeroes in advance so that the BGEMM doesn't have to
   // worry about doing the padding.
   if (std::is_same<DstScalar, TBitpacked>::value &&
-      kernel->output_channels % bitpacking_bitwidth != 0) {
+      (kernel->output_channels % bitpacking_bitwidth != 0)) {
     std::fill(
         output_ptr,
         output_ptr + kernel->num_output_pixels *

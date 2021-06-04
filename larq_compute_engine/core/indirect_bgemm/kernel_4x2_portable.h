@@ -20,13 +20,14 @@ namespace indirect_bgemm {
  * A 4x2 C++ micro-kernel for float or int8 output.
  */
 template <typename DstScalar>
-struct Kernel4x2Portable : Kernel {
+class Kernel4x2Portable : public Kernel {
   static_assert(std::is_same<DstScalar, float>::value ||
                     std::is_same<DstScalar, std::int8_t>::value,
                 "");
 
   const bconv2d::OutputTransform<DstScalar> output_transform;
 
+ public:
   Kernel4x2Portable(const bconv2d::BConv2DParams* bconv2d_params,
                     const RuntimeShape& bitpacked_input_shape,
                     const RuntimeShape& output_shape,
@@ -161,9 +162,10 @@ struct Kernel4x2Portable : Kernel {
  * A 4x2 C++ micro-kernel for bitpacked output.
  */
 template <>
-struct Kernel4x2Portable<TBitpacked> : Kernel {
+class Kernel4x2Portable<TBitpacked> : public Kernel {
   const bconv2d::OutputTransform<TBitpacked> output_transform;
 
+ public:
   Kernel4x2Portable(
       const bconv2d::BConv2DParams* bconv2d_params,
       const RuntimeShape& bitpacked_input_shape,

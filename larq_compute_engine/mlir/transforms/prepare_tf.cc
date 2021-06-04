@@ -16,6 +16,7 @@ namespace TFL {
 namespace {
 
 using compute_engine::core::bitpacking_bitwidth;
+using compute_engine::core::CeilDiv;
 
 // Prepare LCE operations in functions for subsequent legalization.
 struct PrepareLCE : public PassWrapper<PrepareLCE, FunctionPass> {
@@ -107,10 +108,8 @@ bool IsSamePadding(Attribute paddings_attr, Value input, Value output,
 
   return paddings.getValue<int>({0, 0}) == 0 &&
          paddings.getValue<int>({0, 1}) == 0 &&
-         output_shape[1] ==
-             (input_shape[1] + stride_height - 1) / stride_height &&
-         output_shape[2] ==
-             (input_shape[2] + stride_width - 1) / stride_width &&
+         output_shape[1] == CeilDiv(input_shape[1], stride_height) &&
+         output_shape[2] == CeilDiv(input_shape[2], stride_width) &&
          pad_height_left == pad_height / 2 &&
          pad_height_right == (pad_height + 1) / 2 &&
          pad_width_left == pad_width / 2 &&

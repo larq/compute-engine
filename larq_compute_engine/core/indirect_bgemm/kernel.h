@@ -13,7 +13,8 @@ namespace compute_engine {
 namespace core {
 namespace indirect_bgemm {
 
-struct Kernel {
+class Kernel {
+ public:
   const std::int32_t block_size_output_channels;
   const std::int32_t block_size_pixels;
   const std::int32_t block_size_depth;
@@ -54,9 +55,7 @@ struct Kernel {
     const std::int32_t input_depth_per_group = input_depth / groups;
     const std::int32_t output_channels_per_group = output_channels / groups;
     const std::int32_t rounded_up_output_channels_per_group =
-        block_size_output_channels *
-        ((output_channels_per_group + block_size_output_channels - 1) /
-         block_size_output_channels);
+        Ceil(output_channels_per_group, block_size_output_channels);
     packed_weights.resize(groups * rounded_up_output_channels_per_group *
                               filter_size * input_depth_per_group +
                           /* padding */ block_size_output_channels *
@@ -113,15 +112,12 @@ struct Kernel {
         bconv2d_params->padding_values.height;
     const std::int32_t input_padding_left =
         bconv2d_params->padding_values.width;
-    const std::int32_t batch_size = bitpacked_input_shape.Dims(0);
     const std::int32_t input_height = bitpacked_input_shape.Dims(1);
     const std::int32_t input_width = bitpacked_input_shape.Dims(2);
     const std::int32_t output_height = output_shape.Dims(1);
     const std::int32_t output_width = output_shape.Dims(2);
     const std::int32_t output_size = num_output_pixels;
-    const std::int32_t tiled_output_size =
-        block_size_pixels *
-        ((output_size + block_size_pixels - 1) / block_size_pixels);
+    const std::int32_t tiled_output_size = Ceil(output_size, block_size_pixels);
 
     // Create the indirection buffer with padding (+ block_size_pixels) and fill
     // it with pointers to the first element of the input, so that the padding
@@ -156,7 +152,7 @@ struct Kernel {
               const std::int32_t index = output_tile_start * filter_size +
                                          kernel_index * block_size_pixels +
                                          output_tile_offset;
-              if (0 <= input_x && input_x < input_width) {
+              if (FastBoundsCheck(input_x, input_width)) {
                 indirection_buffer.at(index) =
                     (input_ptr + (batch_index * input_height * input_width +
                                   input_y * input_width + input_x) *

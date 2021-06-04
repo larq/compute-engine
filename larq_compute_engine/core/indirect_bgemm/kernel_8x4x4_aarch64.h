@@ -714,7 +714,7 @@ inline void OutputTransformAndLoadNextAndStore(
  * A 8x4x4 Neon micro-kernel for float or int8 output on Aarch64.
  */
 template <typename DstScalar, bool Depth2OrMore, bool IsGrouped>
-struct Kernel8x4x4Aarch64 : Kernel {
+class Kernel8x4x4Aarch64 : public Kernel {
   static_assert(std::is_same<DstScalar, float>::value ||
                     std::is_same<DstScalar, std::int8_t>::value,
                 "");
@@ -722,6 +722,7 @@ struct Kernel8x4x4Aarch64 : Kernel {
 
   const bconv2d::OutputTransform<DstScalar> output_transform;
 
+ public:
   Kernel8x4x4Aarch64(
       const bconv2d::BConv2DParams* bconv2d_params,
       const RuntimeShape& bitpacked_input_shape,
