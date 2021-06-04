@@ -71,7 +71,7 @@ LIBS := \
 # generate things like the protobuf compiler that require that), so all of
 # these settings are for the target compiler.
 CFLAGS := -O3 -DNDEBUG -fPIC $(EXTRA_CFLAGS)
-CXXFLAGS := $(CFLAGS) --std=c++11 $(EXTRA_CXXFLAGS)
+CXXFLAGS := $(CFLAGS) --std=c++14 $(EXTRA_CXXFLAGS)
 LDOPTS := -L/usr/local/lib
 ARFLAGS := -r
 TARGET_TOOLCHAIN_PREFIX :=
