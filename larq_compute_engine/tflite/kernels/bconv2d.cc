@@ -1,6 +1,5 @@
 #include <cmath>
 #include <cstdint>
-#include <memory>
 
 #include "flatbuffers/flexbuffers.h"
 #include "larq_compute_engine/core/bconv2d/optimized_bgemm.h"
@@ -59,7 +58,7 @@ struct OpData {
   std::vector<float> padding_buffer;
 
   // This is used for the 'indirect bgemm' kernel type.
-  core::indirect_bgemm::Kernel* indirect_bgemm_kernel;
+  std::unique_ptr<core::indirect_bgemm::Kernel> indirect_bgemm_kernel;
 
   // IDs are the arbitrary identifiers used by TF Lite to identify and access
   // memory buffers. They are unique in the entire TF Lite context.
@@ -132,11 +131,7 @@ void* Init(TfLiteContext* context, const char* buffer, std::size_t length) {
 }
 
 void Free(TfLiteContext* context, void* buffer) {
-  const OpData* op_data = reinterpret_cast<OpData*>(buffer);
-  if (op_data->indirect_bgemm_kernel) {
-    delete op_data->indirect_bgemm_kernel;
-  }
-  delete op_data;
+  delete reinterpret_cast<OpData*>(buffer);
 }
 
 template <KernelType kernel_type>
@@ -483,9 +478,10 @@ void EvalOptIndirectBGEMM(TfLiteContext* context, TfLiteNode* node,
   if (!op_data->indirect_bgemm_kernel) {
     OutputTransform<DstScalar> output_transform;
     GetOutputTransform(output_transform, context, node, op_data);
-    op_data->indirect_bgemm_kernel = core::indirect_bgemm::SelectRuntimeKernel(
-        &op_data->params, bitpacked_input_shape, output_shape,
-        output_transform);
+    op_data->indirect_bgemm_kernel =
+        std::move(core::indirect_bgemm::SelectRuntimeKernel(
+            &op_data->params, bitpacked_input_shape, output_shape,
+            output_transform));
     op_data->indirect_bgemm_kernel->PackWeights(
         GetTensorData<TBitpacked>(filter));
     op_data->indirect_bgemm_kernel->FillIndirectionBuffer(
@@ -494,8 +490,8 @@ void EvalOptIndirectBGEMM(TfLiteContext* context, TfLiteNode* node,
   }
 
   BConv2DOptimizedIndirectBGEMM<DstScalar>(
-      op_data->indirect_bgemm_kernel, bconv2d_params, bitpacked_input_shape,
-      output_shape, GetTensorData<DstScalar>(output),
+      op_data->indirect_bgemm_kernel.get(), bconv2d_params,
+      bitpacked_input_shape, output_shape, GetTensorData<DstScalar>(output),
       op_data->padding_buffer.data(), bconv2d_params->pad_value);
 }
 

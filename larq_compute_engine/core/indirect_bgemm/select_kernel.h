@@ -2,6 +2,7 @@
 #define COMPUTE_ENGINE_INDIRECT_BGEMM_SELECT_KERNEL_H_
 
 #include <cstdint>
+#include <memory>
 #include <type_traits>
 
 #include "larq_compute_engine/core/indirect_bgemm/kernel.h"
@@ -26,7 +27,7 @@ namespace indirect_bgemm {
 
 // Select a kernel for float or int8 output.
 template <typename DstScalar>
-inline Kernel* SelectRuntimeKernel(
+inline std::unique_ptr<Kernel> SelectRuntimeKernel(
     const bconv2d::BConv2DParams* bconv2d_params,
     const tflite::RuntimeShape& bitpacked_input_shape,
     const tflite::RuntimeShape& output_shape,
@@ -52,21 +53,21 @@ inline Kernel* SelectRuntimeKernel(
     if (input_depth_per_group % 4 == 0) {
       if (input_depth_per_group > 4) {
         if (bconv2d_params->groups > 1) {
-          return new Kernel8x4x4Aarch64<DstScalar, true, true>(
+          return std::make_unique<Kernel8x4x4Aarch64<DstScalar, true, true>>(
               bconv2d_params, bitpacked_input_shape, output_shape,
               output_transform);
         } else {
-          return new Kernel8x4x4Aarch64<DstScalar, true, false>(
+          return std::make_unique<Kernel8x4x4Aarch64<DstScalar, true, false>>(
               bconv2d_params, bitpacked_input_shape, output_shape,
               output_transform);
         }
       } else {
         if (bconv2d_params->groups > 1) {
-          return new Kernel8x4x4Aarch64<DstScalar, false, true>(
+          return std::make_unique<Kernel8x4x4Aarch64<DstScalar, false, true>>(
               bconv2d_params, bitpacked_input_shape, output_shape,
               output_transform);
         } else {
-          return new Kernel8x4x4Aarch64<DstScalar, false, false>(
+          return std::make_unique<Kernel8x4x4Aarch64<DstScalar, false, false>>(
               bconv2d_params, bitpacked_input_shape, output_shape,
               output_transform);
         }
@@ -74,21 +75,21 @@ inline Kernel* SelectRuntimeKernel(
     } else if (input_depth_per_group % 2 == 0) {
       if (input_depth_per_group > 2) {
         if (bconv2d_params->groups > 1) {
-          return new Kernel8x4x2Aarch64<DstScalar, true, true>(
+          return std::make_unique<Kernel8x4x2Aarch64<DstScalar, true, true>>(
               bconv2d_params, bitpacked_input_shape, output_shape,
               output_transform);
         } else {
-          return new Kernel8x4x2Aarch64<DstScalar, true, false>(
+          return std::make_unique<Kernel8x4x2Aarch64<DstScalar, true, false>>(
               bconv2d_params, bitpacked_input_shape, output_shape,
               output_transform);
         }
       } else {
         if (bconv2d_params->groups > 1) {
-          return new Kernel8x4x2Aarch64<DstScalar, false, true>(
+          return std::make_unique<Kernel8x4x2Aarch64<DstScalar, false, true>>(
               bconv2d_params, bitpacked_input_shape, output_shape,
               output_transform);
         } else {
-          return new Kernel8x4x2Aarch64<DstScalar, false, false>(
+          return std::make_unique<Kernel8x4x2Aarch64<DstScalar, false, false>>(
               bconv2d_params, bitpacked_input_shape, output_shape,
               output_transform);
         }
@@ -96,23 +97,23 @@ inline Kernel* SelectRuntimeKernel(
     } else {
       if (input_depth_per_group > 1) {
         if (bconv2d_params->groups > 1) {
-          return new Kernel8x4x1Aarch64<DstScalar, true, true>(
+          return std::make_unique<Kernel8x4x1Aarch64<DstScalar, true, true>>(
               bconv2d_params, bitpacked_input_shape, output_shape,
               output_transform);
 
         } else {
-          return new Kernel8x4x1Aarch64<DstScalar, true, false>(
+          return std::make_unique<Kernel8x4x1Aarch64<DstScalar, true, false>>(
               bconv2d_params, bitpacked_input_shape, output_shape,
               output_transform);
         }
       } else {
         if (bconv2d_params->groups > 1) {
-          return new Kernel8x4x1Aarch64<DstScalar, false, true>(
+          return std::make_unique<Kernel8x4x1Aarch64<DstScalar, false, true>>(
               bconv2d_params, bitpacked_input_shape, output_shape,
               output_transform);
 
         } else {
-          return new Kernel8x4x1Aarch64<DstScalar, false, false>(
+          return std::make_unique<Kernel8x4x1Aarch64<DstScalar, false, false>>(
               bconv2d_params, bitpacked_input_shape, output_shape,
               output_transform);
         }
@@ -122,19 +123,19 @@ inline Kernel* SelectRuntimeKernel(
 #endif
 
   // Fallback C++ kernel
-  return new Kernel4x2Portable<DstScalar>(bconv2d_params, bitpacked_input_shape,
-                                          output_shape, output_transform);
+  return std::make_unique<Kernel4x2Portable<DstScalar>>(
+      bconv2d_params, bitpacked_input_shape, output_shape, output_transform);
 }
 
 // A specialisation: select a kernel for bitpacked output.
 template <>
-inline Kernel* SelectRuntimeKernel<TBitpacked>(
+inline std::unique_ptr<Kernel> SelectRuntimeKernel<TBitpacked>(
     const bconv2d::BConv2DParams* bconv2d_params,
     const tflite::RuntimeShape& bitpacked_input_shape,
     const tflite::RuntimeShape& output_shape,
     const bconv2d::OutputTransform<TBitpacked>& output_transform) {
   // Only the C++ kernel currently supports bitpacked output.
-  return new Kernel4x2Portable<TBitpacked>(
+  return std::make_unique<Kernel4x2Portable<TBitpacked>>(
       bconv2d_params, bitpacked_input_shape, output_shape, output_transform);
 }
 
