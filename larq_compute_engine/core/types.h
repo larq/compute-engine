@@ -17,6 +17,13 @@ namespace core {
 #define LCE_UNLIKELY(condition) (condition)
 #endif
 
+// Check that 0 <= index < limit using a single comparison, assuming
+// that 0 <= limit if Index is signed.  Intended for use in performance
+// critical contexts where 0 <= index < limit is almost always true.
+inline bool FastBoundsCheck(const int index, const int limit) {
+  return LCE_LIKELY((unsigned)index < (unsigned)limit);
+}
+
 // In our kernels we may occasionally read (but never write) beyond the end of
 // an array. This is the maximum number of extra bytes that will be read, and
 // should be added as padding to the end of tensor allocations.
@@ -29,6 +36,16 @@ constexpr std::size_t bitpacking_bitwidth =
 
 inline int xor_popcount(const TBitpacked& a, const TBitpacked& b) {
   return std::bitset<bitpacking_bitwidth>(a ^ b).count();
+}
+
+template <typename T, typename S>
+constexpr T CeilDiv(T a, S b) {
+  return (a + b - 1) / b;
+}
+
+template <typename T, typename S>
+constexpr T Ceil(T a, S b) {
+  return CeilDiv(a, b) * b;
 }
 
 }  // namespace core

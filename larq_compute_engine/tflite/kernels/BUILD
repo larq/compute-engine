@@ -39,7 +39,6 @@ cc_library(
         "//larq_compute_engine/core/bitpacking:bitpack",
         "//larq_compute_engine/core/bitpacking:utils",
         "//larq_compute_engine/core/indirect_bgemm:kernels",
-        "//larq_compute_engine/core/indirect_bgemm:prepare",
         "@flatbuffers",
         "@org_tensorflow//tensorflow/lite:framework",
         "@org_tensorflow//tensorflow/lite/kernels/internal:kernel_utils",
