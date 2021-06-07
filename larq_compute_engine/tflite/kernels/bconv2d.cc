@@ -393,9 +393,9 @@ void OneTimeSetup(TfLiteContext* context, TfLiteNode* node, OpData* op_data) {
 
 // Fill in the OutputTransform values for float and/or int8 outputs
 template <typename DstScalar>
-inline void GetOutputTransform(OutputTransform<DstScalar>& output_transform,
-                               TfLiteContext* context, TfLiteNode* node,
-                               OpData* op_data) {
+void GetOutputTransform(OutputTransform<DstScalar>& output_transform,
+                        TfLiteContext* context, TfLiteNode* node,
+                        OpData* op_data) {
   static_assert(std::is_same<DstScalar, float>::value ||
                     std::is_same<DstScalar, std::int8_t>::value,
                 "");
@@ -406,9 +406,9 @@ inline void GetOutputTransform(OutputTransform<DstScalar>& output_transform,
 }
 
 // Fill in the OutputTransform values for bitpacked outputs
-inline void GetOutputTransform(OutputTransform<TBitpacked>& output_transform,
-                               TfLiteContext* context, TfLiteNode* node,
-                               OpData* op_data) {
+void GetOutputTransform(OutputTransform<TBitpacked>& output_transform,
+                        TfLiteContext* context, TfLiteNode* node,
+                        OpData* op_data) {
   const auto* thresholds = GetInput(context, node, 4);
   output_transform.thresholds = GetTensorData<std::int32_t>(thresholds);
 }

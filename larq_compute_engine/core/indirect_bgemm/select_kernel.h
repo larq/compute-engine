@@ -41,13 +41,15 @@ inline std::unique_ptr<Kernel> SelectRuntimeKernel(
   // They all use int16 accumulators. A different kernel is selected depending
   // on whether the bitpacked number of input channels is a multiple of 4, 2, or
   // 1, and whether that multiple is 1 or more than 1.
-  const int max_accumulator_value = bconv2d_params->filter_height *
-                                    bconv2d_params->filter_width *
-                                    bconv2d_params->channels_in;
-  const bool fits_in_int16_accumulators = max_accumulator_value + 512 < 1 << 16;
 
-  if (fits_in_int16_accumulators) {
-    const std::int32_t input_depth_per_group =
+  const auto max_accumulator_value = bitpacking_bitwidth *
+                                     bitpacked_input_shape.FlatSize() /
+                                     bconv2d_params->groups;
+  const bool fits_in_uint16_accumulators =
+      max_accumulator_value < std::numeric_limits<std::uint16_t>::max();
+
+  if (fits_in_uint16_accumulators) {
+    const auto input_depth_per_group =
         bitpacked_input_shape.Dims(3) / bconv2d_params->groups;
 
     if (input_depth_per_group % 4 == 0) {
