@@ -61,6 +61,38 @@ def _contains_training_quant_op(graph_def):
     return False
 
 
+def _validate_options(
+    *,
+    inference_input_type=None,
+    inference_output_type=None,
+    target=None,
+    experimental_default_int8_range=None,
+):
+    if inference_input_type not in (tf.float32, tf.int8):
+        raise ValueError(
+            "Expected `inference_input_type` to be either `tf.float32` or `tf.int8`, "
+            f"got {inference_input_type}."
+        )
+    if inference_output_type not in (tf.float32, tf.int8):
+        raise ValueError(
+            "Expected `inference_output_type` to be either `tf.float32` or `tf.int8`, "
+            f"got {inference_output_type}."
+        )
+    if target not in ("arm", "xcore"):
+        raise ValueError(f'Expected `target` to be "arm" or "xcore", but got {target}.')
+
+    if not tf.executing_eagerly():
+        raise RuntimeError(
+            "Graph mode is not supported. Please enable eager execution using "
+            "tf.enable_eager_execution() when using TensorFlow 1.x"
+        )
+    if experimental_default_int8_range:
+        warnings.warn(
+            "Using `experimental_default_int8_range` as fallback quantization stats. "
+            "This should only be used for latency tests."
+        )
+
+
 def convert_saved_model(
     saved_model_dir: Union[str, os.PathLike],
     *,  # Require remaining arguments to be keyword-only.
@@ -101,6 +133,12 @@ def convert_saved_model(
         raise RuntimeError(
             "TensorFlow 2.2 or newer is required for saved model conversion."
         )
+    _validate_options(
+        inference_input_type=inference_input_type,
+        inference_output_type=inference_output_type,
+        target=target,
+        experimental_default_int8_range=experimental_default_int8_range,
+    )
 
     saved_model_dir = str(saved_model_dir)
     saved_model_tags = [tf.saved_model.SERVING]
@@ -176,35 +214,18 @@ def convert_keras_model(
         raise ValueError(
             f"Expected `model` argument to be a `tf.keras.Model` instance, got `{model}`."
         )
-    if inference_input_type not in (tf.float32, tf.int8):
-        raise ValueError(
-            "Expected `inference_input_type` to be either `tf.float32` or `tf.int8`, "
-            f"got {inference_input_type}."
-        )
-    if inference_output_type not in (tf.float32, tf.int8):
-        raise ValueError(
-            "Expected `inference_output_type` to be either `tf.float32` or `tf.int8`, "
-            f"got {inference_output_type}."
-        )
-    if target not in ("arm", "xcore"):
-        raise ValueError(f'Expected `target` to be "arm" or "xcore", but got {target}.')
-
-    if not tf.executing_eagerly():
-        raise RuntimeError(
-            "Graph mode is not supported. Please enable eager execution using "
-            "tf.enable_eager_execution() when using TensorFlow 1.x"
-        )
-    if experimental_default_int8_range:
-        warnings.warn(
-            "Using `experimental_default_int8_range` as fallback quantization stats. "
-            "This should only be used for latency tests."
-        )
     if hasattr(model, "dtype_policy") and model.dtype_policy.name != "float32":
         raise ValueError(
             "Mixed precision float16 models are not supported by the TFLite converter, "
             "please convert them to float32 first. See also: "
             "https://github.com/tensorflow/tensorflow/issues/46380"
         )
+    _validate_options(
+        inference_input_type=inference_input_type,
+        inference_output_type=inference_output_type,
+        target=target,
+        experimental_default_int8_range=experimental_default_int8_range,
+    )
 
     # First attempt conversion as saved model
     try:
