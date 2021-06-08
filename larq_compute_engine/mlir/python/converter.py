@@ -117,7 +117,8 @@ def convert_saved_model(
             must be either `tf.float32` or `tf.int8`.
         inference_output_type: Data type of the output layer. Defaults to `tf.float32`,
             must be either `tf.float32` or `tf.int8`.
-        target: Target hardware platform. Must be "arm", or "xcore".
+        target: Target hardware platform. Defaults to "arm", must be either "arm"
+            or "xcore".
         experimental_default_int8_range: Tuple of integers representing `(min, max)`
             range values for all arrays without a specified range. Intended for
             experimenting with quantization via "dummy quantization". (default None)
@@ -198,7 +199,8 @@ def convert_keras_model(
             must be either `tf.float32` or `tf.int8`.
         inference_output_type: Data type of the output layer. Defaults to `tf.float32`,
             must be either `tf.float32` or `tf.int8`.
-        target: Target hardware platform. Must be "arm" or "xcore".
+        target: Target hardware platform. Defaults to "arm", must be either "arm"
+            or "xcore".
         experimental_default_int8_range: Tuple of integers representing `(min, max)`
             range values for all arrays without a specified range. Intended for
             experimenting with quantization via "dummy quantization". (default None)
