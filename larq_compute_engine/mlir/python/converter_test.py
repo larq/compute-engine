@@ -7,14 +7,14 @@ from tensorflow.python.eager import context
 
 sys.modules["importlib.metadata"] = mock.MagicMock()
 sys.modules["importlib_metadata"] = mock.MagicMock()
-sys.modules["larq_compute_engine.mlir._graphdef_tfl_flatbuffer"] = mock.MagicMock()
+sys.modules["larq_compute_engine.mlir._tf_tfl_flatbuffer"] = mock.MagicMock()
 sys.modules[
     "larq_compute_engine.tflite.python.interpreter_wrapper_lite"
 ] = mock.MagicMock()
 sys.modules["larq_compute_engine.mlir.python.tflite_schema"] = mock.MagicMock()
 
 from larq_compute_engine.mlir.python.converter import convert_keras_model
-from larq_compute_engine.mlir._graphdef_tfl_flatbuffer import (
+from larq_compute_engine.mlir._tf_tfl_flatbuffer import (
     convert_graphdef_to_tflite_flatbuffer as mocked_converter,
 )
 

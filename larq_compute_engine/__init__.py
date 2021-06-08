@@ -1,4 +1,7 @@
-from larq_compute_engine.mlir.python.converter import convert_keras_model
+from larq_compute_engine.mlir.python.converter import (
+    convert_keras_model,
+    convert_saved_model,
+)
 from larq_compute_engine.tflite.python import interpreter as testing
 
 try:
@@ -9,4 +12,4 @@ except ImportError:
 
 __version__ = metadata.version("larq_compute_engine")
 
-__all__ = ["convert_keras_model", "testing"]
+__all__ = ["convert_keras_model", "convert_saved_model", "testing"]
