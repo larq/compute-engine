@@ -82,6 +82,8 @@ Converts floating point or integer tensors to binarized bitpacked tensors.
   );
 
   let builders = [OpBuilder<(ins "Value":$x)>];
+
+  let hasFolder = 1;
 }
 
 def LQ_DequantizeOp : LQ_Op<"Dequantize", [NoSideEffect]> {
@@ -98,6 +100,8 @@ Converts binarized bitpacked tensors to floating point or integer tensors.
   let results = (outs
     TensorOf<[BF16, F16, F32, F64, I32, I64, QI8, QI16]>:$y
   );
+
+  let hasFolder = 1;
 }
 
 def LQ_Bconv2dOp : LQ_Op<"Bconv2d", [NoSideEffect]> {

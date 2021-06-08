@@ -72,6 +72,7 @@ def get_input(question):
 
 def get_from_env_or_user_or_default(environ_cp, var_name, ask_for_var, var_default):
     """Get var_name either from env, or user or default.
+
     If var_name has been set as environment variable, use the preset value, else
     ask for user input. If no input is provided, the default is used.
     Args:
@@ -101,6 +102,7 @@ def get_var(
     no_reply=None,
 ):
     """Get boolean input from user.
+
     If var_name is not set in env, ask user to enable query_item or not. If the
     response is empty, use the default.
     Args:
@@ -380,6 +382,7 @@ def setup_python(environ_cp):
 
 def set_cc_opt_flags(environ_cp):
     """Set up architecture-dependent optimization flags.
+
     Also append CC optimization flags to bazel.rc.
     Args:
       environ_cp: copy of the os.environ.

@@ -2,6 +2,7 @@
 
 #include "flatbuffers/flexbuffers.h"
 #include "larq_compute_engine/core/bitpacking/bitpack.h"
+#include "larq_compute_engine/mlir/transforms/bitpack.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
 static tflite::Padding ConvertPaddingAttr(llvm::StringRef str) {
@@ -65,6 +66,18 @@ void QuantizeOp::build(OpBuilder& builder, OperationState& state, Value x) {
   std::vector<int64_t> shape = existing_shape.drop_back();
   shape.push_back(compute_engine::core::bitpacking::GetBitpackedSize(channels));
   state.addTypes(RankedTensorType::get(shape, builder.getIntegerType(32)));
+}
+
+OpFoldResult QuantizeOp::fold(ArrayRef<Attribute> operands) {
+  mlir::OpBuilder builder(getOperation());
+  if (!operands[0]) return nullptr;
+  return mlir::TFL::Bitpack(&builder, operands[0]);
+}
+
+OpFoldResult DequantizeOp::fold(ArrayRef<Attribute> operands) {
+  auto result_type = getType().cast<ShapedType>();
+  if (!operands[0]) return nullptr;
+  return mlir::TFL::Unpack(operands[0], result_type);
 }
 
 void LarqDialect::initialize() {
