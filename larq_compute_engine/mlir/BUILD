@@ -135,6 +135,21 @@ gentbl(
 )
 
 cc_library(
+    name = "larq_compute_engine_bitpack",
+    srcs = [
+        "transforms/bitpack.cc",
+    ],
+    hdrs = [
+        "transforms/bitpack.h",
+    ],
+    deps = [
+        "//larq_compute_engine/core:types",
+        "//larq_compute_engine/core/bitpacking:bitpack",
+        "@llvm-project//mlir:IR",
+    ],
+)
+
+cc_library(
     name = "larq_compute_engine",
     srcs = [
         "ir/lce_dialect.h.inc",
@@ -147,6 +162,7 @@ cc_library(
         "transforms/passes.h",
     ],
     deps = [
+        ":larq_compute_engine_bitpack",
         "//larq_compute_engine/core/bitpacking:bitpack",
         "@flatbuffers",
         "@llvm-project//mlir:QuantOps",
@@ -225,8 +241,7 @@ cc_library(
     ],
     deps = [
         ":larq_compute_engine",
-        "//larq_compute_engine/core:types",
-        "//larq_compute_engine/core/bitpacking:bitpack",
+        ":larq_compute_engine_bitpack",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
     ],
