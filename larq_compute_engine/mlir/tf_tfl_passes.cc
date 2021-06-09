@@ -1,5 +1,6 @@
 #include "larq_compute_engine/mlir/tf_tfl_passes.h"
 
+#include "larq_compute_engine/mlir/transforms/passes.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
 #include "tensorflow/compiler/mlir/lite/quantization/quantization_config.h"
@@ -21,6 +22,7 @@ namespace {
 const char kTFLiteDataLayout[] = "NHWC";
 }  // namespace
 
+namespace {
 void AddQuantizationPasses(const mlir::TFL::QuantizationSpecs& quant_specs,
                            mlir::OpPassManager* pass_manager) {
   pass_manager->addNestedPass<mlir::FuncOp>(
@@ -41,6 +43,7 @@ void AddQuantizationPasses(const mlir::TFL::QuantizationSpecs& quant_specs,
   pass_manager->addNestedPass<mlir::FuncOp>(
       mlir::TFL::CreatePostQuantizePass(emit_quant_adaptor_ops));
 }
+}  // namespace
 
 void AddTFToLCETFLConversionPasses(
     const mlir::TFL::QuantizationSpecs& quant_specs,
@@ -109,6 +112,15 @@ void AddTFToLCETFLConversionPasses(
   // Remove passthrough ops early so constant folding can happen before
   // LCE ops are injected
   pass_manager->addPass(mlir::TFL::CreateOpRemovalPass());
+
+  // The following pass used to be just after createSymbolDCEPass but we move it
+  // before createCanonicalizerPass because without it, the tf.Sign op is not
+  // constant-folded.
+  //
+  // This pass 'freezes' immutable global tensors and inlines them as tf
+  // constant ops.
+  pass_manager->addPass(mlir::tf_saved_model::CreateFreezeGlobalTensorsPass());
+
   // Canonicalization includes const folding, which is utilized here to optimize
   // away ops that can't get constant folded after PrepareTF pass. For example,
   // tf.Conv2D is split into tf.Transpose and tfl.Conv2D.
@@ -116,10 +128,6 @@ void AddTFToLCETFLConversionPasses(
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCSEPass());
   // This pass does dead code elimination based on symbol visibility.
   pass_manager->addPass(mlir::createSymbolDCEPass());
-
-  // This pass 'freezes' immutable global tensors and inlines them as tf
-  // constant ops.
-  pass_manager->addPass(mlir::tf_saved_model::CreateFreezeGlobalTensorsPass());
 
   pass_manager->addPass(mlir::TF::CreateTFShapeInferencePass());
   // Force layout supported by TFLite, this will transpose the data
@@ -158,6 +166,7 @@ void AddTFToLCETFLConversionPasses(
   pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(
       target, experimental_enable_bitpacked_activations));
   pass_manager->addPass(mlir::TFL::CreateBitpackWeightsLCEPass());
+
   // This pass operates on TensorFlow ops but is triggered after legalization
   // so that it can target constants introduced once TensorFlow Identity ops
   // are removed during legalization.

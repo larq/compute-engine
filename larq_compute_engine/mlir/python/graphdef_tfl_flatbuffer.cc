@@ -12,7 +12,6 @@
 #include "pybind11/stl.h"
 #include "tensorflow/compiler/mlir/lite/quantization/quantization_config.h"
 #include "tensorflow/compiler/mlir/lite/transforms/passes.h"
-#include "tensorflow/compiler/mlir/op_or_arg_name_mapper.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/import_model.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/mlir_roundtrip_flags.h"
 #include "tensorflow/compiler/mlir/tensorflow/utils/dump_mlir_util.h"
@@ -118,8 +117,3 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
 }
 
 }  // namespace tensorflow
-
-PYBIND11_MODULE(_graphdef_tfl_flatbuffer, m) {
-  m.def("convert_graphdef_to_tflite_flatbuffer",
-        &tensorflow::ConvertGraphDefToTFLiteFlatBuffer);
-};

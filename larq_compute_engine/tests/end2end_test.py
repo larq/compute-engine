@@ -1,5 +1,7 @@
 import os
 import sys
+import tempfile
+from packaging import version
 
 import larq as lq
 import larq_zoo as lqz
@@ -8,8 +10,17 @@ import pytest
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
-from larq_compute_engine.mlir.python.converter import convert_keras_model
+from larq_compute_engine.mlir.python.converter import (
+    convert_keras_model,
+    convert_saved_model,
+)
 from larq_compute_engine.tflite.python.interpreter import Interpreter
+
+
+def convert_keras_model_as_saved_model(model, **kwargs):
+    with tempfile.TemporaryDirectory() as saved_model_dir:
+        model.save(saved_model_dir, save_format="tf")
+        return convert_saved_model(saved_model_dir, **kwargs)
 
 
 def toy_model(**kwargs):
@@ -155,10 +166,13 @@ def dataset():
 
 
 @pytest.mark.parametrize(
+    "conversion_function", [convert_keras_model, convert_keras_model_as_saved_model]
+)
+@pytest.mark.parametrize(
     "model_cls",
     [toy_model, toy_model_sequential, toy_model_int8, lqz.sota.QuickNetSmall],
 )
-def test_simple_model(dataset, model_cls):
+def test_simple_model(dataset, conversion_function, model_cls):
     model = model_cls(weights="imagenet")
 
     # For the untrained models, do a very small amount of training so that the
@@ -171,7 +185,7 @@ def test_simple_model(dataset, model_cls):
         )
         model.fit(dataset, epochs=1)
 
-    model_lce = convert_keras_model(
+    model_lce = conversion_function(
         model, experimental_enable_bitpacked_activations=True
     )
 
@@ -200,11 +214,21 @@ def test_simple_model(dataset, model_cls):
     assert_model_output(model_lce, inputs, outputs, rtol, atol)
 
 
+@pytest.mark.parametrize(
+    "conversion_function", [convert_keras_model, convert_keras_model_as_saved_model]
+)
 @pytest.mark.parametrize("model_cls", [toy_model, toy_model_int8])
 @pytest.mark.parametrize("inference_input_type", [tf.int8, tf.float32])
 @pytest.mark.parametrize("inference_output_type", [tf.int8, tf.float32])
-def test_int8_input_output(model_cls, inference_input_type, inference_output_type):
-    model_lce = convert_keras_model(
+def test_int8_input_output(
+    conversion_function, model_cls, inference_input_type, inference_output_type
+):
+    if conversion_function == convert_keras_model_as_saved_model and (
+        model_cls == toy_model or version.parse(tf.__version__) < version.parse("2.2")
+    ):
+        pytest.skip("convert_keras_model_as_saved_model currently fails in this case.")
+
+    model_lce = conversion_function(
         model_cls(),
         inference_input_type=inference_input_type,
         inference_output_type=inference_output_type,

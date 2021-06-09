@@ -335,13 +335,19 @@ tf_cc_binary(
 )
 
 pybind_extension(
-    name = "_graphdef_tfl_flatbuffer",
-    srcs = ["python/graphdef_tfl_flatbuffer.cc"],
-    module_name = "graphdef_tfl_flatbuffer",
+    name = "_tf_tfl_flatbuffer",
+    srcs = [
+        "python/graphdef_tfl_flatbuffer.cc",
+        "python/pybind_export.cc",
+        "python/saved_model_tfl_flatbuffer.cc",
+    ],
+    module_name = "tf_tfl_flatbuffer",
     deps = [
         ":lce_tfl_passes",
         ":tf_to_tfl_flatbuffer",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tf_to_tfl_flatbuffer",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite/python:tf_tfl_flatbuffer_helpers",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_graphdef",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:import_utils",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:mlir_roundtrip_flags",
@@ -366,7 +372,7 @@ py_library(
         ":tflite_schema_py",
     ],
     deps = [
-        ":_graphdef_tfl_flatbuffer",
+        ":_tf_tfl_flatbuffer",
     ],
 )
 
