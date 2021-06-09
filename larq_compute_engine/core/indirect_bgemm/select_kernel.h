@@ -29,8 +29,8 @@ namespace indirect_bgemm {
 template <typename DstScalar>
 inline std::unique_ptr<Kernel> SelectRuntimeKernel(
     const bconv2d::BConv2DParams* bconv2d_params,
-    const tflite::RuntimeShape& bitpacked_input_shape,
-    const tflite::RuntimeShape& output_shape,
+    const ::tflite::RuntimeShape& bitpacked_input_shape,
+    const ::tflite::RuntimeShape& output_shape,
     const bconv2d::OutputTransform<DstScalar>& output_transform) {
   static_assert(std::is_same<DstScalar, float>::value ||
                     std::is_same<DstScalar, std::int8_t>::value,
@@ -133,8 +133,8 @@ inline std::unique_ptr<Kernel> SelectRuntimeKernel(
 template <>
 inline std::unique_ptr<Kernel> SelectRuntimeKernel<TBitpacked>(
     const bconv2d::BConv2DParams* bconv2d_params,
-    const tflite::RuntimeShape& bitpacked_input_shape,
-    const tflite::RuntimeShape& output_shape,
+    const ::tflite::RuntimeShape& bitpacked_input_shape,
+    const ::tflite::RuntimeShape& output_shape,
     const bconv2d::OutputTransform<TBitpacked>& output_transform) {
   // Only the C++ kernel currently supports bitpacked output.
   return std::make_unique<Kernel4x2Portable<TBitpacked>>(
