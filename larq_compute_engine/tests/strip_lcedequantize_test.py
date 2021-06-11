@@ -6,10 +6,7 @@ import tensorflow as tf
 
 from larq_compute_engine.mlir.python.converter import convert_keras_model
 from larq_compute_engine.mlir.python.util import strip_lcedequantize_ops
-<<<<<<< HEAD
 from larq_compute_engine.tflite.python.interpreter import Interpreter
-=======
->>>>>>> 7cf93f8b5fc3ab18d0de9897e67f9598e547ccb1
 
 
 def toy_model_sign(**kwargs):
