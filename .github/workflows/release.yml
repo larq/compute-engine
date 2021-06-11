@@ -22,28 +22,28 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: 3.8
-      - uses: actions/cache@v2.1.4
+          python-version: 3.9
+      - uses: actions/cache@v2.1.5
         id: cache
         with:
           path: /tmp/lce_android
           key: ${{ runner.os }}-${{ hashFiles('**/third_party/install_android.sh') }}
-      - name: Configure Bazel
-        run: ./configure.py
-        shell: bash
       - name: Install pip dependencies
         run: pip install numpy six --no-cache-dir
       - name: Download and install Android NDK/SDK
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./third_party/install_android.sh
+      - name: Configure Bazel
+        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_NDK_HOME="/tmp/lce_android/ndk/18.1.5063045" ./configure.py
+        shell: bash
       - run: mkdir benchmark-binaries
       - name: Build Benchmark utility for AArch64
         run: |
-          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=aarch64 -c opt --copt=-O3 --features=fully_static_link
+          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=aarch64 -c opt --copt=-O3
           cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_aarch64
       - name: Build Benchmark utility for AArch32
         run: |
-          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=rpi3 -c opt --copt=-O3 --features=fully_static_link
+          bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=rpi3 -c opt --copt=-O3
           cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_aarch32
       - name: Build Benchmark utility for Android
         run: |
@@ -85,7 +85,7 @@ jobs:
           asset_content_type: application/octet-stream
 
   android-aar:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -93,19 +93,19 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: 3.8
-      - uses: actions/cache@v2.1.4
+      - uses: actions/cache@v2.1.5
         id: cache
         with:
           path: /tmp/lce_android
           key: ${{ runner.os }}-${{ hashFiles('**/third_party/install_android.sh') }}
-      - name: Configure Bazel
-        run: ./configure.py
-        shell: bash
       - name: Install pip dependencies
         run: pip install numpy six --no-cache-dir
       - name: Download and install Android NDK/SDK
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./third_party/install_android.sh
+      - name: Configure Bazel
+        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_NDK_HOME="/tmp/lce_android/ndk/18.1.5063045" ./configure.py
+        shell: bash
       - name: Build LCE AAR
         run: BUILDER=bazelisk ./larq_compute_engine/tflite/java/build_lce_aar.sh
       - uses: actions/upload-artifact@v2
@@ -133,7 +133,8 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
+      fail-fast: false
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -165,7 +166,8 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
+      fail-fast: false
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -197,12 +199,13 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
+      fail-fast: false
     steps:
       - name: Configure Pagefile
         uses: al-cheb/configure-pagefile-action@v1.2
         with:
-          minimum-size: 4GB
+          minimum-size: 8GB
       - name: Pagefile size
         run: |
           (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
@@ -286,7 +289,7 @@ jobs:
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
           # Use Docker `latest` tag convention
-          [ "$VERSION" == "master" ] && VERSION=latest
+          [ "$VERSION" == "main" ] && VERSION=latest
 
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION

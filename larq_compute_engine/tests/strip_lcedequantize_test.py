@@ -6,7 +6,10 @@ import tensorflow as tf
 
 from larq_compute_engine.mlir.python.converter import convert_keras_model
 from larq_compute_engine.mlir.python.util import strip_lcedequantize_ops
+<<<<<<< HEAD
 from larq_compute_engine.tflite.python.interpreter import Interpreter
+=======
+>>>>>>> 7cf93f8b5fc3ab18d0de9897e67f9598e547ccb1
 
 
 def toy_model_sign(**kwargs):
@@ -57,19 +60,22 @@ def test_strip_lcedequantize_ops(
         model_cls(),
         inference_input_type=inference_input_type,
         inference_output_type=inference_output_type,
-        experimental_default_int8_range=(-6.0, 6.0)
-        if model_cls == toy_model_sign
-        else None,
+        None,
         experimental_enable_bitpacked_activations=True,
     )
     model_lce = strip_lcedequantize_ops(model_lce)
     interpreter = Interpreter(model_lce)
+    model_lce = strip_lcedequantize_ops(model_lce)
+    interpreter = tf.lite.Interpreter(model_content=model_lce)
     input_details = interpreter.get_input_details()
     assert len(input_details) == 1
     assert input_details[0]["dtype"] == inference_input_type.as_numpy_dtype
     output_details = interpreter.get_output_details()
     assert len(output_details) == 1
-    assert output_details[0]["dtype"] == tf.int32.as_numpy_dtype
+    if inference_output_type == tf.float32:
+        assert output_details[0]["dtype"] == tf.int32.as_numpy_dtype
+    else:
+        assert output_details[0]["dtype"] == inference_output_type.as_numpy_dtype
 
 
 if __name__ == "__main__":

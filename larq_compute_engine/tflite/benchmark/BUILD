@@ -1,4 +1,5 @@
-load("@org_tensorflow//tensorflow/lite:build_def.bzl", "tflite_copts", "tflite_linkopts")
+load("@org_tensorflow//tensorflow:tensorflow.bzl", "tf_cc_binary")
+load("@org_tensorflow//tensorflow/lite:build_def.bzl", "tflite_copts", "tflite_copts_warnings", "tflite_linkopts")
 
 package(
     default_visibility = [
@@ -7,18 +8,25 @@ package(
     licenses = ["notice"],  # Apache 2.0
 )
 
-cc_binary(
+tf_cc_binary(
     name = "lce_benchmark_model",
     srcs = [
         "lce_benchmark_main.cc",
     ],
-    copts = ["-Wall"] + tflite_copts(),
+    copts = tflite_copts() + tflite_copts_warnings(),
+    features = select({
+        "@org_tensorflow//tensorflow:android": [],
+        "//conditions:default": ["fully_static_link"],
+    }),
     linkopts = tflite_linkopts() + select({
         "@org_tensorflow//tensorflow:android": [
             "-pie",  # Android 5.0 and later supports only PIE
             "-lm",  # some builtin ops, e.g., tanh, need -lm
         ],
-        "//conditions:default": [],
+        "//conditions:default": [
+            "-lstdc++",
+            "-lm",
+        ],
     }),
     deps = [
         "//larq_compute_engine/tflite/kernels:lce_op_kernels",

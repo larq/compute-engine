@@ -54,6 +54,15 @@ def _convert_model_from_object_to_bytearray(model_object):
     return bytes(builder.Output())
 
 
+def _update_signature_def_tensors(tensor_maps, map_old_to_new_tensors):
+    """Update the tensors in the SignatureDef's TensorMaps."""
+    for i in range(len(tensor_maps)):
+        if tensor_maps[i].tensorIndex in map_old_to_new_tensors:
+            tensor_maps[i].tensorIndex = map_old_to_new_tensors[
+                tensor_maps[i].tensorIndex
+            ]
+
+
 def _remove_tensors_from_model(model, remove_tensors_idxs):
     """Remove tensors from model."""
     if not remove_tensors_idxs:
@@ -90,6 +99,10 @@ def _remove_tensors_from_model(model, remove_tensors_idxs):
         for op in operators:
             update_tensors(op.inputs)
             update_tensors(op.outputs)
+        if model.signatureDefs:
+            signature_def = model.signatureDefs[0]
+            _update_signature_def_tensors(signature_def.inputs, d_old_to_new_tensors)
+            _update_signature_def_tensors(signature_def.outputs, d_old_to_new_tensors)
         # Delete the tensors
         for idx in sorted(remove_tensors_idxs, reverse=True):
             tensors.pop(idx)
@@ -186,6 +199,11 @@ def modify_integer_quantized_model_io_type(
         # Remove the inputs and the quant operator
         for op in input_quant_ops:
             subgraph.inputs[subgraph.inputs == op.inputs[0]] = op.outputs[0]
+            if model.signatureDefs:
+                signature_def = model.signatureDefs[0]
+                for i in range(len(signature_def.inputs)):
+                    if signature_def.inputs[i].tensorIndex == op.inputs[0]:
+                        signature_def.inputs[i].tensorIndex = op.outputs[0]
             remove_tensors_idxs.add(op.inputs[0])
             operators.remove(op)
 
@@ -194,6 +212,11 @@ def modify_integer_quantized_model_io_type(
         # Remove the outputs and the dequant operator
         for op in output_dequant_ops:
             subgraph.outputs[subgraph.outputs == op.outputs[0]] = op.inputs[0]
+            if model.signatureDefs:
+                signature_def = model.signatureDefs[0]
+                for i in range(len(signature_def.outputs)):
+                    if signature_def.outputs[i].tensorIndex == op.outputs[0]:
+                        signature_def.outputs[i].tensorIndex = op.inputs[0]
             remove_tensors_idxs.add(op.outputs[0])
             operators.remove(op)
 

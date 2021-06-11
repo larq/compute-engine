@@ -1,5 +1,5 @@
 load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl")
-load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension")
+load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension", "tf_cc_binary")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -16,9 +16,10 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "ir/lce_ops.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_td_files",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@llvm-project//mlir:SideEffectTdFiles",
     ],
 )
 
@@ -29,6 +30,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/op_removal_patterns.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
@@ -42,6 +44,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/prepare_patterns_target_arm.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "ir/lce_ops.td",
         "transforms/op_removal_patterns.td",
@@ -59,6 +62,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/prepare_patterns_common.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "ir/lce_ops.td",
         "transforms/op_removal_patterns.td",
@@ -75,6 +79,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/optimize_patterns_target_arm.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "ir/lce_ops.td",
         "transforms/optimize_patterns_common.td",
@@ -90,6 +95,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/optimize_patterns_common.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "ir/lce_ops.td",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
@@ -104,9 +110,9 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/bitpack_weights_patterns.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "ir/lce_ops.td",
-        "transforms/bitpack_weights_patterns.td",
         "transforms/op_removal_patterns.td",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
@@ -121,6 +127,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/quantize_patterns.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "ir/lce_ops.td",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
@@ -143,7 +150,7 @@ cc_library(
         "//larq_compute_engine/core/bitpacking:bitpack",
         "@flatbuffers",
         "@llvm-project//mlir:QuantOps",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
+        "@llvm-project//mlir:SideEffects",
         "@org_tensorflow//tensorflow/lite/schema:schema_fbs",
     ],
     alwayslink = 1,
@@ -221,6 +228,7 @@ cc_library(
         "//larq_compute_engine/core:types",
         "//larq_compute_engine/core/bitpacking:bitpack",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
     ],
     alwayslink = 1,
 )
@@ -285,7 +293,7 @@ cc_library(
     ],
 )
 
-cc_binary(
+tf_cc_binary(
     name = "lce-tf-opt",
     srcs = ["lce_mlir_opt.cc"],
     deps = [
@@ -301,8 +309,8 @@ pybind_extension(
     deps = [
         ":lce_tfl_passes",
         "@org_tensorflow//tensorflow/compiler/mlir:op_or_arg_name_mapper",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tf_to_tfl_flatbuffer",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_graphdef",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:import_utils",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:mlir_roundtrip_flags",

@@ -3,7 +3,7 @@ name: Lint
 on:
   push:
     branches:
-      - master
+      - main
   pull_request: {}
 
 jobs:
@@ -18,16 +18,16 @@ jobs:
           python-version: 3.8
       - name: Install Lint Dependencies
         run: |
-          pip install pyflakes==2.2.0 black==20.8b1 --no-cache-dir
-          sudo wget -O /usr/local/bin/buildifier https://github.com/bazelbuild/buildtools/releases/download/3.5.0/buildifier
+          pip install pyflakes==2.3.0 black==20.8b1 --no-cache-dir
+          sudo wget -O /usr/local/bin/buildifier https://github.com/bazelbuild/buildtools/releases/download/4.0.1/buildifier-linux-amd64
           sudo chmod +x /usr/local/bin/buildifier
       - name: Run PyFlakes
         run: pyflakes larq_compute_engine
       - name: Black code style
         run: black larq_compute_engine --check --target-version py36 --exclude 'build/|buck-out/|dzzist/|_build/|\.git/|\.hg/|\.mypy_cache/|\.tox/|\.venv/|larq/snapshots/'
       - name: clang-format lint
-        uses: DoozyX/clang-format-lint-action@v0.11
+        uses: DoozyX/clang-format-lint-action@v0.12
         with:
-          clangFormatVersion: 11
+          clangFormatVersion: 12
       - name: Lint bazel files
         run: buildifier -mode=check -r ./

@@ -21,6 +21,14 @@ py_test(
 )
 
 py_test(
+    name = "strip_lcedequantize_test",
+    srcs = ["strip_lcedequantize_test.py"],
+    deps = [
+        "//larq_compute_engine/mlir:converter",
+    ],
+)
+
+py_test(
     name = "convert_model",
     srcs = ["convert_model.py"],
     deps = [
