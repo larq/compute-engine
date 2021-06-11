@@ -236,7 +236,7 @@ jobs:
 
   upload-wheels:
     name: Publish wheels to PyPi
-    if: github.event_name == 'release'
+    if: always() && github.event_name == 'release'
     needs: [manylinux-release-wheel, macos-release-wheel, windows-release-wheel]
     runs-on: ubuntu-latest
     steps:
@@ -244,20 +244,23 @@ jobs:
         with:
           name: Linux-wheels
           path: Linux-wheels
+        if: ${{ needs.manylinux-release-wheel.result == 'success' }}
       - uses: actions/download-artifact@v2
         with:
           name: macOS-wheels
           path: macOS-wheels
+        if: ${{ needs.macos-release-wheel.result == 'success' }}
       - uses: actions/download-artifact@v2
         with:
           name: Windows-wheels
           path: Windows-wheels
+        if: ${{ needs.windows-release-wheel.result == 'success' }}
       - run: |
-          set -e -x
+          set -x
           mkdir -p dist
-          cp Linux-wheels/*.whl dist/
-          cp macOS-wheels/*.whl dist/
-          cp Windows-wheels/*.whl dist/
+          cp Linux-wheels/*.whl dist/ || true
+          cp macOS-wheels/*.whl dist/ || true
+          cp Windows-wheels/*.whl dist/ || true
           ls -la dist/
           sha256sum dist/*.whl
       - uses: pypa/gh-action-pypi-publish@master
