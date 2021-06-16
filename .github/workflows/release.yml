@@ -219,6 +219,9 @@ jobs:
           $Env:BAZEL_VC = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC"
           set PreferredToolArchitecture=x64
 
+          # The default is "/arch:AVX", which we don't want.
+          $Env:CC_OPT_FLAGS = "/O2"
+
           python --version
           python -m pip install wheel setuptools numpy six --no-cache-dir
 
