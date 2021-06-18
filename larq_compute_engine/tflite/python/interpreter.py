@@ -1,4 +1,4 @@
-from typing import Iterator, List, Tuple, Union
+from typing import Iterator, List, Tuple, Union, Optional
 
 import numpy as np
 from tqdm import tqdm
@@ -79,6 +79,16 @@ class Interpreter:
         return self.interpreter.input_shapes
 
     @property
+    def input_scales(self) -> List[Optional[Union[float, List[float]]]]:
+        """Returns a list of input scales."""
+        return self.interpreter.input_scales
+
+    @property
+    def input_zero_points(self) -> List[Optional[int]]:
+        """Returns a list of input zero points."""
+        return self.interpreter.input_zero_points
+
+    @property
     def output_types(self) -> list:
         """Returns a list of output types."""
         return self.interpreter.output_types
@@ -87,6 +97,16 @@ class Interpreter:
     def output_shapes(self) -> List[Tuple[int]]:
         """Returns a list of output shapes."""
         return self.interpreter.output_shapes
+
+    @property
+    def output_scales(self) -> List[Optional[Union[float, List[float]]]]:
+        """Returns a list of input scales."""
+        return self.interpreter.output_scales
+
+    @property
+    def output_zero_points(self) -> List[Optional[int]]:
+        """Returns a list of input zero points."""
+        return self.interpreter.output_zero_points
 
     def predict(self, x: Union[Data, Iterator[Data]], verbose: int = 0) -> Data:
         """Generates output predictions for the input samples.

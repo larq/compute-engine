@@ -60,5 +60,13 @@ PYBIND11_MODULE(interpreter_wrapper_lite, m) {
                     nullptr)
       .def_property("output_shapes", &LiteInterpreterWrapper::get_output_shapes,
                     nullptr)
+      .def_property("input_zero_points",
+                    &LiteInterpreterWrapper::get_input_zero_points, nullptr)
+      .def_property("output_zero_points",
+                    &LiteInterpreterWrapper::get_output_zero_points, nullptr)
+      .def_property("input_scales", &LiteInterpreterWrapper::get_input_scales,
+                    nullptr)
+      .def_property("output_scales", &LiteInterpreterWrapper::get_output_scales,
+                    nullptr)
       .def("predict", &LiteInterpreterWrapper::predict);
 };
