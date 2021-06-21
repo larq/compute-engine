@@ -70,11 +70,11 @@ def LQ_QuantizeOp : LQ_Op<"Quantize", [NoSideEffect]> {
   let summary = "Binary quantize operator";
 
   let description = [{
-Converts floating point or integer tensors to binarized bitpacked tensors.
+Converts floating point, integer, or boolean tensors to binarized bitpacked tensors.
   }];
 
   let arguments = (ins
-    TensorOf<[BF16, F16, F32, F64, I32, I64, QI8, QI16]>:$x
+    TensorOf<[BF16, F16, F32, F64, I32, I64, QI8, QI16, I1]>:$x
   );
 
   let results = (outs
@@ -90,7 +90,7 @@ def LQ_DequantizeOp : LQ_Op<"Dequantize", [NoSideEffect]> {
   let summary = "Binary dequantize operator";
 
   let description = [{
-Converts binarized bitpacked tensors to floating point or integer tensors.
+Converts binarized bitpacked tensors to floating point, integer, or boolean tensors.
   }];
 
   let arguments = (ins
@@ -98,7 +98,7 @@ Converts binarized bitpacked tensors to floating point or integer tensors.
   );
 
   let results = (outs
-    TensorOf<[BF16, F16, F32, F64, I32, I64, QI8, QI16]>:$y
+    TensorOf<[BF16, F16, F32, F64, I32, I64, QI8, QI16, I1]>:$y
   );
 
   let hasFolder = 1;
