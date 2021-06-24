@@ -14,9 +14,14 @@ jobs:
       - uses: actions/checkout@v1
         with:
           submodules: true
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
       - name: Configure Bazel
         run: ./configure.py
         shell: bash
+      - name: Install pip dependencies
+        run: pip install numpy --no-cache-dir
       - name: Run C++ Unit Tests
         run: bazelisk test larq_compute_engine/tests:cc_tests --copt=-O2 --distinct_host_configuration=false --test_output=all
       - name: Build TF Lite Static Library with Make
