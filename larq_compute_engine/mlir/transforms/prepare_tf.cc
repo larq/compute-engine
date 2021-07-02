@@ -36,6 +36,14 @@ struct PrepareLCE : public PassWrapper<PrepareLCE, FunctionPass> {
                        clEnumValN(LCETarget::XCORE, "xcore", "XCORE target"))};
 };
 
+bool IsConstantValue(Attribute values, float expected_value) {
+  if (!values.isa<DenseElementsAttr>()) return false;
+
+  for (auto value : values.cast<DenseElementsAttr>().getValues<float>()) {
+    if (value != expected_value) return false;
+  }
+  return true;
+}
 DenseElementsAttr GetConstantVector(Attribute filter, float val) {
   auto filter_type = filter.getType().cast<ShapedType>();
   auto filter_shape = filter_type.getShape();

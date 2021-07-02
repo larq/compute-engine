@@ -11,6 +11,30 @@ def HasOneUse : Constraint<CPred<"$0.hasOneUse()">>;
 
 class ConstantValue<string val> : AttrConstraint<CPred<"IsConstantValue($_self, " # val # ")">>;
 
+def : Pat<(LQ_QuantizeOp
+              (TFL_GreaterEqualOp:$ge_op
+                  $input,
+                  (ConstantOp ConstantValue<"0.0f">))),
+          (LQ_QuantizeOp $input),
+          [(HasOneUse $ge_op)],
+          (addBenefit 150)>;
+
+def : Pat<(LQ_QuantizeOp
+              (TFL_GreaterEqualOp:$ge_op
+                  $input,
+                  $threshold)),
+          (LQ_QuantizeOp
+              (TFL_SubOp $input, $threshold, TFL_AF_None)),
+          [(HasOneUse $ge_op)],
+          (addBenefit 100)>;
+
+def : Pat<(LQ_QuantizeOp
+              (TFL_LessEqualOp:$ge_op $lhs, $rhs)),
+          (LQ_QuantizeOp
+              (TFL_GreaterEqualOp $rhs, $lhs)),
+          [(HasOneUse $ge_op)],
+          (addBenefit 100)>;
+
 // TODO: Check shapes before fusing
 multiclass FuseAddOrSubWithBConv2D<Op binaryOp> {
   def : Pat<(binaryOp

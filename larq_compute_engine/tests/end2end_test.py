@@ -1,3 +1,4 @@
+import functools
 import os
 import sys
 import tempfile
@@ -23,7 +24,7 @@ def convert_keras_model_as_saved_model(model, **kwargs):
         return convert_saved_model(saved_model_dir, **kwargs)
 
 
-def toy_model(**kwargs):
+def toy_model(binary_quantizer="ste_sign", **kwargs):
     def block(padding, pad_values, activation):
         def dummy(x):
             shortcut = x
@@ -32,8 +33,8 @@ def toy_model(**kwargs):
                 kernel_size=3,
                 padding=padding,
                 pad_values=pad_values,
-                input_quantizer="ste_sign",
-                kernel_quantizer="ste_sign",
+                input_quantizer=binary_quantizer,
+                kernel_quantizer=binary_quantizer,
                 use_bias=False,
                 activation=activation,
             )(x)
@@ -59,7 +60,7 @@ def toy_model(**kwargs):
     return tf.keras.Model(inputs=img_input, outputs=out)
 
 
-def toy_model_sequential(**kwargs):
+def toy_model_sequential(binary_quantizer="ste_sign", **kwargs):
     return tf.keras.models.Sequential(
         [
             tf.keras.layers.Input((224, 224, 3)),
@@ -70,8 +71,8 @@ def toy_model_sequential(**kwargs):
             lq.layers.QuantConv2D(
                 32,
                 (3, 3),
-                input_quantizer="ste_sign",
-                kernel_quantizer="ste_sign",
+                input_quantizer=binary_quantizer,
+                kernel_quantizer=binary_quantizer,
                 padding="same",
                 pad_values=1.0,
                 use_bias=False,
@@ -85,8 +86,8 @@ def toy_model_sequential(**kwargs):
             lq.layers.QuantConv2D(
                 32,
                 (3, 3),
-                input_quantizer="ste_sign",
-                kernel_quantizer="ste_sign",
+                input_quantizer=binary_quantizer,
+                kernel_quantizer=binary_quantizer,
                 strides=(2, 2),
                 padding="same",
                 pad_values=1.0,
@@ -104,8 +105,8 @@ def toy_model_sequential(**kwargs):
             lq.layers.QuantConv2D(
                 32,
                 (3, 3),
-                input_quantizer="ste_sign",
-                kernel_quantizer="ste_sign",
+                input_quantizer=binary_quantizer,
+                kernel_quantizer=binary_quantizer,
                 padding="same",
                 pad_values=1.0,
                 use_bias=False,
@@ -165,12 +166,25 @@ def dataset():
     )
 
 
+def tf_where_binary_quantizer(x):
+    return tf.where(x >= 0, tf.ones_like(x), -tf.ones_like(x))
+
+
 @pytest.mark.parametrize(
     "conversion_function", [convert_keras_model, convert_keras_model_as_saved_model]
 )
 @pytest.mark.parametrize(
     "model_cls",
-    [toy_model, toy_model_sequential, toy_model_int8, lqz.sota.QuickNetSmall],
+    [
+        toy_model,
+        functools.partial(toy_model, binary_quantizer=tf_where_binary_quantizer),
+        toy_model_sequential,
+        functools.partial(
+            toy_model_sequential, binary_quantizer=tf_where_binary_quantizer
+        ),
+        toy_model_int8,
+        lqz.sota.QuickNetSmall,
+    ],
 )
 def test_simple_model(dataset, conversion_function, model_cls):
     model = model_cls(weights="imagenet")

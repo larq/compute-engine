@@ -1,8 +1,71 @@
 // RUN: lce-tf-opt %s -tfl-prepare-lce=target=arm -verify-diagnostics | FileCheck %s --check-prefixes CHECK,CHECK-ARM
 // RUN: lce-tf-opt %s -tfl-prepare-lce=target=xcore -verify-diagnostics | FileCheck %s --check-prefixes CHECK,CHECK-XCORE
 
-// CHECK-LABEL: @fuse_bsign
-func @fuse_bsign(%arg0: tensor<8x16xf32>) -> tensor<8x16xf32> {
+// CHECK-LABEL: @fuse_bsign_tf_where
+func @fuse_bsign_tf_where(%arg0: tensor<8x16xi1>) -> tensor<8x16xf32> {
+  %cst_l = constant dense<1.0> : tensor<8x16xf32>
+  %cst_r = constant dense<-1.0> : tensor<8x16xf32>
+  %0 = "tf.SelectV2"(%arg0, %cst_l, %cst_r) : (tensor<8x16xi1>, tensor<8x16xf32>, tensor<8x16xf32>) -> tensor<8x16xf32>
+  return %0 : tensor<8x16xf32>
+
+  // CHECK-NEXT: %0 = "lq.Quantize"(%arg0) : (tensor<8x16xi1>) -> tensor<8x1xi32>
+  // CHECK-NEXT: %1 = "lq.Dequantize"(%0) : (tensor<8x1xi32>) -> tensor<8x16xf32>
+  // CHECK-NEXT: return %1
+}
+
+// CHECK-LABEL: @fuse_bsign_tf_where_inverted
+func @fuse_bsign_tf_where_inverted(%arg0: tensor<8x16xi1>) -> tensor<8x16xf32> {
+  %cst_l = constant dense<-1.0> : tensor<8x16xf32>
+  %cst_r = constant dense<1.0> : tensor<8x16xf32>
+  %0 = "tf.SelectV2"(%arg0, %cst_l, %cst_r) : (tensor<8x16xi1>, tensor<8x16xf32>, tensor<8x16xf32>) -> tensor<8x16xf32>
+  return %0 : tensor<8x16xf32>
+
+  // CHECK-NEXT: %0 = "tf.LogicalNot"(%arg0) : (tensor<8x16xi1>) -> tensor<8x16xi1>
+  // CHECK-NEXT: %1 = "lq.Quantize"(%0) : (tensor<8x16xi1>) -> tensor<8x1xi32>
+  // CHECK-NEXT: %2 = "lq.Dequantize"(%1) : (tensor<8x1xi32>) -> tensor<8x16xf32>
+  // CHECK-NEXT: return %2
+}
+
+// CHECK-LABEL: @fuse_bsign_tf_where_broadcast_cond
+func @fuse_bsign_tf_where_broadcast_cond(%arg0: tensor<8x1xi1>) -> tensor<8x16xf32> {
+  %cst_l = constant dense<1.0> : tensor<8x16xf32>
+  %cst_r = constant dense<-1.0> : tensor<8x16xf32>
+  %0 = "tf.SelectV2"(%arg0, %cst_l, %cst_r) : (tensor<8x1xi1>, tensor<8x16xf32>, tensor<8x16xf32>) -> tensor<8x16xf32>
+  return %0 : tensor<8x16xf32>
+
+  // CHECK-NEXT: %cst = constant dense<[8, 16]> : tensor<2xi64>
+  // CHECK-NEXT: %0 = "tf.BroadcastTo"(%arg0, %cst) : (tensor<8x1xi1>, tensor<2xi64>) -> tensor<8x16xi1>
+  // CHECK-NEXT: %1 = "lq.Quantize"(%0) : (tensor<8x16xi1>) -> tensor<8x1xi32>
+  // CHECK-NEXT: %2 = "lq.Dequantize"(%1) : (tensor<8x1xi32>) -> tensor<8x16xf32>
+  // CHECK-NEXT: return %2
+}
+
+// CHECK-LABEL: @fuse_bsign_tf_where_broadcast_lhs_rhs
+func @fuse_bsign_tf_where_broadcast_lhs_rhs(%arg0: tensor<8x16xi1>) -> tensor<8x16xf32> {
+  %cst_l = constant dense<1.0> : tensor<f32>
+  %cst_r = constant dense<-1.0> : tensor<8x1xf32>
+  %0 = "tf.SelectV2"(%arg0, %cst_l, %cst_r) : (tensor<8x16xi1>, tensor<f32>, tensor<8x1xf32>) -> tensor<8x16xf32>
+  return %0 : tensor<8x16xf32>
+
+  // CHECK-NEXT: %0 = "lq.Quantize"(%arg0) : (tensor<8x16xi1>) -> tensor<8x1xi32>
+  // CHECK-NEXT: %1 = "lq.Dequantize"(%0) : (tensor<8x1xi32>) -> tensor<8x16xf32>
+  // CHECK-NEXT: return %1
+}
+
+// CHECK-LABEL: @fuse_bsign_tf_where_select_v1_op
+func @fuse_bsign_tf_where_select_v1_op(%arg0: tensor<8x16xi1>) -> tensor<8x16xf32> {
+  %cst_l = constant dense<1.0> : tensor<8x16xf32>
+  %cst_r = constant dense<-1.0> : tensor<8x16xf32>
+  %0 = "tf.Select"(%arg0, %cst_l, %cst_r) : (tensor<8x16xi1>, tensor<8x16xf32>, tensor<8x16xf32>) -> tensor<8x16xf32>
+  return %0 : tensor<8x16xf32>
+
+  // CHECK-NEXT: %0 = "lq.Quantize"(%arg0) : (tensor<8x16xi1>) -> tensor<8x1xi32>
+  // CHECK-NEXT: %1 = "lq.Dequantize"(%0) : (tensor<8x1xi32>) -> tensor<8x16xf32>
+  // CHECK-NEXT: return %1
+}
+
+// CHECK-LABEL: @fuse_bsign_legacy_tf_sign
+func @fuse_bsign_legacy_tf_sign(%arg0: tensor<8x16xf32>) -> tensor<8x16xf32> {
   %0 = "tf.Sign"(%arg0) : (tensor<8x16xf32>) -> tensor<8x16xf32>
   %cst = constant dense<0.1> : tensor<f32>
   %2 = "tf.AddV2"(%0, %cst) : (tensor<8x16xf32>, tensor<f32>) -> tensor<8x16xf32>

@@ -9,12 +9,20 @@
 
 #include "larq_compute_engine/core/types.h"
 #include "ruy/profiler/instrumentation.h"
+#include "tensorflow/lite/kernels/op_macros.h"
 
 namespace compute_engine {
 namespace core {
 namespace bitpacking {
 
+template <typename T>
+inline void bitpack_aarch64_4x32(const T* input, std::size_t num_blocks,
+                                 TBitpacked* output, const T zero_point) {
+  TFLITE_ASSERT_FALSE;
+}
+
 // Bitpack an array of `4 * 32 * num_blocks` floats.
+template <>
 inline void bitpack_aarch64_4x32(const float* input, std::size_t num_blocks,
                                  TBitpacked* output,
                                  const float zero_point /*ignored*/) {
@@ -227,6 +235,7 @@ inline void bitpack_aarch64_4x32(const float* input, std::size_t num_blocks,
 }
 
 // Bitpack an array of `4 * 32 * num_blocks` int8 bytes.
+template <>
 inline void bitpack_aarch64_4x32(const std::int8_t* input,
                                  std::size_t num_blocks, TBitpacked* output,
                                  const std::int8_t zero_byte) {

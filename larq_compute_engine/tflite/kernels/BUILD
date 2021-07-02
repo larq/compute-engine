@@ -41,6 +41,7 @@ cc_library(
         "//larq_compute_engine/core/indirect_bgemm:kernels",
         "@flatbuffers",
         "@org_tensorflow//tensorflow/lite:framework",
+        "@org_tensorflow//tensorflow/lite:type_to_tflitetype",
         "@org_tensorflow//tensorflow/lite/kernels/internal:kernel_utils",
         "@org_tensorflow//tensorflow/lite/kernels/internal:tensor",
         "@ruy//ruy/profiler:instrumentation",

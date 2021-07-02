@@ -4,9 +4,56 @@ include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
 include "larq_compute_engine/mlir/transforms/op_removal_patterns.td"
 
+class ConstantValue<string val> : AttrConstraint<CPred<"IsConstantValue($_self, " # val # ")">>;
 
-// This relies on implementation details of larq.math.sign. We should make
-// this more general in the future
+def CreateTFBroadcastToOp : NativeCodeCall<
+    "$_builder.create<TF::BroadcastToOp>("
+        "$0.getLoc(),"
+        "RankedTensorType::get("
+            "$0.getType().cast<RankedTensorType>().getShape(),"
+            "getElementTypeOrSelf($1.getType())),"
+        "$1,"
+        "$2)">;
+
+def CreateTFShapeOp : NativeCodeCall<
+    "$_builder.create<TF::ShapeOp>($0.getLoc(), $1, $2)">;
+
+// Base quantiser patterns that match the `tf.where` implementation of `ste_sign`.
+multiclass QuantDequantPatterns<Op SelectOp> {
+  def : Pat<(SelectOp:$select_op
+                $cond,
+                (ConstantOp ConstantValue<"1.0f">),
+                (ConstantOp ConstantValue<"-1.0f">)),
+            (LQ_DequantizeOp
+                (LQ_QuantizeOp
+                    (CreateTFBroadcastToOp
+                        $select_op,
+                        $cond,
+                        (CreateTFShapeOp
+                            $select_op,
+                            $select_op,
+                            /*use 32bit*/ConstBoolAttrFalse)))),
+            [], (addBenefit 100)>;
+  def : Pat<(SelectOp:$select_op
+                $cond,
+                (ConstantOp ConstantValue<"-1.0f">),
+                (ConstantOp ConstantValue<"1.0f">)),
+            (LQ_DequantizeOp
+                (LQ_QuantizeOp
+                    (CreateTFBroadcastToOp
+                        $select_op,
+                        (TF_LogicalNotOp $cond),
+                        (CreateTFShapeOp
+                            $select_op,
+                            $select_op,
+                            /*use 32bit*/ConstBoolAttrFalse)))),
+            [], (addBenefit 100)>;
+}
+foreach SelectOp = [TF_SelectOp, TF_SelectV2Op]<Op> in
+  defm : QuantDequantPatterns<SelectOp>;
+
+// A fallback for the old version of `ste_sign` that uses a specific `tf.sign`
+// based implementation of `larq.math.sign`.
 def : Pat<(TF_SignOp (TF_AddV2Op (TF_SignOp $arg), $c)),
           (LQ_DequantizeOp (LQ_QuantizeOp $arg)), [], (addBenefit 100)>;
 def : Pat<(TF_SignOp (TF_AddV2Op $c, (TF_SignOp $arg))),
