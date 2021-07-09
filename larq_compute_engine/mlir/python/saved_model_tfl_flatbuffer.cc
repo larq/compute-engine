@@ -150,6 +150,27 @@ pybind11::bytes ConvertSavedModelToTFLiteFlatBuffer(
     quant_specs.input_ranges.push_back({llvm::None, llvm::None});
   }
   if (!default_ranges.is_none()) {
+    // When there are no Quantize nodes in the graph then in the PrepareQuantize
+    // pass the variables `eager_quantize` and subsequently `infer_tensor_range`
+    // are set to false:
+    // https://github.com/tensorflow/tensorflow/blob/v2.5.0/tensorflow/compiler/mlir/lite/transforms/prepare_quantize.cc#L360-L366
+    // This means that the PrepareQuantize pass does *not* infer the int8
+    // range of weight tensors. The DefaultQuantParamsPass will then set the
+    // quantization stats of those weight tensors to this per-tensor default
+    // range instead of proper per-channel ranges.
+    // The tflite/tfmicro kernels can handle per-tensor weight quantization, but
+    // for some private passes we desire per-channel quantization.
+    // To make `infer_tensor_range` become true we simply set
+    // `post_training_quantization` to true here.
+    // Alternatively to this solution, we could set
+    // `quant_specs.target_func = "serving_default";`
+    // and set the `input_ranges` to some fixed values. In that case, the
+    // PrepareQuantize pass would first insert Quantization ops at the input
+    // here:
+    // https://github.com/tensorflow/tensorflow/blob/v2.5.0/tensorflow/compiler/mlir/lite/transforms/prepare_quantize.cc#L172
+    // https://github.com/tensorflow/tensorflow/blob/v2.5.0/tensorflow/compiler/mlir/lite/transforms/prepare_quantize.cc#L202
+    quant_specs.post_training_quantization = true;
+
     quant_specs.default_ranges =
         default_ranges.cast<std::pair<double, double>>();
   }
