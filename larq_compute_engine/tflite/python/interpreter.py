@@ -1,4 +1,3 @@
-from larq_compute_engine.tflite.python import interpreter_wrapper_lite
 from larq_compute_engine.tflite.python.interpreter_base import InterpreterBase
 
 __all__ = ["Interpreter"]
@@ -34,7 +33,10 @@ class Interpreter(InterpreterBase):
         num_threads: int = 1,
         use_reference_bconv: bool = False,
     ):
-        interpreter = interpreter_wrapper_lite.LiteInterpreter(
-            flatbuffer_model, num_threads, use_reference_bconv
+        from larq_compute_engine.tflite.python import interpreter_wrapper_lite
+
+        super().__init__(
+            interpreter_wrapper_lite.LiteInterpreter(
+                flatbuffer_model, num_threads, use_reference_bconv
+            )
         )
-        super().__init__(interpreter)
