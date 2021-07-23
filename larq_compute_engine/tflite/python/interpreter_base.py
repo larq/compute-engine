@@ -29,18 +29,15 @@ def data_generator(x: Union[Data, Iterator[Data]]) -> Iterator[List[np.ndarray]]
 class InterpreterBase:
     """Interpreter interface for Larq Compute Engine Models.
 
-    !!! example
-        ```python
-        lce_model = convert_keras_model(model)
-        interpreter = Interpreter(lce_model)
-        interpreter.predict(input_data, verbose=1)
-        ```
-
     # Attributes
         input_types: Returns a list of input types.
         input_shapes: Returns a list of input shapes.
+        input_scales: Returns a list of input scales.
+        input_zero_points: Returns a list of input zero points.
         output_types: Returns a list of output types.
         output_shapes: Returns a list of output shapes.
+        output_scales: Returns a list of input scales.
+        output_zero_points: Returns a list of input zero points.
     """
 
     def __init__(self, interpreter):

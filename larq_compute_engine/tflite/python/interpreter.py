@@ -20,18 +20,12 @@ class Interpreter(InterpreterBase):
         interpreter.predict(input_data, verbose=1)
         ```
 
-    See the base class `InterpreterBase` for the interface.
+    See the base class `InterpreterBase` for the full interface.
 
     # Arguments
         flatbuffer_model: A serialized Larq Compute Engine model in the flatbuffer format.
         num_threads: The number of threads used by the interpreter.
         use_reference_bconv: When True, uses the reference implementation of LceBconv2d.
-
-    # Attributes
-        input_types: Returns a list of input types.
-        input_shapes: Returns a list of input shapes.
-        output_types: Returns a list of output types.
-        output_shapes: Returns a list of output shapes.
     """
 
     def __init__(
