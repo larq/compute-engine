@@ -53,7 +53,7 @@ def test_strip_lcedequantize_ops(
 ):
     model_lce = convert_keras_model(
         model_cls(),
-        inference_input_type=inference_input_type,
+        inference_input_type=tf.float32,
         inference_output_type=inference_output_type,
         experimental_enable_bitpacked_activations=True,
     )
