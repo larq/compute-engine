@@ -49,7 +49,7 @@ def toy_model_int8_sign(**kwargs):
 
 @pytest.mark.parametrize("model_cls", [toy_model_sign, toy_model_int8_sign])
 @pytest.mark.parametrize("inference_input_type", [tf.int8, tf.float32])
-@pytest.mark.parametrize("inference_output_type", [tf.int8, tf.float32])
+@pytest.mark.parametrize("inference_output_type", [tf.float32])
 def test_strip_lcedequantize_ops(
     model_cls, inference_input_type, inference_output_type
 ):
@@ -57,11 +57,8 @@ def test_strip_lcedequantize_ops(
         model_cls(),
         inference_input_type=inference_input_type,
         inference_output_type=inference_output_type,
-        None,
         experimental_enable_bitpacked_activations=True,
     )
-    model_lce = strip_lcedequantize_ops(model_lce)
-    interpreter = Interpreter(model_lce)
     model_lce = strip_lcedequantize_ops(model_lce)
     interpreter = tf.lite.Interpreter(model_content=model_lce)
     input_details = interpreter.get_input_details()
@@ -69,10 +66,7 @@ def test_strip_lcedequantize_ops(
     assert input_details[0]["dtype"] == inference_input_type.as_numpy_dtype
     output_details = interpreter.get_output_details()
     assert len(output_details) == 1
-    if inference_output_type == tf.float32:
-        assert output_details[0]["dtype"] == tf.int32.as_numpy_dtype
-    else:
-        assert output_details[0]["dtype"] == inference_output_type.as_numpy_dtype
+    assert output_details[0]["dtype"] == tf.int32.as_numpy_dtype
 
 
 if __name__ == "__main__":
