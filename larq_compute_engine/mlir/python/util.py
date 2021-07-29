@@ -238,23 +238,82 @@ def strip_lcedequantize_ops(model):
             "{} subgraphs.".format(len(model.subgraphs))
         )
 
-    ## Find the LceDequantize operators
+    # Ensure model has at least one LceDequantize and/or Dequantize operator
+    lce_dequant_opcode_idx, dequant_opcode_idx = None, None
+    for idx, opcode in enumerate(model.operatorCodes):
+        if opcode.customCode == b"LceDequantize":
+            lce_dequant_opcode_idx = idx
+        elif opcode.builtinCode == tflite_schema.BuiltinOperator.DEQUANTIZE:
+            dequant_opcode_idx = idx
+        if lce_dequant_opcode_idx is not None and dequant_opcode_idx is not None:
+            break
+    if lce_dequant_opcode_idx is None and dequant_opcode_idx is None:
+        raise ValueError(
+            "Model does not contain any LceDequantize or Dequantize operators."
+        )
+
+    # Ensure model outputs are dequantized and remove Dequantize ops first if any
+    if dequant_opcode_idx is not None:
+        subgraph = model.subgraphs[0]
+        tensors = subgraph.tensors
+        operators = subgraph.operators
+        remove_tensors_idxs = set()
+
+        output_dequant_ops = []
+        for op in operators:
+            # Find output Dequantize operator
+            if (
+                op.opcodeIndex == dequant_opcode_idx
+                and op.outputs[0] in subgraph.outputs
+            ):
+                pos, float_tensor, int_tensor = (
+                    "output",
+                    tensors[op.outputs[0]],
+                    tensors[op.inputs[0]],
+                )
+                output_dequant_ops.append(op)
+            # Otherwise, ignore
+            else:
+                continue
+            # If found, validate the input/output tensor type
+            if float_tensor.type != tflite_schema.TensorType.FLOAT32:
+                raise ValueError(
+                    "Model {} type must be tf.float32. Expected type for tensor with "
+                    "name '{}' is tf.float32, instead type is tf.{}".format(
+                        pos,
+                        float_tensor.name,
+                        _convert_tflite_enum_type_to_tf_type(float_tensor.type).name,
+                    )
+                )
+            if int_tensor.type != tflite_schema.TensorType.INT8:
+                raise ValueError(
+                    "Model is not integer quantized. Expected type for tensor with "
+                    "name '{}' is tf.int8, instead type is tf.{}".format(
+                        int_tensor.name,
+                        _convert_tflite_enum_type_to_tf_type(int_tensor.type).name,
+                    )
+                )
+
+        # Remove the Dequantize operators
+        for op in output_dequant_ops:
+            subgraph.outputs[subgraph.outputs == op.outputs[0]] = op.inputs[0]
+            if model.signatureDefs:
+                signature_def = model.signatureDefs[0]
+                for i in range(len(signature_def.outputs)):
+                    if signature_def.outputs[i].tensorIndex == op.outputs[0]:
+                        signature_def.outputs[i].tensorIndex = op.inputs[0]
+            remove_tensors_idxs.add(op.outputs[0])
+            operators.remove(op)
+
+        # Remove tensors marked for deletion.
+        _remove_tensors_from_model(model, remove_tensors_idxs)
+
     subgraph = model.subgraphs[0]
     tensors = subgraph.tensors
     operators = subgraph.operators
     remove_tensors_idxs = set()
 
-    # Ensure model has at least one LceDequantize operator
-    lce_dequant_opcode_idx = None
-    for idx, opcode in enumerate(model.operatorCodes):
-        if opcode.customCode == b"LceDequantize":
-            lce_dequant_opcode_idx = idx
-        if lce_dequant_opcode_idx is not None:
-            break
-    if lce_dequant_opcode_idx is None:
-        raise ValueError("Model does not contain any LceDequantize operators.")
-
-    # Ensure model outputs are dequantized
+    # Ensure model outputs are Lce dequantized and remove LceDequantize ops
     lce_output_dequant_ops = []
     for op in operators:
         # Find output LceDequantize operator
@@ -262,7 +321,7 @@ def strip_lcedequantize_ops(model):
             op.opcodeIndex == lce_dequant_opcode_idx
             and op.outputs[0] in subgraph.outputs
         ):
-            pos, float_tensor, int_tensor = (
+            pos, output_tensor, input_tensor = (
                 "output",
                 tensors[op.outputs[0]],
                 tensors[op.inputs[0]],
@@ -272,27 +331,35 @@ def strip_lcedequantize_ops(model):
         else:
             continue
         # If found, validate the input/output tensor type
-        if float_tensor.type != tflite_schema.TensorType.FLOAT32:
+        if (
+            output_tensor.type != tflite_schema.TensorType.FLOAT32
+            and output_tensor.type != tflite_schema.TensorType.INT8
+        ):
             raise ValueError(
-                "Model {} type must be tf.float32. Expected type for tensor with "
-                "name '{}' is tf.float32, instead type is tf.{}".format(
+                "Model {} type must be tf.float32/tf.int8. Expected type for tensor with "
+                "name '{}' is tf.float32/tf.int8, instead type is tf.{}".format(
                     pos,
-                    float_tensor.name,
-                    _convert_tflite_enum_type_to_tf_type(float_tensor.type).name,
+                    output_tensor.name,
+                    _convert_tflite_enum_type_to_tf_type(output_tensor.type).name,
                 )
             )
-        if int_tensor.type != tflite_schema.TensorType.INT32:
+        if input_tensor.type != tflite_schema.TensorType.INT32:
             raise ValueError(
                 "Expected type for tensor with "
                 "name '{}' is tf.int32, instead type is tf.{}".format(
-                    int_tensor.name,
-                    _convert_tflite_enum_type_to_tf_type(int_tensor.type).name,
+                    input_tensor.name,
+                    _convert_tflite_enum_type_to_tf_type(input_tensor.type).name,
                 )
             )
 
     # Remove the LceDequantize operators
     for op in lce_output_dequant_ops:
         subgraph.outputs[subgraph.outputs == op.outputs[0]] = op.inputs[0]
+        if model.signatureDefs:
+            signature_def = model.signatureDefs[0]
+            for i in range(len(signature_def.outputs)):
+                if signature_def.outputs[i].tensorIndex == op.outputs[0]:
+                    signature_def.outputs[i].tensorIndex = op.inputs[0]
         remove_tensors_idxs.add(op.outputs[0])
         operators.remove(op)
 
