@@ -47,8 +47,8 @@ def toy_model_int8_sign(**kwargs):
 
 
 @pytest.mark.parametrize("model_cls", [toy_model_sign, toy_model_int8_sign])
-@pytest.mark.parametrize("inference_input_type", [tf.float32])
-@pytest.mark.parametrize("inference_output_type", [tf.float32])
+@pytest.mark.parametrize("inference_input_type", [tf.float32, tf.int8])
+@pytest.mark.parametrize("inference_output_type", [tf.float32, tf.int8])
 def test_strip_lcedequantize_ops(
     model_cls, inference_input_type, inference_output_type
 ):
