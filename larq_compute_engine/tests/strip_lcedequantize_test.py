@@ -40,7 +40,7 @@ def toy_model_int8_sign(**kwargs):
         input_quantizer="ste_sign",
         kernel_quantizer="ste_sign",
         kernel_constraint="weight_clip",
-    )(img)
+    )(x)
     x = lq.quantizers.SteSign()(x)
     x = quant(x)
     return tf.keras.Model(inputs=img, outputs=x)
