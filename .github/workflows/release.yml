@@ -161,6 +161,39 @@ jobs:
           name: ${{ runner.os }}-wheels
           path: wheelhouse
 
+  macos-arm-release-wheel:
+    name: Build release arm wheels for macOS
+    runs-on: macos-11
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Build macOS wheels
+        run: |
+          python --version
+          python -m pip install delocate wheel setuptools numpy six --no-cache-dir
+
+          ./configure.py
+
+          bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --config=macos_arm64
+          bazel-bin/build_pip_pkg artifacts --plat-name macosx_11_0_arm64
+
+          for f in artifacts/*.whl; do
+            delocate-wheel -w wheelhouse $f
+          done
+        env:
+          LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
+        shell: bash
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ runner.os }}-arm-wheels
+          path: wheelhouse
+
   manylinux-release-wheel:
     name: Build release wheels for manylinux2010
     runs-on: ubuntu-18.04
@@ -240,7 +273,7 @@ jobs:
   upload-wheels:
     name: Publish wheels to PyPi
     if: always() && github.event_name == 'release'
-    needs: [manylinux-release-wheel, macos-release-wheel, windows-release-wheel]
+    needs: [manylinux-release-wheel, macos-release-wheel, macos-arm-release-wheel, windows-release-wheel]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v2
@@ -255,6 +288,11 @@ jobs:
         if: ${{ needs.macos-release-wheel.result == 'success' }}
       - uses: actions/download-artifact@v2
         with:
+          name: macOS-arm-wheels
+          path: macOS-arm-wheels
+        if: ${{ needs.macos-arm-release-wheel.result == 'success' }}
+      - uses: actions/download-artifact@v2
+        with:
           name: Windows-wheels
           path: Windows-wheels
         if: ${{ needs.windows-release-wheel.result == 'success' }}
@@ -263,6 +301,7 @@ jobs:
           mkdir -p dist
           cp Linux-wheels/*.whl dist/ || true
           cp macOS-wheels/*.whl dist/ || true
+          cp macOS-arm-wheels/*.whl dist/ || true
           cp Windows-wheels/*.whl dist/ || true
           ls -la dist/
           sha256sum dist/*.whl
