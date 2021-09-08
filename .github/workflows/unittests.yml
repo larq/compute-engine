@@ -90,6 +90,8 @@ jobs:
         run: bazelisk test larq_compute_engine/mlir/tests:all --test_output=all
       - name: Run End2End tests
         run: bazelisk test larq_compute_engine/tests:end2end_test --test_output=all
+      - name: Run Strip dequantize op tests
+        run: bazelisk test larq_compute_engine/tests:strip_lcedequantize_test --test_output=all
 
   ConverterPython:
     runs-on: ubuntu-latest
