@@ -131,7 +131,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./third_party/install_android.sh
       - name: Configure Bazel
-        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_NDK_HOME="/tmp/lce_android/ndk/18.1.5063045" ./configure.py
+        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_NDK_HOME="/tmp/lce_android/ndk/19.2.5345600" ./configure.py
         shell: bash
       - name: Build LCE AAR
         run: BUILDER=bazelisk ./larq_compute_engine/tflite/java/build_lce_aar.sh
