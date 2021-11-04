@@ -10,6 +10,9 @@ namespace TFL {
 namespace {
 
 struct LegalizeLCE : public PassWrapper<LegalizeLCE, FunctionPass> {
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<mlir::TFL::TensorFlowLiteDialect>();
+  }
   void runOnFunction() override;
 };
 
