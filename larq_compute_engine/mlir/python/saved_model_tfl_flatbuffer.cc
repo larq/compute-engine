@@ -126,7 +126,7 @@ pybind11::bytes ConvertSavedModelToTFLiteFlatBuffer(
   std::unordered_set<std::string> tags(saved_model_tags.begin(),
                                        saved_model_tags.end());
 
-  std::unique_ptr<tensorflow::SavedModelBundle> bundle;
+  auto bundle = std::make_unique<tensorflow::SavedModelBundle>();
   auto module =
       ImportSavedModel(saved_model_dir, saved_model_version, tags,
                        custom_opdefs, exported_names_span, specs,
