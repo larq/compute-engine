@@ -164,19 +164,3 @@ def : Pat<(TF_Conv2DOp:$output
            (SamePadding $paddings, $input, $output, $strides),
            (ValidFilterShape $dequantized_input, $filter_op)],
           (addBenefit 90)>;
-
-// Checks if the value has only one user.
-def HasOneUse : Constraint<CPred<"$0.hasOneUse()">>;
-
-// Fuses a padding layer into the convolution that follows
-// TODO:
-// * Check padding values
-// * Add constraint: "(SamePadding $paddings, $input, $conv_output, ($stride_h, $stride_w))"
-// * Do the same for the non-V2 padding
-def : Pat<(TFL_Conv2DOp:$conv_output (TFL_PadV2Op:$pad_output $input, $paddings, $pad_values),
-                         $filter, $bias, $h_factor, $w_factor,
-                         $act_fn, ConstantAttr<StrAttr, "VALID">, $stride_h, $stride_w),
-          (TFL_Conv2DOp $input, $filter, $bias, $h_factor, $w_factor,
-                        $act_fn, ConstantAttr<StrAttr, "SAME">, $stride_h, $stride_w),
-          [(HasOneUse $pad_output)],
-          (addBenefit 100)>;
