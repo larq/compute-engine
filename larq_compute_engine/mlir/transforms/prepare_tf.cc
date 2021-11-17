@@ -126,6 +126,12 @@ bool IsSamePadding(Attribute paddings_attr, Value input, Value output,
          paddings.getValue<int>({3, 1}) == 0;
 }
 
+// Same as the 'IsSamePadding' below but now with the strides assumed to be 1
+bool IsSamePaddingStrides1(Attribute paddings_attr, Value input, Value output) {
+  auto strides = ArrayAttr();  // TODO: fill in {1, 1} and call IsSamePadding
+  return true; // IsSamePadding(paddings_attr, input, output, strides);
+}
+
 // Verify that the filter shape is compatible with the input shape. Will fail if
 // any other type is passed. Will emit an error and return false if the two
 // shapes are incompatible (specifically, if the shapes imply a grouped

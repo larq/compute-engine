@@ -180,35 +180,3 @@ foreach actFnPair = [[TFL_ReluOp, TFL_AF_Relu],
                      [TFL_Relu1Op, TFL_AF_Relu1],
                      [TFL_Relu6Op, TFL_AF_Relu6]] in
   defm : FuseActFnIntoConvOpPat<!cast<Op>(actFnPair[0]), !cast<Attr>(actFnPair[1])>;
-
-
-// Fuses a padding layer into the convolution that follows
-// TODO:
-// * Check padding values
-// * Add constraint: "(SamePadding $paddings, $input, $conv_output, ($stride_h, $stride_w))"
-// * Do the same for the non-V2 padding
-def : Pat<(TFL_Conv2DOp:$conv_output
-                         (TFL_PadV2Op:$pad_output
-                                      $input,
-                                      (ConstantOp $paddings),
-                                      (ConstantOp $pad_values)),
-                         $filter,
-                         $bias,
-                         $h_factor,
-                         $w_factor,
-                         $act_fn,
-                         ConstantAttr<StrAttr, "VALID">,
-                         $stride_h,
-                         $stride_w),
-          (TFL_Conv2DOp $input,
-                        $filter,
-                        $bias,
-                        $h_factor,
-                        $w_factor,
-                        $act_fn,
-                        ConstantAttr<StrAttr,
-                        "SAME">,
-                        $stride_h,
-                        $stride_w),
-          [(HasOneUse $pad_output)],
-          (addBenefit 100)>;
