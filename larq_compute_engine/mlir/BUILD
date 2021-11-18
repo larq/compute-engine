@@ -296,6 +296,7 @@ cc_library(
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:QuantOps",
         "@llvm-project//mlir:Transforms",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:fake_quant_utils",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_legalize_tf",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_optimize",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_quantize",
