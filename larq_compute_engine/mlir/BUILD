@@ -280,12 +280,27 @@ cc_library(
 )
 
 cc_library(
+    name = "batchsize",
+    srcs = [
+        "transforms/batchsize.cc",
+    ],
+    hdrs = [
+        "transforms/passes.h",
+    ],
+    deps = [
+        "@llvm-project//mlir:StandardOps",
+    ],
+    alwayslink = 1,
+)
+
+cc_library(
     name = "lce_tfl_passes",
     srcs = ["tf_tfl_passes.cc"],
     hdrs = [
         "tf_tfl_passes.h",
     ],
     deps = [
+        ":batchsize",
         ":larq_compute_engine_bitpack_weights",
         ":larq_compute_engine_legalize_tflite",
         ":larq_compute_engine_op_removal",
