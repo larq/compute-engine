@@ -63,6 +63,6 @@ std::unique_ptr<OperationPass<FuncOp>> CreateSetBatchSizePass() {
 }
 
 static PassRegistration<SetBatchSizePass> pass("mlir-setbatchsize",
-                                               "Set batch size to 0");
+                                               "Set batch size to 1");
 
 }  // namespace mlir
