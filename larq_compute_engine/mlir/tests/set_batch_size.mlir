@@ -1,6 +1,16 @@
 // RUN: lce-tf-opt %s -mlir-setbatchsize -verify-diagnostics | FileCheck %s
 
+// CHECK-LABEL: @simple
+func @simple(%arg0: tensor<?x6xf32>, %arg1: tensor<2x6xf32>) -> (tensor<?x6xf32>) {
+  %0 = "tf.AddV2"(%arg0, %arg1) : (tensor<?x6xf32>, tensor<2x6xf32>) -> tensor<?x6xf32>
+  return %0 : tensor<?x6xf32>
+  // CHECK: %arg0: tensor<1x6xf32>
+  // Check that the 'batch' size of the second argument is *not* changed to 1
+  // CHECK: %arg1: tensor<2x6xf32>
+}
+
 // This is an IR dump from the following simple 2-input model
+// This is to ensure that the pass does not destroy the extra function attributes that are present
 //    img1 = tf.keras.layers.Input(shape=(4,))
 //    img2 = tf.keras.layers.Input(shape=(6,))
 //    x = tf.keras.layers.Dense(6)(img1) + img2
@@ -17,8 +27,10 @@ func @dual_input_model(%arg0: tensor<?x6xf32> {tf_saved_model.index_path = ["inp
   %5 = "tf.Identity"(%4) {device = ""} : (tensor<?x6xf32>) -> tensor<?x6xf32>
   %6 = "tf.Identity"(%5) {device = ""} : (tensor<?x6xf32>) -> tensor<?x6xf32>
   return %6 : tensor<?x6xf32>
-  // CHECK: %arg0: tensor<1x6xf32>
-  // CHECK: %arg1: tensor<1x4xf32>
+  // CHECK: %arg0: tensor<1x6xf32> {tf_saved_model.index_path = ["input_2"]}
+  // CHECK: %arg1: tensor<1x4xf32> {tf_saved_model.index_path = ["input_1"]}
+  // The resource objects and attributes should be unchanged
+  // CHECK: %arg2: tensor<!tf.resource<tensor<6xf32>>> {tf_saved_model.bound_input = @"dense/bias"}, %arg3: tensor<!tf.resource<tensor<4x6xf32>>> {tf_saved_model.bound_input = @"dense/kernel"}) -> (tensor<?x6xf32> {tf_saved_model.index_path = ["tf.__operators__.add"]}) attributes {tf.entry_function = {control_outputs = "", inputs = "serving_default_input_2:0,serving_default_input_1:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
 }
 
 // This is the same model, but one of the two inputs has been given a fixed batch size in Python
@@ -33,6 +45,7 @@ func @dual_input_one_fixed_size(%arg0: tensor<?x6xf32> {tf_saved_model.index_pat
   %5 = "tf.Identity"(%4) {device = ""} : (tensor<?x6xf32>) -> tensor<?x6xf32>
   %6 = "tf.Identity"(%5) {device = ""} : (tensor<?x6xf32>) -> tensor<?x6xf32>
   return %6 : tensor<?x6xf32>
-  // CHECK: %arg0: tensor<1x6xf32>
-  // CHECK: %arg1: tensor<1x4xf32>
+  // CHECK: %arg0: tensor<1x6xf32> {tf_saved_model.index_path = ["input_2"]}
+  // CHECK: %arg1: tensor<1x4xf32> {tf_saved_model.index_path = ["input_1"]}
+  // CHECK: %arg2: tensor<!tf.resource<tensor<6xf32>>> {tf_saved_model.bound_input = @"dense/bias"}, %arg3: tensor<!tf.resource<tensor<4x6xf32>>> {tf_saved_model.bound_input = @"dense/kernel"}) -> (tensor<?x6xf32> {tf_saved_model.index_path = ["tf.__operators__.add"]}) attributes {tf.entry_function = {control_outputs = "", inputs = "serving_default_input_2:0,serving_default_input_1:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
 }
