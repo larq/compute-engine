@@ -28,6 +28,10 @@ std::unique_ptr<OperationPass<FuncOp>> CreateLCEQuantizePass();
 std::unique_ptr<OperationPass<FuncOp>> CreateLegalizeLCEPass();
 
 }  // namespace TFL
+
+// Creates an instance of the TensorFlow dialect SetBatchSize pass
+std::unique_ptr<OperationPass<FuncOp>> CreateSetBatchSizePass();
+
 }  // namespace mlir
 
 #endif  // LARQ_COMPUTE_ENGINE_MLIR_PASSES_H_

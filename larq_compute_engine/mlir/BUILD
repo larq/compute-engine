@@ -280,6 +280,20 @@ cc_library(
 )
 
 cc_library(
+    name = "set_batch_size",
+    srcs = [
+        "transforms/set_batch_size.cc",
+    ],
+    hdrs = [
+        "transforms/passes.h",
+    ],
+    deps = [
+        "@llvm-project//mlir:StandardOps",
+    ],
+    alwayslink = 1,
+)
+
+cc_library(
     name = "lce_tfl_passes",
     srcs = ["tf_tfl_passes.cc"],
     hdrs = [
@@ -292,6 +306,7 @@ cc_library(
         ":larq_compute_engine_optimize",
         ":larq_compute_engine_prepare",
         ":larq_compute_engine_quantize",
+        ":set_batch_size",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:QuantOps",

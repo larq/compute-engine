@@ -92,6 +92,10 @@ void AddTFToLCETFLConversionPasses(
   pass_manager->addPass(
       mlir::tf_saved_model::CreateOptimizeGlobalTensorsPass());
 
+  // Set the batch size of the function input to 1 and let shape inference
+  // propagate this in the next pass.
+  pass_manager->addPass(mlir::CreateSetBatchSizePass());
+
   // Add a shape inference pass to optimize away the unnecessary casts.
   pass_manager->addPass(mlir::TF::CreateTFShapeInferencePass());
 
