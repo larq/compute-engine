@@ -83,7 +83,7 @@ jobs:
         if: github.ref != 'refs/heads/main'
         shell: bash
       - name: Install pip dependencies
-        run: pip install tensorflow-cpu~=2.5.0 larq~=0.11 larq_zoo~=2.0 pytest tensorflow_datasets~=4.2 flatbuffers tqdm --no-cache-dir
+        run: pip install tensorflow-cpu~=2.6.2 larq~=0.11 larq_zoo~=2.0 pytest tensorflow_datasets~=4.2 flatbuffers tqdm --no-cache-dir
       - name: Run Interpreter test
         run: bazelisk test larq_compute_engine/tflite/tests:interpreter_test --test_output=all
       - name: Run FileCheck tests
@@ -97,7 +97,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        tf-version: [1.14.0, 1.15.5, 2.0.4, 2.1.3, 2.2.2, 2.3.2, 2.4.1, 2.5.0]
+        tf-version: [1.14.0, 1.15.5, 2.0.4, 2.1.3, 2.2.2, 2.3.2, 2.4.1, 2.5.0, 2.6.2, 2.7.0]
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
       - uses: actions/checkout@v2
@@ -131,7 +131,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./third_party/install_android.sh
       - name: Configure Bazel
-        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_NDK_HOME="/tmp/lce_android/ndk/18.1.5063045" ./configure.py
+        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_NDK_HOME="/tmp/lce_android/ndk/19.2.5345600" ./configure.py
         shell: bash
       - name: Build LCE AAR
         run: BUILDER=bazelisk ./larq_compute_engine/tflite/java/build_lce_aar.sh

@@ -14,13 +14,12 @@ http_archive(
     patch_args = ["-p1"],
     patch_tool = "patch",
     patches = [
-        "//third_party/tensorflow_patches:tf_pr_48546.patch",
         "//third_party/tensorflow_patches:disable_forced_mkl.patch",
     ],
-    sha256 = "233875ea27fc357f6b714b2a0de5f6ff124b50c1ee9b3b41f9e726e9e677b86c",
-    strip_prefix = "tensorflow-2.5.0",
+    sha256 = "e68c1d346fc3d529653530ca346b2c62f5b31bd4fcca7ffc9c65bb39ab2f6ed3",
+    strip_prefix = "tensorflow-2.6.2",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/v2.5.0.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/v2.6.2.tar.gz",
     ],
 )
 

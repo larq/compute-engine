@@ -12,6 +12,7 @@ int main(int argc, char** argv) {
   registry.insert<mlir::StandardOpsDialect, mlir::quant::QuantizationDialect,
                   mlir::TF::TensorFlowDialect, mlir::TFL::TensorFlowLiteDialect,
                   mlir::lq::LarqDialect>();
-  return failed(mlir::MlirOptMain(
-      argc, argv, "Larq Compute Engine pass driver\n", registry));
+  return failed(mlir::MlirOptMain(argc, argv,
+                                  "Larq Compute Engine pass driver\n", registry,
+                                  /*preloadDialectsInContext=*/false));
 }

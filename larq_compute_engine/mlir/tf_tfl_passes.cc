@@ -6,6 +6,7 @@
 #include "tensorflow/compiler/mlir/lite/quantization/quantization_config.h"
 #include "tensorflow/compiler/mlir/lite/quantization/quantization_passes.h"
 #include "tensorflow/compiler/mlir/lite/transforms/passes.h"
+#include "tensorflow/compiler/mlir/lite/utils/fake_quant_utils.h"
 #include "tensorflow/compiler/mlir/tensorflow/transforms/decode_constant.h"
 #include "tensorflow/compiler/mlir/tensorflow/transforms/passes.h"
 #include "tensorflow/compiler/mlir/tensorflow/transforms/tf_saved_model_passes.h"
@@ -49,6 +50,12 @@ void AddTFToLCETFLConversionPasses(
     const mlir::TFL::QuantizationSpecs& quant_specs,
     mlir::OpPassManager* pass_manager, const LCETarget target,
     const bool experimental_enable_bitpacked_activations) {
+  // This pass wraps all the tf.FakeQuant ops in a custom op so they are not
+  // folded before being converted to tfl.quantize and tfl.dequantize ops.
+  auto wrapped_ops = mlir::TFL::AllTfFakeQuantOps();
+  pass_manager->addNestedPass<mlir::FuncOp>(
+      mlir::TFL::CreateRaiseCustomOpsPass(wrapped_ops));
+
   mlir::TF::StandardPipelineOptions standard_pipeline_options;
   standard_pipeline_options.enable_inliner = false;
   standard_pipeline_options.form_clusters = false;
@@ -175,8 +182,9 @@ void AddTFToLCETFLConversionPasses(
   // so that it can target constants introduced once TensorFlow Identity ops
   // are removed during legalization.
   pass_manager->addPass(mlir::TFL::CreateOptimizeFunctionalOpsPass());
+  std::vector<std::string> empty_wrapped_ops({});
   pass_manager->addNestedPass<mlir::FuncOp>(
-      mlir::TFL::CreateRaiseCustomOpsPass());
+      mlir::TFL::CreateRaiseCustomOpsPass(empty_wrapped_ops));
   pass_manager->addPass(mlir::createSymbolDCEPass());
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCSEPass());

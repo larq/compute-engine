@@ -15,6 +15,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include <exception>
+#include <memory>
 #include <utility>
 
 #include "absl/types/span.h"
@@ -32,6 +33,7 @@ limitations under the License.
 #include "pybind11/pybind11.h"
 #include "pybind11/pytypes.h"
 #include "pybind11/stl.h"
+#include "tensorflow/cc/saved_model/loader.h"
 #include "tensorflow/compiler/mlir/lite/python/tf_tfl_flatbuffer_helpers.h"
 #include "tensorflow/compiler/mlir/lite/tf_to_tfl_flatbuffer.h"
 #include "tensorflow/compiler/mlir/lite/transforms/passes.h"
@@ -124,9 +126,11 @@ pybind11::bytes ConvertSavedModelToTFLiteFlatBuffer(
   std::unordered_set<std::string> tags(saved_model_tags.begin(),
                                        saved_model_tags.end());
 
+  auto bundle = std::make_unique<tensorflow::SavedModelBundle>();
   auto module =
       ImportSavedModel(saved_model_dir, saved_model_version, tags,
-                       custom_opdefs, exported_names_span, specs, &context);
+                       custom_opdefs, exported_names_span, specs,
+                       /*enable_variable_lifting=*/true, &context, &bundle);
 
   if (!module.ok()) {
     throw std::runtime_error("Could not import SavedModel.");
