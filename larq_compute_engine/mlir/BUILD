@@ -1,9 +1,18 @@
-load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl")
+load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl", "td_library")
 load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension", "tf_cc_binary")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],  # Apache 2.0
+)
+
+td_library(
+    name = "lce_ops_td_file",
+    srcs = [
+        "ir/lce_ops.td",
+    ],
+    includes = ["include"],
+    deps = [],
 )
 
 gentbl(
@@ -146,6 +155,7 @@ cc_library(
         "//larq_compute_engine/core:types",
         "//larq_compute_engine/core/bitpacking:bitpack",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:QuantOps",
     ],
 )
 
