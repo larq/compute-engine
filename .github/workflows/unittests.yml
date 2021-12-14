@@ -61,10 +61,10 @@ jobs:
         with:
           access_token: ${{ github.token }}
       - uses: actions/checkout@v2
-      - uses: google-github-actions/setup-gcloud@v0.3
+      - uses: google-github-actions/auth@v0
+        continue-on-error: true
         with:
-          service_account_key: ${{ secrets.gcs_bazel_cache }}
-          export_default_credentials: true
+          credentials_json: ${{ secrets.gcs_bazel_cache }}
       - uses: actions/setup-python@v2
         with:
           python-version: 3.9
