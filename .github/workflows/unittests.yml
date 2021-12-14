@@ -62,6 +62,7 @@ jobs:
           access_token: ${{ github.token }}
       - uses: actions/checkout@v2
       - uses: google-github-actions/auth@v0
+        continue-on-error: true
         with:
           credentials_json: ${{ secrets.gcs_bazel_cache }}
       - uses: actions/setup-python@v2
