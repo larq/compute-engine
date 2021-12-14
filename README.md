@@ -17,6 +17,7 @@ advantage of multi-core modern desktop and mobile CPUs.
 
 ## Key Features
 
+
 - **Effortless end-to-end integration** from training to deployment:
 
     - Tight integration of LCE with [Larq](https://larq.dev) and
