@@ -11,8 +11,10 @@ td_library(
     srcs = [
         "ir/lce_ops.td",
     ],
-    includes = ["include"],
-    deps = [],
+    deps = [
+        "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_td_files",
+        "@llvm-project//mlir:SideEffectTdFiles",
+    ],
 )
 
 gentbl(
@@ -27,8 +29,7 @@ gentbl(
     td_file = "ir/lce_ops.td",
     td_includes = ["external/org_tensorflow"],
     td_srcs = [
-        "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_td_files",
-        "@llvm-project//mlir:SideEffectTdFiles",
+        ":lce_ops_td_file"
     ],
 )
 
@@ -55,7 +56,7 @@ gentbl(
     td_file = "transforms/prepare_patterns_target_arm.td",
     td_includes = ["external/org_tensorflow"],
     td_srcs = [
-        "ir/lce_ops.td",
+        ":lce_ops_td_file",
         "transforms/op_removal_patterns.td",
         "transforms/prepare_patterns_common.td",
         "@llvm-project//mlir:StdOpsTdFiles",
@@ -73,7 +74,7 @@ gentbl(
     td_file = "transforms/prepare_patterns_common.td",
     td_includes = ["external/org_tensorflow"],
     td_srcs = [
-        "ir/lce_ops.td",
+        ":lce_ops_td_file",
         "transforms/op_removal_patterns.td",
         "@llvm-project//mlir:StdOpsTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
@@ -90,7 +91,7 @@ gentbl(
     td_file = "transforms/optimize_patterns_target_arm.td",
     td_includes = ["external/org_tensorflow"],
     td_srcs = [
-        "ir/lce_ops.td",
+        ":lce_ops_td_file",
         "transforms/optimize_patterns_common.td",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
@@ -106,7 +107,7 @@ gentbl(
     td_file = "transforms/optimize_patterns_common.td",
     td_includes = ["external/org_tensorflow"],
     td_srcs = [
-        "ir/lce_ops.td",
+        ":lce_ops_td_file",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
     ],
@@ -121,7 +122,7 @@ gentbl(
     td_file = "transforms/bitpack_weights_patterns.td",
     td_includes = ["external/org_tensorflow"],
     td_srcs = [
-        "ir/lce_ops.td",
+        ":lce_ops_td_file",
         "transforms/op_removal_patterns.td",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
@@ -138,7 +139,7 @@ gentbl(
     td_file = "transforms/quantize_patterns.td",
     td_includes = ["external/org_tensorflow"],
     td_srcs = [
-        "ir/lce_ops.td",
+        ":lce_ops_td_file",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
