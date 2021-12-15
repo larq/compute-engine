@@ -211,6 +211,8 @@ void AddTFToLCETFLConversionPasses(
       mlir::TFL::CreateInsertCallOnceOpFromSessionInitializerPass());
 
   pass_manager->addPass(mlir::TFL::CreateLegalizeLCEPass());
+  pass_manager->addPass(mlir::TFL::CreateTranslateToLCEPass());
+  pass_manager->addPass(mlir::TFL::CreateLegalizeLCEPass());
 }
 
 }  // namespace tensorflow
