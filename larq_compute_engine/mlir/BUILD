@@ -12,8 +12,8 @@ td_library(
         "ir/lce_ops.td",
     ],
     deps = [
-        "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_td_files",
         "@llvm-project//mlir:SideEffectTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_td_files",
     ],
 )
 
@@ -29,7 +29,7 @@ gentbl(
     td_file = "ir/lce_ops.td",
     td_includes = ["external/org_tensorflow"],
     td_srcs = [
-        ":lce_ops_td_file"
+        ":lce_ops_td_file",
     ],
 )
 
