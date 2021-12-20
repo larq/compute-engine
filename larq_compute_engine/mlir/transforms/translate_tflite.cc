@@ -36,7 +36,7 @@ struct TranslateToLCEPattern : public OpRewritePattern<TFL::CustomOp> {
           flexbuffers::GetRoot((uint8_t*)stringData.data(), stringData.size())
               .AsMap();
       rewriter.replaceOpWithNewOp<lq::BMaxPool2dOp>(
-          custom_op, custom_op->getResultTypes(), custom_op->getOperands()[0],
+          custom_op, custom_op->getResultTypes(), custom_op->getOperand(0),
           stringifyPadding(static_cast<Padding>(map["padding"].AsInt32())),
           map["stride_width"].AsInt32(), map["stride_height"].AsInt32(),
           map["filter_width"].AsInt32(), map["filter_height"].AsInt32());
