@@ -12,8 +12,7 @@ namespace {
 
 struct TranslateToLCE : public PassWrapper<TranslateToLCE, FunctionPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
-    registry.insert<mlir::TFL::TensorFlowLiteDialect>();
-    registry.insert<mlir::lq::LarqDialect>();
+    registry.insert<mlir::TFL::TensorFlowLiteDialect, mlir::lq::LarqDialect>();
   }
   void runOnFunction() override;
 };
