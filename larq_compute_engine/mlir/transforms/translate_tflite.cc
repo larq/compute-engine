@@ -45,9 +45,9 @@ struct TranslateToLCEPattern : public OpRewritePattern<TFL::CustomOp> {
           flexbuffers::GetRoot((uint8_t*)stringData.data(), stringData.size())
               .AsMap();
       rewriter.replaceOpWithNewOp<lq::Bconv2dOp>(
-          custom_op, custom_op->getResultTypes(), custom_op->getOperands()[0],
-          custom_op->getOperands()[1], custom_op->getOperands()[2],
-          custom_op->getOperands()[3], custom_op->getOperands()[4],
+          custom_op, custom_op->getResultTypes(), custom_op->getOperand(0),
+          custom_op->getOperand(1), custom_op->getOperand(2),
+          custom_op->getOperand(3), custom_op->getOperand(4),
           map["channels_in"].AsInt32(), map["dilation_height_factor"].AsInt32(),
           map["dilation_width_factor"].AsInt32(),
           stringifyActivationFunctionType(static_cast<ActivationFunctionType>(
