@@ -8,6 +8,8 @@
 #include "larq_compute_engine/mlir/ir/lce_dialect.h.inc"
 // clang-format on
 
+#include "larq_compute_engine/mlir/ir/lce_enum.h.inc"
+
 #define GET_OP_CLASSES
 #include "larq_compute_engine/mlir/ir/lce_ops.h.inc"
 

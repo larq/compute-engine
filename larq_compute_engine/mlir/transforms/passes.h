@@ -27,6 +27,9 @@ std::unique_ptr<OperationPass<FuncOp>> CreateLCEQuantizePass();
 // Creates an instance of LegalizeLCE pass.
 std::unique_ptr<OperationPass<FuncOp>> CreateLegalizeLCEPass();
 
+// Creates an instance of TranslateToLCE pass.
+std::unique_ptr<OperationPass<FuncOp>> CreateTranslateToLCEPass();
+
 }  // namespace TFL
 
 // Creates an instance of the TensorFlow dialect SetBatchSize pass

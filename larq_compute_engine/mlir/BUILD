@@ -20,6 +20,8 @@ td_library(
 gentbl(
     name = "lce_ops_inc_gen",
     tbl_outs = [
+        ("-gen-enum-decls", "ir/lce_enum.h.inc"),
+        ("-gen-enum-defs", "ir/lce_enum.cc.inc"),
         ("-gen-op-decls", "ir/lce_ops.h.inc"),
         ("-gen-op-defs", "ir/lce_ops.cc.inc"),
         ("-gen-dialect-decls -dialect=lq", "ir/lce_dialect.h.inc"),
@@ -164,6 +166,8 @@ cc_library(
     name = "larq_compute_engine",
     srcs = [
         "ir/lce_dialect.h.inc",
+        "ir/lce_enum.cc.inc",
+        "ir/lce_enum.h.inc",
         "ir/lce_ops.cc",
         "ir/lce_ops.cc.inc",
         "ir/lce_ops.h.inc",
@@ -275,6 +279,21 @@ cc_library(
 )
 
 cc_library(
+    name = "larq_compute_engine_translate_tflite",
+    srcs = [
+        "transforms/translate_tflite.cc",
+    ],
+    hdrs = [
+        "transforms/passes.h",
+    ],
+    deps = [
+        ":larq_compute_engine",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+    ],
+    alwayslink = 1,
+)
+
+cc_library(
     name = "larq_compute_engine_quantize",
     srcs = [
         "transforms/generated_quantize.inc",
@@ -317,6 +336,7 @@ cc_library(
         ":larq_compute_engine_optimize",
         ":larq_compute_engine_prepare",
         ":larq_compute_engine_quantize",
+        ":larq_compute_engine_translate_tflite",
         ":set_batch_size",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
