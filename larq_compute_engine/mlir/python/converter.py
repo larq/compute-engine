@@ -100,7 +100,6 @@ def convert_saved_model(
     inference_output_type: tf.DType = tf.float32,
     target: str = "arm",
     experimental_default_int8_range: Optional[Tuple[float, float]] = None,
-    experimental_enable_bitpacked_activations: bool = False,
 ) -> bytes:
     """Converts a SavedModel to TFLite flatbuffer.
 
@@ -122,10 +121,6 @@ def convert_saved_model(
         experimental_default_int8_range: Tuple of integers representing `(min, max)`
             range values for all arrays without a specified range. Intended for
             experimenting with quantization via "dummy quantization". (default None)
-        experimental_enable_bitpacked_activations: Enable an experimental
-            converter optimisation that attempts to reduce intermediate
-            activation memory usage by bitpacking the activation tensor between
-            consecutive binary convolutions where possible.
 
     # Returns
         The converted data in serialized format.
@@ -162,7 +157,6 @@ def convert_saved_model(
         saved_model_version,
         target,
         experimental_default_int8_range,
-        experimental_enable_bitpacked_activations,
     )
 
     if inference_input_type != tf.float32 or inference_output_type != tf.float32:
@@ -234,7 +228,6 @@ def convert_keras_model(
                 inference_input_type=inference_input_type,
                 inference_output_type=inference_output_type,
                 experimental_default_int8_range=experimental_default_int8_range,
-                experimental_enable_bitpacked_activations=experimental_enable_bitpacked_activations,
                 target=target,
             )
     except Exception:
