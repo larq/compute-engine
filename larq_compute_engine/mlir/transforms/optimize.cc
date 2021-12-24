@@ -10,6 +10,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 namespace mlir {
@@ -257,17 +258,17 @@ namespace target_other {
 }
 
 void OptimizeLCE::runOnFunction() {
-  OwningRewritePatternList patterns;
   auto* ctx = &getContext();
+  OwningRewritePatternList patterns(ctx);
   auto func = getFunction();
 
   if (target_ == LCETarget::ARM) {
-    target_arm::populateWithGenerated(ctx, patterns);
+    target_arm::populateWithGenerated(patterns);
   } else {
-    target_other::populateWithGenerated(ctx, patterns);
+    target_other::populateWithGenerated(patterns);
   }
 
-  applyPatternsAndFoldGreedily(func, patterns);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
 }  // namespace

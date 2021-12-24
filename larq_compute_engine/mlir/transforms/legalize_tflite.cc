@@ -1,6 +1,7 @@
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 namespace mlir {
@@ -9,6 +10,9 @@ namespace TFL {
 namespace {
 
 struct LegalizeLCE : public PassWrapper<LegalizeLCE, FunctionPass> {
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<mlir::TFL::TensorFlowLiteDialect>();
+  }
   void runOnFunction() override;
 };
 
@@ -34,7 +38,7 @@ struct LegalizeToCustomOp : public OpRewritePattern<LarqOp> {
 };
 
 void LegalizeLCE::runOnFunction() {
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(&getContext());
   auto* ctx = &getContext();
   auto func = getFunction();
 
@@ -43,7 +47,7 @@ void LegalizeLCE::runOnFunction() {
       LegalizeToCustomOp<lq::Bconv2dOp>, LegalizeToCustomOp<lq::BMaxPool2dOp>>(
       ctx);
 
-  applyPatternsAndFoldGreedily(func, patterns);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
 }  // namespace

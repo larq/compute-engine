@@ -4,6 +4,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "tensorflow/compiler/mlir/lite/transforms/dilated_conv.h"
 #include "tensorflow/compiler/mlir/lite/utils/validators.h"
@@ -15,6 +16,7 @@ namespace TFL {
 namespace {
 
 using compute_engine::core::bitpacking_bitwidth;
+using compute_engine::core::CeilDiv;
 
 // Prepare LCE operations in functions for subsequent legalization.
 struct PrepareLCE : public PassWrapper<PrepareLCE, FunctionPass> {
@@ -34,6 +36,14 @@ struct PrepareLCE : public PassWrapper<PrepareLCE, FunctionPass> {
                        clEnumValN(LCETarget::XCORE, "xcore", "XCORE target"))};
 };
 
+bool IsConstantValue(Attribute values, float expected_value) {
+  if (!values.isa<DenseElementsAttr>()) return false;
+
+  for (auto value : values.cast<DenseElementsAttr>().getValues<float>()) {
+    if (value != expected_value) return false;
+  }
+  return true;
+}
 DenseElementsAttr GetConstantVector(Attribute filter, float val) {
   auto filter_type = filter.getType().cast<ShapedType>();
   auto filter_shape = filter_type.getShape();
@@ -63,7 +73,10 @@ bool IsBinaryFilter(Attribute filter_attr) {
   if (!filter_attr.isa<DenseElementsAttr>()) return false;
   auto filter = filter_attr.cast<DenseElementsAttr>();
 
-  auto shape = filter_attr.getType().cast<ShapedType>().getShape();
+  auto filter_type = filter_attr.getType().cast<ShapedType>();
+  auto element_type = filter_type.getElementType();
+  if (!element_type.isF32()) return false;
+  auto shape = filter_type.getShape();
   if (shape.size() != 4) return false;
 
   for (std::size_t h = 0; h < shape[0]; ++h) {
@@ -103,10 +116,8 @@ bool IsSamePadding(Attribute paddings_attr, Value input, Value output,
 
   return paddings.getValue<int>({0, 0}) == 0 &&
          paddings.getValue<int>({0, 1}) == 0 &&
-         output_shape[1] ==
-             (input_shape[1] + stride_height - 1) / stride_height &&
-         output_shape[2] ==
-             (input_shape[2] + stride_width - 1) / stride_width &&
+         output_shape[1] == CeilDiv(input_shape[1], stride_height) &&
+         output_shape[2] == CeilDiv(input_shape[2], stride_width) &&
          pad_height_left == pad_height / 2 &&
          pad_height_right == (pad_height + 1) / 2 &&
          pad_width_left == pad_width / 2 &&
@@ -163,8 +174,8 @@ namespace target_other {
 }
 
 void PrepareLCE::runOnFunction() {
-  OwningRewritePatternList patterns;
   auto* ctx = &getContext();
+  OwningRewritePatternList patterns(ctx);
   auto func = getFunction();
 
   // This pattern will try to identify and optimize for dilated convolution.
@@ -173,12 +184,12 @@ void PrepareLCE::runOnFunction() {
   patterns.insert<ConvertTFDilatedConvOp<TF::Conv2DOp>>(ctx);
 
   if (target_ == LCETarget::ARM) {
-    target_arm::populateWithGenerated(ctx, patterns);
+    target_arm::populateWithGenerated(patterns);
   } else {
-    target_other::populateWithGenerated(ctx, patterns);
+    target_other::populateWithGenerated(patterns);
   }
 
-  applyPatternsAndFoldGreedily(func, patterns);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
 }  // namespace

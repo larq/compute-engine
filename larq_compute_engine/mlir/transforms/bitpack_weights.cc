@@ -1,18 +1,15 @@
-#include "larq_compute_engine/core/bitpacking/bitpack.h"
-#include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
+#include "larq_compute_engine/mlir/transforms/bitpack.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.h"
 
 namespace mlir {
 namespace TFL {
 
 namespace {
-
-using compute_engine::core::bitpacking_bitwidth;
-using compute_engine::core::TBitpacked;
-using namespace compute_engine::core::bitpacking;
 
 struct BitpackWeightsLCE : public PassWrapper<BitpackWeightsLCE, FunctionPass> {
   void runOnFunction() override;
@@ -25,43 +22,14 @@ bool IsConv2DFilter(Attribute filter) {
          filter_type.getShape().size() == 4;
 }
 
-DenseElementsAttr Bitpack(PatternRewriter& builder, Attribute x) {
-  const auto& dense_elements_iter =
-      x.cast<DenseElementsAttr>().getValues<float>();
-
-  auto shape = x.getType().cast<ShapedType>().getShape();
-  int num_rows = shape[0] * shape[1] * shape[2];
-  int unpacked_channels = shape[3];
-  int packed_channels = GetBitpackedSize(unpacked_channels);
-
-  std::vector<TBitpacked> new_values(num_rows * packed_channels);
-  std::vector<float> old_values(num_rows * unpacked_channels);
-
-  int i = 0;
-  for (float x : dense_elements_iter) {
-    old_values[i++] = x;
-  }
-  assert(i == num_rows * unpacked_channels);
-
-  bitpack_matrix(old_values.data(), num_rows, unpacked_channels,
-                 new_values.data());
-
-  RankedTensorType out_tensor_type =
-      RankedTensorType::get({shape[0], shape[1], shape[2], packed_channels},
-                            builder.getIntegerType(bitpacking_bitwidth));
-
-  return DenseElementsAttr::get<TBitpacked>(out_tensor_type, new_values);
-}
-
 #include "larq_compute_engine/mlir/transforms/generated_bitpack_weights.inc"
 
 void BitpackWeightsLCE::runOnFunction() {
-  OwningRewritePatternList patterns;
-  auto* ctx = &getContext();
+  OwningRewritePatternList patterns(&getContext());
   auto func = getFunction();
 
-  TFL::populateWithGenerated(ctx, patterns);
-  applyPatternsAndFoldGreedily(func, patterns);
+  TFL::populateWithGenerated(patterns);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
 }  // namespace

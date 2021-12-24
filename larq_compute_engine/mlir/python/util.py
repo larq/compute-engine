@@ -54,6 +54,15 @@ def _convert_model_from_object_to_bytearray(model_object):
     return bytes(builder.Output())
 
 
+def _update_signature_def_tensors(tensor_maps, map_old_to_new_tensors):
+    """Update the tensors in the SignatureDef's TensorMaps."""
+    for i in range(len(tensor_maps)):
+        if tensor_maps[i].tensorIndex in map_old_to_new_tensors:
+            tensor_maps[i].tensorIndex = map_old_to_new_tensors[
+                tensor_maps[i].tensorIndex
+            ]
+
+
 def _remove_tensors_from_model(model, remove_tensors_idxs):
     """Remove tensors from model."""
     if not remove_tensors_idxs:
@@ -90,6 +99,10 @@ def _remove_tensors_from_model(model, remove_tensors_idxs):
         for op in operators:
             update_tensors(op.inputs)
             update_tensors(op.outputs)
+        if model.signatureDefs:
+            signature_def = model.signatureDefs[0]
+            _update_signature_def_tensors(signature_def.inputs, d_old_to_new_tensors)
+            _update_signature_def_tensors(signature_def.outputs, d_old_to_new_tensors)
         # Delete the tensors
         for idx in sorted(remove_tensors_idxs, reverse=True):
             tensors.pop(idx)
@@ -186,6 +199,11 @@ def modify_integer_quantized_model_io_type(
         # Remove the inputs and the quant operator
         for op in input_quant_ops:
             subgraph.inputs[subgraph.inputs == op.inputs[0]] = op.outputs[0]
+            if model.signatureDefs:
+                signature_def = model.signatureDefs[0]
+                for i in range(len(signature_def.inputs)):
+                    if signature_def.inputs[i].tensorIndex == op.inputs[0]:
+                        signature_def.inputs[i].tensorIndex = op.outputs[0]
             remove_tensors_idxs.add(op.inputs[0])
             operators.remove(op)
 
@@ -194,8 +212,156 @@ def modify_integer_quantized_model_io_type(
         # Remove the outputs and the dequant operator
         for op in output_dequant_ops:
             subgraph.outputs[subgraph.outputs == op.outputs[0]] = op.inputs[0]
+            if model.signatureDefs:
+                signature_def = model.signatureDefs[0]
+                for i in range(len(signature_def.outputs)):
+                    if signature_def.outputs[i].tensorIndex == op.outputs[0]:
+                        signature_def.outputs[i].tensorIndex = op.inputs[0]
             remove_tensors_idxs.add(op.outputs[0])
             operators.remove(op)
+
+    # Remove tensors marked for deletion.
+    _remove_tensors_from_model(model, remove_tensors_idxs)
+
+    # Convert the model to a bytearray
+    return _convert_model_from_object_to_bytearray(model)
+
+
+def strip_lcedequantize_ops(model):
+    """Strip the LceDequantize ops to directly output bitpacked tf.int32 tensors."""
+    # Convert the model to an object
+    model = _convert_model_from_bytearray_to_object(model)
+
+    if len(model.subgraphs) > 1:
+        raise ValueError(
+            "Model must only have one subgraph. Instead, it has "
+            "{} subgraphs.".format(len(model.subgraphs))
+        )
+
+    # Ensure model has at least one LceDequantize and/or Dequantize operator
+    lce_dequant_opcode_idx, dequant_opcode_idx = None, None
+    for idx, opcode in enumerate(model.operatorCodes):
+        if opcode.customCode == b"LceDequantize":
+            lce_dequant_opcode_idx = idx
+        elif opcode.builtinCode == tflite_schema.BuiltinOperator.DEQUANTIZE:
+            dequant_opcode_idx = idx
+        if lce_dequant_opcode_idx is not None and dequant_opcode_idx is not None:
+            break
+    if lce_dequant_opcode_idx is None and dequant_opcode_idx is None:
+        raise ValueError(
+            "Model does not contain any LceDequantize or Dequantize operators."
+        )
+
+    # Ensure model outputs are dequantized and remove Dequantize ops first if any
+    if dequant_opcode_idx is not None:
+        subgraph = model.subgraphs[0]
+        tensors = subgraph.tensors
+        operators = subgraph.operators
+        remove_tensors_idxs = set()
+
+        output_dequant_ops = []
+        for op in operators:
+            # Find output Dequantize operator
+            if (
+                op.opcodeIndex == dequant_opcode_idx
+                and op.outputs[0] in subgraph.outputs
+            ):
+                pos, float_tensor, int_tensor = (
+                    "output",
+                    tensors[op.outputs[0]],
+                    tensors[op.inputs[0]],
+                )
+                output_dequant_ops.append(op)
+            # Otherwise, ignore
+            else:
+                continue
+            # If found, validate the input/output tensor type
+            if float_tensor.type != tflite_schema.TensorType.FLOAT32:
+                raise ValueError(
+                    "Model {} type must be tf.float32. Expected type for tensor with "
+                    "name '{}' is tf.float32, instead type is tf.{}".format(
+                        pos,
+                        float_tensor.name,
+                        _convert_tflite_enum_type_to_tf_type(float_tensor.type).name,
+                    )
+                )
+            if int_tensor.type != tflite_schema.TensorType.INT8:
+                raise ValueError(
+                    "Model is not integer quantized. Expected type for tensor with "
+                    "name '{}' is tf.int8, instead type is tf.{}".format(
+                        int_tensor.name,
+                        _convert_tflite_enum_type_to_tf_type(int_tensor.type).name,
+                    )
+                )
+
+        # Remove the Dequantize operators
+        for op in output_dequant_ops:
+            subgraph.outputs[subgraph.outputs == op.outputs[0]] = op.inputs[0]
+            if model.signatureDefs:
+                signature_def = model.signatureDefs[0]
+                for i in range(len(signature_def.outputs)):
+                    if signature_def.outputs[i].tensorIndex == op.outputs[0]:
+                        signature_def.outputs[i].tensorIndex = op.inputs[0]
+            remove_tensors_idxs.add(op.outputs[0])
+            operators.remove(op)
+
+        # Remove tensors marked for deletion.
+        _remove_tensors_from_model(model, remove_tensors_idxs)
+
+    subgraph = model.subgraphs[0]
+    tensors = subgraph.tensors
+    operators = subgraph.operators
+    remove_tensors_idxs = set()
+
+    # Ensure model outputs are Lce dequantized and remove LceDequantize ops
+    lce_output_dequant_ops = []
+    for op in operators:
+        # Find output LceDequantize operator
+        if (
+            op.opcodeIndex == lce_dequant_opcode_idx
+            and op.outputs[0] in subgraph.outputs
+        ):
+            pos, output_tensor, input_tensor = (
+                "output",
+                tensors[op.outputs[0]],
+                tensors[op.inputs[0]],
+            )
+            lce_output_dequant_ops.append(op)
+        # Otherwise, ignore
+        else:
+            continue
+        # If found, validate the input/output tensor type
+        if (
+            output_tensor.type != tflite_schema.TensorType.FLOAT32
+            and output_tensor.type != tflite_schema.TensorType.INT8
+        ):
+            raise ValueError(
+                "Model {} type must be tf.float32/tf.int8. Expected type for tensor with "
+                "name '{}' is tf.float32/tf.int8, instead type is tf.{}".format(
+                    pos,
+                    output_tensor.name,
+                    _convert_tflite_enum_type_to_tf_type(output_tensor.type).name,
+                )
+            )
+        if input_tensor.type != tflite_schema.TensorType.INT32:
+            raise ValueError(
+                "Expected type for tensor with "
+                "name '{}' is tf.int32, instead type is tf.{}".format(
+                    input_tensor.name,
+                    _convert_tflite_enum_type_to_tf_type(input_tensor.type).name,
+                )
+            )
+
+    # Remove the LceDequantize operators
+    for op in lce_output_dequant_ops:
+        subgraph.outputs[subgraph.outputs == op.outputs[0]] = op.inputs[0]
+        if model.signatureDefs:
+            signature_def = model.signatureDefs[0]
+            for i in range(len(signature_def.outputs)):
+                if signature_def.outputs[i].tensorIndex == op.outputs[0]:
+                    signature_def.outputs[i].tensorIndex = op.inputs[0]
+        remove_tensors_idxs.add(op.outputs[0])
+        operators.remove(op)
 
     # Remove tensors marked for deletion.
     _remove_tensors_from_model(model, remove_tensors_idxs)

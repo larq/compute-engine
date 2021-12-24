@@ -1,6 +1,50 @@
 // RUN: lce-tf-opt %s -tfl-optimize-lce=target=arm -verify-diagnostics | FileCheck %s --check-prefixes CHECK,CHECK-ARM
 // RUN: lce-tf-opt %s -tfl-optimize-lce=target=xcore -verify-diagnostics | FileCheck %s --check-prefixes CHECK,CHECK-XCORE
 
+// CHECK-LABEL: @optimize_quantize_greater_equal_zero
+func @optimize_quantize_greater_equal_zero(%arg0: tensor<48x48x64xf32>) -> tensor<48x48x2xi32> {
+  %cst = constant dense<0.0> : tensor<f32>
+  %0 = "tfl.greater_equal"(%arg0, %cst) : (tensor<48x48x64xf32>, tensor<f32>) -> tensor<48x48x64xi1>
+  %1 = "lq.Quantize"(%0) : (tensor<48x48x64xi1>) -> tensor<48x48x2xi32>
+  return %1 : tensor<48x48x2xi32>
+
+  // CHECK-NEXT: %0 = "lq.Quantize"(%arg0) : (tensor<48x48x64xf32>) -> tensor<48x48x2xi32>
+  // CHECK-NEXT: return %0
+}
+
+// CHECK-LABEL: @optimize_quantize_greater_equal_non_zero
+func @optimize_quantize_greater_equal_non_zero(%arg0: tensor<48x48x64xf32>, %arg1: tensor<48x48x64xf32>) -> tensor<48x48x2xi32> {
+  %0 = "tfl.greater_equal"(%arg0, %arg1) : (tensor<48x48x64xf32>, tensor<48x48x64xf32>) -> tensor<48x48x64xi1>
+  %1 = "lq.Quantize"(%0) : (tensor<48x48x64xi1>) -> tensor<48x48x2xi32>
+  return %1 : tensor<48x48x2xi32>
+
+  // CHECK-NEXT: %0 = tfl.sub %arg0, %arg1 {fused_activation_function = "NONE"} : tensor<48x48x64xf32>
+  // CHECK-NEXT: %1 = "lq.Quantize"(%0) : (tensor<48x48x64xf32>) -> tensor<48x48x2xi32>
+  // CHECK-NEXT: return %1
+}
+
+// CHECK-LABEL: @optimize_quantize_less_equal_zero
+func @optimize_quantize_less_equal_zero(%arg0: tensor<48x48x64xf32>) -> tensor<48x48x2xi32> {
+  %cst = constant dense<0.0> : tensor<64xf32>
+  %0 = "tfl.less_equal"(%cst, %arg0) : (tensor<64xf32>, tensor<48x48x64xf32>) -> tensor<48x48x64xi1>
+  %1 = "lq.Quantize"(%0) : (tensor<48x48x64xi1>) -> tensor<48x48x2xi32>
+  return %1 : tensor<48x48x2xi32>
+
+  // CHECK-NEXT: %0 = "lq.Quantize"(%arg0) : (tensor<48x48x64xf32>) -> tensor<48x48x2xi32>
+  // CHECK-NEXT: return %0
+}
+
+// CHECK-LABEL: @optimize_quantize_less_equal_non_zero
+func @optimize_quantize_less_equal_non_zero(%arg0: tensor<48x48x64xf32>, %arg1: tensor<48x48x64xf32>) -> tensor<48x48x2xi32> {
+  %0 = "tfl.less_equal"(%arg0, %arg1) : (tensor<48x48x64xf32>, tensor<48x48x64xf32>) -> tensor<48x48x64xi1>
+  %1 = "lq.Quantize"(%0) : (tensor<48x48x64xi1>) -> tensor<48x48x2xi32>
+  return %1 : tensor<48x48x2xi32>
+
+  // CHECK-NEXT: %0 = tfl.sub %arg1, %arg0 {fused_activation_function = "NONE"} : tensor<48x48x64xf32>
+  // CHECK-NEXT: %1 = "lq.Quantize"(%0) : (tensor<48x48x64xf32>) -> tensor<48x48x2xi32>
+  // CHECK-NEXT: return %1
+}
+
 // CHECK-LABEL: @fuse_add_into_bconv2d
 func @fuse_add_into_bconv2d(%arg0: tensor<256x32x32x1xi32>, %arg1: tensor<16x3x3x3xf32>, %arg2: tensor<16xf32>, %arg3: none) -> tensor<256x30x30x16xf32> {
   %cst = constant dense<1.5> : tensor<16xf32>

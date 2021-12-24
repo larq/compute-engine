@@ -3,12 +3,13 @@ name: Release Notes
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   update_draft_release:
+    if: github.repository == 'larq/compute-engine'
     runs-on: ubuntu-latest
     steps:
-      - uses: toolmantim/release-drafter@v5.13.0
+      - uses: toolmantim/release-drafter@v5.15.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

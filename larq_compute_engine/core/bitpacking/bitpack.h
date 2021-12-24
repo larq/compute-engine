@@ -22,7 +22,7 @@ namespace bitpacking {
 // Utility functions
 
 constexpr int GetBitpackedSize(int unpacked_elements) {
-  return (unpacked_elements + bitpacking_bitwidth - 1) / bitpacking_bitwidth;
+  return CeilDiv(unpacked_elements, bitpacking_bitwidth);
 }
 
 constexpr int GetBitpackedMatrixSize(int rows, int cols) {

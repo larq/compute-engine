@@ -27,3 +27,13 @@ func @quantize_bitpacked_bconv2d(%arg0: tensor<1x224x224x1xi32>, %arg1: tensor<3
 // CHECK-NEXT: %0 = "lq.Bconv2d"(%arg0, %arg1, %arg2, %arg3, %arg4)
 // CHECK-NEXT: return %0 : tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>
 }
+
+// CHECK-LABEL: quantize_lce_dequantize
+func @quantize_lce_dequantize(%arg0: tensor<1x112x112x1xi32>) -> tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>> {
+  %0 = "lq.Dequantize"(%arg0) : (tensor<1x112x112x1xi32>) -> tensor<1x112x112x32xf32>
+  %1 = "tfl.quantize"(%0) {qtype = tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>} : (tensor<1x112x112x32xf32>) -> tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>
+  return %1 : tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>
+
+// CHECK-NEXT: %0 = "lq.Dequantize"(%arg0) : (tensor<1x112x112x1xi32>) -> tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>
+// CHECK-NEXT: return %0 : tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>
+}

@@ -1,8 +1,71 @@
 // RUN: lce-tf-opt %s -tfl-prepare-lce=target=arm -verify-diagnostics | FileCheck %s --check-prefixes CHECK,CHECK-ARM
 // RUN: lce-tf-opt %s -tfl-prepare-lce=target=xcore -verify-diagnostics | FileCheck %s --check-prefixes CHECK,CHECK-XCORE
 
-// CHECK-LABEL: @fuse_bsign
-func @fuse_bsign(%arg0: tensor<8x16xf32>) -> tensor<8x16xf32> {
+// CHECK-LABEL: @fuse_bsign_tf_where
+func @fuse_bsign_tf_where(%arg0: tensor<8x16xi1>) -> tensor<8x16xf32> {
+  %cst_l = constant dense<1.0> : tensor<8x16xf32>
+  %cst_r = constant dense<-1.0> : tensor<8x16xf32>
+  %0 = "tf.SelectV2"(%arg0, %cst_l, %cst_r) : (tensor<8x16xi1>, tensor<8x16xf32>, tensor<8x16xf32>) -> tensor<8x16xf32>
+  return %0 : tensor<8x16xf32>
+
+  // CHECK-NEXT: %0 = "lq.Quantize"(%arg0) : (tensor<8x16xi1>) -> tensor<8x1xi32>
+  // CHECK-NEXT: %1 = "lq.Dequantize"(%0) : (tensor<8x1xi32>) -> tensor<8x16xf32>
+  // CHECK-NEXT: return %1
+}
+
+// CHECK-LABEL: @fuse_bsign_tf_where_inverted
+func @fuse_bsign_tf_where_inverted(%arg0: tensor<8x16xi1>) -> tensor<8x16xf32> {
+  %cst_l = constant dense<-1.0> : tensor<8x16xf32>
+  %cst_r = constant dense<1.0> : tensor<8x16xf32>
+  %0 = "tf.SelectV2"(%arg0, %cst_l, %cst_r) : (tensor<8x16xi1>, tensor<8x16xf32>, tensor<8x16xf32>) -> tensor<8x16xf32>
+  return %0 : tensor<8x16xf32>
+
+  // CHECK-NEXT: %0 = "tf.LogicalNot"(%arg0) : (tensor<8x16xi1>) -> tensor<8x16xi1>
+  // CHECK-NEXT: %1 = "lq.Quantize"(%0) : (tensor<8x16xi1>) -> tensor<8x1xi32>
+  // CHECK-NEXT: %2 = "lq.Dequantize"(%1) : (tensor<8x1xi32>) -> tensor<8x16xf32>
+  // CHECK-NEXT: return %2
+}
+
+// CHECK-LABEL: @fuse_bsign_tf_where_broadcast_cond
+func @fuse_bsign_tf_where_broadcast_cond(%arg0: tensor<8x1xi1>) -> tensor<8x16xf32> {
+  %cst_l = constant dense<1.0> : tensor<8x16xf32>
+  %cst_r = constant dense<-1.0> : tensor<8x16xf32>
+  %0 = "tf.SelectV2"(%arg0, %cst_l, %cst_r) : (tensor<8x1xi1>, tensor<8x16xf32>, tensor<8x16xf32>) -> tensor<8x16xf32>
+  return %0 : tensor<8x16xf32>
+
+  // CHECK-NEXT: %cst = constant dense<[8, 16]> : tensor<2xi64>
+  // CHECK-NEXT: %0 = "tf.BroadcastTo"(%arg0, %cst) : (tensor<8x1xi1>, tensor<2xi64>) -> tensor<8x16xi1>
+  // CHECK-NEXT: %1 = "lq.Quantize"(%0) : (tensor<8x16xi1>) -> tensor<8x1xi32>
+  // CHECK-NEXT: %2 = "lq.Dequantize"(%1) : (tensor<8x1xi32>) -> tensor<8x16xf32>
+  // CHECK-NEXT: return %2
+}
+
+// CHECK-LABEL: @fuse_bsign_tf_where_broadcast_lhs_rhs
+func @fuse_bsign_tf_where_broadcast_lhs_rhs(%arg0: tensor<8x16xi1>) -> tensor<8x16xf32> {
+  %cst_l = constant dense<1.0> : tensor<f32>
+  %cst_r = constant dense<-1.0> : tensor<8x1xf32>
+  %0 = "tf.SelectV2"(%arg0, %cst_l, %cst_r) : (tensor<8x16xi1>, tensor<f32>, tensor<8x1xf32>) -> tensor<8x16xf32>
+  return %0 : tensor<8x16xf32>
+
+  // CHECK-NEXT: %0 = "lq.Quantize"(%arg0) : (tensor<8x16xi1>) -> tensor<8x1xi32>
+  // CHECK-NEXT: %1 = "lq.Dequantize"(%0) : (tensor<8x1xi32>) -> tensor<8x16xf32>
+  // CHECK-NEXT: return %1
+}
+
+// CHECK-LABEL: @fuse_bsign_tf_where_select_v1_op
+func @fuse_bsign_tf_where_select_v1_op(%arg0: tensor<8x16xi1>) -> tensor<8x16xf32> {
+  %cst_l = constant dense<1.0> : tensor<8x16xf32>
+  %cst_r = constant dense<-1.0> : tensor<8x16xf32>
+  %0 = "tf.Select"(%arg0, %cst_l, %cst_r) : (tensor<8x16xi1>, tensor<8x16xf32>, tensor<8x16xf32>) -> tensor<8x16xf32>
+  return %0 : tensor<8x16xf32>
+
+  // CHECK-NEXT: %0 = "lq.Quantize"(%arg0) : (tensor<8x16xi1>) -> tensor<8x1xi32>
+  // CHECK-NEXT: %1 = "lq.Dequantize"(%0) : (tensor<8x1xi32>) -> tensor<8x16xf32>
+  // CHECK-NEXT: return %1
+}
+
+// CHECK-LABEL: @fuse_bsign_legacy_tf_sign
+func @fuse_bsign_legacy_tf_sign(%arg0: tensor<8x16xf32>) -> tensor<8x16xf32> {
   %0 = "tf.Sign"(%arg0) : (tensor<8x16xf32>) -> tensor<8x16xf32>
   %cst = constant dense<0.1> : tensor<f32>
   %2 = "tf.AddV2"(%0, %cst) : (tensor<8x16xf32>, tensor<f32>) -> tensor<8x16xf32>
@@ -106,8 +169,11 @@ func @fuse_dilated_bconv(%arg0: tensor<1x128x128x1xi32>) -> tensor<1x128x128x8xf
   %3 = "tf.BatchToSpaceND"(%2, %cst, %cst_0) : (tensor<4x64x64x8xf32>, tensor<2xi32>, tensor<2x2xi32>) -> tensor<1x128x128x8xf32>
   return %3 : tensor<1x128x128x8xf32>
 
+  // CHECK: %[[post_activation_multiplier:.*]] = constant dense<1.000000e+00> : tensor<8xf32>
+  // CHECK: %[[post_activation_bias:.*]] = constant dense<0.000000e+00> : tensor<8xf32>
+  // CHECK: %[[output_threshold:.*]] = constant unit
   // CHECK: %[[transpose:.*]] = "tf.Transpose"
-  // CHECK-NEXT: %[[conv:.*]] = "lq.Bconv2d"(%arg0, %[[transpose]], %cst_0, %cst_1, %cst_2) {channels_in = 3 : i32, dilation_height_factor = 2 : i32, dilation_width_factor = 2 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<1x128x128x1xi32>, tensor<8x5x5x3xf32>, tensor<8xf32>, tensor<8xf32>, none) -> tensor<1x128x128x8xf32>
+  // CHECK-NEXT: %[[conv:.*]] = "lq.Bconv2d"(%arg0, %[[transpose]], %[[post_activation_multiplier]], %[[post_activation_bias]], %[[output_threshold:.*]]) {channels_in = 3 : i32, dilation_height_factor = 2 : i32, dilation_width_factor = 2 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<1x128x128x1xi32>, tensor<8x5x5x3xf32>, tensor<8xf32>, tensor<8xf32>, none) -> tensor<1x128x128x8xf32>
   // CHECK-NEXT: return %[[conv]] : tensor<1x128x128x8xf32>
 }
 
@@ -185,14 +251,14 @@ func @do_not_fuse_bconv2d_unsupported_constant_padding(%arg0: tensor<256x32x32x1
 }
 
 // CHECK-LABEL: @do_not_fuse_bconv2d_padding_wrong_size
-func @do_not_fuse_bconv2d_padding_wrong_size(%arg0: tensor<256x32x32x1xi32>) -> tensor<256x36x36x16xf32> {
+func @do_not_fuse_bconv2d_padding_wrong_size(%arg0: tensor<256x32x32x1xi32>) -> tensor<256x34x34x16xf32> {
   %cst = constant dense<1.0> : tensor<3x3x3x16xf32>
   %cst0 = constant dense<1.0> : tensor<f32>
   %cst1 = constant dense<[[0, 0], [2, 2], [2, 2], [0, 0]]> : tensor<4x2xi32>
   %0 = "lq.Dequantize"(%arg0) : (tensor<256x32x32x1xi32>) -> tensor<256x32x32x3xf32>
   %1 = "tf.PadV2"(%0, %cst1, %cst0) : (tensor<256x32x32x3xf32>, tensor<4x2xi32>, tensor<f32>) -> tensor<256x36x36x3xf32>
-  %2 = "tf.Conv2D"(%1, %cst) {padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x36x36x3xf32>, tensor<3x3x3x16xf32>) -> tensor<256x36x36x16xf32>
-  return %2 : tensor<256x36x36x16xf32>
+  %2 = "tf.Conv2D"(%1, %cst) {padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<256x36x36x3xf32>, tensor<3x3x3x16xf32>) -> tensor<256x34x34x16xf32>
+  return %2 : tensor<256x34x34x16xf32>
 
   // CHECK: %0 = "lq.Dequantize"
   // CHECK-NEXT: %1 = "tf.PadV2"

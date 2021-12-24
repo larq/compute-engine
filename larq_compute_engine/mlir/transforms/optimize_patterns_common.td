@@ -11,8 +11,32 @@ def HasOneUse : Constraint<CPred<"$0.hasOneUse()">>;
 
 class ConstantValue<string val> : AttrConstraint<CPred<"IsConstantValue($_self, " # val # ")">>;
 
+def : Pat<(LQ_QuantizeOp
+              (TFL_GreaterEqualOp:$ge_op
+                  $input,
+                  (ConstantOp ConstantValue<"0.0f">))),
+          (LQ_QuantizeOp $input),
+          [(HasOneUse $ge_op)],
+          (addBenefit 150)>;
+
+def : Pat<(LQ_QuantizeOp
+              (TFL_GreaterEqualOp:$ge_op
+                  $input,
+                  $threshold)),
+          (LQ_QuantizeOp
+              (TFL_SubOp $input, $threshold, TFL_AF_None)),
+          [(HasOneUse $ge_op)],
+          (addBenefit 100)>;
+
+def : Pat<(LQ_QuantizeOp
+              (TFL_LessEqualOp:$ge_op $lhs, $rhs)),
+          (LQ_QuantizeOp
+              (TFL_GreaterEqualOp $rhs, $lhs)),
+          [(HasOneUse $ge_op)],
+          (addBenefit 100)>;
+
 // TODO: Check shapes before fusing
-multiclass FuseAddOrSubWithBConv2D<dag binaryOp> {
+multiclass FuseAddOrSubWithBConv2D<Op binaryOp> {
   def : Pat<(binaryOp
                 (LQ_Bconv2dOp:$output
                     $input,
@@ -50,7 +74,7 @@ foreach binaryOp = [TFL_AddOp, TFL_SubOp] in
   defm : FuseAddOrSubWithBConv2D<binaryOp>;
 
 // TODO: Check shapes before fusing
-multiclass FuseMulOrDivWithBConv2D<dag binaryOp> {
+multiclass FuseMulOrDivWithBConv2D<Op binaryOp> {
   def : Pat<(binaryOp
                 (LQ_Bconv2dOp:$conv_output
                     $input,
@@ -90,7 +114,7 @@ foreach binaryOp = [TFL_DivOp, TFL_MulOp] in
 
 
 // Fuse an activation function into the BConv2D.
-multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
+multiclass FuseActFnIntoConvOpPat<Op ActFnOp, Attr ActFnAttr> {
   def : Pat<(ActFnOp
                 (LQ_Bconv2dOp:$conv_output
                     $input,
@@ -155,7 +179,7 @@ multiclass FuseActFnIntoConvOpPat<dag ActFnOp, dag ActFnAttr> {
 foreach actFnPair = [[TFL_ReluOp, TFL_AF_Relu],
                      [TFL_Relu1Op, TFL_AF_Relu1],
                      [TFL_Relu6Op, TFL_AF_Relu6]] in
-  defm : FuseActFnIntoConvOpPat<actFnPair[0], actFnPair[1]>;
+  defm : FuseActFnIntoConvOpPat<!cast<Op>(actFnPair[0]), !cast<Attr>(actFnPair[1])>;
 
 def CreateNoneAttrValue : NativeCodeCall<"$_builder.getUnitAttr()">;
 def GetSignsOfVectorAndBroadcast4D : NativeCodeCall<"GetSignsOfVectorAndBroadcast4D($0)">;

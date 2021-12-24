@@ -30,12 +30,21 @@ pybind_extension(
 )
 
 py_library(
+    name = "interpreter_base",
+    srcs = [
+        "__init__.py",
+        "interpreter_base.py",
+    ],
+)
+
+py_library(
     name = "interpreter",
     srcs = [
         "__init__.py",
         "interpreter.py",
     ],
     deps = [
+        ":interpreter_base",
         ":interpreter_wrapper_lite",
     ],
 )

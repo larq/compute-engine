@@ -464,10 +464,10 @@ void runTest(const TestParam& param) {
   const int pad_values = (padding == Padding_ONE ? 1 : 0);
 
   if (groups > 1 &&
-      (registration != compute_engine::tflite::Register_BCONV_2D_REF ||
+      (registration == compute_engine::tflite::Register_BCONV_2D_OPT_BGEMM ||
        input_depth % groups != 0 || filter_count % groups != 0 ||
        (input_depth / groups) % bitpacking_bitwidth != 0)) {
-    // Grouped convolutions are only supported in the reference kernel, and
+    // Grouped convolutions aren't supported by the optimised BGEMM kernel, and
     // require compatible input and filter dimensions, with the additional
     // requirement that the per-group input depth must be a multiple of the
     // bitpacking bitwidth.

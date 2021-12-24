@@ -1,5 +1,8 @@
+import functools
 import os
 import sys
+import tempfile
+from packaging import version
 
 import larq as lq
 import larq_zoo as lqz
@@ -8,11 +11,20 @@ import pytest
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
-from larq_compute_engine.mlir.python.converter import convert_keras_model
+from larq_compute_engine.mlir.python.converter import (
+    convert_keras_model,
+    convert_saved_model,
+)
 from larq_compute_engine.tflite.python.interpreter import Interpreter
 
 
-def toy_model(**kwargs):
+def convert_keras_model_as_saved_model(model, **kwargs):
+    with tempfile.TemporaryDirectory() as saved_model_dir:
+        model.save(saved_model_dir, save_format="tf")
+        return convert_saved_model(saved_model_dir, **kwargs)
+
+
+def toy_model(binary_quantizer="ste_sign", **kwargs):
     def block(padding, pad_values, activation):
         def dummy(x):
             shortcut = x
@@ -21,8 +33,8 @@ def toy_model(**kwargs):
                 kernel_size=3,
                 padding=padding,
                 pad_values=pad_values,
-                input_quantizer="ste_sign",
-                kernel_quantizer="ste_sign",
+                input_quantizer=binary_quantizer,
+                kernel_quantizer=binary_quantizer,
                 use_bias=False,
                 activation=activation,
             )(x)
@@ -48,7 +60,7 @@ def toy_model(**kwargs):
     return tf.keras.Model(inputs=img_input, outputs=out)
 
 
-def toy_model_sequential(**kwargs):
+def toy_model_sequential(binary_quantizer="ste_sign", **kwargs):
     return tf.keras.models.Sequential(
         [
             tf.keras.layers.Input((224, 224, 3)),
@@ -59,8 +71,8 @@ def toy_model_sequential(**kwargs):
             lq.layers.QuantConv2D(
                 32,
                 (3, 3),
-                input_quantizer="ste_sign",
-                kernel_quantizer="ste_sign",
+                input_quantizer=binary_quantizer,
+                kernel_quantizer=binary_quantizer,
                 padding="same",
                 pad_values=1.0,
                 use_bias=False,
@@ -74,8 +86,8 @@ def toy_model_sequential(**kwargs):
             lq.layers.QuantConv2D(
                 32,
                 (3, 3),
-                input_quantizer="ste_sign",
-                kernel_quantizer="ste_sign",
+                input_quantizer=binary_quantizer,
+                kernel_quantizer=binary_quantizer,
                 strides=(2, 2),
                 padding="same",
                 pad_values=1.0,
@@ -93,8 +105,8 @@ def toy_model_sequential(**kwargs):
             lq.layers.QuantConv2D(
                 32,
                 (3, 3),
-                input_quantizer="ste_sign",
-                kernel_quantizer="ste_sign",
+                input_quantizer=binary_quantizer,
+                kernel_quantizer=binary_quantizer,
                 padding="same",
                 pad_values=1.0,
                 use_bias=False,
@@ -154,11 +166,27 @@ def dataset():
     )
 
 
+def tf_where_binary_quantizer(x):
+    return tf.where(x >= 0, tf.ones_like(x), -tf.ones_like(x))
+
+
+@pytest.mark.parametrize(
+    "conversion_function", [convert_keras_model, convert_keras_model_as_saved_model]
+)
 @pytest.mark.parametrize(
     "model_cls",
-    [toy_model, toy_model_sequential, toy_model_int8, lqz.sota.QuickNetSmall],
+    [
+        toy_model,
+        functools.partial(toy_model, binary_quantizer=tf_where_binary_quantizer),
+        toy_model_sequential,
+        functools.partial(
+            toy_model_sequential, binary_quantizer=tf_where_binary_quantizer
+        ),
+        toy_model_int8,
+        lqz.sota.QuickNetSmall,
+    ],
 )
-def test_simple_model(dataset, model_cls):
+def test_simple_model(dataset, conversion_function, model_cls):
     model = model_cls(weights="imagenet")
 
     # For the untrained models, do a very small amount of training so that the
@@ -171,7 +199,9 @@ def test_simple_model(dataset, model_cls):
         )
         model.fit(dataset, epochs=1)
 
-    model_lce = convert_keras_model(model)
+    model_lce = conversion_function(
+        model, experimental_enable_bitpacked_activations=True
+    )
 
     if model_cls == lqz.sota.QuickNetSmall:
         # Since QuickNetSmall is a deep model we are more tolerant of error.
@@ -198,11 +228,21 @@ def test_simple_model(dataset, model_cls):
     assert_model_output(model_lce, inputs, outputs, rtol, atol)
 
 
+@pytest.mark.parametrize(
+    "conversion_function", [convert_keras_model, convert_keras_model_as_saved_model]
+)
 @pytest.mark.parametrize("model_cls", [toy_model, toy_model_int8])
 @pytest.mark.parametrize("inference_input_type", [tf.int8, tf.float32])
 @pytest.mark.parametrize("inference_output_type", [tf.int8, tf.float32])
-def test_int8_input_output(model_cls, inference_input_type, inference_output_type):
-    model_lce = convert_keras_model(
+def test_int8_input_output(
+    conversion_function, model_cls, inference_input_type, inference_output_type
+):
+    if conversion_function == convert_keras_model_as_saved_model and (
+        model_cls == toy_model or version.parse(tf.__version__) < version.parse("2.2")
+    ):
+        pytest.skip("convert_keras_model_as_saved_model currently fails in this case.")
+
+    model_lce = conversion_function(
         model_cls(),
         inference_input_type=inference_input_type,
         inference_output_type=inference_output_type,
