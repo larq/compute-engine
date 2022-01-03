@@ -116,6 +116,21 @@ gentbl(
 )
 
 gentbl(
+    name = "bitpack_activations_inc_gen",
+    tbl_outs = [
+        ("-gen-rewriters", "transforms/generated_bitpack_activations.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "transforms/bitpack_activations_patterns.td",
+    td_includes = ["external/org_tensorflow"],
+    td_srcs = [
+        ":lce_ops_td_file",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+        "@llvm-project//mlir:StdOpsTdFiles",
+    ],
+)
+
+gentbl(
     name = "bitpack_weights_lce_inc_gen",
     tbl_outs = [
         ("-gen-rewriters", "transforms/generated_bitpack_weights.inc"),
@@ -228,6 +243,7 @@ cc_library(
 cc_library(
     name = "larq_compute_engine_optimize",
     srcs = [
+        "transforms/generated_bitpack_activations.inc",
         "transforms/generated_optimize_target_arm.inc",
         "transforms/generated_optimize_target_other.inc",
         "transforms/optimize.cc",

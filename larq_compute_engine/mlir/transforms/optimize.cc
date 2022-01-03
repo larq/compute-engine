@@ -257,6 +257,10 @@ namespace target_other {
 #include "larq_compute_engine/mlir/transforms/generated_optimize_target_other.inc"
 }
 
+namespace bitpack_activations {
+#include "larq_compute_engine/mlir/transforms/generated_bitpack_activations.inc"
+}
+
 void OptimizeLCE::runOnFunction() {
   auto* ctx = &getContext();
   OwningRewritePatternList patterns(ctx);
@@ -267,6 +271,7 @@ void OptimizeLCE::runOnFunction() {
   } else {
     target_other::populateWithGenerated(patterns);
   }
+  bitpack_activations::populateWithGenerated(patterns);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
