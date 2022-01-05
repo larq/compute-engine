@@ -199,9 +199,7 @@ def test_simple_model(dataset, conversion_function, model_cls):
         )
         model.fit(dataset, epochs=1)
 
-    model_lce = conversion_function(
-        model, experimental_enable_bitpacked_activations=True
-    )
+    model_lce = conversion_function(model)
 
     if model_cls == lqz.sota.QuickNetSmall:
         # Since QuickNetSmall is a deep model we are more tolerant of error.

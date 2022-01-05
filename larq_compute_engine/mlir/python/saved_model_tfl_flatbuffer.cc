@@ -87,8 +87,7 @@ pybind11::bytes ConvertSavedModelToTFLiteFlatBuffer(
     const std::vector<std::string>& saved_model_tags,
     const std::vector<std::string>& exported_names,
     const int saved_model_version, const std::string& target_str,
-    const pybind11::object& default_ranges,
-    const bool experimental_enable_bitpacked_activations) {
+    const pybind11::object& default_ranges) {
   mlir::MLIRContext context;
   Status status;
 
@@ -182,8 +181,7 @@ pybind11::bytes ConvertSavedModelToTFLiteFlatBuffer(
   mlir::PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
   tensorflow::SetCrashReproducer(pm);
 
-  tensorflow::AddTFToLCETFLConversionPasses(
-      quant_specs, &pm, target, experimental_enable_bitpacked_activations);
+  tensorflow::AddTFToLCETFLConversionPasses(quant_specs, &pm, target);
 
   // Convert back to outlined while format for export back to flatbuffer.
   pm.addPass(mlir::TFL::CreateWhileOutlinePass());

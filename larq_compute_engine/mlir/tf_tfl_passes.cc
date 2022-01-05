@@ -48,8 +48,7 @@ void AddQuantizationPasses(const mlir::TFL::QuantizationSpecs& quant_specs,
 
 void AddTFToLCETFLConversionPasses(
     const mlir::TFL::QuantizationSpecs& quant_specs,
-    mlir::OpPassManager* pass_manager, const LCETarget target,
-    const bool experimental_enable_bitpacked_activations) {
+    mlir::OpPassManager* pass_manager, const LCETarget target) {
   // This pass wraps all the tf.FakeQuant ops in a custom op so they are not
   // folded before being converted to tfl.quantize and tfl.dequantize ops.
   auto wrapped_ops = mlir::TFL::AllTfFakeQuantOps();
@@ -171,11 +170,10 @@ void AddTFToLCETFLConversionPasses(
   pass_manager->addNestedPass<mlir::FuncOp>(
       mlir::TFL::CreateLegalizeTFPass(true));
   pass_manager->addPass(mlir::TFL::CreateLegalizeHashTablesPass());
-  pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(target, false));
+  pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(target));
   pass_manager->addNestedPass<mlir::FuncOp>(
       mlir::TFL::CreateOptimizePass(true));
-  pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(
-      target, experimental_enable_bitpacked_activations));
+  pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(target));
   pass_manager->addPass(mlir::TFL::CreateBitpackWeightsLCEPass());
 
   // This pass operates on TensorFlow ops but is triggered after legalization

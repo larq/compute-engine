@@ -37,11 +37,10 @@ class TestConverter(unittest.TestCase):
                 False,
                 "arm",
                 None,
-                False,
             )
         else:
             mocked_saved_model_converter.assert_called_once_with(
-                mock.ANY, ["serve"], ["serving_default"], 1, "arm", None, False
+                mock.ANY, ["serve"], ["serving_default"], 1, "arm", None
             )
 
     def test_wrong_arg(self):
