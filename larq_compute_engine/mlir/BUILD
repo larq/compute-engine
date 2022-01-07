@@ -388,6 +388,21 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "python_common",
+    srcs = ["python/common.cc"],
+    hdrs = ["python/common.h"],
+    deps = [
+        ":lce_tfl_passes",
+        ":tf_to_tfl_flatbuffer",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tf_to_tfl_flatbuffer",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite/python:tf_tfl_flatbuffer_helpers",
+        "@org_tensorflow//tensorflow/core:ops",
+        "@pybind11",
+    ],
+)
+
 tf_cc_binary(
     name = "lce-tf-opt",
     srcs = ["lce_mlir_opt.cc"],
@@ -407,6 +422,7 @@ pybind_extension(
     module_name = "tf_tfl_flatbuffer",
     deps = [
         ":lce_tfl_passes",
+        ":python_common",
         ":tf_to_tfl_flatbuffer",
         "@org_tensorflow//tensorflow/cc/saved_model:loader",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
