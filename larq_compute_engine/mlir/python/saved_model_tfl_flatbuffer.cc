@@ -76,8 +76,17 @@ pybind11::bytes ConvertSavedModelToTFLiteFlatBuffer(
   if (!module.ok()) {
     throw std::runtime_error("Could not import SavedModel.");
   }
-  return ConvertMLIRModuleToTFLiteFlatBuffer(&module.ValueOrDie(), context,
-                                             target, default_ranges);
+
+  int num_inputs = 0;
+  status = GetNumInputs(&module.ValueOrDie(), &num_inputs);
+  if (!status.ok()) {
+    throw std::runtime_error(status.error_message());
+  }
+
+  return ConvertMLIRModuleToTFLiteFlatBuffer(
+      &module.ValueOrDie(), context, target, default_ranges, num_inputs,
+      /*should_quantize=*/true,
+      /*mark_as_post_training_quant=*/true);
 }
 
 }  // namespace tensorflow
