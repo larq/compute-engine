@@ -1,25 +1,14 @@
 #include <exception>
 
+#include "larq_compute_engine/mlir/python/common.h"
 #include "larq_compute_engine/mlir/tf_tfl_passes.h"
 #include "larq_compute_engine/mlir/tf_to_tfl_flatbuffer.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Support/FileUtilities.h"
 #include "pybind11/pybind11.h"
-#include "pybind11/pytypes.h"
-#include "pybind11/stl.h"
-#include "tensorflow/compiler/mlir/lite/quantization/quantization_config.h"
 #include "tensorflow/compiler/mlir/lite/transforms/passes.h"
 #include "tensorflow/compiler/mlir/tensorflow/translate/import_model.h"
-#include "tensorflow/compiler/mlir/tensorflow/translate/mlir_roundtrip_flags.h"
-#include "tensorflow/compiler/mlir/tensorflow/utils/dump_mlir_util.h"
 #include "tensorflow/compiler/mlir/tensorflow/utils/error_util.h"
 #include "tensorflow/compiler/mlir/tensorflow/utils/import_utils.h"
-#include "tensorflow/core/framework/graph.pb.h"
-#include "tensorflow/core/framework/types.pb.h"
-#include "tensorflow/core/protobuf/graph_debug_info.pb.h"
 
 namespace tensorflow {
 
@@ -36,14 +25,7 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
     throw std::runtime_error("Could not load GraphDef.");
   }
 
-  LCETarget target;
-  if (target_str == "arm") {
-    target = LCETarget::ARM;
-  } else if (target_str == "xcore") {
-    target = LCETarget::XCORE;
-  } else {
-    throw std::runtime_error("Invalid target.");
-  }
+  auto target = GetLCETarget(target_str);
 
   // `ParseInputArrayInfo` requires a type that isn't pybind compatible, so
   // translate here.
@@ -80,38 +62,10 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
     throw std::runtime_error("Could not convert GraphDef.");
   }
 
-  mlir::TFL::QuantizationSpecs quant_specs;
-  if (should_quantize) {
-    quant_specs.inference_type = tensorflow::DT_QINT8;
-    for (auto input_array : input_arrays) {
-      // Input inference type is DT_FLOAT, so set the default input ranges
-      // to llvm::None.
-      quant_specs.input_ranges.push_back({llvm::None, llvm::None});
-    }
-    if (!default_ranges.is_none()) {
-      quant_specs.default_ranges =
-          default_ranges.cast<std::pair<double, double>>();
-    }
-  }
-
-  mlir::PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
-  tensorflow::SetCrashReproducer(pm);
-
-  tensorflow::AddTFToLCETFLConversionPasses(quant_specs, &pm, target);
-
-  // Convert back to outlined while format for export back to flatbuffer.
-  pm.addPass(mlir::TFL::CreateWhileOutlinePass());
-  pm.addPass(mlir::TFL::CreateRuntimeVerifyPass());
-
-  std::string result;
-  auto status = ConvertTFExecutorToFlatbuffer(
-      module->get(), /*export_to_mlir=*/false, &result, &pm);
-
-  if (!status.ok()) {
-    throw std::runtime_error("Could not translate to flatbuffer.");
-  }
-
-  return pybind11::bytes(result);
+  return ConvertMLIRModuleToTFLiteFlatBuffer(
+      &module.ValueOrDie(), context, target, default_ranges,
+      input_arrays.size(), should_quantize,
+      /*mark_as_post_training_quant=*/false);
 }
 
 }  // namespace tensorflow
