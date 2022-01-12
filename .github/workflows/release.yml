@@ -199,7 +199,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9]
       fail-fast: false
     steps:
       - uses: actions/checkout@v2
@@ -211,7 +211,7 @@ jobs:
           docker run -e PYTHON_VERSION=${{ matrix.python-version }} \
             -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }} \
             -v ${PWD}:/compute-engine -w /compute-engine \
-            tensorflow/tensorflow:2.2.0-custom-op-ubuntu16 \
+            tensorflow/build:latest-python${{ matrix.python-version }} \
             .github/tools/release_linux.sh
 
           sudo apt-get -y -qq install patchelf --no-install-recommends
