@@ -208,8 +208,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Build manylinux2010 wheels
         run: |
-          docker run -e PYTHON_VERSION=${{ matrix.python-version }} \
-            -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }} \
+          docker run -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }} \
             -v ${PWD}:/compute-engine -w /compute-engine \
             tensorflow/build:latest-python${{ matrix.python-version }} \
             .github/tools/release_linux.sh
