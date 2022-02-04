@@ -10,6 +10,6 @@ jobs:
     if: github.repository == 'larq/compute-engine'
     runs-on: ubuntu-latest
     steps:
-      - uses: toolmantim/release-drafter@v5.17.5
+      - uses: toolmantim/release-drafter@v5.18.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
