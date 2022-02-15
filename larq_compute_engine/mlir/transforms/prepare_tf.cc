@@ -97,12 +97,16 @@ bool IsBinaryFilter(Attribute filter_attr) {
 
 bool IsSamePadding(Attribute paddings_attr, Value input, Value output,
                    ArrayAttr strides_attr) {
-  if (!paddings_attr.isa<DenseElementsAttr>()) return false;
-  auto paddings = paddings_attr.dyn_cast<DenseElementsAttr>();
-  auto input_shape = input.getType().cast<RankedTensorType>().getShape();
-  auto output_shape = output.getType().cast<RankedTensorType>().getShape();
-  auto strides = strides_attr.getValue();
+  auto paddings = GetValidPadAttr(paddings_attr);
+  if (!paddings) return false;
+  auto input_shape = GetShape4D(input);
+  if (input_shape.empty()) return false;
+  auto output_shape = GetShape4D(output);
+  if (output_shape.empty()) return false;
 
+  auto strides = strides_attr.getValue();
+  if (!strides[1].isa<IntegerAttr>() || !strides[2].isa<IntegerAttr>())
+    return false;
   int stride_height = strides[1].cast<IntegerAttr>().getInt();
   int stride_width = strides[2].cast<IntegerAttr>().getInt();
 

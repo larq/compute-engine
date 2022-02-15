@@ -13,10 +13,12 @@ namespace {
 // pass them both into a single function call.
 bool IsSamePaddingPartial(Attribute paddings_attr, Value input, Value output,
                           Attribute strides_attr, uint64_t dimension) {
-  if (!paddings_attr.isa<DenseElementsAttr>()) return false;
-  auto paddings = paddings_attr.dyn_cast<DenseElementsAttr>();
-  auto input_shape = input.getType().cast<RankedTensorType>().getShape();
-  auto output_shape = output.getType().cast<RankedTensorType>().getShape();
+  auto paddings = GetValidPadAttr(paddings_attr);
+  if (!paddings) return false;
+  auto input_shape = GetShape4D(input);
+  if (input_shape.empty()) return false;
+  auto output_shape = GetShape4D(output);
+  if (output_shape.empty()) return false;
 
   if (!strides_attr.isa<IntegerAttr>()) return false;
   const int stride = strides_attr.cast<IntegerAttr>().getInt();

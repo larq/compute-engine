@@ -3,9 +3,32 @@
 
 #include "larq_compute_engine/core/types.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Value.h"
 
 namespace mlir {
 namespace TFL {
+
+inline DenseElementsAttr GetValidPadAttr(Attribute paddings_attr) {
+  if (!paddings_attr.isa<DenseElementsAttr>()) return nullptr;
+  auto paddings = paddings_attr.cast<DenseElementsAttr>();
+  // The shape should be [4,2]
+  auto pad_type = paddings.getType();
+  if (pad_type.getRank() != 2) return nullptr;
+  auto pad_shape = pad_type.getShape();
+  if (pad_shape[0] != 4 || pad_shape[1] != 2) return nullptr;
+  return paddings;
+}
+
+using ShapeRefType = ::llvm::ArrayRef<int64_t>;
+
+inline ShapeRefType GetShape4D(Value tensor) {
+  auto tensor_type = tensor.getType().dyn_cast<RankedTensorType>();
+  if (!tensor_type) return ShapeRefType();
+  ShapeRefType tensor_shape = tensor_type.getShape();
+  if (tensor_shape.size() != 4) return ShapeRefType();
+  return tensor_shape;
+}
 
 inline bool IsSamePadding1D(DenseElementsAttr paddings, uint64_t dimension,
                             int input_size, int output_size, int stride) {
