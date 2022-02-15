@@ -27,6 +27,19 @@ func @fuse_padv2_into_conv_valid(%arg0: tensor<1x64x64x8xf32>) -> tensor<1x64x64
   // CHECK-NEXT: return %0 : tensor<1x64x64x16xf32>
 }
 
+// CHECK-LABEL: @fuse_pad_into_dwconv_valid
+func @fuse_pad_into_dwconv_valid(%arg0: tensor<1x64x64x16xf32>) -> tensor<1x64x64x16xf32> {
+  %cst0 = constant dense<[[0, 0], [1, 1], [1, 1], [0, 0]]> : tensor<4x2xi32>
+  %cst1 = constant dense<1.0> : tensor<1x3x3x16xf32>
+  %cst2 = constant dense<1.0> : tensor<16xf32>
+  %0 = "tfl.pad"(%arg0, %cst0) : (tensor<1x64x64x16xf32>, tensor<4x2xi32>) -> tensor<1x66x66x16xf32>
+  %1 = "tfl.depthwise_conv_2d"(%0, %cst1, %cst2) {depth_multiplier = 1 : i32, dilation_h_factor = 1 : i32, dilation_w_factor = 1 : i32, fused_activation_function = "NONE", padding = "VALID", stride_h = 1 : i32, stride_w = 1 : i32} : (tensor<1x66x66x16xf32>, tensor<1x3x3x16xf32>, tensor<16xf32>) -> tensor<1x64x64x16xf32>
+  return %1 : tensor<1x64x64x16xf32>
+
+  // CHECK: %0 = "tfl.depthwise_conv_2d"(%arg0, %cst, %cst_0) {depth_multiplier = 1 : i32, dilation_h_factor = 1 : i32, dilation_w_factor = 1 : i32, fused_activation_function = "NONE", padding = "SAME", stride_h = 1 : i32, stride_w = 1 : i32} : (tensor<1x64x64x16xf32>, tensor<1x3x3x16xf32>, tensor<16xf32>) -> tensor<1x64x64x16xf32>
+  // CHECK-NEXT: return %0 : tensor<1x64x64x16xf32>
+}
+
 // CHECK-LABEL: @do_not_fuse_padv2_into_conv_wrong_pad_value
 func @do_not_fuse_padv2_into_conv_wrong_pad_value(%arg0: tensor<1x64x64x8xf32>) -> tensor<1x64x64x16xf32> {
   %cst0 = constant dense<[[0, 0], [1, 1], [1, 1], [0, 0]]> : tensor<4x2xi32>
@@ -51,4 +64,16 @@ func @do_not_fuse_pad_into_conv_same(%arg0: tensor<1x64x64x8xf32>) -> tensor<1x6
   return %1 : tensor<1x66x66x16xf32>
 
   // CHECK: %0 = "tfl.padv2"(%arg0, %cst, %cst_0)
+}
+
+// CHECK-LABEL: @do_not_fuse_pad_into_dwconv_channelpad
+func @do_not_fuse_pad_into_dwconv_channelpad(%arg0: tensor<1x64x64x12xf32>) -> tensor<1x64x64x16xf32> {
+  %cst0 = constant dense<[[0, 0], [1, 1], [1, 1], [1, 3]]> : tensor<4x2xi32>
+  %cst1 = constant dense<1.0> : tensor<1x3x3x16xf32>
+  %cst2 = constant dense<1.0> : tensor<16xf32>
+  %0 = "tfl.pad"(%arg0, %cst0) : (tensor<1x64x64x12xf32>, tensor<4x2xi32>) -> tensor<1x66x66x16xf32>
+  %1 = "tfl.depthwise_conv_2d"(%0, %cst1, %cst2) {depth_multiplier = 1 : i32, dilation_h_factor = 1 : i32, dilation_w_factor = 1 : i32, fused_activation_function = "NONE", padding = "VALID", stride_h = 1 : i32, stride_w = 1 : i32} : (tensor<1x66x66x16xf32>, tensor<1x3x3x16xf32>, tensor<16xf32>) -> tensor<1x64x64x16xf32>
+  return %1 : tensor<1x64x64x16xf32>
+
+  // CHECK: %0 = "tfl.pad"
 }
