@@ -1,12 +1,3 @@
-//#include "larq_compute_engine/core/types.h"
-//#include "larq_compute_engine/mlir/ir/lce_ops.h"
-//#include "larq_compute_engine/mlir/transforms/passes.h"
-//#include "mlir/Dialect/StandardOps/IR/Ops.h"
-//#include "mlir/IR/PatternMatch.h"
-//#include "tensorflow/compiler/mlir/lite/transforms/dilated_conv.h"
-//#include "tensorflow/compiler/mlir/lite/utils/validators.h"
-//#include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.h"
-
 #include "larq_compute_engine/mlir/transforms/padding.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
