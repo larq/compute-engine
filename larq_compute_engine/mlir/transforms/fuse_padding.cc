@@ -8,9 +8,14 @@ namespace TFL {
 
 namespace {
 
-// Version used when matching a TFLite op that has `stride_height` and
-// `stride_width` as separate attributes. Due to a TableGen limitation we can't
-// pass them both into a single function call.
+bool NoBatchAndChannelPadding(Attribute paddings_attr) {
+  auto paddings = GetValidPadAttr(paddings_attr);
+  if (!paddings) return false;
+  return IsNoPadding(paddings, 0) && IsNoPadding(paddings, 3);
+}
+
+// The TFLite op has `stride_height` and `stride_width` as separate attributes.
+// Due to a TableGen limitation we can't pass them both in a single call.
 bool IsSamePaddingPartial(Attribute paddings_attr, Value input, Value output,
                           Attribute strides_attr, uint64_t dimension) {
   auto paddings = GetValidPadAttr(paddings_attr);
@@ -24,10 +29,8 @@ bool IsSamePaddingPartial(Attribute paddings_attr, Value input, Value output,
   const int stride = strides_attr.cast<IntegerAttr>().getInt();
 
   // Check that there is no padding in the batch and channel dimensions
-  return IsNoPadding(paddings, 0) &&
-         IsSamePadding1D(paddings, dimension, input_shape[dimension],
-                         output_shape[dimension], stride) &&
-         IsNoPadding(paddings, 3);
+  return IsSamePadding1D(paddings, dimension, input_shape[dimension],
+                         output_shape[dimension], stride);
 }
 
 #include "larq_compute_engine/mlir/transforms/generated_fuse_padding.inc"

@@ -9,6 +9,7 @@ class ConstFloatValueIs<string val>
           "$0.cast<DenseElementsAttr>().getNumElements() == 1 && "
           "*$0.cast<DenseElementsAttr>().getValues<float>().begin() == " #val>>;
 
+def NoBatchAndChannelPadding : Constraint<CPred<"NoBatchAndChannelPadding($0)">>;
 // TableGen has a maximum of 4 arguments to these constraints, so we have to split the height and the width
 def SamePaddingHeight : Constraint<CPred<"IsSamePaddingPartial($0, $1, $2, $3, 1)">>;
 def SamePaddingWidth : Constraint<CPred<"IsSamePaddingPartial($0, $1, $2, $3, 2)">>;
@@ -38,6 +39,7 @@ def : Pat<(TFL_Conv2DOp:$conv_output
                         $stride_h,
                         $stride_w),
           [(HasOneUse $pad_output),
+           (NoBatchAndChannelPadding $paddings),
            (SamePaddingHeight $paddings, $input, $conv_output, $stride_h),
            (SamePaddingWidth $paddings, $input, $conv_output, $stride_w)],
           (addBenefit 100)>;
@@ -68,6 +70,7 @@ def : Pat<(TFL_Conv2DOp:$conv_output
                         $stride_w),
           [(HasOneUse $pad_output),
            (ConstFloatValueIs<"0.0"> $pad_values),
+           (NoBatchAndChannelPadding $paddings),
            (SamePaddingHeight $paddings, $input, $conv_output, $stride_h),
            (SamePaddingWidth $paddings, $input, $conv_output, $stride_w)],
           (addBenefit 100)>;
@@ -97,6 +100,7 @@ def : Pat<(TFL_DepthwiseConv2DOp:$conv_output
                         $stride_w,
                         $depth_multiplier),
           [(HasOneUse $pad_output),
+           (NoBatchAndChannelPadding $paddings),
            (SamePaddingHeight $paddings, $input, $conv_output, $stride_h),
            (SamePaddingWidth $paddings, $input, $conv_output, $stride_w)],
           (addBenefit 100)>;
@@ -128,6 +132,7 @@ def : Pat<(TFL_DepthwiseConv2DOp:$conv_output
                         $depth_multiplier),
           [(HasOneUse $pad_output),
            (ConstFloatValueIs<"0.0"> $pad_values),
+           (NoBatchAndChannelPadding $paddings),
            (SamePaddingHeight $paddings, $input, $conv_output, $stride_h),
            (SamePaddingWidth $paddings, $input, $conv_output, $stride_w)],
           (addBenefit 100)>;
