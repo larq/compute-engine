@@ -187,6 +187,8 @@ void AddTFToLCETFLConversionPasses(
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
   pass_manager->addNestedPass<mlir::FuncOp>(mlir::createCSEPass());
 
+  pass_manager->addPass(mlir::TFL::CreateFusePaddingPass());
+
   // Run quantization after all the floating point model conversion is
   // completed.
   if (quant_specs.RunPropagationAndRewriteQuantizationPasses()) {

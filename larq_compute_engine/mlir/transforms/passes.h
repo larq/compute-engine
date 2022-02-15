@@ -26,6 +26,9 @@ std::unique_ptr<OperationPass<FuncOp>> CreateLCEQuantizePass();
 // Creates an instance of LegalizeLCE pass.
 std::unique_ptr<OperationPass<FuncOp>> CreateLegalizeLCEPass();
 
+// Creates an instance of the FusePadding pass.
+std::unique_ptr<OperationPass<FuncOp>> CreateFusePaddingPass();
+
 // Creates an instance of TranslateToLCE pass.
 std::unique_ptr<OperationPass<FuncOp>> CreateTranslateToLCEPass();
 
