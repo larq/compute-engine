@@ -161,6 +161,19 @@ gentbl(
     ],
 )
 
+gentbl(
+    name = "fuse_padding_inc_gen",
+    tbl_outs = [
+        ("-gen-rewriters", "transforms/generated_fuse_padding.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "transforms/fuse_padding.td",
+    td_includes = ["external/org_tensorflow"],
+    td_srcs = [
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    ],
+)
+
 cc_library(
     name = "larq_compute_engine_bitpack",
     srcs = [
@@ -226,6 +239,7 @@ cc_library(
         "transforms/prepare_tf.cc",
     ],
     hdrs = [
+        "transforms/padding.h",
         "transforms/passes.h",
     ],
     deps = [
@@ -326,6 +340,24 @@ cc_library(
 )
 
 cc_library(
+    name = "fuse_padding",
+    srcs = [
+        "transforms/fuse_padding.cc",
+        "transforms/generated_fuse_padding.inc",
+    ],
+    hdrs = [
+        "transforms/padding.h",
+        "transforms/passes.h",
+    ],
+    deps = [
+        "//larq_compute_engine/core:types",
+        "@llvm-project//mlir:IR",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+    ],
+    alwayslink = 1,
+)
+
+cc_library(
     name = "set_batch_size",
     srcs = [
         "transforms/set_batch_size.cc",
@@ -346,6 +378,7 @@ cc_library(
         "tf_tfl_passes.h",
     ],
     deps = [
+        ":fuse_padding",
         ":larq_compute_engine_bitpack_weights",
         ":larq_compute_engine_legalize_tflite",
         ":larq_compute_engine_op_removal",
