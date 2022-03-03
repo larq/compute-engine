@@ -23,7 +23,7 @@ class Interpreter(InterpreterBase):
         flatbuffer_model: A serialized Larq Compute Engine model in the flatbuffer format.
         num_threads: The number of threads used by the interpreter.
         use_reference_bconv: When True, uses the reference implementation of LceBconv2d.
-        use_reference_bconv: When True, uses the reference implementation of LceBconv2d.
+        use_indirect_bgemm: When True, uses the optimized indirect BGEMM kernel of LceBconv2d.
 
     # Attributes
         input_types: Returns a list of input types.
