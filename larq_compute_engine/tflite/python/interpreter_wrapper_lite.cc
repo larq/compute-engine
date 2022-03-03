@@ -25,7 +25,7 @@ class LiteInterpreterWrapper
 
 LiteInterpreterWrapper::LiteInterpreterWrapper(
     const pybind11::bytes& flatbuffer, const int num_threads,
-    const bool use_reference_bconv) {
+    const bool use_reference_bconv, const bool use_indirect_bgemm) {
   // Make a copy of the flatbuffer because it can get deallocated after the
   // constructor is done
   flatbuffer_ = static_cast<std::string>(flatbuffer);
@@ -39,7 +39,7 @@ LiteInterpreterWrapper::LiteInterpreterWrapper(
   // Build the interpreter
   resolver_ = std::make_unique<tflite::ops::builtin::BuiltinOpResolver>();
   compute_engine::tflite::RegisterLCECustomOps(resolver_.get(),
-                                               use_reference_bconv);
+                                               use_reference_bconv, use_indirect_bgemm);
 
   tflite::InterpreterBuilder builder(*model_, *resolver_);
   builder(&interpreter_, num_threads);
