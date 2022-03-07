@@ -60,7 +60,7 @@ void LceBenchmarkTfLiteModel::LogParams() {
   LOG_BENCHMARK_PARAM(bool, "use_indirect_bgemm", "Use indirect BGEMM",
                       verbose);
 }
-  
+
 TfLiteStatus LceBenchmarkTfLiteModel::Run(int argc, char** argv) {
   TF_LITE_ENSURE_STATUS(ParseFlags(argc, argv));
   use_reference_bconv = params_.Get<bool>("use_reference_bconv");
