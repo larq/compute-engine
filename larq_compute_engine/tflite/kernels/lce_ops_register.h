@@ -30,13 +30,14 @@ inline void RegisterLCECustomOps(::tflite::MutableOpResolver* resolver,
     resolver->AddCustom("LceBconv2d",
                         compute_engine::tflite::Register_BCONV_2D_REF());
   } else {
-      if (use_indirect_bgemm) {
-          resolver->AddCustom("LceBconv2d",
-                        compute_engine::tflite::Register_BCONV_2D_OPT_INDIRECT_BGEMM());
-      } else {
-          resolver->AddCustom("LceBconv2d",
-                        compute_engine::tflite::Register_BCONV_2D());
-      }
+    if (use_indirect_bgemm) {
+      resolver->AddCustom(
+          "LceBconv2d",
+          compute_engine::tflite::Register_BCONV_2D_OPT_INDIRECT_BGEMM());
+    } else {
+      resolver->AddCustom("LceBconv2d",
+                          compute_engine::tflite::Register_BCONV_2D());
+    }
     
   }
   resolver->AddCustom("LceBMaxPool2d",

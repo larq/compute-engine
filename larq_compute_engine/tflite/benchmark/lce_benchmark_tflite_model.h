@@ -26,19 +26,19 @@ namespace benchmark {
 class LceBenchmarkTfLiteModel : public BenchmarkTfLiteModel {
  public:
   explicit LceBenchmarkTfLiteModel(BenchmarkParams params,
-                                   bool &use_reference_bconv,
-                                   bool &use_indirect_bgemm);
+                                   bool& use_reference_bconv,
+                                   bool& use_indirect_bgemm);
 
   std::vector<Flag> GetFlags() override;
   void LogParams() override;
   static BenchmarkParams DefaultParams();
-    
+
   using BenchmarkTfLiteModel::Run;
   TfLiteStatus Run(int argc, char** argv);
-    
+
  private:
-  bool &use_reference_bconv;
-  bool &use_indirect_bgemm;
+  bool& use_reference_bconv;
+  bool& use_indirect_bgemm;
 
 };
 

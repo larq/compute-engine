@@ -24,28 +24,31 @@ namespace benchmark {
 
 BenchmarkParams LceBenchmarkTfLiteModel::DefaultParams() {
   BenchmarkParams default_params = BenchmarkTfLiteModel::DefaultParams();
-  default_params.AddParam("use_reference_bconv", BenchmarkParam::Create<bool>(false));
-  default_params.AddParam("use_indirect_bgemm", BenchmarkParam::Create<bool>(false));
+  default_params.AddParam("use_reference_bconv",
+                          BenchmarkParam::Create<bool>(false));
+  default_params.AddParam("use_indirect_bgemm",
+                          BenchmarkParam::Create<bool>(false));
 
   return default_params;
 }
 
 LceBenchmarkTfLiteModel::LceBenchmarkTfLiteModel(BenchmarkParams params,
-                                                 bool &use_reference_bconv,
-                                                 bool &use_indirect_bgemm)
+                                                 bool& use_reference_bconv,
+                                                 bool& use_indirect_bgemm)
     : BenchmarkTfLiteModel(std::move(params)),
-    use_reference_bconv(use_reference_bconv),
-    use_indirect_bgemm(use_indirect_bgemm) {
-}
+      use_reference_bconv(use_reference_bconv),
+      use_indirect_bgemm(use_indirect_bgemm) {}
 
 
 std::vector<Flag> LceBenchmarkTfLiteModel::GetFlags() {
   std::vector<Flag> flags = BenchmarkTfLiteModel::GetFlags();
   std::vector<Flag> lce_flags = {
-      CreateFlag<bool>("use_reference_bconv", &params_,
-                       "When true, uses the reference implementation of LceBconv2d."),
+      CreateFlag<bool>(
+          "use_reference_bconv", &params_,
+          "When true, uses the reference implementation of LceBconv2d."),
       CreateFlag<bool>("use_indirect_bgemm", &params_,
-                       "When true, uses the optimized indirect BGEMM kernel of LceBconv2d.")};
+                       "When true, uses the optimized indirect BGEMM kernel of"
+                       "LceBconv2d.")};
 
   flags.insert(flags.end(), lce_flags.begin(), lce_flags.end());
 
@@ -55,16 +58,17 @@ std::vector<Flag> LceBenchmarkTfLiteModel::GetFlags() {
 void LceBenchmarkTfLiteModel::LogParams() {
   BenchmarkTfLiteModel::LogParams();
   const bool verbose = params_.Get<bool>("verbose");
-  LOG_BENCHMARK_PARAM(bool, "use_reference_bconv",
-                      "Use reference Bconv", verbose);
-  LOG_BENCHMARK_PARAM(bool, "use_indirect_bgemm",
-                      "Use indirect BGEMM", verbose);
+  LOG_BENCHMARK_PARAM(bool, "use_reference_bconv", "Use reference Bconv",
+                      verbose);
+  LOG_BENCHMARK_PARAM(bool, "use_indirect_bgemm", "Use indirect BGEMM",
+                      verbose);
 }
     
 TfLiteStatus LceBenchmarkTfLiteModel::Run(int argc, char** argv) {
   TF_LITE_ENSURE_STATUS(ParseFlags(argc, argv));
   use_reference_bconv = params_.Get<bool>("use_reference_bconv");
   use_indirect_bgemm = params_.Get<bool>("use_indirect_bgemm");
+    
   return BenchmarkTfLiteModel::Run();
 }
 
