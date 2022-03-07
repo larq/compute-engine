@@ -29,9 +29,9 @@ tf_cc_binary(
         ],
     }),
     deps = [
+        "//larq_compute_engine/tflite/benchmark:lce_benchmark_tflite_model_lib",
         "//larq_compute_engine/tflite/kernels:lce_op_kernels",
         "@org_tensorflow//tensorflow/lite/tools:logging",
-        "//larq_compute_engine/tflite/benchmark:lce_benchmark_tflite_model_lib",
     ],
 )
 
@@ -46,6 +46,6 @@ cc_library(
         "//conditions:default": [],
     }),
     deps = [
-        "@org_tensorflow//tensorflow/lite/tools/benchmark:benchmark_tflite_model_lib"
+        "@org_tensorflow//tensorflow/lite/tools/benchmark:benchmark_tflite_model_lib",
     ],
 )
