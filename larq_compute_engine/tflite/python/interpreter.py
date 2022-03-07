@@ -49,7 +49,10 @@ class Interpreter(InterpreterBase):
 
         super().__init__(
             interpreter_wrapper_lite.LiteInterpreter(
-                flatbuffer_model, num_threads, use_reference_bconv,
-                use_indirect_bgemm, use_xnnpack
+                flatbuffer_model,
+                num_threads,
+                use_reference_bconv,
+                use_indirect_bgemm,
+                use_xnnpack,
             )
         )
