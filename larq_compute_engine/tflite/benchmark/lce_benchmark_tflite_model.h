@@ -25,8 +25,9 @@ namespace benchmark {
 // Benchmarks a TFLite model by running tflite interpreter.
 class LceBenchmarkTfLiteModel : public BenchmarkTfLiteModel {
  public:
-
-  explicit LceBenchmarkTfLiteModel(BenchmarkParams params, bool &use_reference_bconv, bool &use_indirect_bgemm);
+  explicit LceBenchmarkTfLiteModel(BenchmarkParams params,
+                                   bool &use_reference_bconv,
+                                   bool &use_indirect_bgemm);
 
   std::vector<Flag> GetFlags() override;
   void LogParams() override;

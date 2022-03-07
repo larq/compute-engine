@@ -12,7 +12,9 @@ class LiteInterpreterWrapper
  public:
   LiteInterpreterWrapper(const pybind11::bytes& flatbuffer,
                          const int num_threads = 1,
-                         const bool use_reference_bconv = false);
+                         const bool use_reference_bconv = false
+                         const bool use_indirect_bgemm = false
+                         const bool use_xnnpack = false);
   ~LiteInterpreterWrapper(){};
 
  private:
@@ -38,9 +40,9 @@ LiteInterpreterWrapper::LiteInterpreterWrapper(
 
   // Build the interpreter
   if (use_xnnpack) {
-      resolver_ = std::make_unique<tflite::ops::builtin::BuiltinOpResolver>();
+    resolver_ = std::make_unique<tflite::ops::builtin::BuiltinOpResolver>();
   } else {
-      resolver_ = std::make_unique<tflite::ops::builtin::BuiltinOpResolverWithoutDefaultDelegates>();
+    resolver_ = std::make_unique<tflite::ops::builtin::BuiltinOpResolverWithoutDefaultDelegates>();
   }
   compute_engine::tflite::RegisterLCECustomOps(resolver_.get(),
                                                use_reference_bconv, use_indirect_bgemm);

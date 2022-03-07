@@ -27,7 +27,8 @@ bool use_indirect_bgemm = false;
 
 void ABSL_ATTRIBUTE_WEAK
 RegisterSelectedOps(::tflite::MutableOpResolver* resolver) {
-  compute_engine::tflite::RegisterLCECustomOps(resolver, use_reference_bconv, use_indirect_bgemm);
+  compute_engine::tflite::RegisterLCECustomOps(resolver, use_reference_bconv,
+  use_indirect_bgemm);
 }
 
 namespace tflite {
