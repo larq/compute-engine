@@ -38,7 +38,6 @@ inline void RegisterLCECustomOps(::tflite::MutableOpResolver* resolver,
       resolver->AddCustom("LceBconv2d",
                           compute_engine::tflite::Register_BCONV_2D());
     }
-
   }
   resolver->AddCustom("LceBMaxPool2d",
                       compute_engine::tflite::Register_BMAXPOOL_2D());
