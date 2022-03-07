@@ -57,7 +57,8 @@ LiteInterpreterWrapper::LiteInterpreterWrapper(
 
 PYBIND11_MODULE(interpreter_wrapper_lite, m) {
   pybind11::class_<LiteInterpreterWrapper>(m, "LiteInterpreter")
-      .def(pybind11::init<const pybind11::bytes&, const int, const bool>())
+      .def(pybind11::init<const pybind11::bytes&, const int, const bool,
+           const bool, const bool>())
       .def_property("input_types", &LiteInterpreterWrapper::get_input_types,
                     nullptr)
       .def_property("output_types", &LiteInterpreterWrapper::get_output_types,
