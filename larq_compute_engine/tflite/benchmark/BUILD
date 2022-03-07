@@ -31,6 +31,21 @@ tf_cc_binary(
     deps = [
         "//larq_compute_engine/tflite/kernels:lce_op_kernels",
         "@org_tensorflow//tensorflow/lite/tools:logging",
-        "@org_tensorflow//tensorflow/lite/tools/benchmark:benchmark_tflite_model_lib",
+        "//larq_compute_engine/tflite/benchmark:lce_benchmark_tflite_model_lib",
+    ],
+)
+
+cc_library(
+    name = "lce_benchmark_tflite_model_lib",
+    srcs = ["lce_benchmark_tflite_model.cc"],
+    hdrs = ["lce_benchmark_tflite_model.h"],
+    copts = tflite_copts() + select({
+        "@org_tensorflow//tensorflow:ios": [
+            "-xobjective-c++",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = [
+        "@org_tensorflow//tensorflow/lite/tools/benchmark:benchmark_tflite_model_lib"
     ],
 )
