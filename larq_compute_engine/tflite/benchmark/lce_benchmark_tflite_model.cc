@@ -30,8 +30,12 @@ BenchmarkParams LceBenchmarkTfLiteModel::DefaultParams() {
   return default_params;
 }
 
-LceBenchmarkTfLiteModel::LceBenchmarkTfLiteModel(BenchmarkParams params, bool &use_reference_bconv, bool &use_indirect_bgemm)
-    : BenchmarkTfLiteModel(std::move(params)), use_reference_bconv(use_reference_bconv), use_indirect_bgemm(use_indirect_bgemm) {
+LceBenchmarkTfLiteModel::LceBenchmarkTfLiteModel(BenchmarkParams params,
+                                                 bool &use_reference_bconv,
+                                                 bool &use_indirect_bgemm)
+    : BenchmarkTfLiteModel(std::move(params)),
+    use_reference_bconv(use_reference_bconv),
+    use_indirect_bgemm(use_indirect_bgemm) {
 }
 
 
