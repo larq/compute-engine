@@ -10,11 +10,11 @@
 class LiteInterpreterWrapper
     : public InterpreterWrapperBase<tflite::Interpreter> {
  public:
-  LiteInterpreterWrapper(
-      const pybind11::bytes& flatbuffer, const int num_threads = 1,
-      const bool use_reference_bconv = false,
-      const bool use_indirect_bgemm = false,
-      const bool use_xnnpack = false);
+  LiteInterpreterWrapper(const pybind11::bytes& flatbuffer,
+                         const int num_threads = 1,
+                         const bool use_reference_bconv = false,
+                         const bool use_indirect_bgemm = false,
+                         const bool use_xnnpack = false);
   ~LiteInterpreterWrapper(){};
 
  private:

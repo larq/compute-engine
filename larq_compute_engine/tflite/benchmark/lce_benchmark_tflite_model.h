@@ -39,7 +39,6 @@ class LceBenchmarkTfLiteModel : public BenchmarkTfLiteModel {
  private:
   bool& use_reference_bconv;
   bool& use_indirect_bgemm;
-
 };
 
 }  // namespace benchmark

@@ -15,9 +15,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include "larq_compute_engine/tflite/benchmark/lce_benchmark_tflite_model.h"
-
-#include "tensorflow/lite/tools/delegates/delegate_provider.h"
-
+#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 namespace benchmark {
@@ -38,7 +36,6 @@ LceBenchmarkTfLiteModel::LceBenchmarkTfLiteModel(BenchmarkParams params,
     : BenchmarkTfLiteModel(std::move(params)),
       use_reference_bconv(use_reference_bconv),
       use_indirect_bgemm(use_indirect_bgemm) {}
-
 
 std::vector<Flag> LceBenchmarkTfLiteModel::GetFlags() {
   std::vector<Flag> flags = BenchmarkTfLiteModel::GetFlags();
@@ -63,12 +60,12 @@ void LceBenchmarkTfLiteModel::LogParams() {
   LOG_BENCHMARK_PARAM(bool, "use_indirect_bgemm", "Use indirect BGEMM",
                       verbose);
 }
-    
+   
 TfLiteStatus LceBenchmarkTfLiteModel::Run(int argc, char** argv) {
   TF_LITE_ENSURE_STATUS(ParseFlags(argc, argv));
   use_reference_bconv = params_.Get<bool>("use_reference_bconv");
   use_indirect_bgemm = params_.Get<bool>("use_indirect_bgemm");
-    
+
   return BenchmarkTfLiteModel::Run();
 }
 
