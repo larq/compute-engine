@@ -15,6 +15,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include "larq_compute_engine/tflite/benchmark/lce_benchmark_tflite_model.h"
+
 #include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
