@@ -54,6 +54,7 @@ INCLUDES := \
 -I$(TF_MAKEFILE_DIR)/downloads/farmhash/src \
 -I$(TF_MAKEFILE_DIR)/downloads/flatbuffers/include \
 -I$(TF_MAKEFILE_DIR)/downloads/fp16/include
+-Ilarq_compute_engine/tflite/benchmark/
 # This is at the end so any globally-installed frameworks like protobuf don't
 # override local versions in the source tree.
 INCLUDES += -I/usr/local/include
