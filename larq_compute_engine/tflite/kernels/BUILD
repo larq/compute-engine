@@ -44,7 +44,6 @@ cc_library(
         "@org_tensorflow//tensorflow/lite:type_to_tflitetype",
         "@org_tensorflow//tensorflow/lite/kernels/internal:kernel_utils",
         "@org_tensorflow//tensorflow/lite/kernels/internal:tensor",
-        "@org_tensorflow//tensorflow/lite/tools/logging",
         "@ruy//ruy/profiler:instrumentation",
     ],
     alwayslink = 1,
