@@ -2,7 +2,6 @@
 #define COMPUTE_ENGINE_TFLITE_KERNELS_LCE_OPS_REGISTER_H_
 
 #include "tensorflow/lite/context.h"
-//#include "tensorflow/lite/stderr_reporter.h"
 #include "tensorflow/lite/op_resolver.h"
 #include "tensorflow/lite/tools/logging.h"
 
