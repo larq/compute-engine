@@ -2,13 +2,17 @@
 #define COMPUTE_ENGINE_TFLITE_KERNELS_LCE_OPS_REGISTER_H_
 
 #include "tensorflow/lite/context.h"
+//#include "tensorflow/lite/stderr_reporter.h"
 #include "tensorflow/lite/op_resolver.h"
+#include "tensorflow/lite/tools/logging.h"
 
 // This file contains forward declaration of all custom ops
 // implemented in LCE which can be used to link against LCE library.
 
 namespace compute_engine {
 namespace tflite {
+
+using namespace ::tflite;
 
 TfLiteRegistration* Register_QUANTIZE();
 TfLiteRegistration* Register_DEQUANTIZE();
@@ -22,6 +26,11 @@ TfLiteRegistration* Register_BMAXPOOL_2D();
 inline void RegisterLCECustomOps(::tflite::MutableOpResolver* resolver,
                                  const bool use_reference_bconv = false,
                                  const bool use_indirect_bgemm = false) {
+  if (use_reference_bconv && use_indirect_bgemm) {
+    TFLITE_LOG(WARN) << "WARNING: 'use_reference_bconv' and `use_indirect_bgemm` "
+                         "are both set to true. use_indirect_bgemm==true "
+                         "will have no effect.";
+  }
   resolver->AddCustom("LceQuantize",
                       compute_engine::tflite::Register_QUANTIZE());
   resolver->AddCustom("LceDequantize",
