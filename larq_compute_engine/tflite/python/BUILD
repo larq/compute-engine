@@ -25,6 +25,7 @@ pybind_extension(
         "//larq_compute_engine/tflite/kernels:lce_op_kernels",
         "@org_tensorflow//tensorflow/lite:framework",
         "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
+        "@org_tensorflow//tensorflow/lite/tools/logging.h",
         "@pybind11",
     ],
 )
