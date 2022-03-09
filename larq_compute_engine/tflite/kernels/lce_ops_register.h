@@ -27,9 +27,10 @@ inline void RegisterLCECustomOps(::tflite::MutableOpResolver* resolver,
                                  const bool use_reference_bconv = false,
                                  const bool use_indirect_bgemm = false) {
   if (use_reference_bconv && use_indirect_bgemm) {
-    TFLITE_LOG(WARN) << "WARNING: 'use_reference_bconv' and `use_indirect_bgemm` "
-                         "are both set to true. use_indirect_bgemm==true "
-                         "will have no effect.";
+    TFLITE_LOG(WARN)
+        << "WARNING: 'use_reference_bconv' and `use_indirect_bgemm` "
+           "are both set to true. use_indirect_bgemm==true "
+           "will have no effect.";
   }
   resolver->AddCustom("LceQuantize",
                       compute_engine::tflite::Register_QUANTIZE());
