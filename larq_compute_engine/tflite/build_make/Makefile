@@ -117,6 +117,7 @@ LCE_EXAMPLE_SRCS := \
 	examples/lce_minimal.cc
 
 LCE_BENCHMARK_SRCS := \
+    larq_compute_engine/tflite/benchmark/lce_benchmark_tflite_model.cc \
 	larq_compute_engine/tflite/benchmark/lce_benchmark_main.cc
 
 # These target-specific makefiles should modify or replace options like

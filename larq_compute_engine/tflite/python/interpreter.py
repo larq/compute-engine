@@ -23,6 +23,8 @@ class Interpreter(InterpreterBase):
         flatbuffer_model: A serialized Larq Compute Engine model in the flatbuffer format.
         num_threads: The number of threads used by the interpreter.
         use_reference_bconv: When True, uses the reference implementation of LceBconv2d.
+        use_indirect_bgemm: When True, uses the optimized indirect BGEMM kernel of LceBconv2d.
+        use_xnnpack: When True, uses the XNNPack delegate of TFLite.
 
     # Attributes
         input_types: Returns a list of input types.
@@ -40,11 +42,17 @@ class Interpreter(InterpreterBase):
         flatbuffer_model: bytes,
         num_threads: int = 1,
         use_reference_bconv: bool = False,
+        use_indirect_bgemm: bool = False,
+        use_xnnpack: bool = False,
     ):
         from larq_compute_engine.tflite.python import interpreter_wrapper_lite
 
         super().__init__(
             interpreter_wrapper_lite.LiteInterpreter(
-                flatbuffer_model, num_threads, use_reference_bconv
+                flatbuffer_model,
+                num_threads,
+                use_reference_bconv,
+                use_indirect_bgemm,
+                use_xnnpack,
             )
         )
