@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
           fetch-depth: 0
@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install qemu-user
         run: |
           sudo apt-get update
@@ -60,7 +60,7 @@ jobs:
         uses: styfle/cancel-workflow-action@0.9.1
         with:
           access_token: ${{ github.token }}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: google-github-actions/auth@v0
         continue-on-error: true
         with:
@@ -100,7 +100,7 @@ jobs:
         tf-version: [1.14.0, 1.15.5, 2.0.4, 2.1.3, 2.2.2, 2.3.2, 2.4.1, 2.5.0, 2.6.2, 2.7.0]
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
         with:
           python-version: 3.7
@@ -114,7 +114,7 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - uses: actions/setup-python@v3
