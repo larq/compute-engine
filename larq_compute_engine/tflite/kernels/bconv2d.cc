@@ -39,8 +39,6 @@ enum class KernelType {
   kOptimizedIndirectBGEMM,
 };
 
-constexpr int kTensorNotAllocated = -1;
-
 struct OpData {
   BConv2DParams params;
 
@@ -62,7 +60,7 @@ struct OpData {
 
   // IDs are the arbitrary identifiers used by TF Lite to identify and access
   // memory buffers. They are unique in the entire TF Lite context.
-  int im2col_id = kTensorNotAllocated;
+  int im2col_id;
   // In node->temporaries there is a list of tensor id's that are part
   // of this node in particular. The indices below are offsets into this array.
   // So in pseudo-code: `node->temporaries[index] = id;`
@@ -273,11 +271,9 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
 
   // Now allocate the buffers
   if (need_im2col) {
-    // Allocate the im2col tensor if necessary
-    if (op_data->im2col_id == kTensorNotAllocated) {
-      context->AddTensors(context, 1, &op_data->im2col_id);
-      node->temporaries->data[op_data->im2col_index] = op_data->im2col_id;
-    }
+    // Allocate the im2col tensor
+    context->AddTensors(context, 1, &op_data->im2col_id);
+    node->temporaries->data[op_data->im2col_index] = op_data->im2col_id;
 
     // Resize the im2col tensor
     const std::int32_t bitpacked_channels_in =
