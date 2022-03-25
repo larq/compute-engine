@@ -1,5 +1,5 @@
-load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl", "td_library")
 load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension", "tf_cc_binary")
+load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -13,163 +13,198 @@ td_library(
     ],
     deps = [
         "@llvm-project//mlir:SideEffectTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_td_files",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "lce_ops_inc_gen",
     tbl_outs = [
-        ("-gen-enum-decls", "ir/lce_enum.h.inc"),
-        ("-gen-enum-defs", "ir/lce_enum.cc.inc"),
-        ("-gen-op-decls", "ir/lce_ops.h.inc"),
-        ("-gen-op-defs", "ir/lce_ops.cc.inc"),
-        ("-gen-dialect-decls -dialect=lq", "ir/lce_dialect.h.inc"),
-        ("-gen-dialect-doc", "g3doc/lce_ops.md"),
+        (
+            ["-gen-enum-decls"],
+            "ir/lce_enum.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "ir/lce_enum.cc.inc",
+        ),
+        (
+            ["-gen-op-decls"],
+            "ir/lce_ops.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "ir/lce_ops.cc.inc",
+        ),
+        (
+            [
+                "-gen-dialect-decls",
+                "-dialect=lq",
+            ],
+            "ir/lce_dialect.h.inc",
+        ),
+        (
+            ["-gen-dialect-doc"],
+            "g3doc/lce_ops.md",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "ir/lce_ops.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
+    deps = [
         ":lce_ops_td_file",
-    ],
+    ]
 )
 
-gentbl(
+gentbl_cc_library(
     name = "op_removal_lce_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "transforms/generated_op_removal.inc"),
+        (
+            ["-gen-rewriters"],
+            "transforms/generated_op_removal.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/op_removal_patterns.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
+    deps = [
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "prepare_lce_target_arm_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "transforms/generated_prepare_target_arm.inc"),
+        (
+            ["-gen-rewriters"],
+            "transforms/generated_prepare_target_arm.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/prepare_patterns_target_arm.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
+    deps = [
         ":lce_ops_td_file",
-        "transforms/op_removal_patterns.td",
-        "transforms/prepare_patterns_common.td",
         "@llvm-project//mlir:StdOpsTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "prepare_lce_target_other_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "transforms/generated_prepare_target_other.inc"),
+        (
+            ["-gen-rewriters"],
+            "transforms/generated_prepare_target_other.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/prepare_patterns_common.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
+    deps = [
         ":lce_ops_td_file",
-        "transforms/op_removal_patterns.td",
         "@llvm-project//mlir:StdOpsTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "optimize_lce_target_arm_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "transforms/generated_optimize_target_arm.inc"),
+        (
+            ["-gen-rewriters"],
+            "transforms/generated_optimize_target_arm.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/optimize_patterns_target_arm.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
+    deps = [
         ":lce_ops_td_file",
-        "transforms/optimize_patterns_common.td",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "optimize_lce_target_other_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "transforms/generated_optimize_target_other.inc"),
+        (
+            ["-gen-rewriters"],
+            "transforms/generated_optimize_target_other.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/optimize_patterns_common.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
+    deps = [
         ":lce_ops_td_file",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "bitpack_activations_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "transforms/generated_bitpack_activations.inc"),
+        (
+            ["-gen-rewriters"],
+            "transforms/generated_bitpack_activations.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/bitpack_activations_patterns.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
+    deps = [
         ":lce_ops_td_file",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "bitpack_weights_lce_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "transforms/generated_bitpack_weights.inc"),
+        (
+            ["-gen-rewriters"],
+            "transforms/generated_bitpack_weights.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/bitpack_weights_patterns.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
+    deps = [
         ":lce_ops_td_file",
-        "transforms/op_removal_patterns.td",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "quantize_lce_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "transforms/generated_quantize.inc"),
+        (
+            ["-gen-rewriters"],
+            "transforms/generated_quantize.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/quantize_patterns.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
+    deps = [
         ":lce_ops_td_file",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "fuse_padding_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "transforms/generated_fuse_padding.inc"),
+        (
+            ["-gen-rewriters"],
+            "transforms/generated_fuse_padding.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/fuse_padding.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
+    deps = [
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_inc_gen",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
@@ -398,7 +433,6 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_config",
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_passes",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:decode_constant_pass",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_passes",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_saved_model_passes",
     ],
@@ -461,7 +495,7 @@ pybind_extension(
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tf_to_tfl_flatbuffer",
         "@org_tensorflow//tensorflow/compiler/mlir/lite/python:tf_tfl_flatbuffer_helpers",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_graphdef",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:export_graphdef",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:import_utils",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:mlir_roundtrip_flags",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_dialect_passes",
