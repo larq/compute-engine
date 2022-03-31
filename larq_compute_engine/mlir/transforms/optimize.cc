@@ -202,7 +202,7 @@ DenseElementsAttr GetSignsOfVectorAndBroadcast4D(Attribute vector_attr) {
 
   std::vector<Attribute> signs(vector_length);
   for (std::size_t i = 0; i < vector_length; ++i) {
-    const auto sign = vector.getValue<float>({i}) >= 0.0f ? 1.0f : -1.0f;
+    const auto sign = vector.getValues<float>()[{i}] >= 0.0f ? 1.0f : -1.0f;
     signs[i] = FloatAttr::get(element_type, sign);
   }
 
