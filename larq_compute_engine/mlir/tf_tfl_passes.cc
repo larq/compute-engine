@@ -127,6 +127,14 @@ void AddTFToLCETFLConversionPasses(
   // constant ops.
   pass_manager->addPass(mlir::tf_saved_model::CreateFreezeGlobalTensorsPass());
 
+  // Reduce operands of TFL::While without changing the outcome.
+  // It needs to stay here because:
+  // 1. WhileOps are in TFL dialect.
+  // 2. The body and cond are inlined.
+  // 3. We need to do this before while canonicalization, otherwise it would be
+  //   difficult to find dependencies.
+  pass_manager->addNestedPass<mlir::FuncOp>(
+      mlir::TFL::CreateReduceWhileOperandsPass());
   // Canonicalization includes const folding, which is utilized here to optimize
   // away ops that can't get constant folded after PrepareTF pass. For example,
   // tf.Conv2D is split into tf.Transpose and tfl.Conv2D.
@@ -155,6 +163,7 @@ void AddTFToLCETFLConversionPasses(
   // TODO(fengliuai): remove this pass if TableGen patterns have a better
   // to control the shapes for the intermediate results.
   pass_manager->addPass(mlir::TF::CreateTFShapeInferencePass());
+
   // Inline function calls that left in the graph after folding functional
   // control flow ops (IfOp, CaseOp).
   pass_manager->addPass(mlir::createInlinerPass());
@@ -165,6 +174,8 @@ void AddTFToLCETFLConversionPasses(
 
   pass_manager->addNestedPass<mlir::FuncOp>(
       mlir::TFL::CreateLegalizeTFPass(true));
+  pass_manager->addPass(mlir::TFL::CreateAnalyzeVariablesPass());
+  pass_manager->addPass(mlir::TFL::CreateLegalizeVariablesPass());
   pass_manager->addPass(mlir::TFL::CreateLegalizeHashTablesPass());
   pass_manager->addPass(mlir::TFL::CreateOptimizeLCEPass(target));
   pass_manager->addNestedPass<mlir::FuncOp>(
