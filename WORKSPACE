@@ -15,6 +15,7 @@ http_archive(
     patch_tool = "patch",
     patches = [
         "//third_party/tensorflow_patches:disable_forced_mkl.patch",
+        "//third_party/tensorflow_patches:fix_armhf_xnnpack.patch",
     ],
     sha256 = "66b953ae7fba61fd78969a2e24e350b26ec116cf2e6a7eb93d02c63939c6f9f7",
     strip_prefix = "tensorflow-2.8.0",

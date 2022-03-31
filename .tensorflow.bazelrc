@@ -136,6 +136,7 @@ build:elinux_aarch64 --config=elinux
 build:elinux_aarch64 --cpu=aarch64
 build:elinux_armhf --config=elinux
 build:elinux_armhf --cpu=armhf
+build:elinux_armhf --copt -mfp16-format=ieee
 
 # Address sanitizer
 # CC=clang bazel build --config asan
