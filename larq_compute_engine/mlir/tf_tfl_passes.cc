@@ -7,7 +7,6 @@
 #include "tensorflow/compiler/mlir/lite/quantization/quantization_passes.h"
 #include "tensorflow/compiler/mlir/lite/transforms/passes.h"
 #include "tensorflow/compiler/mlir/lite/utils/fake_quant_utils.h"
-#include "tensorflow/compiler/mlir/tensorflow/transforms/decode_constant.h"
 #include "tensorflow/compiler/mlir/tensorflow/transforms/passes.h"
 #include "tensorflow/compiler/mlir/tensorflow/transforms/tf_saved_model_passes.h"
 
@@ -116,9 +115,6 @@ void AddTFToLCETFLConversionPasses(
   // function inliner interface.
   pass_manager->addPass(mlir::createInlinerPass());
 
-  // TODO(jpienaar): Revise post dialect constants.
-  pass_manager->addNestedPass<mlir::FuncOp>(
-      mlir::TF::CreateDecodeConstantPass());
   // Remove passthrough ops early so constant folding can happen before
   // LCE ops are injected
   pass_manager->addPass(mlir::TFL::CreateOpRemovalPass());
