@@ -20,6 +20,8 @@ using compute_engine::core::bitpacking_bitwidth;
 
 // Prepare LCE operations in functions for subsequent legalization.
 struct PrepareLCE : public PassWrapper<PrepareLCE, FunctionPass> {
+  llvm::StringRef getArgument() const final { return "tfl-prepare-lce"; }
+  llvm::StringRef getDescription() const final { return "Inject LCE Ops"; }
   PrepareLCE() = default;
   PrepareLCE(const PrepareLCE& pass) {}
   PrepareLCE(const LCETarget target) { target_.setValue(target); }
@@ -194,7 +196,7 @@ std::unique_ptr<OperationPass<FuncOp>> CreatePrepareLCEPass(
   return std::make_unique<PrepareLCE>(target);
 }
 
-static PassRegistration<PrepareLCE> pass("tfl-prepare-lce", "Inject LCE Ops.");
+static PassRegistration<PrepareLCE> pass;
 
 }  // namespace TFL
 }  // namespace mlir
