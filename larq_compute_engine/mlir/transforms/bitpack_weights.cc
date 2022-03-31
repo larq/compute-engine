@@ -12,6 +12,12 @@ namespace TFL {
 namespace {
 
 struct BitpackWeightsLCE : public PassWrapper<BitpackWeightsLCE, FunctionPass> {
+  llvm::StringRef getArgument() const final {
+    return "tfl-lce-bitpack-weights";
+  }
+  llvm::StringRef getDescription() const final {
+    return "Bitpack binary weights";
+  }
   void runOnFunction() override;
 };
 
@@ -39,8 +45,7 @@ std::unique_ptr<OperationPass<FuncOp>> CreateBitpackWeightsLCEPass() {
   return std::make_unique<BitpackWeightsLCE>();
 }
 
-static PassRegistration<BitpackWeightsLCE> pass("tfl-lce-bitpack-weights",
-                                                "Bitpack binary weights");
+static PassRegistration<BitpackWeightsLCE> pass;
 
 }  // namespace TFL
 }  // namespace mlir
