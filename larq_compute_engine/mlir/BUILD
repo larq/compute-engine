@@ -8,13 +8,32 @@ package(
 
 td_library(
     name = "lce_ops_td_file",
-    srcs = [
-        "ir/lce_ops.td",
-    ],
+    srcs = ["ir/lce_ops.td"],
+    includes = ["/external/org_tensorflow"],
     deps = [
         "@llvm-project//mlir:SideEffectTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_td_files",
+    ],
+)
+
+td_library(
+    name = "fuse_padding_file",
+    srcs = ["transforms/fuse_padding.td"],
+    includes = ["/external/org_tensorflow"],
+    deps = [
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_inc_gen",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    ],
+)
+
+td_library(
+    name = "op_removal_patterns_file",
+    srcs = ["transforms/op_removal_patterns.td"],
+    includes = ["/external/org_tensorflow"],
+    deps = [
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
     ],
 )
 
@@ -51,9 +70,7 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "ir/lce_ops.td",
-    deps = [
-        ":lce_ops_td_file",
-    ]
+    deps = [":lce_ops_td_file"],
 )
 
 gentbl_cc_library(
@@ -66,10 +83,7 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/op_removal_patterns.td",
-    deps = [
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
-        "@llvm-project//mlir:StdOpsTdFiles",
-    ],
+    deps = [":op_removal_patterns_file"],
 )
 
 gentbl_cc_library(
@@ -85,8 +99,8 @@ gentbl_cc_library(
     deps = [
         ":lce_ops_td_file",
         "@llvm-project//mlir:StdOpsTdFiles",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
     ],
 )
 
@@ -103,8 +117,8 @@ gentbl_cc_library(
     deps = [
         ":lce_ops_td_file",
         "@llvm-project//mlir:StdOpsTdFiles",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
     ],
 )
 
@@ -120,8 +134,8 @@ gentbl_cc_library(
     td_file = "transforms/optimize_patterns_target_arm.td",
     deps = [
         ":lce_ops_td_file",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
 
@@ -137,8 +151,8 @@ gentbl_cc_library(
     td_file = "transforms/optimize_patterns_common.td",
     deps = [
         ":lce_ops_td_file",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
 
@@ -154,8 +168,8 @@ gentbl_cc_library(
     td_file = "transforms/bitpack_activations_patterns.td",
     deps = [
         ":lce_ops_td_file",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
 
@@ -171,9 +185,9 @@ gentbl_cc_library(
     td_file = "transforms/bitpack_weights_patterns.td",
     deps = [
         ":lce_ops_td_file",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
     ],
 )
 
@@ -204,8 +218,7 @@ gentbl_cc_library(
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/fuse_padding.td",
     deps = [
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_inc_gen",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+        ":fuse_padding_file",
     ],
 )
 
