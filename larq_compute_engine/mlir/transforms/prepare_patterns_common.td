@@ -1,4 +1,5 @@
 include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
@@ -22,8 +23,8 @@ def CreateTFShapeOp : NativeCodeCall<
 multiclass QuantDequantPatterns<Op SelectOp> {
   def : Pat<(SelectOp:$select_op
                 $cond,
-                (ConstantOp ConstantValue<"1.0f">),
-                (ConstantOp ConstantValue<"-1.0f">)),
+                (Arith_ConstantOp ConstantValue<"1.0f">),
+                (Arith_ConstantOp ConstantValue<"-1.0f">)),
             (LQ_DequantizeOp
                 (LQ_QuantizeOp
                     (CreateTFBroadcastToOp
@@ -36,8 +37,8 @@ multiclass QuantDequantPatterns<Op SelectOp> {
             [], (addBenefit 100)>;
   def : Pat<(SelectOp:$select_op
                 $cond,
-                (ConstantOp ConstantValue<"-1.0f">),
-                (ConstantOp ConstantValue<"1.0f">)),
+                (Arith_ConstantOp ConstantValue<"-1.0f">),
+                (Arith_ConstantOp ConstantValue<"1.0f">)),
             (LQ_DequantizeOp
                 (LQ_QuantizeOp
                     (CreateTFBroadcastToOp
@@ -93,7 +94,7 @@ def CreateNoneAttrValue : NativeCodeCall<"$_builder.getUnitAttr()">;
 class PrepareBConvPadValue0Pat<StrEnumAttrCase padding_type> :
       Pat<(TF_Conv2DOp
               (LQ_DequantizeOp:$dequantized_input $input),
-              (ConstantOp:$filter_op $filter),
+              (Arith_ConstantOp:$filter_op $filter),
               IsIntList1XY1:$strides,
               $use_cudnn,
               padding_type:$padding,
@@ -104,12 +105,12 @@ class PrepareBConvPadValue0Pat<StrEnumAttrCase padding_type> :
               $input,
               (TF_TransposeOp
                   (TF_DivOp
-                      (ConstantOp $filter),
-                      (ConstantOp (GetScaleVector $filter))),
-                  (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
-              (ConstantOp (GetScaleVector $filter)),
-              (ConstantOp (GetConstantVector<"0.0f"> $filter)),
-              (ConstantOp (CreateNoneAttrValue)),
+                      (Arith_ConstantOp $filter),
+                      (Arith_ConstantOp (GetScaleVector $filter))),
+                  (Arith_ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
+              (Arith_ConstantOp (GetScaleVector $filter)),
+              (Arith_ConstantOp (GetConstantVector<"0.0f"> $filter)),
+              (Arith_ConstantOp (CreateNoneAttrValue)),
               (GetNumChannels $dequantized_input),
               ExtractI32At<1>:$dilations,
               ExtractI32At<2>:$dilations,
@@ -133,9 +134,9 @@ def SamePadding : Constraint<CPred<"IsSamePadding($0, $1, $2, $3)">>;
 def : Pat<(TF_Conv2DOp:$output
               (TF_PadV2Op
                   (LQ_DequantizeOp:$dequantized_input $input),
-                  (ConstantOp $paddings),
-                  (ConstantOp $pad_values)),
-              (ConstantOp:$filter_op $filter),
+                  (Arith_ConstantOp $paddings),
+                  (Arith_ConstantOp $pad_values)),
+              (Arith_ConstantOp:$filter_op $filter),
               IsIntList1XY1:$strides,
               $use_cudnn,
               TFL_PAD_Valid,
@@ -145,12 +146,12 @@ def : Pat<(TF_Conv2DOp:$output
           (LQ_Bconv2dOp $input,
               (TF_TransposeOp
                   (TF_DivOp
-                      (ConstantOp $filter),
-                      (ConstantOp (GetScaleVector $filter))),
-                  (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
-              (ConstantOp (GetScaleVector $filter)),
-              (ConstantOp (GetConstantVector<"0.0f"> $filter)),
-              (ConstantOp (CreateNoneAttrValue)),
+                      (Arith_ConstantOp $filter),
+                      (Arith_ConstantOp (GetScaleVector $filter))),
+                  (Arith_ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
+              (Arith_ConstantOp (GetScaleVector $filter)),
+              (Arith_ConstantOp (GetConstantVector<"0.0f"> $filter)),
+              (Arith_ConstantOp (CreateNoneAttrValue)),
               (GetNumChannels $dequantized_input),
               ExtractI32At<1>:$dilations,
               ExtractI32At<2>:$dilations,

@@ -1,4 +1,5 @@
 include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
 
@@ -17,10 +18,10 @@ class WriteBitpackedActivationsPat<StrEnumAttrCase padding_type, string pad_valu
       Pat<(LQ_QuantizeOp
               (LQ_Bconv2dOp:$output
                   $input,
-                  (ConstantOp F32ElementsAttr:$filter),
-                  (ConstantOp F32ElementsAttr:$post_activation_multiplier),
-                  (ConstantOp F32ElementsAttr:$post_activation_bias),
-                  (ConstantOp UnitAttr),
+                  (Arith_ConstantOp F32ElementsAttr:$filter),
+                  (Arith_ConstantOp F32ElementsAttr:$post_activation_multiplier),
+                  (Arith_ConstantOp F32ElementsAttr:$post_activation_bias),
+                  (Arith_ConstantOp UnitAttr),
                   $channels_in,
                   $dilation_height_factor,
                   $dilation_width_factor,
@@ -32,13 +33,13 @@ class WriteBitpackedActivationsPat<StrEnumAttrCase padding_type, string pad_valu
           (LQ_Bconv2dOp
               $input,
               (TFL_MulOp
-                  (ConstantOp $filter),
-                  (ConstantOp
+                  (Arith_ConstantOp $filter),
+                  (Arith_ConstantOp
                       (GetSignsOfVectorAndBroadcast4D $post_activation_multiplier)),
                   TFL_AF_None),
-              (ConstantOp (CreateNoneAttrValue)),
-              (ConstantOp (CreateNoneAttrValue)),
-              (ConstantOp
+              (Arith_ConstantOp (CreateNoneAttrValue)),
+              (Arith_ConstantOp (CreateNoneAttrValue)),
+              (Arith_ConstantOp
                   (GetBitpackedOutputThresholds
                       $filter,
                       $post_activation_multiplier,
