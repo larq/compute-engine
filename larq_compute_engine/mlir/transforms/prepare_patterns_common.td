@@ -85,7 +85,7 @@ def BinaryFilter : Constraint<CPred<"IsBinaryFilter($0)">>;
 def GetScaleVector : NativeCodeCall<"GetScaleVector($0)">;
 def GetNumChannels : NativeCodeCall<"GetNumChannels($_builder, $0)">;
 def ValidFilterShape : Constraint<CPred<"HasValidFilterShape($0, $1)">>;
-def IsDataFormatNHWC : ConstantAttr<TF_ConvnetDataFormatAttr, "NHWC">;
+def IsDataFormatNHWC : ConstantAttr<TF_ConvnetDataFormatAttr, "\"NHWC\"">;
 def CreateNoneAttrValue : NativeCodeCall<"$_builder.getUnitAttr()">;
 
 // All targets support this pattern with "VALID" padding, but only the "arm"
