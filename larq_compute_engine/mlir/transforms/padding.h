@@ -33,8 +33,8 @@ inline ShapeRefType GetShape4D(Value tensor) {
 inline bool IsSamePadding1D(DenseElementsAttr paddings, uint64_t dimension,
                             int input_size, int output_size, int stride) {
   using compute_engine::core::CeilDiv;
-  int pad_before = paddings.getValues<int>()[]{dimension, 0}];
-  int pad_after = paddings.getValues<int>()[]{dimension, 1}];
+  int pad_before = paddings.getValues<int>()[{dimension, 0}];
+  int pad_after = paddings.getValues<int>()[{dimension, 1}];
   const int pad_total = pad_before + pad_after;
   return (output_size == CeilDiv(input_size, stride)) &&
          (pad_before == (pad_total / 2)) &&
@@ -42,8 +42,8 @@ inline bool IsSamePadding1D(DenseElementsAttr paddings, uint64_t dimension,
 }
 
 inline bool IsNoPadding(DenseElementsAttr paddings, uint64_t dimension) {
-  return paddings.getValue<int>({dimension, 0}) == 0 &&
-         paddings.getValue<int>({dimension, 1}) == 0;
+  return paddings.getValues<int>()[{dimension, 0}] == 0 &&
+         paddings.getValues<int>()[{dimension, 1}] == 0;
 }
 
 }  // namespace TFL

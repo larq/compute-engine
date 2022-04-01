@@ -37,6 +37,29 @@ td_library(
     ],
 )
 
+td_library(
+    name = "optimize_patterns_common_file",
+    srcs = ["transforms/optimize_patterns_common.td"],
+    includes = ["/external/org_tensorflow"],
+    deps = [
+        ":lce_ops_td_file",
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    ],
+)
+
+td_library(
+    name = "prepare_patterns_common_file",
+    srcs = ["transforms/prepare_patterns_common.td"],
+    includes = ["/external/org_tensorflow"],
+    deps = [
+        ":lce_ops_td_file",
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+    ],
+)
+
 gentbl_cc_library(
     name = "lce_ops_inc_gen",
     tbl_outs = [
@@ -59,7 +82,8 @@ gentbl_cc_library(
         (
             [
                 "-gen-dialect-decls",
-                "-dialect=lq",
+                "-dialect",
+                "lq",
             ],
             "ir/lce_dialect.h.inc",
         ),
@@ -96,12 +120,7 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/prepare_patterns_target_arm.td",
-    deps = [
-        ":lce_ops_td_file",
-        "@llvm-project//mlir:StdOpsTdFiles",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
-    ],
+    deps = [":prepare_patterns_common_file"],
 )
 
 gentbl_cc_library(
@@ -114,12 +133,7 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/prepare_patterns_common.td",
-    deps = [
-        ":lce_ops_td_file",
-        "@llvm-project//mlir:StdOpsTdFiles",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
-    ],
+    deps = [":prepare_patterns_common_file"],
 )
 
 gentbl_cc_library(
@@ -132,11 +146,7 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/optimize_patterns_target_arm.td",
-    deps = [
-        ":lce_ops_td_file",
-        "@llvm-project//mlir:StdOpsTdFiles",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
-    ],
+    deps = [":optimize_patterns_common_file"],
 )
 
 gentbl_cc_library(
@@ -149,11 +159,7 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/optimize_patterns_common.td",
-    deps = [
-        ":lce_ops_td_file",
-        "@llvm-project//mlir:StdOpsTdFiles",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
-    ],
+    deps = [":optimize_patterns_common_file"],
 )
 
 gentbl_cc_library(

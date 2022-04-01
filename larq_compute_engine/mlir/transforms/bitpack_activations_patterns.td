@@ -13,7 +13,7 @@ def CreateNoneAttrValue : NativeCodeCall<"$_builder.getUnitAttr()">;
 def GetSignsOfVectorAndBroadcast4D : NativeCodeCall<"GetSignsOfVectorAndBroadcast4D($0)">;
 def GetBitpackedOutputThresholds : NativeCodeCall<"GetBitpackedOutputThresholds($_builder, $0, $1, $2, $3)">;
 
-class WriteBitpackedActivationsPat<string padding_type, string pad_values> :
+class WriteBitpackedActivationsPat<StrEnumAttrCase padding_type, string pad_values> :
       Pat<(LQ_QuantizeOp
               (LQ_Bconv2dOp:$output
                   $input,
@@ -26,7 +26,7 @@ class WriteBitpackedActivationsPat<string padding_type, string pad_values> :
                   $dilation_width_factor,
                   $fused_activation_function,
                   ConstantAttr<I32Attr, pad_values>,
-                  ConstantAttr<StrAttr, padding_type>,
+                  padding_type,
                   $stride_height,
                   $stride_width)),
           (LQ_Bconv2dOp
@@ -49,9 +49,9 @@ class WriteBitpackedActivationsPat<string padding_type, string pad_values> :
               $dilation_width_factor,
               $fused_activation_function,
               ConstantAttr<I32Attr, pad_values>,
-              ConstantAttr<StrAttr, padding_type>,
+              padding_type,
               $stride_height,
               $stride_width),
           [(HasOneUse $output)], (addBenefit 10)>;
-def : WriteBitpackedActivationsPat<"VALID", "0">;
-def : WriteBitpackedActivationsPat<"SAME", "1">;
+def : WriteBitpackedActivationsPat<TFL_PAD_Valid, "0">;
+def : WriteBitpackedActivationsPat<TFL_PAD_Same, "1">;

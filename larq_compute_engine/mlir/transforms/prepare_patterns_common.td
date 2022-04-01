@@ -90,13 +90,13 @@ def CreateNoneAttrValue : NativeCodeCall<"$_builder.getUnitAttr()">;
 
 // All targets support this pattern with "VALID" padding, but only the "arm"
 // target supports it with "SAME" padding.
-class PrepareBConvPadValue0Pat<string padding_type> :
+class PrepareBConvPadValue0Pat<StrEnumAttrCase padding_type> :
       Pat<(TF_Conv2DOp
               (LQ_DequantizeOp:$dequantized_input $input),
               (ConstantOp:$filter_op $filter),
               IsIntList1XY1:$strides,
               $use_cudnn,
-              ConstantAttr<StrAttr, padding_type>:$padding,
+              padding_type:$padding,
               $explicit_padding,
               IsDataFormatNHWC:$data_format,
               IsIntList1XY1:$dilations),
@@ -121,7 +121,7 @@ class PrepareBConvPadValue0Pat<string padding_type> :
           [(BinaryFilter $filter),
            (ValidFilterShape $dequantized_input, $filter_op)],
           (addBenefit 90)>;
-def : PrepareBConvPadValue0Pat<"VALID">;
+def : PrepareBConvPadValue0Pat<TFL_PAD_Valid>;
 
 def ConstFloatValueIsOne : Constraint<
   CPred<"$0.isa<DenseElementsAttr>() && "
@@ -138,7 +138,7 @@ def : Pat<(TF_Conv2DOp:$output
               (ConstantOp:$filter_op $filter),
               IsIntList1XY1:$strides,
               $use_cudnn,
-              ConstantAttr<StrAttr, "VALID">,
+              TFL_PAD_Valid,
               $explicit_padding,
               IsDataFormatNHWC:$data_format,
               IsIntList1XY1:$dilations),
@@ -156,7 +156,7 @@ def : Pat<(TF_Conv2DOp:$output
               ExtractI32At<2>:$dilations,
               TFL_AF_None,
               ConstantAttr<I32Attr, "1">,
-              ConstantAttr<StrAttr, "SAME">,
+              TFL_PAD_Same,
               ExtractI32At<1>:$strides,
               ExtractI32At<2>:$strides),
           [(BinaryFilter $filter),
