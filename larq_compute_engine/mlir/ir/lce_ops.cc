@@ -5,6 +5,9 @@
 #include "larq_compute_engine/mlir/transforms/bitpack.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
+// Generated dialect defs.
+#include "larq_compute_engine/mlir/ir/lce_dialect.cc.inc"
+
 #define GET_OP_CLASSES
 #include "larq_compute_engine/mlir/ir/lce_enum.cc.inc"
 #include "larq_compute_engine/mlir/ir/lce_ops.cc.inc"

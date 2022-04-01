@@ -88,6 +88,14 @@ gentbl_cc_library(
             "ir/lce_dialect.h.inc",
         ),
         (
+            [
+                "-gen-dialect-defs",
+                "-dialect",
+                "lq",
+            ],
+            "ir/lce_dialect.cc.inc",
+        ),
+        (
             ["-gen-dialect-doc"],
             "g3doc/lce_ops.md",
         ),
@@ -247,6 +255,7 @@ cc_library(
 cc_library(
     name = "larq_compute_engine",
     srcs = [
+        "ir/lce_dialect.cc.inc",
         "ir/lce_dialect.h.inc",
         "ir/lce_enum.cc.inc",
         "ir/lce_enum.h.inc",
