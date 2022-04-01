@@ -82,10 +82,13 @@ Status ConvertTFExecutorToFlatbuffer(mlir::ModuleOp module, bool export_to_mlir,
   }
 
   // This is the only modification compared to the upstream tensorflow file
+  // TODO: This is no longer the case, these files have diverged since TF2.6
   TruncateOpOrArgLocNameMapper op_or_arg_name_mapper;
+  toco::TocoFlags toco_flags;
+  toco_flags.set_force_select_tf_ops(false);
+  toco_flags.set_allow_custom_ops(true);
   tflite::FlatbufferExportOptions options;
-  options.emit_builtin_tflite_ops = true;
-  options.emit_custom_ops = true;
+  options.toco_flags = toco_flags;
   options.op_or_arg_name_mapper = &op_or_arg_name_mapper;
   if (!tflite::MlirToFlatBufferTranslateFunction(module, options, result)) {
     return statusHandler.ConsumeStatus();
