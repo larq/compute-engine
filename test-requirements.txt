@@ -1,3 +1,3 @@
-black==21.5b1
-pyflakes==2.3.1
-pytype==2021.5.25
+black==22.3.0
+pyflakes==2.4.0
+pytype==2022.3.29
