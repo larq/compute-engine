@@ -9,9 +9,9 @@
 int main(int argc, char** argv) {
   mlir::registerTransformsPasses();
   mlir::DialectRegistry registry;
-  registry.insert<mlir::StandardOpsDialect, mlir::quant::QuantizationDialect,
-                  mlir::TF::TensorFlowDialect, mlir::TFL::TensorFlowLiteDialect,
-                  mlir::lq::LarqDialect>();
+  registry.insert<mlir::arith::ArithmeticDialect, mlir::StandardOpsDialect,
+                  mlir::quant::QuantizationDialect, mlir::TF::TensorFlowDialect,
+                  mlir::TFL::TensorFlowLiteDialect, mlir::lq::LarqDialect>();
   return failed(mlir::MlirOptMain(argc, argv,
                                   "Larq Compute Engine pass driver\n", registry,
                                   /*preloadDialectsInContext=*/false));
