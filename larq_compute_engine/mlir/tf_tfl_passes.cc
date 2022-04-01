@@ -143,6 +143,7 @@ void AddTFToLCETFLConversionPasses(
   // This pass does dead code elimination based on symbol visibility.
   pass_manager->addPass(mlir::createSymbolDCEPass());
 
+  // Run shape inference after variables are converted to constants.
   pass_manager->addPass(mlir::TF::CreateTFShapeInferencePass());
   // Force layout supported by TFLite, this will transpose the data
   // to match 'kTFLiteDataLayout'
@@ -200,6 +201,7 @@ void AddTFToLCETFLConversionPasses(
   // completed.
   if (quant_specs.RunPropagationAndRewriteQuantizationPasses()) {
     AddQuantizationPasses(quant_specs, pass_manager);
+    pass_manager->addPass(mlir::createCanonicalizerPass());
   }
 
   // This pass should be always at the end of the model
@@ -216,6 +218,10 @@ void AddTFToLCETFLConversionPasses(
   // model dialect.
   pass_manager->addPass(
       mlir::TFL::CreateInsertCallOnceOpFromSessionInitializerPass());
+  pass_manager->addPass(mlir::TFL::CreateUnfoldLargeSplatConstantPass());
+  pass_manager->addPass(mlir::TFL::CreateWhileOutlinePass());
+  pass_manager->addNestedPass<mlir::FuncOp>(
+      mlir::TFL::CreateRuntimeVerifyPass());
 
   pass_manager->addPass(mlir::TFL::CreateLegalizeLCEPass());
 }
