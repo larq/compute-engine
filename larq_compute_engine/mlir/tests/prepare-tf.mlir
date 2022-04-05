@@ -84,7 +84,7 @@ func @fuse_bconv2d_valid_padding(%arg0: tensor<1x112x112x1xi32>) -> tensor<1x112
   %1 = "tf.Conv2D"(%0, %cst) {padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<1x3x2x2xf32>) -> tensor<1x112x110x2xf32>
   return %1 : tensor<1x112x110x2xf32>
 
-  // CHECK: %cst = constant
+  // CHECK: %cst = arith.constant
   // CHECK: %[[post_activation_multiplier:.*]] = arith.constant dense<1.000000e+00> : tensor<2xf32>
   // CHECK: %[[post_activation_bias:.*]] = arith.constant dense<0.000000e+00> : tensor<2xf32>
   // CHECK: %[[output_threshold:.*]] = constant unit
@@ -100,7 +100,7 @@ func @target_specific_fuse_bconv2d_same_zero_padding(%arg0: tensor<1x112x112x1xi
   %1 = "tf.Conv2D"(%0, %cst) {padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<1x2x2x2xf32>) -> tensor<1x112x112x2xf32>
   return %1 : tensor<1x112x112x2xf32>
 
-  // CHECK-ARM: %cst = constant
+  // CHECK-ARM: %cst = arith.constant
   // CHECK-ARM: %[[post_activation_multiplier:.*]] = arith.constant dense<1.000000e+00> : tensor<2xf32>
   // CHECK-ARM: %[[post_activation_bias:.*]] = arith.constant dense<0.000000e+00> : tensor<2xf32>
   // CHECK-ARM: %[[output_threshold:.*]] = constant unit
@@ -120,7 +120,7 @@ func @fuse_bconv2d_grouped_convolution(%arg0: tensor<1x112x112x4xi32>) -> tensor
   %1 = "tf.Conv2D"(%0, %cst) {padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<1x112x112x128xf32>, tensor<3x3x64x16xf32>) -> tensor<1x110x110x16xf32>
   return %1 : tensor<1x110x110x16xf32>
 
-  // CHECK: %cst = constant
+  // CHECK: %cst = arith.constant
   // CHECK: %[[post_activation_multiplier:.*]] = arith.constant dense<1.000000e+00> : tensor<16xf32>
   // CHECK: %[[post_activation_bias:.*]] = arith.constant dense<0.000000e+00> : tensor<16xf32>
   // CHECK: %[[output_threshold:.*]] = constant unit
@@ -148,7 +148,7 @@ func @fuse_scaled_bconv2d(%arg0: tensor<1x112x112x1xi32>) -> tensor<1x112x110x2x
   %1 = "tf.Conv2D"(%0, %cst) {padding = "VALID", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<1x3x2x2xf32>) -> tensor<1x112x110x2xf32>
   return %1 : tensor<1x112x110x2xf32>
 
-  // CHECK: %cst = constant
+  // CHECK: %cst = arith.constant
   // CHECK: %[[post_activation_multiplier:.*]] = arith.constant dense<[3.000000e-01, 1.000000e-01]> : tensor<2xf32>
   // CHECK: %[[post_activation_bias:.*]] = arith.constant dense<0.000000e+00> : tensor<2xf32>
   // CHECK: %[[output_threshold:.*]] = constant unit
@@ -184,7 +184,7 @@ func @do_not_fuse_bconv2d_non_binary_weights(%arg0: tensor<1x112x112x1xi32>) -> 
   %1 = "tf.Conv2D"(%0, %cst) {padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<1x2x2x2xf32>) -> tensor<1x112x112x2xf32>
   return %1 : tensor<1x112x112x2xf32>
 
-  // CHECK-NEXT: %cst = constant
+  // CHECK-NEXT: %cst = arith.constant
   // CHECK-NEXT: %0 = "lq.Dequantize"(%arg0)
   // CHECK-NEXT: %1 = "tf.Conv2D"(%0, %cst)
   // CHECK-NEXT: return %1
@@ -197,7 +197,7 @@ func @do_not_fuse_bconv2d_zero_weight(%arg0: tensor<1x112x112x1xi32>) -> tensor<
   %1 = "tf.Conv2D"(%0, %cst) {padding = "SAME", strides = [1, 1, 1, 1]} : (tensor<1x112x112x2xf32>, tensor<1x2x2x2xf32>) -> tensor<1x112x112x2xf32>
   return %1 : tensor<1x112x112x2xf32>
 
-  // CHECK-NEXT: %cst = constant
+  // CHECK-NEXT: %cst = arith.constant
   // CHECK-NEXT: %0 = "lq.Dequantize"(%arg0)
   // CHECK-NEXT: %1 = "tf.Conv2D"(%0, %cst)
   // CHECK-NEXT: return %1
