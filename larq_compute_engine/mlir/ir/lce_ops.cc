@@ -3,6 +3,7 @@
 #include "flatbuffers/flexbuffers.h"
 #include "larq_compute_engine/core/bitpacking/bitpack.h"
 #include "larq_compute_engine/mlir/transforms/bitpack.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
 // Generated dialect defs.
@@ -75,6 +76,13 @@ void LarqDialect::initialize() {
 #define GET_OP_LIST
 #include "larq_compute_engine/mlir/ir/lce_ops.cc.inc"
       >();
+}
+
+Operation* LarqDialect::materializeConstant(OpBuilder& builder, Attribute value,
+                                            Type type, Location loc) {
+  if (arith::ConstantOp::isBuildableWith(value, type))
+    return builder.create<mlir::arith::ConstantOp>(loc, type, value);
+  return nullptr;
 }
 }  // namespace lq
 }  // namespace mlir
