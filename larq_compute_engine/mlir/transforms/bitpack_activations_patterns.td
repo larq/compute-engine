@@ -21,7 +21,7 @@ class WriteBitpackedActivationsPat<StrEnumAttrCase padding_type, string pad_valu
                   (Arith_ConstantOp F32ElementsAttr:$filter),
                   (Arith_ConstantOp F32ElementsAttr:$post_activation_multiplier),
                   (Arith_ConstantOp F32ElementsAttr:$post_activation_bias),
-                  (Arith_ConstantOp UnitAttr),
+                  (ConstantOp UnitAttr),
                   $channels_in,
                   $dilation_height_factor,
                   $dilation_width_factor,
@@ -37,8 +37,8 @@ class WriteBitpackedActivationsPat<StrEnumAttrCase padding_type, string pad_valu
                   (Arith_ConstantOp
                       (GetSignsOfVectorAndBroadcast4D $post_activation_multiplier)),
                   TFL_AF_None),
-              (Arith_ConstantOp (CreateNoneAttrValue)),
-              (Arith_ConstantOp (CreateNoneAttrValue)),
+              (ConstantOp (CreateNoneAttrValue)),
+              (ConstantOp (CreateNoneAttrValue)),
               (Arith_ConstantOp
                   (GetBitpackedOutputThresholds
                       $filter,
