@@ -37,3 +37,13 @@ func @quantize_lce_dequantize(%arg0: tensor<1x112x112x1xi32>) -> tensor<1x112x11
 // CHECK-NEXT: %0 = "lq.Dequantize"(%arg0) : (tensor<1x112x112x1xi32>) -> tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>
 // CHECK-NEXT: return %0 : tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>
 }
+
+// CHECK-LABEL: dequantize_lce_quantize
+func @dequantize_lce_quantize(%arg0: tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>) -> tensor<1x112x112x1xi32> {
+  %0 = "tfl.dequantize"(%arg0) : (tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>) -> tensor<1x112x112x32xf32>
+  %1 = "lq.Quantize"(%0) : (tensor<1x112x112x32xf32>) -> tensor<1x112x112x1xi32>
+  return %1 : tensor<1x112x112x1xi32>
+
+// CHECK: %[[quant:.*]] = "lq.Quantize"(%arg0) : (tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>) -> tensor<1x112x112x1xi32>
+// CHECK-NEXT: return %[[quant]] : tensor<1x112x112x1xi32>
+}
