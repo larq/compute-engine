@@ -201,8 +201,8 @@ void AddTFToLCETFLConversionPasses(
   // completed.
   if (quant_specs.RunPropagationAndRewriteQuantizationPasses()) {
     AddQuantizationPasses(quant_specs, pass_manager);
-    pass_manager->addPass(mlir::createCanonicalizerPass());
   }
+  pass_manager->addPass(mlir::createCanonicalizerPass());
 
   // This pass should be always at the end of the model
   // conversion (even after quantization). Some TFL ops like unidirectional
