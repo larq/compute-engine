@@ -18,14 +18,9 @@ limitations under the License.
 
 #include <exception>
 
-#include "larq_compute_engine/mlir/tf_tfl_passes.h"
 #include "larq_compute_engine/mlir/tf_to_tfl_flatbuffer.h"
-#include "larq_compute_engine/mlir/transforms/passes.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Pass/Pass.h"
 #include "pybind11/pybind11.h"
-#include "tensorflow/compiler/mlir/lite/transforms/passes.h"
-#include "tensorflow/compiler/mlir/tensorflow/utils/dump_mlir_util.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/platform/status.h"
 
@@ -77,8 +72,10 @@ Status GetNumInputs(mlir::OwningModuleRef* module, int* num_inputs) {
 pybind11::bytes ConvertMLIRModuleToTFLiteFlatBuffer(
     mlir::OwningModuleRef* module, mlir::MLIRContext& context,
     const LCETarget target, const pybind11::object& default_ranges,
-    const int num_inputs, const bool should_quantize,
-    const bool mark_as_post_training_quant) {
+    const std::unordered_set<std::string>& saved_model_tags,
+    llvm::StringRef saved_model_dir,
+    llvm::Optional<tensorflow::Session*> session, const int num_inputs,
+    const bool should_quantize, const bool mark_as_post_training_quant) {
   mlir::TFL::QuantizationSpecs quant_specs;
   if (should_quantize) {
     // Normally we'd only set `inference_type` to QINT8 when there are
@@ -118,18 +115,10 @@ pybind11::bytes ConvertMLIRModuleToTFLiteFlatBuffer(
     }
   }
 
-  mlir::PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
-  tensorflow::SetCrashReproducer(pm);
-
-  tensorflow::AddTFToLCETFLConversionPasses(quant_specs, &pm, target);
-
-  // Convert back to outlined while format for export back to flatbuffer.
-  pm.addPass(mlir::TFL::CreateWhileOutlinePass());
-  pm.addPass(mlir::TFL::CreateRuntimeVerifyPass());
-
   std::string result;
-  auto status = ConvertTFExecutorToFlatbuffer(
-      module->get(), /*export_to_mlir=*/false, &result, &pm);
+  auto status = ConvertTFExecutorToTFLOrFlatbuffer(
+      module->get(), /*export_to_mlir=*/false, target, quant_specs,
+      saved_model_tags, saved_model_dir, session, &result);
 
   if (!status.ok()) {
     throw std::runtime_error("Could not translate to flatbuffer.");

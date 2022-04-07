@@ -42,8 +42,8 @@ pybind11::bytes ConvertSavedModelToTFLiteFlatBuffer(
 
   auto target = GetLCETarget(target_str);
 
-  if (exported_names.size() != 1) {
-    throw std::runtime_error("Only a single exported name is supported.");
+  if (exported_names.empty()) {
+    throw std::runtime_error("Need at least one exported name.");
   }
 
   tensorflow::GraphImportConfig specs;
@@ -84,7 +84,8 @@ pybind11::bytes ConvertSavedModelToTFLiteFlatBuffer(
   }
 
   return ConvertMLIRModuleToTFLiteFlatBuffer(
-      &module.ValueOrDie(), context, target, default_ranges, num_inputs,
+      &module.ValueOrDie(), context, target, default_ranges, tags,
+      saved_model_dir, bundle ? bundle->GetSession() : nullptr, num_inputs,
       /*should_quantize=*/true,
       /*mark_as_post_training_quant=*/true);
 }
