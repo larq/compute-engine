@@ -14,7 +14,7 @@ void AddPreVariableFreezingTFToLCETFLConversionPasses(
 
 void AddPostVariableFreezingTFToLCETFLConversionPasses(
     llvm::StringRef saved_model_dir,
-    const mlir::TFL::QuantizationSpecs& quant_specs,
+    const mlir::quant::QuantizationSpecs& quant_specs,
     mlir::OpPassManager* pass_manager, const LCETarget target = LCETarget::ARM);
 
 }  // namespace tensorflow

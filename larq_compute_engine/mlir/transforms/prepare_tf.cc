@@ -2,7 +2,7 @@
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "larq_compute_engine/mlir/transforms/padding.h"
 #include "larq_compute_engine/mlir/transforms/passes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -19,14 +19,14 @@ namespace {
 using compute_engine::core::bitpacking_bitwidth;
 
 // Prepare LCE operations in functions for subsequent legalization.
-struct PrepareLCE : public PassWrapper<PrepareLCE, FunctionPass> {
+struct PrepareLCE : public PassWrapper<PrepareLCE, OperationPass<FuncOp>> {
   llvm::StringRef getArgument() const final { return "tfl-prepare-lce"; }
   llvm::StringRef getDescription() const final { return "Inject LCE Ops"; }
   PrepareLCE() = default;
   PrepareLCE(const PrepareLCE& pass) {}
   PrepareLCE(const LCETarget target) { target_.setValue(target); }
 
-  void runOnFunction() override;
+  void runOnOperation() override;
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<mlir::lq::LarqDialect>();
   }
@@ -169,15 +169,15 @@ namespace target_other {
 #include "larq_compute_engine/mlir/transforms/generated_prepare_target_other.inc"
 }
 
-void PrepareLCE::runOnFunction() {
+void PrepareLCE::runOnOperation() {
   auto* ctx = &getContext();
-  OwningRewritePatternList patterns(ctx);
-  auto func = getFunction();
+  RewritePatternSet patterns(ctx);
+  auto func = getOperation();
 
   // This pattern will try to identify and optimize for dilated convolution.
   // e.g. Patterns like "SpaceToBatchND -> Conv2D -> BatchToSpaceND" will be
   // replaced with a single Conv op with dilation parameter.
-  patterns.insert<ConvertTFDilatedConvOp<TF::Conv2DOp>>(ctx);
+  patterns.add<ConvertTFDilatedConvOp<TF::Conv2DOp>>(ctx);
 
   if (target_ == LCETarget::ARM) {
     target_arm::populateWithGenerated(patterns);

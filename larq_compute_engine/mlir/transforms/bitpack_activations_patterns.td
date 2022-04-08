@@ -1,4 +1,5 @@
-include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "mlir/IR/PatternBase.td"
+include "mlir/Dialect/Func/IR/FuncOps.td"
 include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
@@ -10,7 +11,8 @@ def F32ElementsAttr : ElementsAttrBase<
 // Checks if the value has only one user.
 def HasOneUse : Constraint<CPred<"$0.hasOneUse()">>;
 
-def CreateNoneAttrValue : NativeCodeCall<"$_builder.getUnitAttr()">;
+def CreateNoneValue : NativeCodeCall<
+  "$_builder.create<TFL::NoValueOp>($0.getLoc(), $_builder.getUnitAttr())">;
 def GetSignsOfVectorAndBroadcast4D : NativeCodeCall<"GetSignsOfVectorAndBroadcast4D($0)">;
 def GetBitpackedOutputThresholds : NativeCodeCall<"GetBitpackedOutputThresholds($_builder, $0, $1, $2, $3)">;
 
@@ -21,7 +23,7 @@ class WriteBitpackedActivationsPat<StrEnumAttrCase padding_type, string pad_valu
                   (Arith_ConstantOp F32ElementsAttr:$filter),
                   (Arith_ConstantOp F32ElementsAttr:$post_activation_multiplier),
                   (Arith_ConstantOp F32ElementsAttr:$post_activation_bias),
-                  (ConstantOp UnitAttr),
+                  (TFL_NoValueOp UnitAttr),
                   $channels_in,
                   $dilation_height_factor,
                   $dilation_width_factor,
@@ -37,8 +39,8 @@ class WriteBitpackedActivationsPat<StrEnumAttrCase padding_type, string pad_valu
                   (Arith_ConstantOp
                       (GetSignsOfVectorAndBroadcast4D $post_activation_multiplier)),
                   TFL_AF_None),
-              (ConstantOp (CreateNoneAttrValue)),
-              (ConstantOp (CreateNoneAttrValue)),
+              (CreateNoneValue $input),
+              (CreateNoneValue $input),
               (Arith_ConstantOp
                   (GetBitpackedOutputThresholds
                       $filter,

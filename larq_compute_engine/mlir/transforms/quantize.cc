@@ -15,19 +15,20 @@ namespace TFL {
 namespace {
 
 // Applies quantization on the model in TFL dialect.
-struct LCEQuantizePass : public PassWrapper<LCEQuantizePass, FunctionPass> {
+struct LCEQuantizePass
+    : public PassWrapper<LCEQuantizePass, OperationPass<FuncOp>> {
   llvm::StringRef getArgument() const final { return "lce-quantize"; }
   llvm::StringRef getDescription() const final {
     return "Apply hybrid quantization on models in TensorFlow Lite dialect";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 #include "larq_compute_engine/mlir/transforms/generated_quantize.inc"
 
-void LCEQuantizePass::runOnFunction() {
-  OwningRewritePatternList patterns(&getContext());
-  auto func = getFunction();
+void LCEQuantizePass::runOnOperation() {
+  RewritePatternSet patterns(&getContext());
+  auto func = getOperation();
   TFL::populateWithGenerated(patterns);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

@@ -1,3 +1,4 @@
+include "mlir/IR/PatternBase.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
 

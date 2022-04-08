@@ -1,4 +1,4 @@
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -11,19 +11,19 @@ namespace {
 
 // Op removal of pass through ops to make following patterns easier and enable
 // early constant folding
-struct OpRemoval : public PassWrapper<OpRemoval, FunctionPass> {
+struct OpRemoval : public PassWrapper<OpRemoval, OperationPass<FuncOp>> {
   llvm::StringRef getArgument() const final { return "lce-op-removal-tf"; }
   llvm::StringRef getDescription() const final {
     return "Remove pass through TensorFlow ops";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 #include "larq_compute_engine/mlir/transforms/generated_op_removal.inc"
 
-void OpRemoval::runOnFunction() {
-  OwningRewritePatternList patterns(&getContext());
-  auto func = getFunction();
+void OpRemoval::runOnOperation() {
+  RewritePatternSet patterns(&getContext());
+  auto func = getOperation();
 
   TFL::populateWithGenerated(patterns);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));

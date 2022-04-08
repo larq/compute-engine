@@ -57,7 +57,7 @@ class TruncateOpOrArgLocNameMapper : public OpOrArgLocNameMapper {
 }  // namespace
 Status ConvertTFExecutorToTFLOrFlatbuffer(
     mlir::ModuleOp module, bool export_to_mlir, const LCETarget target,
-    mlir::TFL::QuantizationSpecs quant_specs,
+    mlir::quant::QuantizationSpecs quant_specs,
     const std::unordered_set<std::string>& saved_model_tags,
     llvm::StringRef saved_model_dir,
     llvm::Optional<tensorflow::Session*> session, std::string* result) {

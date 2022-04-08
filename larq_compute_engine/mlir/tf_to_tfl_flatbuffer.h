@@ -15,7 +15,7 @@ namespace tensorflow {
 // https://github.com/tensorflow/tensorflow/blob/v2.8.0/tensorflow/compiler/mlir/lite/tf_to_tfl_flatbuffer.h#L60-L78
 Status ConvertTFExecutorToTFLOrFlatbuffer(
     mlir::ModuleOp module, bool export_to_mlir, const LCETarget target,
-    mlir::TFL::QuantizationSpecs quant_specs,
+    mlir::quant::QuantizationSpecs quant_specs,
     const std::unordered_set<std::string>& saved_model_tags,
     llvm::StringRef saved_model_dir,
     llvm::Optional<tensorflow::Session*> session, std::string* result);

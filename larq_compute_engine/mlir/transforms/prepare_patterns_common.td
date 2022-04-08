@@ -1,4 +1,5 @@
-include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "mlir/IR/PatternBase.td"
+include "mlir/Dialect/Func/IR/FuncOps.td"
 include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.td"
@@ -6,6 +7,8 @@ include "larq_compute_engine/mlir/ir/lce_ops.td"
 include "larq_compute_engine/mlir/transforms/op_removal_patterns.td"
 
 class ConstantValue<string val> : AttrConstraint<CPred<"IsConstantValue($_self, " # val # ")">>;
+def CreateNoneValue : NativeCodeCall<
+  "$_builder.create<TFL::NoValueOp>($0.getLoc(), $_builder.getUnitAttr())">;
 
 def CreateTFBroadcastToOp : NativeCodeCall<
     "$_builder.create<TF::BroadcastToOp>("
@@ -87,7 +90,7 @@ def GetScaleVector : NativeCodeCall<"GetScaleVector($0)">;
 def GetNumChannels : NativeCodeCall<"GetNumChannels($_builder, $0)">;
 def ValidFilterShape : Constraint<CPred<"HasValidFilterShape($0, $1)">>;
 def IsDataFormatNHWC : ConstantAttr<TF_ConvnetDataFormatAttr, "\"NHWC\"">;
-def CreateNoneAttrValue : NativeCodeCall<"$_builder.getUnitAttr()">;
+
 
 // All targets support this pattern with "VALID" padding, but only the "arm"
 // target supports it with "SAME" padding.
@@ -110,7 +113,7 @@ class PrepareBConvPadValue0Pat<StrEnumAttrCase padding_type> :
                   (Arith_ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
               (Arith_ConstantOp (GetScaleVector $filter)),
               (Arith_ConstantOp (GetConstantVector<"0.0f"> $filter)),
-              (ConstantOp (CreateNoneAttrValue)),
+              (CreateNoneValue $input),
               (GetNumChannels $dequantized_input),
               ExtractI32At<1>:$dilations,
               ExtractI32At<2>:$dilations,
@@ -151,7 +154,7 @@ def : Pat<(TF_Conv2DOp:$output
                   (Arith_ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
               (Arith_ConstantOp (GetScaleVector $filter)),
               (Arith_ConstantOp (GetConstantVector<"0.0f"> $filter)),
-              (ConstantOp (CreateNoneAttrValue)),
+              (CreateNoneValue $input),
               (GetNumChannels $dequantized_input),
               ExtractI32At<1>:$dilations,
               ExtractI32At<2>:$dilations,

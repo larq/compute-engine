@@ -6,7 +6,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -19,7 +19,7 @@ namespace TFL {
 namespace {
 
 // Optimize LCE operations in functions.
-struct OptimizeLCE : public PassWrapper<OptimizeLCE, FunctionPass> {
+struct OptimizeLCE : public PassWrapper<OptimizeLCE, OperationPass<FuncOp>> {
   llvm::StringRef getArgument() const final { return "tfl-optimize-lce"; }
   llvm::StringRef getDescription() const final {
     return "Optimize within the TensorFlow Lite dialect";
@@ -28,7 +28,7 @@ struct OptimizeLCE : public PassWrapper<OptimizeLCE, FunctionPass> {
   OptimizeLCE(const OptimizeLCE& pass) {}
   OptimizeLCE(const LCETarget target) { target_.setValue(target); }
 
-  void runOnFunction() override;
+  void runOnOperation() override;
 
  private:
   Option<LCETarget> target_{
@@ -265,10 +265,9 @@ namespace bitpack_activations {
 #include "larq_compute_engine/mlir/transforms/generated_bitpack_activations.inc"
 }
 
-void OptimizeLCE::runOnFunction() {
-  auto* ctx = &getContext();
-  OwningRewritePatternList patterns(ctx);
-  auto func = getFunction();
+void OptimizeLCE::runOnOperation() {
+  RewritePatternSet patterns(&getContext());
+  auto func = getOperation();
 
   if (target_ == LCETarget::ARM) {
     target_arm::populateWithGenerated(patterns);

@@ -10,7 +10,8 @@ namespace TFL {
 
 namespace {
 
-struct TranslateToLCE : public PassWrapper<TranslateToLCE, FunctionPass> {
+struct TranslateToLCE
+    : public PassWrapper<TranslateToLCE, OperationPass<FuncOp>> {
   llvm::StringRef getArgument() const final { return "lce-translate-tfl"; }
   llvm::StringRef getDescription() const final {
     return "Translate TFL custom ops to LCE ops";
@@ -18,7 +19,7 @@ struct TranslateToLCE : public PassWrapper<TranslateToLCE, FunctionPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<mlir::TFL::TensorFlowLiteDialect, mlir::lq::LarqDialect>();
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 struct TranslateToLCEPattern : public OpRewritePattern<TFL::CustomOp> {
@@ -65,11 +66,11 @@ struct TranslateToLCEPattern : public OpRewritePattern<TFL::CustomOp> {
   }
 };
 
-void TranslateToLCE::runOnFunction() {
-  OwningRewritePatternList patterns(&getContext());
+void TranslateToLCE::runOnOperation() {
+  RewritePatternSet patterns(&getContext());
   auto* ctx = &getContext();
-  auto func = getFunction();
-  patterns.insert<TranslateToLCEPattern>(ctx);
+  auto func = getOperation();
+  patterns.add<TranslateToLCEPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 

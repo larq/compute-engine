@@ -1,7 +1,7 @@
 // RUN: lce-tf-opt %s -tfl-fuse-padding -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: @fuse_pad_into_conv_valid
-func @fuse_pad_into_conv_valid(%arg0: tensor<1x64x64x8xf32>) -> tensor<1x64x64x16xf32> {
+func.func @fuse_pad_into_conv_valid(%arg0: tensor<1x64x64x8xf32>) -> tensor<1x64x64x16xf32> {
   %cst0 = arith.constant dense<[[0, 0], [1, 1], [1, 1], [0, 0]]> : tensor<4x2xi32>
   %cst1 = arith.constant dense<1.0> : tensor<16x3x3x8xf32>
   %cst2 = arith.constant dense<1.0> : tensor<16xf32>
@@ -14,7 +14,7 @@ func @fuse_pad_into_conv_valid(%arg0: tensor<1x64x64x8xf32>) -> tensor<1x64x64x1
 }
 
 // CHECK-LABEL: @fuse_padv2_into_conv_valid
-func @fuse_padv2_into_conv_valid(%arg0: tensor<1x64x64x8xf32>) -> tensor<1x64x64x16xf32> {
+func.func @fuse_padv2_into_conv_valid(%arg0: tensor<1x64x64x8xf32>) -> tensor<1x64x64x16xf32> {
   %cst0 = arith.constant dense<[[0, 0], [1, 1], [1, 1], [0, 0]]> : tensor<4x2xi32>
   %cst1 = arith.constant dense<0.0> : tensor<f32>
   %cst2 = arith.constant dense<1.0> : tensor<16x3x3x8xf32>
@@ -28,7 +28,7 @@ func @fuse_padv2_into_conv_valid(%arg0: tensor<1x64x64x8xf32>) -> tensor<1x64x64
 }
 
 // CHECK-LABEL: @fuse_pad_into_dwconv_valid
-func @fuse_pad_into_dwconv_valid(%arg0: tensor<1x64x64x16xf32>) -> tensor<1x64x64x16xf32> {
+func.func @fuse_pad_into_dwconv_valid(%arg0: tensor<1x64x64x16xf32>) -> tensor<1x64x64x16xf32> {
   %cst0 = arith.constant dense<[[0, 0], [1, 1], [1, 1], [0, 0]]> : tensor<4x2xi32>
   %cst1 = arith.constant dense<1.0> : tensor<1x3x3x16xf32>
   %cst2 = arith.constant dense<1.0> : tensor<16xf32>
@@ -41,7 +41,7 @@ func @fuse_pad_into_dwconv_valid(%arg0: tensor<1x64x64x16xf32>) -> tensor<1x64x6
 }
 
 // CHECK-LABEL: @do_not_fuse_padv2_into_conv_wrong_pad_value
-func @do_not_fuse_padv2_into_conv_wrong_pad_value(%arg0: tensor<1x64x64x8xf32>) -> tensor<1x64x64x16xf32> {
+func.func @do_not_fuse_padv2_into_conv_wrong_pad_value(%arg0: tensor<1x64x64x8xf32>) -> tensor<1x64x64x16xf32> {
   %cst0 = arith.constant dense<[[0, 0], [1, 1], [1, 1], [0, 0]]> : tensor<4x2xi32>
   %cst1 = arith.constant dense<1.0> : tensor<f32>
   %cst2 = arith.constant dense<1.0> : tensor<16x3x3x8xf32>
@@ -54,7 +54,7 @@ func @do_not_fuse_padv2_into_conv_wrong_pad_value(%arg0: tensor<1x64x64x8xf32>) 
 }
 
 // CHECK-LABEL: @do_not_fuse_pad_into_conv_same
-func @do_not_fuse_pad_into_conv_same(%arg0: tensor<1x64x64x8xf32>) -> tensor<1x66x66x16xf32> {
+func.func @do_not_fuse_pad_into_conv_same(%arg0: tensor<1x64x64x8xf32>) -> tensor<1x66x66x16xf32> {
   %cst0 = arith.constant dense<[[0, 0], [1, 1], [1, 1], [0, 0]]> : tensor<4x2xi32>
   %cst1 = arith.constant dense<1.0> : tensor<f32>
   %cst2 = arith.constant dense<1.0> : tensor<16x3x3x8xf32>
@@ -67,7 +67,7 @@ func @do_not_fuse_pad_into_conv_same(%arg0: tensor<1x64x64x8xf32>) -> tensor<1x6
 }
 
 // CHECK-LABEL: @do_not_fuse_pad_into_dwconv_channelpad
-func @do_not_fuse_pad_into_dwconv_channelpad(%arg0: tensor<1x64x64x12xf32>) -> tensor<1x64x64x16xf32> {
+func.func @do_not_fuse_pad_into_dwconv_channelpad(%arg0: tensor<1x64x64x12xf32>) -> tensor<1x64x64x16xf32> {
   %cst0 = arith.constant dense<[[0, 0], [1, 1], [1, 1], [1, 3]]> : tensor<4x2xi32>
   %cst1 = arith.constant dense<1.0> : tensor<1x3x3x16xf32>
   %cst2 = arith.constant dense<1.0> : tensor<16xf32>
