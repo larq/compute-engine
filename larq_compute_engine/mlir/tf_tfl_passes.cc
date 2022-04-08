@@ -42,6 +42,9 @@ void AddQuantizationPasses(const mlir::TFL::QuantizationSpecs& quant_specs,
       quant_specs.inference_type != quant_specs.inference_input_type;
   pass_manager->addNestedPass<mlir::FuncOp>(
       mlir::TFL::CreatePostQuantizePass(emit_quant_adaptor_ops));
+  pass_manager->addPass(mlir::TFL::CreateLCEQuantizePass());
+  pass_manager->addNestedPass<mlir::FuncOp>(
+      mlir::TFL::CreatePostQuantizePass(emit_quant_adaptor_ops));
 }
 }  // namespace
 
