@@ -1,20 +1,8 @@
-diff --git a/.bazelrc b/.bazelrc
-index b1d4eee905d..ada1395298f 100644
---- a/.bazelrc
-+++ b/.bazelrc
-@@ -572,6 +572,7 @@ build:elinux_aarch64 --distinct_host_configuration=true
- build:elinux_armhf --config=elinux
- build:elinux_armhf --cpu=armhf
- build:elinux_armhf --distinct_host_configuration=true
-+build:elinux_armhf --copt -mfp16-format=ieee
- # END TF REMOTE BUILD EXECUTION OPTIONS
-
- # Config-specific options should come above this line.
 diff --git a/tensorflow/lite/tools/evaluation/BUILD b/tensorflow/lite/tools/evaluation/BUILD
-index 86bfa35bd1e..e22e9efd840 100644
+index 02ca40fad25cf..c2b12b7741dfc 100644
 --- a/tensorflow/lite/tools/evaluation/BUILD
 +++ b/tensorflow/lite/tools/evaluation/BUILD
-@@ -53,7 +53,6 @@ cc_library(
+@@ -54,7 +54,6 @@ cc_library(
          ],
          "//conditions:default": [],
      }) + select({
