@@ -9,8 +9,11 @@
 
 namespace tensorflow {
 
-// Add the TF to TFLite passes into a pass_manager.
-void AddTFToLCETFLConversionPasses(
+void AddPreVariableFreezingTFToLCETFLConversionPasses(
+    mlir::OpPassManager* pass_manager);
+
+void AddPostVariableFreezingTFToLCETFLConversionPasses(
+    llvm::StringRef saved_model_dir,
     const mlir::TFL::QuantizationSpecs& quant_specs,
     mlir::OpPassManager* pass_manager, const LCETarget target = LCETarget::ARM);
 

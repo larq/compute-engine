@@ -64,7 +64,9 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
 
   return ConvertMLIRModuleToTFLiteFlatBuffer(
       &module.ValueOrDie(), context, target, default_ranges,
-      input_arrays.size(), should_quantize,
+      /*saved_model_tags=*/{},
+      /*saved_model_dir=*/"", /*session=*/llvm::None, input_arrays.size(),
+      should_quantize,
       /*mark_as_post_training_quant=*/false);
 }
 

@@ -473,12 +473,16 @@ cc_library(
         "tf_to_tfl_flatbuffer.h",
     ],
     deps = [
+        ":lce_tfl_passes",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
         "@org_tensorflow//tensorflow/compiler/mlir:op_or_arg_name_mapper",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite/metrics:error_collector",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_config",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:error_util",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_saved_model_freeze_variables",
         "@org_tensorflow//tensorflow/stream_executor/lib",
     ],
 )
@@ -488,11 +492,7 @@ cc_library(
     srcs = ["python/common.cc"],
     hdrs = ["python/common.h"],
     deps = [
-        ":lce_tfl_passes",
         ":tf_to_tfl_flatbuffer",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tf_to_tfl_flatbuffer",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite/python:tf_tfl_flatbuffer_helpers",
         "@org_tensorflow//tensorflow/core:ops",
         "@pybind11",
     ],
