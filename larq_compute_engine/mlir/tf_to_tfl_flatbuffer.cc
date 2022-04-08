@@ -102,7 +102,7 @@ Status ConvertTFExecutorToTFLOrFlatbuffer(
       mlir::TFL::ErrorCollector* collector =
           mlir::TFL::ErrorCollector::GetErrorCollector();
       if (!collector->CollectedErrors().empty()) {
-        return errors::InvalidArgument("Variable constant folding is failed.");
+        return errors::InvalidArgument("Variable constant folding has failed.");
       }
       return status;
     }
