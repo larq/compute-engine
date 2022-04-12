@@ -17,10 +17,10 @@ http_archive(
         "//third_party/tensorflow_patches:disable_forced_mkl.patch",
         "//third_party/tensorflow_patches:fix_armhf_xnnpack.patch",
     ],
-    sha256 = "263f747102e531dc52e5c912db247ab6053070bb1f549294aca6f5d696529128",
-    strip_prefix = "tensorflow-8727d035e7aa593720d16a5f57f70f3b5a93bd00",
+    sha256 = "7d736fa5ff3868516359d8370e7b57251b8080243fc38e8089ee0ceb8ee90264",
+    strip_prefix = "tensorflow-2.9.0-rc0",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/8727d035e7aa593720d16a5f57f70f3b5a93bd00.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/v2.9.0-rc0.tar.gz",
     ],
 )
 
