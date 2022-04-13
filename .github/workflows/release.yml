@@ -210,7 +210,7 @@ jobs:
         run: |
           docker run -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }} \
             -v ${PWD}:/compute-engine -w /compute-engine \
-            tensorflow/build:latest-python${{ matrix.python-version }} \
+            tensorflow/build:2.8-python${{ matrix.python-version }} \
             .github/tools/release_linux.sh
 
           sudo apt-get -y -qq install patchelf --no-install-recommends
