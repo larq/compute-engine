@@ -9,7 +9,7 @@ bazel build :build_pip_pkg \
   --copt=-mavx \
   --distinct_host_configuration=false \
   --verbose_failures \
-  --crosstool_top=@org_tensorflow//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda11.2:toolchain
+  --crosstool_top=//third_party/toolchains/gcc7_manylinux2010-nvcc-cuda11:toolchain
 
 # Package Whl
 bazel-bin/build_pip_pkg artifacts
