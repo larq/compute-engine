@@ -229,6 +229,7 @@ jobs:
   windows-release-wheel:
     name: Build release wheels for Windows
     runs-on: windows-2019
+    timeout-minutes: 600
     strategy:
       matrix:
         python-version: [3.7, 3.8, 3.9]
