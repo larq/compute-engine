@@ -77,18 +77,20 @@ if(COMPILE_BENCHMARK)
             ${TFLITE_SOURCE_DIR}/profiling/time.cc
             ${TFLITE_SOURCE_DIR}/tools/command_line_flags.cc
             ${TFLITE_SOURCE_DIR}/tools/benchmark/benchmark_model.cc
+            ${TFLITE_SOURCE_DIR}/tools/benchmark/benchmark_performance_options.cc
             ${TFLITE_SOURCE_DIR}/tools/benchmark/benchmark_tflite_model.cc
             ${TFLITE_SOURCE_DIR}/tools/benchmark/benchmark_utils.cc
             ${TFLITE_SOURCE_DIR}/tools/benchmark/profiling_listener.cc
             ${TFLITE_SOURCE_DIR}/tools/delegates/default_execution_provider.cc
             ${TFLITE_SOURCE_DIR}/tools/delegates/delegate_provider.cc
+            ${TFLITE_SOURCE_DIR}/tools/delegates/xnnpack_delegate_provider.cc
             ${TFLITE_SOURCE_DIR}/tools/evaluation/utils.cc
             ${TFLITE_SOURCE_DIR}/tools/tool_params.cc
             )
-    add_executable(benchmark
+    add_executable(lce_benchmark_model
             ${TFLITE_BENCHMARK_SRCS}
             ${LCE_CORE_SRCS} ${LCE_CORE_HDRS}
             ${LCE_BENCHMARK_SRCS} ${LCE_BENCHMARK_HRDS}
             )
-    target_link_libraries(benchmark tensorflow-lite)
+    target_link_libraries(lce_benchmark_model tensorflow-lite)
 endif()
