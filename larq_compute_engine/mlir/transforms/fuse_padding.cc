@@ -37,6 +37,10 @@ bool IsSamePaddingPartial(Attribute paddings_attr, Value input, Value output,
 
 // Prepare LCE operations in functions for subsequent legalization.
 struct FusePadding : public PassWrapper<FusePadding, FunctionPass> {
+  llvm::StringRef getArgument() const final { return "tfl-fuse-padding"; }
+  llvm::StringRef getDescription() const final {
+    return "Fuse padding ops into (Depthwise)Convs";
+  }
   FusePadding() = default;
   FusePadding(const FusePadding& pass) {}
 
@@ -59,8 +63,7 @@ std::unique_ptr<OperationPass<FuncOp>> CreateFusePaddingPass() {
   return std::make_unique<FusePadding>();
 }
 
-static PassRegistration<FusePadding> pass(
-    "tfl-fuse-padding", "Fuse padding ops into (Depthwise)Convs.");
+static PassRegistration<FusePadding> pass;
 
 }  // namespace TFL
 }  // namespace mlir

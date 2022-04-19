@@ -20,6 +20,8 @@ using compute_engine::core::bitpacking_bitwidth;
 
 // Prepare LCE operations in functions for subsequent legalization.
 struct PrepareLCE : public PassWrapper<PrepareLCE, FunctionPass> {
+  llvm::StringRef getArgument() const final { return "tfl-prepare-lce"; }
+  llvm::StringRef getDescription() const final { return "Inject LCE Ops"; }
   PrepareLCE() = default;
   PrepareLCE(const PrepareLCE& pass) {}
   PrepareLCE(const LCETarget target) { target_.setValue(target); }
@@ -61,7 +63,7 @@ DenseElementsAttr GetScaleVector(Attribute filter_attr) {
 
   std::vector<Attribute> scales(channels);
   for (std::size_t i = 0; i < channels; ++i) {
-    auto scale = std::abs(filter.getValue<float>({0, 0, 0, i}));
+    auto scale = std::abs(filter.getValues<float>()[{0, 0, 0, i}]);
     scales[i] = FloatAttr::get(element_type, scale);
   }
 
@@ -83,10 +85,10 @@ bool IsBinaryFilter(Attribute filter_attr) {
     for (std::size_t w = 0; w < shape[1]; ++w) {
       for (std::size_t i = 0; i < shape[2]; ++i) {
         for (std::size_t o = 0; o < shape[3]; ++o) {
-          auto scale = filter.getValue<float>({0, 0, 0, o});
+          auto scale = filter.getValues<float>()[{0, 0, 0, o}];
           if (std::abs(scale) <= std::numeric_limits<float>::epsilon())
             return false;
-          auto value = filter.getValue<float>({h, w, i, o});
+          auto value = filter.getValues<float>()[{h, w, i, o}];
           if (std::abs(std::abs(value / scale) - 1.0f) > 0.005f) return false;
         }
       }
@@ -194,7 +196,7 @@ std::unique_ptr<OperationPass<FuncOp>> CreatePrepareLCEPass(
   return std::make_unique<PrepareLCE>(target);
 }
 
-static PassRegistration<PrepareLCE> pass("tfl-prepare-lce", "Inject LCE Ops.");
+static PassRegistration<PrepareLCE> pass;
 
 }  // namespace TFL
 }  // namespace mlir

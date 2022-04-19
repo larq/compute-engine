@@ -1,4 +1,5 @@
 include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 
 def HasOneUse : Constraint<CPred<"$0.hasOneUse()">>;
@@ -20,13 +21,13 @@ def SamePaddingWidth : Constraint<CPred<"IsSamePaddingPartial($0, $1, $2, $3, 2)
 def : Pat<(TFL_Conv2DOp:$conv_output
                          (TFL_PadOp:$pad_output
                                       $input,
-                                      (ConstantOp $paddings)),
+                                      (Arith_ConstantOp $paddings)),
                          $filter,
                          $bias,
                          $h_factor,
                          $w_factor,
                          $act_fn,
-                         ConstantAttr<StrAttr, "VALID">,
+                         TFL_PAD_Valid,
                          $stride_h,
                          $stride_w),
           (TFL_Conv2DOp $input,
@@ -35,7 +36,7 @@ def : Pat<(TFL_Conv2DOp:$conv_output
                         $h_factor,
                         $w_factor,
                         $act_fn,
-                        ConstantAttr<StrAttr, "SAME">,
+                        TFL_PAD_Same,
                         $stride_h,
                         $stride_w),
           [(HasOneUse $pad_output),
@@ -49,14 +50,14 @@ def : Pat<(TFL_Conv2DOp:$conv_output
 def : Pat<(TFL_Conv2DOp:$conv_output
                          (TFL_PadV2Op:$pad_output
                                       $input,
-                                      (ConstantOp $paddings),
-                                      (ConstantOp $pad_values)),
+                                      (Arith_ConstantOp $paddings),
+                                      (Arith_ConstantOp $pad_values)),
                          $filter,
                          $bias,
                          $h_factor,
                          $w_factor,
                          $act_fn,
-                         ConstantAttr<StrAttr, "VALID">,
+                         TFL_PAD_Valid,
                          $stride_h,
                          $stride_w),
           (TFL_Conv2DOp $input,
@@ -65,7 +66,7 @@ def : Pat<(TFL_Conv2DOp:$conv_output
                         $h_factor,
                         $w_factor,
                         $act_fn,
-                        ConstantAttr<StrAttr, "SAME">,
+                        TFL_PAD_Same,
                         $stride_h,
                         $stride_w),
           [(HasOneUse $pad_output),
@@ -79,13 +80,13 @@ def : Pat<(TFL_Conv2DOp:$conv_output
 def : Pat<(TFL_DepthwiseConv2DOp:$conv_output
                          (TFL_PadOp:$pad_output
                                       $input,
-                                      (ConstantOp $paddings)),
+                                      (Arith_ConstantOp $paddings)),
                          $filter,
                          $bias,
                          $h_factor,
                          $w_factor,
                          $act_fn,
-                         ConstantAttr<StrAttr, "VALID">,
+                         TFL_PAD_Valid,
                          $stride_h,
                          $stride_w,
                          $depth_multiplier),
@@ -95,7 +96,7 @@ def : Pat<(TFL_DepthwiseConv2DOp:$conv_output
                         $h_factor,
                         $w_factor,
                         $act_fn,
-                        ConstantAttr<StrAttr, "SAME">,
+                        TFL_PAD_Same,
                         $stride_h,
                         $stride_w,
                         $depth_multiplier),
@@ -109,14 +110,14 @@ def : Pat<(TFL_DepthwiseConv2DOp:$conv_output
 def : Pat<(TFL_DepthwiseConv2DOp:$conv_output
                          (TFL_PadV2Op:$pad_output
                                       $input,
-                                      (ConstantOp $paddings),
-                                      (ConstantOp $pad_values)),
+                                      (Arith_ConstantOp $paddings),
+                                      (Arith_ConstantOp $pad_values)),
                          $filter,
                          $bias,
                          $h_factor,
                          $w_factor,
                          $act_fn,
-                         ConstantAttr<StrAttr, "VALID">,
+                         TFL_PAD_Valid,
                          $stride_h,
                          $stride_w,
                          $depth_multiplier),
@@ -126,7 +127,7 @@ def : Pat<(TFL_DepthwiseConv2DOp:$conv_output
                         $h_factor,
                         $w_factor,
                         $act_fn,
-                        ConstantAttr<StrAttr, "SAME">,
+                        TFL_PAD_Same,
                         $stride_h,
                         $stride_w,
                         $depth_multiplier),

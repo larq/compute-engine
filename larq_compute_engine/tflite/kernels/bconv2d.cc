@@ -276,8 +276,8 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     // Allocate the im2col tensor if necessary
     if (op_data->im2col_id == kTensorNotAllocated) {
       context->AddTensors(context, 1, &op_data->im2col_id);
-      node->temporaries->data[op_data->im2col_index] = op_data->im2col_id;
     }
+    node->temporaries->data[op_data->im2col_index] = op_data->im2col_id;
 
     // Resize the im2col tensor
     const std::int32_t bitpacked_channels_in =

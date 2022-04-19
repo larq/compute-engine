@@ -11,6 +11,10 @@ namespace TFL {
 namespace {
 
 struct TranslateToLCE : public PassWrapper<TranslateToLCE, FunctionPass> {
+  llvm::StringRef getArgument() const final { return "lce-translate-tfl"; }
+  llvm::StringRef getDescription() const final {
+    return "Translate TFL custom ops to LCE ops";
+  }
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<mlir::TFL::TensorFlowLiteDialect, mlir::lq::LarqDialect>();
   }
@@ -76,8 +80,7 @@ std::unique_ptr<OperationPass<FuncOp>> CreateTranslateToLCEPass() {
   return std::make_unique<TranslateToLCE>();
 }
 
-static PassRegistration<TranslateToLCE> pass(
-    "lce-translate-tfl", "Translate TFL custom ops to LCE ops");
+static PassRegistration<TranslateToLCE> pass;
 
 }  // namespace TFL
 }  // namespace mlir

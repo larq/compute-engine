@@ -46,6 +46,8 @@ def LarqDialect : Dialect {
     TF graphs to be deployed on Larq Compute Engine.
   }];
 
+  let hasConstantMaterializer = 1;
+
   let cppNamespace = "::mlir::lq";
 }
 

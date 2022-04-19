@@ -49,15 +49,18 @@ def test_interpreter_multi_input(use_iterator):
     interpreter = Interpreter(converter.convert(), num_threads=2)
     assert interpreter.input_types == [np.float32, np.float32]
     assert interpreter.output_types == [np.float32, np.float32]
-    assert interpreter.input_shapes == [(1, 24, 24, 2), (1, 24, 24, 1)]
-    assert interpreter.output_shapes == [(1, 24 * 24 * 2), (1, 24 * 24 * 1)]
+    assert interpreter.input_shapes == [(1, 24, 24, 1), (1, 24, 24, 2)]
+    assert sorted(interpreter.output_shapes) == [(1, 24 * 24 * 1), (1, 24 * 24 * 2)]
 
     def input_fn():
         if use_iterator:
-            return ([x, y] for x, y in zip(x_np, y_np))
-        return [x_np, y_np]
+            return ([y, x] for x, y in zip(x_np, y_np))
+        return [y_np, x_np]
 
     output_x, output_y = interpreter.predict(input_fn())
+    # Output order is not deterministic, decide based on shape
+    if output_y.shape == expected_output_x.shape:
+        output_x, output_y = output_y, output_x
     np.testing.assert_allclose(output_x, expected_output_x)
     np.testing.assert_allclose(output_y, expected_output_y)
 

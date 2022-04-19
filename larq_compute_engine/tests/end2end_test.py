@@ -38,7 +38,9 @@ def toy_model(binary_quantizer="ste_sign", **kwargs):
                 use_bias=False,
                 activation=activation,
             )(x)
-            x = tf.keras.layers.BatchNormalization(momentum=0.7)(x)
+            x = tf.keras.layers.BatchNormalization(
+                momentum=0.7, beta_initializer="random_normal"
+            )(x)
             return tf.keras.layers.add([x, shortcut])
 
         return dummy
@@ -235,10 +237,8 @@ def test_simple_model(dataset, conversion_function, model_cls):
 def test_int8_input_output(
     conversion_function, model_cls, inference_input_type, inference_output_type
 ):
-    if conversion_function == convert_keras_model_as_saved_model and (
-        model_cls == toy_model or version.parse(tf.__version__) < version.parse("2.2")
-    ):
-        pytest.skip("convert_keras_model_as_saved_model currently fails in this case.")
+    if version.parse(tf.__version__) < version.parse("2.2"):
+        pytest.skip("TensorFlow 2.2 or newer is required for saved model conversion.")
 
     model_lce = conversion_function(
         model_cls(),

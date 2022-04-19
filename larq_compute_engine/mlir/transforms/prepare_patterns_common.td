@@ -1,4 +1,5 @@
 include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
@@ -22,8 +23,8 @@ def CreateTFShapeOp : NativeCodeCall<
 multiclass QuantDequantPatterns<Op SelectOp> {
   def : Pat<(SelectOp:$select_op
                 $cond,
-                (ConstantOp ConstantValue<"1.0f">),
-                (ConstantOp ConstantValue<"-1.0f">)),
+                (Arith_ConstantOp ConstantValue<"1.0f">),
+                (Arith_ConstantOp ConstantValue<"-1.0f">)),
             (LQ_DequantizeOp
                 (LQ_QuantizeOp
                     (CreateTFBroadcastToOp
@@ -36,8 +37,8 @@ multiclass QuantDequantPatterns<Op SelectOp> {
             [], (addBenefit 100)>;
   def : Pat<(SelectOp:$select_op
                 $cond,
-                (ConstantOp ConstantValue<"-1.0f">),
-                (ConstantOp ConstantValue<"1.0f">)),
+                (Arith_ConstantOp ConstantValue<"-1.0f">),
+                (Arith_ConstantOp ConstantValue<"1.0f">)),
             (LQ_DequantizeOp
                 (LQ_QuantizeOp
                     (CreateTFBroadcastToOp
@@ -85,18 +86,18 @@ def BinaryFilter : Constraint<CPred<"IsBinaryFilter($0)">>;
 def GetScaleVector : NativeCodeCall<"GetScaleVector($0)">;
 def GetNumChannels : NativeCodeCall<"GetNumChannels($_builder, $0)">;
 def ValidFilterShape : Constraint<CPred<"HasValidFilterShape($0, $1)">>;
-def IsDataFormatNHWC : ConstantAttr<TF_ConvnetDataFormatAttr, "NHWC">;
+def IsDataFormatNHWC : ConstantAttr<TF_ConvnetDataFormatAttr, "\"NHWC\"">;
 def CreateNoneAttrValue : NativeCodeCall<"$_builder.getUnitAttr()">;
 
 // All targets support this pattern with "VALID" padding, but only the "arm"
 // target supports it with "SAME" padding.
-class PrepareBConvPadValue0Pat<string padding_type> :
+class PrepareBConvPadValue0Pat<StrEnumAttrCase padding_type> :
       Pat<(TF_Conv2DOp
               (LQ_DequantizeOp:$dequantized_input $input),
-              (ConstantOp:$filter_op $filter),
+              (Arith_ConstantOp:$filter_op $filter),
               IsIntList1XY1:$strides,
               $use_cudnn,
-              ConstantAttr<StrAttr, padding_type>:$padding,
+              padding_type:$padding,
               $explicit_padding,
               IsDataFormatNHWC:$data_format,
               IsIntList1XY1:$dilations),
@@ -104,11 +105,11 @@ class PrepareBConvPadValue0Pat<string padding_type> :
               $input,
               (TF_TransposeOp
                   (TF_DivOp
-                      (ConstantOp $filter),
-                      (ConstantOp (GetScaleVector $filter))),
-                  (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
-              (ConstantOp (GetScaleVector $filter)),
-              (ConstantOp (GetConstantVector<"0.0f"> $filter)),
+                      (Arith_ConstantOp $filter),
+                      (Arith_ConstantOp (GetScaleVector $filter))),
+                  (Arith_ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
+              (Arith_ConstantOp (GetScaleVector $filter)),
+              (Arith_ConstantOp (GetConstantVector<"0.0f"> $filter)),
               (ConstantOp (CreateNoneAttrValue)),
               (GetNumChannels $dequantized_input),
               ExtractI32At<1>:$dilations,
@@ -121,7 +122,7 @@ class PrepareBConvPadValue0Pat<string padding_type> :
           [(BinaryFilter $filter),
            (ValidFilterShape $dequantized_input, $filter_op)],
           (addBenefit 90)>;
-def : PrepareBConvPadValue0Pat<"VALID">;
+def : PrepareBConvPadValue0Pat<TFL_PAD_Valid>;
 
 def ConstFloatValueIsOne : Constraint<
   CPred<"$0.isa<DenseElementsAttr>() && "
@@ -133,30 +134,30 @@ def SamePadding : Constraint<CPred<"IsSamePadding($0, $1, $2, $3)">>;
 def : Pat<(TF_Conv2DOp:$output
               (TF_PadV2Op
                   (LQ_DequantizeOp:$dequantized_input $input),
-                  (ConstantOp $paddings),
-                  (ConstantOp $pad_values)),
-              (ConstantOp:$filter_op $filter),
+                  (Arith_ConstantOp $paddings),
+                  (Arith_ConstantOp $pad_values)),
+              (Arith_ConstantOp:$filter_op $filter),
               IsIntList1XY1:$strides,
               $use_cudnn,
-              ConstantAttr<StrAttr, "VALID">,
+              TFL_PAD_Valid,
               $explicit_padding,
               IsDataFormatNHWC:$data_format,
               IsIntList1XY1:$dilations),
           (LQ_Bconv2dOp $input,
               (TF_TransposeOp
                   (TF_DivOp
-                      (ConstantOp $filter),
-                      (ConstantOp (GetScaleVector $filter))),
-                  (ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
-              (ConstantOp (GetScaleVector $filter)),
-              (ConstantOp (GetConstantVector<"0.0f"> $filter)),
+                      (Arith_ConstantOp $filter),
+                      (Arith_ConstantOp (GetScaleVector $filter))),
+                  (Arith_ConstantOp ConstantAttr<I32VectorElementsAttr<4>, "{3, 0, 1, 2}">)),
+              (Arith_ConstantOp (GetScaleVector $filter)),
+              (Arith_ConstantOp (GetConstantVector<"0.0f"> $filter)),
               (ConstantOp (CreateNoneAttrValue)),
               (GetNumChannels $dequantized_input),
               ExtractI32At<1>:$dilations,
               ExtractI32At<2>:$dilations,
               TFL_AF_None,
               ConstantAttr<I32Attr, "1">,
-              ConstantAttr<StrAttr, "SAME">,
+              TFL_PAD_Same,
               ExtractI32At<1>:$strides,
               ExtractI32At<2>:$strides),
           [(BinaryFilter $filter),

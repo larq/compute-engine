@@ -23,6 +23,8 @@ mlir::Type SetBatchSize(mlir::Type type) {
 }
 
 struct SetBatchSizePass : public PassWrapper<SetBatchSizePass, FunctionPass> {
+  llvm::StringRef getArgument() const final { return "mlir-setbatchsize"; }
+  llvm::StringRef getDescription() const final { return "Set batch size to 1"; }
   void runOnFunction() override {
     FuncOp func = getFunction();
 
@@ -62,7 +64,6 @@ std::unique_ptr<OperationPass<FuncOp>> CreateSetBatchSizePass() {
   return std::make_unique<SetBatchSizePass>();
 }
 
-static PassRegistration<SetBatchSizePass> pass("mlir-setbatchsize",
-                                               "Set batch size to 1");
+static PassRegistration<SetBatchSizePass> pass;
 
 }  // namespace mlir

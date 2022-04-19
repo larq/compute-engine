@@ -1,18 +1,24 @@
 #ifndef LARQ_COMPUTE_ENGINE_MLIR_TF_TO_TFL_FLATBUFFER_H_
 #define LARQ_COMPUTE_ENGINE_MLIR_TF_TO_TFL_FLATBUFFER_H_
 
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Pass/PassManager.h"
-#include "tensorflow/stream_executor/lib/statusor.h"
+#include <unordered_set>
 
+#include "larq_compute_engine/mlir/transforms/passes.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "tensorflow/compiler/mlir/lite/quantization/quantization_config.h"
+#include "tensorflow/core/public/session.h"
+#include "tensorflow/stream_executor/lib/statusor.h"
 namespace tensorflow {
 
 // This is a fork of ConvertTFExecutorToTFLOrFlatbuffer to enable custom
 // OpOrArgLocNameMapper
-// https://github.com/tensorflow/tensorflow/blob/v2.5.0/tensorflow/compiler/mlir/lite/tf_to_tfl_flatbuffer.h#L55-L69
-Status ConvertTFExecutorToFlatbuffer(mlir::ModuleOp module, bool export_to_mlir,
-                                     std::string* result,
-                                     mlir::PassManager* pass_manager);
+// https://github.com/tensorflow/tensorflow/blob/v2.8.0/tensorflow/compiler/mlir/lite/tf_to_tfl_flatbuffer.h#L60-L78
+Status ConvertTFExecutorToTFLOrFlatbuffer(
+    mlir::ModuleOp module, bool export_to_mlir, const LCETarget target,
+    mlir::TFL::QuantizationSpecs quant_specs,
+    const std::unordered_set<std::string>& saved_model_tags,
+    llvm::StringRef saved_model_dir,
+    llvm::Optional<tensorflow::Session*> session, std::string* result);
 }  // namespace tensorflow
 
 #endif  // LARQ_COMPUTE_ENGINE_MLIR_TF_TO_TFL_FLATBUFFER_H_

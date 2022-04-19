@@ -15,11 +15,12 @@ http_archive(
     patch_tool = "patch",
     patches = [
         "//third_party/tensorflow_patches:disable_forced_mkl.patch",
+        "//third_party/tensorflow_patches:fix_armhf_xnnpack.patch",
     ],
-    sha256 = "e68c1d346fc3d529653530ca346b2c62f5b31bd4fcca7ffc9c65bb39ab2f6ed3",
-    strip_prefix = "tensorflow-2.6.2",
+    sha256 = "66b953ae7fba61fd78969a2e24e350b26ec116cf2e6a7eb93d02c63939c6f9f7",
+    strip_prefix = "tensorflow-2.8.0",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/v2.6.2.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/v2.8.0.tar.gz",
     ],
 )
 
