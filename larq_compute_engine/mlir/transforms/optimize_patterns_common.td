@@ -1,4 +1,5 @@
 include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
 
@@ -11,6 +12,30 @@ def HasOneUse : Constraint<CPred<"$0.hasOneUse()">>;
 
 class ConstantValue<string val> : AttrConstraint<CPred<"IsConstantValue($_self, " # val # ")">>;
 
+def : Pat<(LQ_QuantizeOp
+              (TFL_GreaterEqualOp:$ge_op
+                  $input,
+                  (Arith_ConstantOp ConstantValue<"0.0f">))),
+          (LQ_QuantizeOp $input),
+          [(HasOneUse $ge_op)],
+          (addBenefit 150)>;
+
+def : Pat<(LQ_QuantizeOp
+              (TFL_GreaterEqualOp:$ge_op
+                  $input,
+                  $threshold)),
+          (LQ_QuantizeOp
+              (TFL_SubOp $input, $threshold, TFL_AF_None)),
+          [(HasOneUse $ge_op)],
+          (addBenefit 100)>;
+
+def : Pat<(LQ_QuantizeOp
+              (TFL_LessEqualOp:$ge_op $lhs, $rhs)),
+          (LQ_QuantizeOp
+              (TFL_GreaterEqualOp $rhs, $lhs)),
+          [(HasOneUse $ge_op)],
+          (addBenefit 100)>;
+
 // TODO: Check shapes before fusing
 multiclass FuseAddOrSubWithBConv2D<Op binaryOp> {
   def : Pat<(binaryOp
@@ -18,7 +43,7 @@ multiclass FuseAddOrSubWithBConv2D<Op binaryOp> {
                     $input,
                     $filter,
                     $post_activation_multiplier,
-                    (ConstantOp F32ElementsAttr:$post_activation_bias),
+                    (Arith_ConstantOp F32ElementsAttr:$post_activation_bias),
                     $output_threshold,
                     $channels_in,
                     $dilation_height_factor,
@@ -28,13 +53,13 @@ multiclass FuseAddOrSubWithBConv2D<Op binaryOp> {
                     $padding,
                     $stride_height,
                     $stride_width),
-                (ConstantOp F32ElementsAttr:$value), TFL_AF_None),
+                (Arith_ConstantOp F32ElementsAttr:$value), TFL_AF_None),
             (LQ_Bconv2dOp
                 $input,
                 $filter,
                 $post_activation_multiplier,
-                (binaryOp (ConstantOp $post_activation_bias),
-                          (ConstantOp $value), TFL_AF_None),
+                (binaryOp (Arith_ConstantOp $post_activation_bias),
+                          (Arith_ConstantOp $value), TFL_AF_None),
                 $output_threshold,
                 $channels_in,
                 $dilation_height_factor,
@@ -55,8 +80,8 @@ multiclass FuseMulOrDivWithBConv2D<Op binaryOp> {
                 (LQ_Bconv2dOp:$conv_output
                     $input,
                     $filter,
-                    (ConstantOp F32ElementsAttr:$post_activation_multiplier),
-                    (ConstantOp F32ElementsAttr:$post_activation_bias),
+                    (Arith_ConstantOp F32ElementsAttr:$post_activation_multiplier),
+                    (Arith_ConstantOp F32ElementsAttr:$post_activation_bias),
                     $output_threshold,
                     $channels_in,
                     $dilation_height_factor,
@@ -66,14 +91,14 @@ multiclass FuseMulOrDivWithBConv2D<Op binaryOp> {
                     $padding,
                     $stride_height,
                     $stride_width),
-                (ConstantOp F32ElementsAttr:$value), TFL_AF_None),
+                (Arith_ConstantOp F32ElementsAttr:$value), TFL_AF_None),
             (LQ_Bconv2dOp
                 $input,
                 $filter,
-                (binaryOp (ConstantOp $post_activation_multiplier),
-                          (ConstantOp $value), TFL_AF_None),
-                (binaryOp (ConstantOp $post_activation_bias),
-                          (ConstantOp $value), TFL_AF_None),
+                (binaryOp (Arith_ConstantOp $post_activation_multiplier),
+                          (Arith_ConstantOp $value), TFL_AF_None),
+                (binaryOp (Arith_ConstantOp $post_activation_bias),
+                          (Arith_ConstantOp $value), TFL_AF_None),
                 $output_threshold,
                 $channels_in,
                 $dilation_height_factor,
@@ -95,22 +120,22 @@ multiclass FuseActFnIntoConvOpPat<Op ActFnOp, Attr ActFnAttr> {
                 (LQ_Bconv2dOp:$conv_output
                     $input,
                     $filter,
-                    (ConstantOp ConstantValue<"1.0f">:$post_activation_multiplier),
-                    (ConstantOp ConstantValue<"0.0f">:$post_activation_bias),
+                    (Arith_ConstantOp ConstantValue<"1.0f">:$post_activation_multiplier),
+                    (Arith_ConstantOp ConstantValue<"0.0f">:$post_activation_bias),
                     $output_threshold,
                     $channels_in,
                     $dilation_height_factor,
                     $dilation_width_factor,
                     TFL_AF_None,
                     $pad_values,
-                    ConstantAttr<StrAttr, "VALID">:$padding,
+                    TFL_PAD_Valid:$padding,
                     $stride_height,
                     $stride_width)),
             (LQ_Bconv2dOp
                 $input,
                 $filter,
-                (ConstantOp $post_activation_multiplier),
-                (ConstantOp $post_activation_bias),
+                (Arith_ConstantOp $post_activation_multiplier),
+                (Arith_ConstantOp $post_activation_bias),
                 $output_threshold,
                 $channels_in,
                 $dilation_height_factor,
@@ -125,22 +150,22 @@ multiclass FuseActFnIntoConvOpPat<Op ActFnOp, Attr ActFnAttr> {
                 (LQ_Bconv2dOp:$conv_output
                     $input,
                     $filter,
-                    (ConstantOp ConstantValue<"1.0f">:$post_activation_multiplier),
-                    (ConstantOp ConstantValue<"0.0f">:$post_activation_bias),
+                    (Arith_ConstantOp ConstantValue<"1.0f">:$post_activation_multiplier),
+                    (Arith_ConstantOp ConstantValue<"0.0f">:$post_activation_bias),
                     $output_threshold,
                     $channels_in,
                     $dilation_height_factor,
                     $dilation_width_factor,
                     TFL_AF_None,
                     ConstantAttr<I32Attr, "1">:$pad_values,
-                    ConstantAttr<StrAttr, "SAME">:$padding,
+                    TFL_PAD_Same:$padding,
                     $stride_height,
                     $stride_width)),
             (LQ_Bconv2dOp
                 $input,
                 $filter,
-                (ConstantOp $post_activation_multiplier),
-                (ConstantOp $post_activation_bias),
+                (Arith_ConstantOp $post_activation_multiplier),
+                (Arith_ConstantOp $post_activation_bias),
                 $output_threshold,
                 $channels_in,
                 $dilation_height_factor,

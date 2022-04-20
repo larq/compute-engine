@@ -324,29 +324,29 @@ void BinaryKernelNeon4x4(BinaryKernelParams<DstScalar, 4, 4>& params) {
 
       // Load the clamp_max bound (in parallel with the shift)
       "ldr r1, [%[params], #" RUY_STR(RUY_OFFSET_OUTPUT_TRANSFORM_CLAMP_MIN) "]\n"
-      "vdup q12.32, r1 \n"  // clamp_min
+      "vdup.32 q12, r1 \n"  // clamp_min
 
       // Perform the backtransformation shift (in int32)
-      "vshl q8.s32, q8.s32, #1\n"
-      "vshl q9.s32, q9.s32, #1\n"
-      "vshl q10.s32, q10.s32, #1\n"
-      "vshl q11.s32, q11.s32, #1\n"
+      "vshl.s32 q8, q8, #1\n"
+      "vshl.s32 q9, q9, #1\n"
+      "vshl.s32 q10, q10, #1\n"
+      "vshl.s32 q11, q11, #1\n"
 
       // Load the clamp_max bound (in parallel with the clamp_min)
       "ldr r2, [%[params], #" RUY_STR(RUY_OFFSET_OUTPUT_TRANSFORM_CLAMP_MAX) "]\n"
-      "vdup q13.32, r2\n"  // clamp_max
+      "vdup.32 q13, r2\n"  // clamp_max
 
       // Perform the activation function, by clamping
       // Apply the clamp_min bound
-      "vmax q8.s32, q8.s32, q12.s32\n"
-      "vmax q9.s32, q9.s32, q12.s32\n"
-      "vmax q10.s32, q10.s32, q12.s32\n"
-      "vmax q11.s32, q11.s32, q12.s32\n"
+      "vmax.s32 q8, q8, q12\n"
+      "vmax.s32 q9, q9, q12\n"
+      "vmax.s32 q10, q10, q12\n"
+      "vmax.s32 q11, q11, q12\n"
       // Apply the clamp_max bound
-      "vmin q8.s32, q8.s32, q13.s32\n"
-      "vmin q9.s32, q9.s32, q13.s32\n"
-      "vmin q10.s32, q10.s32, q13.s32\n"
-      "vmin q11.s32, q11.s32, q13.s32\n"
+      "vmin.s32 q8, q8, q13\n"
+      "vmin.s32 q9, q9, q13\n"
+      "vmin.s32 q10, q10, q13\n"
+      "vmin.s32 q11, q11, q13\n"
 
       // Convert to single precision float
       "vcvt.f32.s32 q8, q8\n"

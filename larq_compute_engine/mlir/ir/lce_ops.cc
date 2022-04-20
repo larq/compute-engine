@@ -3,24 +3,14 @@
 #include "flatbuffers/flexbuffers.h"
 #include "larq_compute_engine/core/bitpacking/bitpack.h"
 #include "larq_compute_engine/mlir/transforms/bitpack.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
-static tflite::Padding ConvertPaddingAttr(llvm::StringRef str) {
-  return llvm::StringSwitch<tflite::Padding>(str)
-      .Case("SAME", tflite::Padding_SAME)
-      .Case("VALID", tflite::Padding_VALID);
-}
-
-static tflite::ActivationFunctionType ConvertActivationAttr(
-    llvm::StringRef str) {
-  return llvm::StringSwitch<tflite::ActivationFunctionType>(str)
-      .Case("NONE", tflite::ActivationFunctionType_NONE)
-      .Case("RELU", tflite::ActivationFunctionType_RELU)
-      .Case("RELU_N1_TO_1", tflite::ActivationFunctionType_RELU_N1_TO_1)
-      .Case("RELU6", tflite::ActivationFunctionType_RELU6);
-}
+// Generated dialect defs.
+#include "larq_compute_engine/mlir/ir/lce_dialect.cc.inc"
 
 #define GET_OP_CLASSES
+#include "larq_compute_engine/mlir/ir/lce_enum.cc.inc"
 #include "larq_compute_engine/mlir/ir/lce_ops.cc.inc"
 
 namespace mlir {
@@ -36,9 +26,10 @@ std::vector<uint8_t> Bconv2dOp::buildCustomOptions() {
     fbb.Int("dilation_height_factor", dilation_height_factor());
     fbb.Int("dilation_width_factor", dilation_width_factor());
     fbb.Int("fused_activation_function",
-            (int)ConvertActivationAttr(fused_activation_function()));
+            (int)symbolizeActivationFunctionType(fused_activation_function())
+                .getValue());
     fbb.Int("pad_values", pad_values());
-    fbb.Int("padding", (int)ConvertPaddingAttr(padding()));
+    fbb.Int("padding", (int)symbolizePadding(padding()).getValue());
     fbb.Int("stride_height", stride_height());
     fbb.Int("stride_width", stride_width());
   });
@@ -49,7 +40,7 @@ std::vector<uint8_t> Bconv2dOp::buildCustomOptions() {
 std::vector<uint8_t> BMaxPool2dOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() {
-    fbb.Int("padding", (int)ConvertPaddingAttr(padding()));
+    fbb.Int("padding", (int)symbolizePadding(padding()).getValue());
     fbb.Int("stride_width", stride_width());
     fbb.Int("stride_height", stride_height());
     fbb.Int("filter_width", filter_width());
@@ -85,6 +76,13 @@ void LarqDialect::initialize() {
 #define GET_OP_LIST
 #include "larq_compute_engine/mlir/ir/lce_ops.cc.inc"
       >();
+}
+
+Operation* LarqDialect::materializeConstant(OpBuilder& builder, Attribute value,
+                                            Type type, Location loc) {
+  if (arith::ConstantOp::isBuildableWith(value, type))
+    return builder.create<mlir::arith::ConstantOp>(loc, type, value);
+  return nullptr;
 }
 }  // namespace lq
 }  // namespace mlir

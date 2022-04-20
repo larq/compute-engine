@@ -12,16 +12,14 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
     const std::vector<string>& input_dtypes,
     const std::vector<std::vector<int>>& input_shapes,
     const std::vector<string>& output_arrays, const bool should_quantize,
-    const std::string& target_str, const pybind11::object& default_ranges,
-    const bool experimental_enable_bitpacked_activations);
+    const std::string& target_str, const pybind11::object& default_ranges);
 
 pybind11::bytes ConvertSavedModelToTFLiteFlatBuffer(
     const std::string& saved_model_dir,
     const std::vector<std::string>& saved_model_tags,
     const std::vector<std::string>& exported_names,
     const int saved_model_version, const std::string& target_str,
-    const pybind11::object& default_ranges,
-    const bool experimental_enable_bitpacked_activations);
+    const pybind11::object& default_ranges);
 }  // namespace tensorflow
 
 PYBIND11_MODULE(_tf_tfl_flatbuffer, m) {

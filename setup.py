@@ -29,8 +29,8 @@ ext_modules = [Extension("_foo", ["stub.cc"])] if platform.startswith("linux") e
 
 setup(
     name="larq-compute-engine",
-    version=get_version_number(default="0.6.0"),
-    python_requires=">=3.6",
+    version=get_version_number(default="0.6.2"),
+    python_requires=">=3.7",
     description="Highly optimized inference engine for binarized neural networks.",
     long_description=readme(),
     long_description_content_type="text/markdown",
@@ -60,9 +60,9 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Mathematics",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",

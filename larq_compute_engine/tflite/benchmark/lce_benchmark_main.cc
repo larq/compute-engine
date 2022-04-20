@@ -15,15 +15,20 @@ limitations under the License.
 ==============================================================================*/
 
 #include <iostream>
+#include <string>
 
 #include "absl/base/attributes.h"
+#include "larq_compute_engine/tflite/benchmark/lce_benchmark_tflite_model.h"
 #include "larq_compute_engine/tflite/kernels/lce_ops_register.h"
-#include "tensorflow/lite/tools/benchmark/benchmark_tflite_model.h"
 #include "tensorflow/lite/tools/logging.h"
+
+bool use_reference_bconv = false;
+bool use_indirect_bgemm = false;
 
 void ABSL_ATTRIBUTE_WEAK
 RegisterSelectedOps(::tflite::MutableOpResolver* resolver) {
-  compute_engine::tflite::RegisterLCECustomOps(resolver);
+  compute_engine::tflite::RegisterLCECustomOps(resolver, use_reference_bconv,
+                                               use_indirect_bgemm);
 }
 
 namespace tflite {
@@ -31,7 +36,8 @@ namespace benchmark {
 
 int Main(int argc, char** argv) {
   TFLITE_LOG(INFO) << "STARTING!";
-  BenchmarkTfLiteModel benchmark;
+  LceBenchmarkTfLiteModel benchmark(LceBenchmarkTfLiteModel::DefaultParams(),
+                                    use_reference_bconv, use_indirect_bgemm);
   if (benchmark.Run(argc, argv) != kTfLiteOk) {
     TFLITE_LOG(ERROR) << "Benchmarking failed.";
     return EXIT_FAILURE;

@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
+# **NOTE**: This requires Java 8 and won't work on never versions. See:
+# https://stackoverflow.com/questions/46402772/failed-to-install-android-sdk-java-lang-noclassdeffounderror-javax-xml-bind-a
+
 # default LCE Android Env. variables
 export ANDROID_SDK_URL="https://dl.google.com/android/repository/sdk-tools-linux-3859397.zip"
 export ANDROID_HOME="/tmp/lce_android"
 export ANDROID_VERSION=29
-export ANDROID_BUILD_TOOLS_VERSION=28.0.3
-export ANDROID_NDK_VERSION=18.1.5063045
+export ANDROID_BUILD_TOOLS_VERSION=30.0.2
+export ANDROID_NDK_VERSION=19.2.5345600
 
 # download android SDK
 mkdir -p $ANDROID_HOME; cd $ANDROID_HOME;

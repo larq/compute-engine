@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version of the form 1.0.0(.devYYYYMMDD)'
+        description: "Version of the form 1.0.0(.devYYYYMMDD)"
         required: true
 
 env:
@@ -19,11 +19,11 @@ jobs:
     name: Build Benchmark Binaries for AArch64 and Android
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
         with:
           python-version: 3.9
-      - uses: actions/cache@v2.1.6
+      - uses: actions/cache@v3
         id: cache
         with:
           path: /tmp/lce_android
@@ -34,7 +34,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./third_party/install_android.sh
       - name: Configure Bazel
-        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_NDK_HOME="/tmp/lce_android/ndk/18.1.5063045" ./configure.py
+        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_NDK_HOME="/tmp/lce_android/ndk/19.2.5345600" ./configure.py
         shell: bash
       - run: mkdir benchmark-binaries
       - name: Build Benchmark utility for AArch64
@@ -49,7 +49,7 @@ jobs:
         run: |
           bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=android_arm64 -c opt --copt=-O3
           cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_android_arm64
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: Benchmark-Binaries
           path: benchmark-binaries
@@ -87,13 +87,13 @@ jobs:
   android-aar:
     runs-on: ubuntu-18.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v3
         with:
           python-version: 3.8
-      - uses: actions/cache@v2.1.6
+      - uses: actions/cache@v3
         id: cache
         with:
           path: /tmp/lce_android
@@ -104,11 +104,11 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./third_party/install_android.sh
       - name: Configure Bazel
-        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_NDK_HOME="/tmp/lce_android/ndk/18.1.5063045" ./configure.py
+        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_NDK_HOME="/tmp/lce_android/ndk/19.2.5345600" ./configure.py
         shell: bash
       - name: Build LCE AAR
         run: BUILDER=bazelisk ./larq_compute_engine/tflite/java/build_lce_aar.sh
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: Android-AAR
           path: lce-lite-*.aar
@@ -133,11 +133,11 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build macOS wheels
@@ -156,9 +156,42 @@ jobs:
         env:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
         shell: bash
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ runner.os }}-wheels
+          path: wheelhouse
+
+  macos-arm-release-wheel:
+    name: Build release arm wheels for macOS
+    runs-on: macos-11
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Build macOS wheels
+        run: |
+          python --version
+          python -m pip install delocate wheel setuptools numpy six --no-cache-dir
+
+          ./configure.py
+
+          bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --config=macos_arm64
+          bazel-bin/build_pip_pkg artifacts --plat-name macosx_11_0_arm64
+
+          for f in artifacts/*.whl; do
+            delocate-wheel -w wheelhouse $f
+          done
+        env:
+          LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
+        shell: bash
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ runner.os }}-arm-wheels
           path: wheelhouse
 
   manylinux-release-wheel:
@@ -166,19 +199,18 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build manylinux2010 wheels
         run: |
-          docker run -e PYTHON_VERSION=${{ matrix.python-version }} \
-            -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }} \
+          docker run -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }} \
             -v ${PWD}:/compute-engine -w /compute-engine \
-            tensorflow/tensorflow:2.2.0-custom-op-ubuntu16 \
+            tensorflow/build:2.8-python${{ matrix.python-version }} \
             .github/tools/release_linux.sh
 
           sudo apt-get -y -qq install patchelf --no-install-recommends
@@ -189,17 +221,17 @@ jobs:
           done
 
           ls -al wheelhouse/
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ runner.os }}-wheels
           path: wheelhouse
 
   windows-release-wheel:
     name: Build release wheels for Windows
-    runs-on: windows-latest
+    runs-on: windows-2019
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9]
       fail-fast: false
     steps:
       - name: Configure Pagefile
@@ -210,14 +242,17 @@ jobs:
         run: |
           (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
         shell: pwsh
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build Windows wheels
         run: |
           $Env:BAZEL_VC = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC"
           set PreferredToolArchitecture=x64
+
+          # The default is "/arch:AVX", which we don't want.
+          $Env:CC_OPT_FLAGS = "/O2"
 
           python --version
           python -m pip install wheel setuptools numpy six --no-cache-dir
@@ -229,7 +264,7 @@ jobs:
         env:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
         shell: pwsh
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ runner.os }}-wheels
           path: wheelhouse
@@ -237,20 +272,31 @@ jobs:
   upload-wheels:
     name: Publish wheels to PyPi
     if: always() && github.event_name == 'release'
-    needs: [manylinux-release-wheel, macos-release-wheel, windows-release-wheel]
+    needs:
+      [
+        manylinux-release-wheel,
+        macos-release-wheel,
+        macos-arm-release-wheel,
+        windows-release-wheel,
+      ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: Linux-wheels
           path: Linux-wheels
         if: ${{ needs.manylinux-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: macOS-wheels
           path: macOS-wheels
         if: ${{ needs.macos-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
+        with:
+          name: macOS-arm-wheels
+          path: macOS-arm-wheels
+        if: ${{ needs.macos-arm-release-wheel.result == 'success' }}
+      - uses: actions/download-artifact@v3
         with:
           name: Windows-wheels
           path: Windows-wheels
@@ -260,6 +306,7 @@ jobs:
           mkdir -p dist
           cp Linux-wheels/*.whl dist/ || true
           cp macOS-wheels/*.whl dist/ || true
+          cp macOS-arm-wheels/*.whl dist/ || true
           cp Windows-wheels/*.whl dist/ || true
           ls -la dist/
           sha256sum dist/*.whl
@@ -273,7 +320,7 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Build image
         run: docker build . --file Dockerfile --tag $IMAGE_NAME
       - name: Log into registry

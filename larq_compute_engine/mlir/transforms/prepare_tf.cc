@@ -1,5 +1,6 @@
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
+#include "larq_compute_engine/mlir/transforms/padding.h"
 #include "larq_compute_engine/mlir/transforms/passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
@@ -16,10 +17,11 @@ namespace TFL {
 namespace {
 
 using compute_engine::core::bitpacking_bitwidth;
-using compute_engine::core::CeilDiv;
 
 // Prepare LCE operations in functions for subsequent legalization.
 struct PrepareLCE : public PassWrapper<PrepareLCE, FunctionPass> {
+  llvm::StringRef getArgument() const final { return "tfl-prepare-lce"; }
+  llvm::StringRef getDescription() const final { return "Inject LCE Ops"; }
   PrepareLCE() = default;
   PrepareLCE(const PrepareLCE& pass) {}
   PrepareLCE(const LCETarget target) { target_.setValue(target); }
@@ -36,6 +38,14 @@ struct PrepareLCE : public PassWrapper<PrepareLCE, FunctionPass> {
                        clEnumValN(LCETarget::XCORE, "xcore", "XCORE target"))};
 };
 
+bool IsConstantValue(Attribute values, float expected_value) {
+  if (!values.isa<DenseElementsAttr>()) return false;
+
+  for (auto value : values.cast<DenseElementsAttr>().getValues<float>()) {
+    if (value != expected_value) return false;
+  }
+  return true;
+}
 DenseElementsAttr GetConstantVector(Attribute filter, float val) {
   auto filter_type = filter.getType().cast<ShapedType>();
   auto filter_shape = filter_type.getShape();
@@ -53,7 +63,7 @@ DenseElementsAttr GetScaleVector(Attribute filter_attr) {
 
   std::vector<Attribute> scales(channels);
   for (std::size_t i = 0; i < channels; ++i) {
-    auto scale = std::abs(filter.getValue<float>({0, 0, 0, i}));
+    auto scale = std::abs(filter.getValues<float>()[{0, 0, 0, i}]);
     scales[i] = FloatAttr::get(element_type, scale);
   }
 
@@ -75,10 +85,10 @@ bool IsBinaryFilter(Attribute filter_attr) {
     for (std::size_t w = 0; w < shape[1]; ++w) {
       for (std::size_t i = 0; i < shape[2]; ++i) {
         for (std::size_t o = 0; o < shape[3]; ++o) {
-          auto scale = filter.getValue<float>({0, 0, 0, o});
+          auto scale = filter.getValues<float>()[{0, 0, 0, o}];
           if (std::abs(scale) <= std::numeric_limits<float>::epsilon())
             return false;
-          auto value = filter.getValue<float>({h, w, i, o});
+          auto value = filter.getValues<float>()[{h, w, i, o}];
           if (std::abs(std::abs(value / scale) - 1.0f) > 0.005f) return false;
         }
       }
@@ -89,33 +99,27 @@ bool IsBinaryFilter(Attribute filter_attr) {
 
 bool IsSamePadding(Attribute paddings_attr, Value input, Value output,
                    ArrayAttr strides_attr) {
-  if (!paddings_attr.isa<DenseElementsAttr>()) return false;
-  auto paddings = paddings_attr.dyn_cast<DenseElementsAttr>();
-  auto input_shape = input.getType().cast<RankedTensorType>().getShape();
-  auto output_shape = output.getType().cast<RankedTensorType>().getShape();
+  auto paddings = GetValidPadAttr(paddings_attr);
+  if (!paddings) return false;
+  auto input_shape = GetShape4D(input);
+  if (input_shape.empty()) return false;
+  auto output_shape = GetShape4D(output);
+  if (output_shape.empty()) return false;
+
   auto strides = strides_attr.getValue();
-
-  int pad_height_left = paddings.getValue<int>({1, 0});
-  int pad_height_right = paddings.getValue<int>({1, 1});
-  int pad_width_left = paddings.getValue<int>({2, 0});
-  int pad_width_right = paddings.getValue<int>({2, 1});
-
-  int pad_height = pad_height_left + pad_height_right;
-  int pad_width = pad_width_left + pad_width_right;
-
+  if (!strides[1].isa<IntegerAttr>() || !strides[2].isa<IntegerAttr>())
+    return false;
   int stride_height = strides[1].cast<IntegerAttr>().getInt();
   int stride_width = strides[2].cast<IntegerAttr>().getInt();
 
-  return paddings.getValue<int>({0, 0}) == 0 &&
-         paddings.getValue<int>({0, 1}) == 0 &&
-         output_shape[1] == CeilDiv(input_shape[1], stride_height) &&
-         output_shape[2] == CeilDiv(input_shape[2], stride_width) &&
-         pad_height_left == pad_height / 2 &&
-         pad_height_right == (pad_height + 1) / 2 &&
-         pad_width_left == pad_width / 2 &&
-         pad_width_right == (pad_width + 1) / 2 &&
-         paddings.getValue<int>({3, 0}) == 0 &&
-         paddings.getValue<int>({3, 1}) == 0;
+  // Check that there is no padding in the batch and channel dimensions
+  // Functions defined in `padding.h`
+  return IsNoPadding(paddings, 0) &&
+         IsSamePadding1D(paddings, 1, input_shape[1], output_shape[1],
+                         stride_height) &&
+         IsSamePadding1D(paddings, 2, input_shape[2], output_shape[2],
+                         stride_width) &&
+         IsNoPadding(paddings, 3);
 }
 
 // Verify that the filter shape is compatible with the input shape. Will fail if
@@ -192,7 +196,7 @@ std::unique_ptr<OperationPass<FuncOp>> CreatePrepareLCEPass(
   return std::make_unique<PrepareLCE>(target);
 }
 
-static PassRegistration<PrepareLCE> pass("tfl-prepare-lce", "Inject LCE Ops.");
+static PassRegistration<PrepareLCE> pass;
 
 }  // namespace TFL
 }  // namespace mlir

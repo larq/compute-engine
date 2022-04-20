@@ -1,4 +1,5 @@
 include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
 include "larq_compute_engine/mlir/transforms/op_removal_patterns.td"
@@ -9,7 +10,7 @@ def Bitpack : NativeCodeCall<"Bitpack(&$_builder, $0)">;
 
 def : Pat<(LQ_Bconv2dOp
               $input,
-              (ConstantOp Conv2DFilter:$filter),
+              (Arith_ConstantOp Conv2DFilter:$filter),
               $post_activation_multiplier,
               $post_activation_bias,
               $output_threshold,
@@ -23,7 +24,7 @@ def : Pat<(LQ_Bconv2dOp
               $stride_width),
           (LQ_Bconv2dOp
               $input,
-              (ConstantOp (Bitpack $filter)),
+              (Arith_ConstantOp (Bitpack $filter)),
               $post_activation_multiplier,
               $post_activation_bias,
               $output_threshold,

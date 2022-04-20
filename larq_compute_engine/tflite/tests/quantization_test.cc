@@ -116,6 +116,8 @@ TEST_P(QuantizationOpTest, Float) { TestQuantization<float>(GetParam()); }
 
 TEST_P(QuantizationOpTest, Int8) { TestQuantization<std::int8_t>(GetParam()); }
 
+TEST_P(QuantizationOpTest, Bool) { TestQuantization<bool>(GetParam()); }
+
 INSTANTIATE_TEST_SUITE_P(AllCombinations, QuantizationOpTest,
                          ::testing::Values(std::array<int, 4>{1, 1, 1, 1},
                                            std::array<int, 4>{1, 4, 4, 1},

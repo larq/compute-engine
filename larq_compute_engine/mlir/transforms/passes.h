@@ -15,8 +15,7 @@ std::unique_ptr<OperationPass<FuncOp>> CreateOpRemovalPass();
 std::unique_ptr<OperationPass<FuncOp>> CreatePrepareLCEPass(LCETarget target);
 
 // Creates an instance of the TensorFlow dialect OptimizeLCE pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateOptimizeLCEPass(
-    LCETarget target, bool experimental_enable_bitpacked_activations);
+std::unique_ptr<OperationPass<FuncOp>> CreateOptimizeLCEPass(LCETarget target);
 
 // Creates an instance of the TensorFlow dialect BitpackWeightsLCE pass.
 std::unique_ptr<OperationPass<FuncOp>> CreateBitpackWeightsLCEPass();
@@ -27,7 +26,17 @@ std::unique_ptr<OperationPass<FuncOp>> CreateLCEQuantizePass();
 // Creates an instance of LegalizeLCE pass.
 std::unique_ptr<OperationPass<FuncOp>> CreateLegalizeLCEPass();
 
+// Creates an instance of the FusePadding pass.
+std::unique_ptr<OperationPass<FuncOp>> CreateFusePaddingPass();
+
+// Creates an instance of TranslateToLCE pass.
+std::unique_ptr<OperationPass<FuncOp>> CreateTranslateToLCEPass();
+
 }  // namespace TFL
+
+// Creates an instance of the TensorFlow dialect SetBatchSize pass
+std::unique_ptr<OperationPass<FuncOp>> CreateSetBatchSizePass();
+
 }  // namespace mlir
 
 #endif  // LARQ_COMPUTE_ENGINE_MLIR_PASSES_H_

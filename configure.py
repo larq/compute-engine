@@ -411,26 +411,6 @@ def set_cc_opt_flags(environ_cp):
         write_to_bazelrc("build:opt --host_copt=%s" % opt)
 
 
-def maybe_set_manylinux_toolchain(environ_cp):
-    write_to_bazelrc(
-        "build:manylinux2010 --crosstool_top=@org_tensorflow//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda11.2:toolchain"
-    )
-    if get_var(
-        environ_cp,
-        var_name="MANYLINUX2010",
-        query_item="manylinux2010-compatible pip package",
-        enabled_by_default=False,
-        question=(
-            "Are you trying to build a manylinux2010-compatible pip package "
-            "in the tensorflow:custom-op-ubuntu16 Docker container?"
-        ),
-        yes_reply="Building manylinux2010-compatible pip package.",
-        no_reply="Not building manylinux2010-compatible pip package.",
-    ):
-        write_to_bazelrc("build --config=manylinux2010")
-        write_to_bazelrc("test --config=manylinux2010")
-
-
 def set_windows_build_flags(environ_cp):
     """Set Windows specific build options."""
 
@@ -637,9 +617,6 @@ def main():
 
     if is_windows():
         set_windows_build_flags(environ_cp)
-
-    if is_linux():
-        maybe_set_manylinux_toolchain(environ_cp)
 
     if get_var(
         environ_cp,

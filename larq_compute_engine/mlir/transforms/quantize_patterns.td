@@ -69,3 +69,7 @@ def : Pat<(TFL_QuantizeOp
 def : Pat<(TFL_QuantizeOp (LQ_DequantizeOp:$output $input), $qtype),
           (LQ_DequantizeOp $input),
           [(HasOneUse $output)]>;
+
+def : Pat<(LQ_QuantizeOp (TFL_DequantizeOp:$output $input)),
+          (LQ_QuantizeOp $input),
+          [(HasOneUse $output)]>;

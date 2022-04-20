@@ -12,7 +12,9 @@ class LiteInterpreterWrapper
  public:
   LiteInterpreterWrapper(const pybind11::bytes& flatbuffer,
                          const int num_threads = 1,
-                         const bool use_reference_bconv = false);
+                         const bool use_reference_bconv = false,
+                         const bool use_indirect_bgemm = false,
+                         const bool use_xnnpack = false);
   ~LiteInterpreterWrapper(){};
 
  private:
@@ -25,7 +27,8 @@ class LiteInterpreterWrapper
 
 LiteInterpreterWrapper::LiteInterpreterWrapper(
     const pybind11::bytes& flatbuffer, const int num_threads,
-    const bool use_reference_bconv) {
+    const bool use_reference_bconv, const bool use_indirect_bgemm,
+    const bool use_xnnpack) {
   // Make a copy of the flatbuffer because it can get deallocated after the
   // constructor is done
   flatbuffer_ = static_cast<std::string>(flatbuffer);
@@ -37,9 +40,14 @@ LiteInterpreterWrapper::LiteInterpreterWrapper(
   }
 
   // Build the interpreter
-  resolver_ = std::make_unique<tflite::ops::builtin::BuiltinOpResolver>();
-  compute_engine::tflite::RegisterLCECustomOps(resolver_.get(),
-                                               use_reference_bconv);
+  if (use_xnnpack) {
+    resolver_ = std::make_unique<tflite::ops::builtin::BuiltinOpResolver>();
+  } else {
+    resolver_ = std::make_unique<
+        tflite::ops::builtin::BuiltinOpResolverWithoutDefaultDelegates>();
+  }
+  compute_engine::tflite::RegisterLCECustomOps(
+      resolver_.get(), use_reference_bconv, use_indirect_bgemm);
 
   tflite::InterpreterBuilder builder(*model_, *resolver_);
   builder(&interpreter_, num_threads);
@@ -51,7 +59,8 @@ LiteInterpreterWrapper::LiteInterpreterWrapper(
 
 PYBIND11_MODULE(interpreter_wrapper_lite, m) {
   pybind11::class_<LiteInterpreterWrapper>(m, "LiteInterpreter")
-      .def(pybind11::init<const pybind11::bytes&, const int, const bool>())
+      .def(pybind11::init<const pybind11::bytes&, const int, const bool,
+                          const bool, const bool>())
       .def_property("input_types", &LiteInterpreterWrapper::get_input_types,
                     nullptr)
       .def_property("output_types", &LiteInterpreterWrapper::get_output_types,
@@ -59,6 +68,14 @@ PYBIND11_MODULE(interpreter_wrapper_lite, m) {
       .def_property("input_shapes", &LiteInterpreterWrapper::get_input_shapes,
                     nullptr)
       .def_property("output_shapes", &LiteInterpreterWrapper::get_output_shapes,
+                    nullptr)
+      .def_property("input_zero_points",
+                    &LiteInterpreterWrapper::get_input_zero_points, nullptr)
+      .def_property("output_zero_points",
+                    &LiteInterpreterWrapper::get_output_zero_points, nullptr)
+      .def_property("input_scales", &LiteInterpreterWrapper::get_input_scales,
+                    nullptr)
+      .def_property("output_scales", &LiteInterpreterWrapper::get_output_scales,
                     nullptr)
       .def("predict", &LiteInterpreterWrapper::predict);
 };
