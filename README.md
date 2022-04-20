@@ -49,9 +49,9 @@ on a Raspberry Pi 4 Model B at 1.5GHz ([BCM2711](https://www.raspberrypi.com/doc
 
 | Model                                                              | Top-1 Accuracy | RPi 4B 1.5GHz, 1 thread (ms) | Pixel 1, 1 thread (ms) | Mac Mini M1, 1 thread (ms) |
 |--------------------------------------------------------------------|----------------|------------------------------|------------------------|----------------------------|
-| [QuickNetSmall](https://docs.larq.dev/zoo/api/sota/#quicknetsmall) | 59.4%          | 31.4                         | 16.8                   | 4.0                        |
-| [QuickNet](https://docs.larq.dev/zoo/api/sota/#quicknet)           | 63.3%          | 48.7                         | 25.5                   | 5.8                        |
-| [QuickNetLarge](https://docs.larq.dev/zoo/api/sota/#quicknetlarge) | 66.9%          | 82.9                         | 44.2                   | 9.9                        |
+| [QuickNetSmall](https://docs.larq.dev/zoo/api/sota/#quicknetsmall) | 59.4%          | 27.7                         | 16.8                   | 4.0                        |
+| [QuickNet](https://docs.larq.dev/zoo/api/sota/#quicknet)           | 63.3%          | 45.0                         | 25.5                   | 5.8                        |
+| [QuickNetLarge](https://docs.larq.dev/zoo/api/sota/#quicknetlarge) | 66.9%          | 77.0                         | 44.2                   | 9.9                        |
 
 For reference, [dabnn](https://github.com/JDAI-CV/dabnn) (the other main BNN library) reports an inference time of 61.3 ms for [Bi-RealNet](https://docs.larq.dev/zoo/api/literature/#birealnet) (56.4% accuracy) on the Pixel 1 phone,
 while LCE achieves an inference time of 41.6 ms for Bi-RealNet on the same device.
@@ -63,13 +63,14 @@ board:
 
 | Model                                                              | Top-1 Accuracy | RPi 4B 1.5GHz, 4 threads (ms) | Pixel 1, 4 threads (ms) | Mac Mini M1, 4 threads (ms) |
 |--------------------------------------------------------------------|----------------|-------------------------------|-------------------------|-----------------------------|
-| [QuickNetSmall](https://docs.larq.dev/zoo/api/sota/#quicknetsmall) | 59.4%          | 16.1                          | 8.9                     | 1.8                         |
-| [QuickNet](https://docs.larq.dev/zoo/api/sota/#quicknet)           | 63.3%          | 24.7                          | 12.6                    | 2.5                         |
-| [QuickNetLarge](https://docs.larq.dev/zoo/api/sota/#quicknetlarge) | 66.9%          | 37.9                          | 22.8                    | 3.9                         |
+| [QuickNetSmall](https://docs.larq.dev/zoo/api/sota/#quicknetsmall) | 59.4%          | 12.1                          | 8.9                     | 1.8                         |
+| [QuickNet](https://docs.larq.dev/zoo/api/sota/#quicknet)           | 63.3%          | 20.8                          | 12.6                    | 2.5                         |
+| [QuickNetLarge](https://docs.larq.dev/zoo/api/sota/#quicknetlarge) | 66.9%          | 31.7                          | 22.8                    | 3.9                         |
 
-Benchmarked on August 21st, 2020 with LCE custom
+Benchmarked on 2021-06-11 (Pixel 1), 2021-06-13 (Mac Mini M1), and 2022-04-20 (RPi 4B) with LCE custom
 [TFLite Model Benchmark Tool](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/tools/benchmark)
 (see [here](https://github.com/larq/compute-engine/tree/main/larq_compute_engine/tflite/benchmark))
+with XNNPack enabled
 and BNN models with randomized inputs.
 
 ## Getting started
