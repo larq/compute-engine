@@ -14,19 +14,13 @@ tf_cc_binary(
         "lce_benchmark_main.cc",
     ],
     copts = tflite_copts() + tflite_copts_warnings(),
-    features = select({
-        "@org_tensorflow//tensorflow:android": [],
-        "//conditions:default": ["fully_static_link"],
-    }),
     linkopts = tflite_linkopts() + select({
         "@org_tensorflow//tensorflow:android": [
             "-pie",  # Android 5.0 and later supports only PIE
             "-lm",  # some builtin ops, e.g., tanh, need -lm
+            "-Wl,--rpath=/data/local/tmp/",  # Hexagon delegate libraries should be in /data/local/tmp
         ],
-        "//conditions:default": [
-            "-lstdc++",
-            "-lm",
-        ],
+        "//conditions:default": [],
     }),
     deps = [
         "//larq_compute_engine/tflite/benchmark:lce_benchmark_tflite_model_lib",
