@@ -235,15 +235,12 @@ jobs:
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
-          cp $GOOGLE_APPLICATION_CREDENTIALS gcloud-credentials.json
-
           docker run -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }} \
-            -e GOOGLE_APPLICATION_CREDENTIALS=/compute-engine/gcloud-credentials.json \
+            -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-credentials.json \
+            -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/gcloud-credentials.json:ro \
             -v ${PWD}:/compute-engine -w /compute-engine \
             tensorflow/build:2.8-python${{ matrix.python-version }} \
             .github/tools/release_linux.sh
-
-          rm gcloud-credentials.json
 
           sudo apt-get -y -qq install patchelf --no-install-recommends
           python -m pip install auditwheel --no-cache-dir
