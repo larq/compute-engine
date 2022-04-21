@@ -52,10 +52,14 @@ def test_interpreter_multi_input(use_iterator):
     assert interpreter.input_shapes == [(1, 24, 24, 1), (1, 24, 24, 2)]
     assert sorted(interpreter.output_shapes) == [(1, 24 * 24 * 1), (1, 24 * 24 * 2)]
 
+    # Input order is not deterministic, decide based on shape
+    if interpreter.input_shapes[0][-1] == 1:
+        x_np, y_np = y_np, x_np
+
     def input_fn():
         if use_iterator:
-            return ([y, x] for x, y in zip(x_np, y_np))
-        return [y_np, x_np]
+            return ([x, y] for x, y in zip(x_np, y_np))
+        return [x_np, y_np]
 
     output_x, output_y = interpreter.predict(input_fn())
     # Output order is not deterministic, decide based on shape
