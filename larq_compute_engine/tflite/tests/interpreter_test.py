@@ -49,7 +49,7 @@ def test_interpreter_multi_input(use_iterator):
     interpreter = Interpreter(converter.convert(), num_threads=2)
     assert interpreter.input_types == [np.float32, np.float32]
     assert interpreter.output_types == [np.float32, np.float32]
-    assert interpreter.input_shapes == [(1, 24, 24, 1), (1, 24, 24, 2)]
+    assert sorted(interpreter.input_shapes) == [(1, 24, 24, 1), (1, 24, 24, 2)]
     assert sorted(interpreter.output_shapes) == [(1, 24 * 24 * 1), (1, 24 * 24 * 2)]
 
     # Input order is not deterministic, decide based on shape
