@@ -152,7 +152,7 @@ jobs:
           ./configure.py
 
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-macos' >> .bazelrc.user
+            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-macos-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
@@ -194,7 +194,7 @@ jobs:
           ./configure.py
 
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-macos-arm' >> .bazelrc.user
+            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-macos-arm-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
@@ -231,17 +231,19 @@ jobs:
       - name: Build manylinux2010 wheels
         run: |
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-manylinux' >> .bazelrc.user
+            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-manylinux-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
-          echo "GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS"
+          cp $GOOGLE_APPLICATION_CREDENTIALS gcloud-credentials.json
 
           docker run -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }} \
-            -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+            -e GOOGLE_APPLICATION_CREDENTIALS=/compute-engine/gcloud-credentials.json \
             -v ${PWD}:/compute-engine -w /compute-engine \
             tensorflow/build:2.8-python${{ matrix.python-version }} \
             .github/tools/release_linux.sh
+
+          rm gcloud-credentials.json
 
           sudo apt-get -y -qq install patchelf --no-install-recommends
           python -m pip install auditwheel --no-cache-dir
@@ -294,7 +296,7 @@ jobs:
           "" | python configure.py
 
           if ($GOOGLE_APPLICATION_CREDENTIALS) {
-            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-windows' >> .bazelrc.user
+            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-windows-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           }
 
