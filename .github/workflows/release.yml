@@ -235,7 +235,10 @@ jobs:
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS"
+
           docker run -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }} \
+            -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
             -v ${PWD}:/compute-engine -w /compute-engine \
             tensorflow/build:2.8-python${{ matrix.python-version }} \
             .github/tools/release_linux.sh
