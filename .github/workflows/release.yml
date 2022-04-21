@@ -290,10 +290,10 @@ jobs:
 
           "" | python configure.py
 
-          if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
+          if ($GOOGLE_APPLICATION_CREDENTIALS) {
             echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-windows' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
-          fi
+          }
 
           bazelisk --output_base=C:\build_output build :build_pip_pkg --enable_runfiles --discard_analysis_cache --notrack_incremental_state --nokeep_state_after_build --nouse_action_cache --local_ram_resources=4096
           bazel-bin/build_pip_pkg wheelhouse
