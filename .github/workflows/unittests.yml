@@ -17,7 +17,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v3
         with:
-          python-version: 3.10
+          python-version: 3.9
       - name: Configure Bazel
         run: ./configure.py
         shell: bash
@@ -43,7 +43,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends qemu-user
       - uses: actions/setup-python@v3
         with:
-          python-version: 3.10
+          python-version: 3.9
       - name: Configure Bazel
         run: ./configure.py
         shell: bash
@@ -71,7 +71,7 @@ jobs:
           credentials_json: ${{ secrets.gcs_bazel_cache }}
       - uses: actions/setup-python@v3
         with:
-          python-version: 3.10
+          python-version: 3.9
       - name: Configure Bazel
         run: |
           ./configure.py
@@ -123,7 +123,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v3
         with:
-          python-version: 3.10
+          python-version: 3.9
       - uses: actions/cache@v3
         id: cache
         with:
