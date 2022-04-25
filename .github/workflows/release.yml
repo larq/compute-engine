@@ -133,7 +133,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, 3.10]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -175,7 +175,7 @@ jobs:
     runs-on: macos-11
     strategy:
       matrix:
-        python-version: [3.8, 3.9]
+        python-version: [3.8, 3.9, 3.10]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -217,7 +217,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, 3.10]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -260,7 +260,7 @@ jobs:
     runs-on: windows-2019
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, 3.10]
       fail-fast: false
     steps:
       - name: Configure Pagefile
