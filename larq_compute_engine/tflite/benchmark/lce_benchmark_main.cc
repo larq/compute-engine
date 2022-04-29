@@ -17,7 +17,6 @@ limitations under the License.
 #include <iostream>
 #include <string>
 
-#include "absl/base/attributes.h"
 #include "larq_compute_engine/tflite/benchmark/lce_benchmark_tflite_model.h"
 #include "larq_compute_engine/tflite/kernels/lce_ops_register.h"
 #include "tensorflow/lite/tools/logging.h"
@@ -25,8 +24,7 @@ limitations under the License.
 bool use_reference_bconv = false;
 bool use_indirect_bgemm = false;
 
-void ABSL_ATTRIBUTE_WEAK
-RegisterSelectedOps(::tflite::MutableOpResolver* resolver) {
+void RegisterSelectedOps(::tflite::MutableOpResolver* resolver) {
   compute_engine::tflite::RegisterLCECustomOps(resolver, use_reference_bconv,
                                                use_indirect_bgemm);
 }
