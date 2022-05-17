@@ -67,26 +67,10 @@ if(COMPILE_BENCHMARK)
             ${LCE_SOURCE_DIR}/tflite/benchmark/lce_benchmark_tflite_model.h
             ${TFLITE_SOURCE_DIR}/tools/benchmark/benchmark_model.h
             )
-    set(TFLITE_BENCHMARK_SRCS  # from ${TFLITE_SOURCE_DIR}/tools/benchmark/CMakeLists.txt
-            ${TENSORFLOW_SOURCE_DIR}/tensorflow/core/util/stats_calculator.cc
-            ${TFLITE_SOURCE_DIR}/kernels/internal/utils/sparsity_format_converter.cc
-            ${TFLITE_SOURCE_DIR}/profiling/memory_info.cc
-            ${TFLITE_SOURCE_DIR}/profiling/memory_usage_monitor.cc
-            ${TFLITE_SOURCE_DIR}/profiling/profile_summarizer.cc
-            ${TFLITE_SOURCE_DIR}/profiling/profile_summary_formatter.cc
-            ${TFLITE_SOURCE_DIR}/profiling/time.cc
-            ${TFLITE_SOURCE_DIR}/tools/command_line_flags.cc
-            ${TFLITE_SOURCE_DIR}/tools/benchmark/benchmark_model.cc
-            ${TFLITE_SOURCE_DIR}/tools/benchmark/benchmark_performance_options.cc
-            ${TFLITE_SOURCE_DIR}/tools/benchmark/benchmark_tflite_model.cc
-            ${TFLITE_SOURCE_DIR}/tools/benchmark/benchmark_utils.cc
-            ${TFLITE_SOURCE_DIR}/tools/benchmark/profiling_listener.cc
-            ${TFLITE_SOURCE_DIR}/tools/delegates/default_execution_provider.cc
-            ${TFLITE_SOURCE_DIR}/tools/delegates/delegate_provider.cc
-            ${TFLITE_SOURCE_DIR}/tools/delegates/xnnpack_delegate_provider.cc
-            ${TFLITE_SOURCE_DIR}/tools/evaluation/utils.cc
-            ${TFLITE_SOURCE_DIR}/tools/tool_params.cc
-            )
+
+    get_directory_property(TFLITE_BENCHMARK_SRCS DIRECTORY ${TFLITE_SOURCE_DIR}/tools/benchmark DEFINITION TFLITE_BENCHMARK_SRCS)
+    list(FILTER TFLITE_BENCHMARK_SRCS EXCLUDE REGEX benchmark_main.cc)
+
     add_executable(lce_benchmark_model
             ${TFLITE_BENCHMARK_SRCS}
             ${LCE_CORE_SRCS} ${LCE_CORE_HDRS}
