@@ -7,9 +7,6 @@
 enum LCETarget { ARM = 0, XCORE = 1 };
 
 namespace mlir {
-// namespace func {
-// class FuncOp;
-// }
 namespace TFL {
 
 // Creates an instance of the TensorFlow dialect OpRemoval pass.
