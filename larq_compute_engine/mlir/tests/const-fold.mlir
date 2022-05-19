@@ -1,7 +1,7 @@
 // RUN: lce-tf-opt %s -canonicalize | FileCheck %s
 
 // CHECK-LABEL: @quantize
-func @quantize() -> (tensor<1x1x2x1xi32>, tensor<1x1x2x1xi32>) {
+func.func @quantize() -> (tensor<1x1x2x1xi32>, tensor<1x1x2x1xi32>) {
   %pos = arith.constant dense< 0.5> : tensor<1x1x2x32xf32>
   %neg = arith.constant dense<-0.5> : tensor<1x1x2x32xf32>
   %0 = "lq.Quantize"(%pos) {} : (tensor<1x1x2x32xf32>) -> tensor<1x1x2x1xi32>
@@ -14,7 +14,7 @@ func @quantize() -> (tensor<1x1x2x1xi32>, tensor<1x1x2x1xi32>) {
 }
 
 // CHECK-LABEL: @dequantize
-func @dequantize() -> (tensor<1x1x2x32xf32>, tensor<1x1x2x32xf32>) {
+func.func @dequantize() -> (tensor<1x1x2x32xf32>, tensor<1x1x2x32xf32>) {
   %pos = arith.constant dense<0> : tensor<1x1x2x1xi32>
   %neg = arith.constant dense<-1> : tensor<1x1x2x1xi32>
   %0 = "lq.Dequantize"(%pos) {} : (tensor<1x1x2x1xi32>) -> tensor<1x1x2x32xf32>

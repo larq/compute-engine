@@ -36,10 +36,11 @@ LCETarget GetLCETarget(const std::string& target_str) {
   }
 }
 
-Status GetNumInputs(mlir::OwningModuleRef* module, int* num_inputs) {
+Status GetNumInputs(mlir::OwningOpRef<mlir::ModuleOp>* module,
+                    int* num_inputs) {
   *num_inputs = 0;
-  mlir::FuncOp entry_function = nullptr;
-  for (auto func : module->get().getOps<mlir::FuncOp>()) {
+  mlir::func::FuncOp entry_function = nullptr;
+  for (auto func : module->get().getOps<mlir::func::FuncOp>()) {
     if (auto tf_attrs =
             func->getAttrOfType<mlir::DictionaryAttr>("tf.entry_function")) {
       // TODO(jaesung): There could be multiple entry functions. Let's handle
@@ -70,13 +71,13 @@ Status GetNumInputs(mlir::OwningModuleRef* module, int* num_inputs) {
 }
 
 pybind11::bytes ConvertMLIRModuleToTFLiteFlatBuffer(
-    mlir::OwningModuleRef* module, mlir::MLIRContext& context,
+    mlir::OwningOpRef<mlir::ModuleOp>* module, mlir::MLIRContext& context,
     const LCETarget target, const pybind11::object& default_ranges,
     const std::unordered_set<std::string>& saved_model_tags,
     llvm::StringRef saved_model_dir,
     llvm::Optional<tensorflow::Session*> session, const int num_inputs,
     const bool should_quantize, const bool mark_as_post_training_quant) {
-  mlir::TFL::QuantizationSpecs quant_specs;
+  mlir::quant::QuantizationSpecs quant_specs;
   if (should_quantize) {
     // Normally we'd only set `inference_type` to QINT8 when there are
     // fake_quant nodes in the graph. However this did not work reliably, and

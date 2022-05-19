@@ -9,7 +9,7 @@ namespace TFL {
 
 namespace {
 
-struct LegalizeLCE : public PassWrapper<LegalizeLCE, FunctionPass> {
+struct LegalizeLCE : public PassWrapper<LegalizeLCE, OperationPass<FuncOp>> {
   llvm::StringRef getArgument() const final { return "tfl-legalize-lce"; }
   llvm::StringRef getDescription() const final {
     return "Legalize LCE ops in TensorFlow Lite dialect";
@@ -17,7 +17,7 @@ struct LegalizeLCE : public PassWrapper<LegalizeLCE, FunctionPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<mlir::TFL::TensorFlowLiteDialect>();
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 template <typename LarqOp>
@@ -41,12 +41,12 @@ struct LegalizeToCustomOp : public OpRewritePattern<LarqOp> {
   }
 };
 
-void LegalizeLCE::runOnFunction() {
-  OwningRewritePatternList patterns(&getContext());
+void LegalizeLCE::runOnOperation() {
+  RewritePatternSet patterns(&getContext());
   auto* ctx = &getContext();
-  auto func = getFunction();
+  auto func = getOperation();
 
-  patterns.insert<
+  patterns.add<
       LegalizeToCustomOp<lq::QuantizeOp>, LegalizeToCustomOp<lq::DequantizeOp>,
       LegalizeToCustomOp<lq::Bconv2dOp>, LegalizeToCustomOp<lq::BMaxPool2dOp>>(
       ctx);

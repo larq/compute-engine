@@ -31,7 +31,7 @@ android_library(
 
 java_library(
     name = "tensorflowlite_java",
-    resource_jars = [
+    runtime_deps = [
         "@org_tensorflow//tensorflow/lite/java:tensorflowlite",
     ],
 )

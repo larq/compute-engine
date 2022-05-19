@@ -213,7 +213,7 @@ jobs:
           path: wheelhouse
 
   manylinux-release-wheel:
-    name: Build release wheels for manylinux2010
+    name: Build release wheels for manylinux2014
     runs-on: ubuntu-18.04
     strategy:
       matrix:
@@ -228,7 +228,7 @@ jobs:
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.gcs_bazel_cache }}
-      - name: Build manylinux2010 wheels
+      - name: Build manylinux2014 wheels
         run: |
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-manylinux-python${{ matrix.python-version }}' >> .bazelrc.user
@@ -239,14 +239,14 @@ jobs:
             -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-credentials.json \
             -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/gcloud-credentials.json:ro \
             -v ${PWD}:/compute-engine -w /compute-engine \
-            tensorflow/build:2.8-python${{ matrix.python-version }} \
+            tensorflow/build:2.9-python${{ matrix.python-version }} \
             .github/tools/release_linux.sh
 
           sudo apt-get -y -qq install patchelf --no-install-recommends
           python -m pip install auditwheel --no-cache-dir
 
           for f in artifacts/*.whl; do
-            auditwheel repair --plat manylinux2010_x86_64 $f
+            auditwheel repair --plat manylinux2014_x86_64 $f
           done
 
           ls -al wheelhouse/

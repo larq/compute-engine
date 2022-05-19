@@ -32,7 +32,7 @@ td_library(
     srcs = ["transforms/op_removal_patterns.td"],
     includes = ["/external/org_tensorflow"],
     deps = [
-        "@llvm-project//mlir:StdOpsTdFiles",
+        "@llvm-project//mlir:FuncTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
     ],
 )
@@ -43,7 +43,7 @@ td_library(
     includes = ["/external/org_tensorflow"],
     deps = [
         ":lce_ops_td_file",
-        "@llvm-project//mlir:StdOpsTdFiles",
+        "@llvm-project//mlir:FuncTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
@@ -54,7 +54,7 @@ td_library(
     includes = ["/external/org_tensorflow"],
     deps = [
         ":lce_ops_td_file",
-        "@llvm-project//mlir:StdOpsTdFiles",
+        "@llvm-project//mlir:FuncTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
     ],
@@ -182,7 +182,7 @@ gentbl_cc_library(
     td_file = "transforms/bitpack_activations_patterns.td",
     deps = [
         ":lce_ops_td_file",
-        "@llvm-project//mlir:StdOpsTdFiles",
+        "@llvm-project//mlir:FuncTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
@@ -199,7 +199,7 @@ gentbl_cc_library(
     td_file = "transforms/bitpack_weights_patterns.td",
     deps = [
         ":lce_ops_td_file",
-        "@llvm-project//mlir:StdOpsTdFiles",
+        "@llvm-project//mlir:FuncTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
     ],
@@ -288,7 +288,7 @@ cc_library(
         "transforms/passes.h",
     ],
     deps = [
-        "@llvm-project//mlir:StandardOps",
+        "@llvm-project//mlir:FuncDialect",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
     ],
     alwayslink = 1,
@@ -308,7 +308,7 @@ cc_library(
     deps = [
         ":larq_compute_engine",
         "//larq_compute_engine/core:types",
-        "@llvm-project//mlir:StandardOps",
+        "@llvm-project//mlir:FuncDialect",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_legalize_tf",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:validators",
@@ -429,7 +429,7 @@ cc_library(
         "transforms/passes.h",
     ],
     deps = [
-        "@llvm-project//mlir:StandardOps",
+        "@llvm-project//mlir:FuncDialect",
     ],
     alwayslink = 1,
 )

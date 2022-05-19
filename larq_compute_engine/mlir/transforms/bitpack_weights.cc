@@ -1,6 +1,6 @@
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "larq_compute_engine/mlir/transforms/bitpack.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -11,14 +11,15 @@ namespace TFL {
 
 namespace {
 
-struct BitpackWeightsLCE : public PassWrapper<BitpackWeightsLCE, FunctionPass> {
+struct BitpackWeightsLCE
+    : public PassWrapper<BitpackWeightsLCE, OperationPass<FuncOp>> {
   llvm::StringRef getArgument() const final {
     return "tfl-lce-bitpack-weights";
   }
   llvm::StringRef getDescription() const final {
     return "Bitpack binary weights";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 bool IsConv2DFilter(Attribute filter) {
@@ -30,9 +31,9 @@ bool IsConv2DFilter(Attribute filter) {
 
 #include "larq_compute_engine/mlir/transforms/generated_bitpack_weights.inc"
 
-void BitpackWeightsLCE::runOnFunction() {
-  OwningRewritePatternList patterns(&getContext());
-  auto func = getFunction();
+void BitpackWeightsLCE::runOnOperation() {
+  RewritePatternSet patterns(&getContext());
+  auto func = getOperation();
 
   TFL::populateWithGenerated(patterns);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));

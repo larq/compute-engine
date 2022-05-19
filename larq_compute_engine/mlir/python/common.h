@@ -9,10 +9,10 @@ namespace tensorflow {
 
 LCETarget GetLCETarget(const std::string& target_str);
 
-Status GetNumInputs(mlir::OwningModuleRef* module, int* num_inputs);
+Status GetNumInputs(mlir::OwningOpRef<mlir::ModuleOp>* module, int* num_inputs);
 
 pybind11::bytes ConvertMLIRModuleToTFLiteFlatBuffer(
-    mlir::OwningModuleRef* module, mlir::MLIRContext& context,
+    mlir::OwningOpRef<mlir::ModuleOp>* module, mlir::MLIRContext& context,
     const LCETarget target, const pybind11::object& default_ranges,
     const std::unordered_set<std::string>& saved_model_tags,
     llvm::StringRef saved_model_dir,
