@@ -19,7 +19,7 @@ namespace TFL {
 namespace {
 
 // Optimize LCE operations in functions.
-struct OptimizeLCE : public PassWrapper<OptimizeLCE, OperationPass<FuncOp>> {
+struct OptimizeLCE : public PassWrapper<OptimizeLCE, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final { return "tfl-optimize-lce"; }
   llvm::StringRef getDescription() const final {
     return "Optimize within the TensorFlow Lite dialect";
@@ -282,7 +282,7 @@ void OptimizeLCE::runOnOperation() {
 }  // namespace
 
 // Creates an instance of the TensorFlow dialect OptimizeLCE pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateOptimizeLCEPass(
+std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateOptimizeLCEPass(
     const LCETarget target) {
   return std::make_unique<OptimizeLCE>(target);
 }

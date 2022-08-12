@@ -12,7 +12,7 @@ namespace TFL {
 namespace {
 
 struct BitpackWeightsLCE
-    : public PassWrapper<BitpackWeightsLCE, OperationPass<FuncOp>> {
+    : public PassWrapper<BitpackWeightsLCE, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final {
     return "tfl-lce-bitpack-weights";
   }
@@ -42,7 +42,7 @@ void BitpackWeightsLCE::runOnOperation() {
 }  // namespace
 
 // Creates an instance of the TensorFlow dialect BitpackWeights pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateBitpackWeightsLCEPass() {
+std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateBitpackWeightsLCEPass() {
   return std::make_unique<BitpackWeightsLCE>();
 }
 

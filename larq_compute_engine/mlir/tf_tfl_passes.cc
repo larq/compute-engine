@@ -12,7 +12,7 @@
 
 namespace mlir {
 /// Create a pass to convert from the TFExecutor to the TF control dialect.
-std::unique_ptr<OperationPass<FuncOp>>
+std::unique_ptr<OperationPass<mlir::func::FuncOp>>
 CreateTFExecutorToControlDialectConversion();
 }  // namespace mlir
 

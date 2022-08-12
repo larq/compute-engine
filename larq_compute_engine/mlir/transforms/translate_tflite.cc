@@ -11,7 +11,7 @@ namespace TFL {
 namespace {
 
 struct TranslateToLCE
-    : public PassWrapper<TranslateToLCE, OperationPass<FuncOp>> {
+    : public PassWrapper<TranslateToLCE, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final { return "lce-translate-tfl"; }
   llvm::StringRef getDescription() const final {
     return "Translate TFL custom ops to LCE ops";
@@ -77,7 +77,7 @@ void TranslateToLCE::runOnOperation() {
 }  // namespace
 
 // Creates an instance of the TranslateToLCE pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateTranslateToLCEPass() {
+std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateTranslateToLCEPass() {
   return std::make_unique<TranslateToLCE>();
 }
 

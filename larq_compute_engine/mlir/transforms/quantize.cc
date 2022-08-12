@@ -16,7 +16,7 @@ namespace {
 
 // Applies quantization on the model in TFL dialect.
 struct LCEQuantizePass
-    : public PassWrapper<LCEQuantizePass, OperationPass<FuncOp>> {
+    : public PassWrapper<LCEQuantizePass, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final { return "lce-quantize"; }
   llvm::StringRef getDescription() const final {
     return "Apply hybrid quantization on models in TensorFlow Lite dialect";
@@ -35,7 +35,7 @@ void LCEQuantizePass::runOnOperation() {
 }  // namespace
 
 // Creates an instance of the TensorFlow Lite dialect QuantizeTFL pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateLCEQuantizePass() {
+std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateLCEQuantizePass() {
   return std::make_unique<LCEQuantizePass>();
 }
 

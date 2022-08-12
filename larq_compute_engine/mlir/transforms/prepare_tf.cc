@@ -19,7 +19,7 @@ namespace {
 using compute_engine::core::bitpacking_bitwidth;
 
 // Prepare LCE operations in functions for subsequent legalization.
-struct PrepareLCE : public PassWrapper<PrepareLCE, OperationPass<FuncOp>> {
+struct PrepareLCE : public PassWrapper<PrepareLCE, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final { return "tfl-prepare-lce"; }
   llvm::StringRef getDescription() const final { return "Inject LCE Ops"; }
   PrepareLCE() = default;
@@ -191,7 +191,7 @@ void PrepareLCE::runOnOperation() {
 }  // namespace
 
 // Creates an instance of the TensorFlow dialect PrepareLCE pass.
-std::unique_ptr<OperationPass<FuncOp>> CreatePrepareLCEPass(
+std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreatePrepareLCEPass(
     const LCETarget target) {
   return std::make_unique<PrepareLCE>(target);
 }
