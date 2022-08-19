@@ -116,7 +116,7 @@ foreach binaryOp = [TFL_DivOp, TFL_MulOp] in
 
 
 // Fuse an activation function into the BConv2D.
-multiclass FuseActFnIntoConvOpPat<Op ActFnOp, Attr ActFnAttr> {
+multiclass FuseActFnIntoConvOpPat<Op ActFnOp, ConstantStrAttr ActFnAttr> {
   def : Pat<(ActFnOp
                 (LQ_Bconv2dOp:$conv_output
                     $input,
@@ -181,4 +181,4 @@ multiclass FuseActFnIntoConvOpPat<Op ActFnOp, Attr ActFnAttr> {
 foreach actFnPair = [[TFL_ReluOp, TFL_AF_Relu],
                      [TFL_Relu1Op, TFL_AF_Relu1],
                      [TFL_Relu6Op, TFL_AF_Relu6]] in
-  defm : FuseActFnIntoConvOpPat<!cast<Op>(actFnPair[0]), !cast<Attr>(actFnPair[1])>;
+  defm : FuseActFnIntoConvOpPat<!cast<Op>(actFnPair[0]), !cast<ConstantStrAttr>(actFnPair[1])>;

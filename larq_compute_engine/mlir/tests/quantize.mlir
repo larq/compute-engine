@@ -12,8 +12,8 @@ func.func @quantize_bconv2d(%arg0: tensor<1x224x224x1xi32>, %arg1: tensor<32x3x3
   %5 = "tfl.quantize"(%4) {qtype = tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>} : (tensor<1x112x112x32xf32>) -> tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>
   return %5 : tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>
 
-// CHECK: %[[cst0:.*]] = arith.constant dense<-1.23697901> : tensor<32xf32>
 // CHECK: %[[cst1:.*]] = arith.constant dense<1.10976315> : tensor<32xf32>
+// CHECK: %[[cst0:.*]] = arith.constant dense<-1.23697901> : tensor<32xf32>
 // CHECK: %[[conv:.*]] = "lq.Bconv2d"(%arg0, %arg1, %[[cst0]], %[[cst1]], %arg2)
 // CHECK: return %[[conv]] : tensor<1x112x112x32x!quant.uniform<u8:f32, 0.023528476789885875>>
 }
