@@ -60,9 +60,9 @@ TEST(LCEOpsSerializationTest, BConv2dTest) {
   ASSERT_EQ(m["stride_height"].AsInt32(), 1);
   ASSERT_EQ(m["stride_width"].AsInt32(), 2);
   ASSERT_EQ(m["pad_values"].AsInt32(), 1);
-  ASSERT_EQ((::ActivationFunctionType)m["fused_activation_function"].AsInt32(),
-            ::ActivationFunctionType::RELU);
-  ASSERT_EQ((::Padding)m["padding"].AsInt32(), ::Padding::SAME);
+  ASSERT_EQ((ActivationFunctionType)m["fused_activation_function"].AsInt32(),
+            ActivationFunctionType_RELU);
+  ASSERT_EQ((Padding)m["padding"].AsInt32(), Padding_SAME);
 }
 
 TEST(LCEOpsSerializationTest, BMaxPool2dTest) {
@@ -82,7 +82,7 @@ TEST(LCEOpsSerializationTest, BMaxPool2dTest) {
   std::vector<uint8_t> v = cast<lq::BMaxPool2dOp>(op).buildCustomOptions();
   const flexbuffers::Map& m = flexbuffers::GetRoot(v).AsMap();
 
-  ASSERT_EQ((::Padding)m["padding"].AsInt32(), ::Padding::SAME);
+  ASSERT_EQ((Padding)m["padding"].AsInt32(), Padding_SAME);
   ASSERT_EQ(m["stride_width"].AsInt32(), 2);
   ASSERT_EQ(m["stride_height"].AsInt32(), 1);
   ASSERT_EQ(m["filter_width"].AsInt32(), 3);

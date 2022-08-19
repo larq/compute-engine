@@ -64,14 +64,6 @@ gentbl_cc_library(
     name = "lce_ops_inc_gen",
     tbl_outs = [
         (
-            ["-gen-enum-decls"],
-            "ir/lce_enum.h.inc",
-        ),
-        (
-            ["-gen-enum-defs"],
-            "ir/lce_enum.cc.inc",
-        ),
-        (
             ["-gen-op-decls"],
             "ir/lce_ops.h.inc",
         ),
@@ -257,8 +249,6 @@ cc_library(
     srcs = [
         "ir/lce_dialect.cc.inc",
         "ir/lce_dialect.h.inc",
-        "ir/lce_enum.cc.inc",
-        "ir/lce_enum.h.inc",
         "ir/lce_ops.cc",
         "ir/lce_ops.cc.inc",
         "ir/lce_ops.h.inc",
