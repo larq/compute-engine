@@ -204,10 +204,6 @@ void AddPostVariableFreezingTFToLCETFLConversionPasses(
   pass_manager->addNestedPass<mlir::func::FuncOp>(
       mlir::TF::CreateInitTextFileToImportPass(saved_model_dir.str()));
 
-  // This pass removes the asset file dependencies in hash table use cases.
-  pass_manager->addNestedPass<mlir::func::FuncOp>(
-      mlir::TF::CreateInitTextFileToImportPass());
-
   pass_manager->addNestedPass<mlir::func::FuncOp>(
       mlir::TFL::CreateLegalizeTFPass(true));
   pass_manager->addPass(mlir::TFL::CreateAnalyzeVariablesPass());
@@ -241,6 +237,9 @@ void AddPostVariableFreezingTFToLCETFLConversionPasses(
   // completed.
   if (quant_specs.RunPropagationAndRewriteQuantizationPasses()) {
     AddQuantizationPasses(quant_specs, *pass_manager);
+    // Remove unnecessary QDQs while handling QAT models.
+    pass_manager->addNestedPass<mlir::func::FuncOp>(
+        mlir::TFL::CreatePostQuantizeRemoveQDQPass());
   }
   pass_manager->addPass(mlir::createCanonicalizerPass());
 
