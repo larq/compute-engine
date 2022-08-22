@@ -1,5 +1,4 @@
 load("//larq_compute_engine/mlir/tests:lit_test.bzl", "lce_lit_test_suite")
-load("@org_tensorflow//tensorflow:tensorflow.bzl", "tf_cc_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -15,7 +14,7 @@ lce_lit_test_suite(
     ],
 )
 
-tf_cc_test(
+cc_test(
     name = "lce_ops_options_test",
     srcs = ["lce_ops_options_test.cc"],
     linkopts = ["-ldl"],
