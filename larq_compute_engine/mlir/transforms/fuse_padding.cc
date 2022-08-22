@@ -36,7 +36,8 @@ bool IsSamePaddingPartial(Attribute paddings_attr, Value input, Value output,
 #include "larq_compute_engine/mlir/transforms/generated_fuse_padding.inc"
 
 // Prepare LCE operations in functions for subsequent legalization.
-struct FusePadding : public PassWrapper<FusePadding, OperationPass<mlir::func::FuncOp>> {
+struct FusePadding
+    : public PassWrapper<FusePadding, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final { return "tfl-fuse-padding"; }
   llvm::StringRef getDescription() const final {
     return "Fuse padding ops into (Depthwise)Convs";

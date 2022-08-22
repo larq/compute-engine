@@ -19,7 +19,8 @@ namespace {
 using compute_engine::core::bitpacking_bitwidth;
 
 // Prepare LCE operations in functions for subsequent legalization.
-struct PrepareLCE : public PassWrapper<PrepareLCE, OperationPass<mlir::func::FuncOp>> {
+struct PrepareLCE
+    : public PassWrapper<PrepareLCE, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final { return "tfl-prepare-lce"; }
   llvm::StringRef getDescription() const final { return "Inject LCE Ops"; }
   PrepareLCE() = default;

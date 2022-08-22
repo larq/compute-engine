@@ -12,7 +12,8 @@ namespace {
 
 // Op removal of pass through ops to make following patterns easier and enable
 // early constant folding
-struct OpRemoval : public PassWrapper<OpRemoval, OperationPass<mlir::func::FuncOp>> {
+struct OpRemoval
+    : public PassWrapper<OpRemoval, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final { return "lce-op-removal-tf"; }
   llvm::StringRef getDescription() const final {
     return "Remove pass through TensorFlow ops";
