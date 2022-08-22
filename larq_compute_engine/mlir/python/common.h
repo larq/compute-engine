@@ -1,4 +1,5 @@
 #include "larq_compute_engine/mlir/transforms/passes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/Pass.h"
 #include "pybind11/pybind11.h"
