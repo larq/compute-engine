@@ -40,7 +40,7 @@ setup(
     ext_modules=ext_modules,
     url="https://larq.dev/",
     install_requires=[
-        "flatbuffers>=1.12,<2.0",
+        "flatbuffers>=1.12",
         "packaging>=19",
         "tqdm>=4",
         "importlib-metadata ~= 2.0 ; python_version<'3.8'",
