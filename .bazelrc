@@ -15,6 +15,7 @@ build --config=monolithic
 
 # Make sure tests are quick and -DNDEBUG is *not* set
 test --compilation_mode=fastbuild
+test --cxxopt -DTF_LITE_DISABLE_X86_NEON
 
 # Enable Ruy
 build --copt=-DTFLITE_WITH_RUY
