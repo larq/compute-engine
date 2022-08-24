@@ -113,7 +113,7 @@ jobs:
         run: PYTHONPATH=./ python larq_compute_engine/mlir/python/converter_test.py
 
   Android_AAR:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
 
     steps:
@@ -130,6 +130,8 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/third_party/install_android.sh') }}
       - name: Install pip dependencies
         run: pip install numpy six --no-cache-dir
+      - name: Set Java version
+        run: echo "JAVA_HOME=${JAVA_HOME_8_X64}" >> $GITHUB_ENV
       - name: Download and install Android NDK/SDK
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./third_party/install_android.sh
