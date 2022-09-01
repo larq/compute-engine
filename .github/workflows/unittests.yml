@@ -50,7 +50,7 @@ jobs:
       - name: Install pip dependencies
         run: pip install numpy six --no-cache-dir
       - name: "TF Lite Arm32: Cross-compile and run unit tests in qemu"
-        run: bazelisk test larq_compute_engine/tests:arm32_tests --config=rpi3 --test_output=all --test_filter="-*BigTest*"
+        run: bazelisk test larq_compute_engine/tests:arm32_tests --config=rpi3 --test_output=all --test_filter="-*BigTest*" --copt=-O1
       - name: "TF Lite Aarch64: Cross-compile and run unit tests in qemu"
         run: bazelisk test larq_compute_engine/tests:aarch64_tests --config=aarch64 --test_output=all --test_filter="-*BigTest*"
       - name: "Benchmark utility: check it builds successfully"
