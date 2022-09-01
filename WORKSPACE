@@ -15,6 +15,7 @@ http_archive(
     patch_tool = "patch",
     patches = [
         "//third_party/tensorflow_patches:disable_forced_mkl.patch",
+        "//third_party/tensorflow_patches:embedded_toolchain.patch",
     ],
     sha256 = "cb9b0a73d1748d1b71457631bd4bdc3675792d8d068150d93b73d24e33c8d236",
     strip_prefix = "tensorflow-2.10.0-rc3",
