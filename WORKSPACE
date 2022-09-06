@@ -17,10 +17,10 @@ http_archive(
         "//third_party/tensorflow_patches:disable_forced_mkl.patch",
         "//third_party/tensorflow_patches:embedded_toolchain.patch",
     ],
-    sha256 = "cb9b0a73d1748d1b71457631bd4bdc3675792d8d068150d93b73d24e33c8d236",
-    strip_prefix = "tensorflow-2.10.0-rc3",
+    sha256 = "b5a1bb04c84b6fe1538377e5a1f649bb5d5f0b2e3625a3c526ff3a8af88633e8",
+    strip_prefix = "tensorflow-2.10.0",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/v2.10.0-rc3.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/v2.10.0.tar.gz",
     ],
 )
 
