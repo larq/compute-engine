@@ -11,7 +11,7 @@ set(TFLITE_SOURCE_DIR "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite")
 add_subdirectory("${TFLITE_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/tensorflow-lite" EXCLUDE_FROM_ALL)
 
 # Generic compilation options and settings
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 include_directories(${CMAKE_CURRENT_LIST_DIR})
 
 # The LCE core files

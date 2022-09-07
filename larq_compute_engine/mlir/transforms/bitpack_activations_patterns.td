@@ -16,7 +16,7 @@ def CreateNoneValue : NativeCodeCall<
 def GetSignsOfVectorAndBroadcast4D : NativeCodeCall<"GetSignsOfVectorAndBroadcast4D($0)">;
 def GetBitpackedOutputThresholds : NativeCodeCall<"GetBitpackedOutputThresholds($_builder, $0, $1, $2, $3)">;
 
-class WriteBitpackedActivationsPat<StrEnumAttrCase padding_type, string pad_values> :
+class WriteBitpackedActivationsPat<ConstantStrAttr padding_type, string pad_values> :
       Pat<(LQ_QuantizeOp
               (LQ_Bconv2dOp:$output
                   $input,

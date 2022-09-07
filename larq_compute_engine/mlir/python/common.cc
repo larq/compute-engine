@@ -19,6 +19,7 @@ limitations under the License.
 #include <exception>
 
 #include "larq_compute_engine/mlir/tf_to_tfl_flatbuffer.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "pybind11/pybind11.h"
 #include "tensorflow/core/lib/core/errors.h"

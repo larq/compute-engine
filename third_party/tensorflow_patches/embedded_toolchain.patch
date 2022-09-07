@@ -1,0 +1,373 @@
+diff --git a/tensorflow/tools/toolchains/embedded/arm-linux/aarch64-linux-toolchain.BUILD b/tensorflow/tools/toolchains/embedded/arm-linux/aarch64-linux-toolchain.BUILD
+index 2b50aef57f5..3438401eac6 100644
+--- a/tensorflow/tools/toolchains/embedded/arm-linux/aarch64-linux-toolchain.BUILD
++++ b/tensorflow/tools/toolchains/embedded/arm-linux/aarch64-linux-toolchain.BUILD
+@@ -3,65 +3,65 @@ package(default_visibility = ["//visibility:public"])
+ filegroup(
+     name = "gcc",
+     srcs = [
+-        "bin/aarch64-linux-gnu-gcc",
++        "bin/aarch64-none-linux-gnu-gcc",
+     ],
+ )
+ 
+ filegroup(
+     name = "ar",
+     srcs = [
+-        "bin/aarch64-linux-gnu-ar",
++        "bin/aarch64-none-linux-gnu-ar",
+     ],
+ )
+ 
+ filegroup(
+     name = "ld",
+     srcs = [
+-        "bin/aarch64-linux-gnu-ld",
++        "bin/aarch64-none-linux-gnu-ld",
+     ],
+ )
+ 
+ filegroup(
+     name = "nm",
+     srcs = [
+-        "bin/aarch64-linux-gnu-nm",
++        "bin/aarch64-none-linux-gnu-nm",
+     ],
+ )
+ 
+ filegroup(
+     name = "objcopy",
+     srcs = [
+-        "bin/aarch64-linux-gnu-objcopy",
++        "bin/aarch64-none-linux-gnu-objcopy",
+     ],
+ )
+ 
+ filegroup(
+     name = "objdump",
+     srcs = [
+-        "bin/aarch64-linux-gnu-objdump",
++        "bin/aarch64-none-linux-gnu-objdump",
+     ],
+ )
+ 
+ filegroup(
+     name = "strip",
+     srcs = [
+-        "bin/aarch64-linux-gnu-strip",
++        "bin/aarch64-none-linux-gnu-strip",
+     ],
+ )
+ 
+ filegroup(
+     name = "as",
+     srcs = [
+-        "bin/aarch64-linux-gnu-as",
++        "bin/aarch64-none-linux-gnu-as",
+     ],
+ )
+ 
+ filegroup(
+     name = "compiler_pieces",
+     srcs = glob([
+-        "aarch64-linux-gnu/**",
++        "aarch64-none-linux-gnu/**",
+         "libexec/**",
+-        "lib/gcc/aarch64-linux-gnu/**",
++        "lib/gcc/aarch64-none-linux-gnu/**",
+         "include/**",
+     ]),
+ )
+diff --git a/tensorflow/tools/toolchains/embedded/arm-linux/armhf-linux-toolchain.BUILD b/tensorflow/tools/toolchains/embedded/arm-linux/armhf-linux-toolchain.BUILD
+index db2e9bbe1e1..b0d51b96c86 100644
+--- a/tensorflow/tools/toolchains/embedded/arm-linux/armhf-linux-toolchain.BUILD
++++ b/tensorflow/tools/toolchains/embedded/arm-linux/armhf-linux-toolchain.BUILD
+@@ -3,65 +3,65 @@ package(default_visibility = ["//visibility:public"])
+ filegroup(
+     name = "gcc",
+     srcs = [
+-        "bin/arm-linux-gnueabihf-gcc",
++        "bin/arm-none-linux-gnueabihf-gcc",
+     ],
+ )
+ 
+ filegroup(
+     name = "ar",
+     srcs = [
+-        "bin/arm-linux-gnueabihf-ar",
++        "bin/arm-none-linux-gnueabihf-ar",
+     ],
+ )
+ 
+ filegroup(
+     name = "ld",
+     srcs = [
+-        "bin/arm-linux-gnueabihf-ld",
++        "bin/arm-none-linux-gnueabihf-ld",
+     ],
+ )
+ 
+ filegroup(
+     name = "nm",
+     srcs = [
+-        "bin/arm-linux-gnueabihf-nm",
++        "bin/arm-none-linux-gnueabihf-nm",
+     ],
+ )
+ 
+ filegroup(
+     name = "objcopy",
+     srcs = [
+-        "bin/arm-linux-gnueabihf-objcopy",
++        "bin/arm-none-linux-gnueabihf-objcopy",
+     ],
+ )
+ 
+ filegroup(
+     name = "objdump",
+     srcs = [
+-        "bin/arm-linux-gnueabihf-objdump",
++        "bin/arm-none-linux-gnueabihf-objdump",
+     ],
+ )
+ 
+ filegroup(
+     name = "strip",
+     srcs = [
+-        "bin/arm-linux-gnueabihf-strip",
++        "bin/arm-none-linux-gnueabihf-strip",
+     ],
+ )
+ 
+ filegroup(
+     name = "as",
+     srcs = [
+-        "bin/arm-linux-gnueabihf-as",
++        "bin/arm-none-linux-gnueabihf-as",
+     ],
+ )
+ 
+ filegroup(
+     name = "compiler_pieces",
+     srcs = glob([
+-        "arm-linux-gnueabihf/**",
++        "arm-none-linux-gnueabihf/**",
+         "libexec/**",
+-        "lib/gcc/arm-linux-gnueabihf/**",
++        "lib/gcc/arm-none-linux-gnueabihf/**",
+         "include/**",
+     ]),
+ )
+diff --git a/tensorflow/tools/toolchains/embedded/arm-linux/cc_config.bzl.tpl b/tensorflow/tools/toolchains/embedded/arm-linux/cc_config.bzl.tpl
+index afbea6a3e34..d67d65e8b56 100644
+--- a/tensorflow/tools/toolchains/embedded/arm-linux/cc_config.bzl.tpl
++++ b/tensorflow/tools/toolchains/embedded/arm-linux/cc_config.bzl.tpl
+@@ -17,7 +17,7 @@ load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "ACTION_NAMES")
+ 
+ def _impl(ctx):
+     if (ctx.attr.cpu == "aarch64"):
+-        toolchain_identifier = "aarch64-linux-gnu"
++        toolchain_identifier = "aarch64-none-linux-gnu"
+         host_system_name = "aarch64"
+         target_system_name = "aarch64"
+         target_cpu = "aarch64"
+@@ -245,13 +245,13 @@ def _impl(ctx):
+                         flag_group(
+                             flags = [
+                                 "-isystem",
+-                                "%{AARCH64_COMPILER_PATH}%/lib/gcc/aarch64-linux-gnu/8.3.0/include",
++                                "%{AARCH64_COMPILER_PATH}%/lib/gcc/aarch64-none-linux-gnu/11.3.1/include",
+                                 "-isystem",
+-                                "%{AARCH64_COMPILER_PATH}%/lib/gcc/aarch64-linux-gnu/8.3.0/include-fixed",
++                                "%{AARCH64_COMPILER_PATH}%/lib/gcc/aarch64-none-linux-gnu/11.3.1/include-fixed",
+                                 "-isystem",
+-                                "%{AARCH64_COMPILER_PATH}%/aarch64-linux-gnu/include/c++/8.3.0/",
++                                "%{AARCH64_COMPILER_PATH}%/aarch64-none-linux-gnu/include/c++/11.3.1/",
+                                 "-isystem",
+-                                "%{AARCH64_COMPILER_PATH}%/aarch64-linux-gnu/libc/usr/include/",
++                                "%{AARCH64_COMPILER_PATH}%/aarch64-none-linux-gnu/libc/usr/include/",
+                                 "-isystem",
+                                 "%{PYTHON_INCLUDE_PATH}%",
+                                 "-isystem",
+@@ -344,13 +344,13 @@ def _impl(ctx):
+                         flag_group(
+                             flags = [
+                                 "-isystem",
+-                                "%{ARMHF_COMPILER_PATH}%/lib/gcc/arm-linux-gnueabihf/8.3.0/include",
++                                "%{ARMHF_COMPILER_PATH}%/lib/gcc/arm-none-linux-gnueabihf/11.3.1/include",
+                                 "-isystem",
+-                                "%{ARMHF_COMPILER_PATH}%/lib/gcc/arm-linux-gnueabihf/8.3.0/include-fixed",
++                                "%{ARMHF_COMPILER_PATH}%/lib/gcc/arm-none-linux-gnueabihf/11.3.1/include-fixed",
+                                 "-isystem",
+-                                "%{ARMHF_COMPILER_PATH}%/arm-linux-gnueabihf/include/c++/8.3.0/",
++                                "%{ARMHF_COMPILER_PATH}%/arm-none-linux-gnueabihf/include/c++/11.3.1/",
+                                 "-isystem",
+-                                "%{ARMHF_COMPILER_PATH}%/arm-linux-gnueabihf/libc/usr/include/",
++                                "%{ARMHF_COMPILER_PATH}%/arm-none-linux-gnueabihf/libc/usr/include/",
+                                 "-isystem",
+                                 "%{PYTHON_INCLUDE_PATH}%",
+                                 "-isystem",
+@@ -470,18 +470,18 @@ def _impl(ctx):
+ 
+     if (ctx.attr.cpu == "aarch64"):
+         cxx_builtin_include_directories = [
+-                "%{AARCH64_COMPILER_PATH}%/lib/gcc/aarch64-linux-gnu/8.3.0/include",
+-                "%{AARCH64_COMPILER_PATH}%/lib/gcc/aarch64-linux-gnu/8.3.0/include-fixed",
+-                "%{AARCH64_COMPILER_PATH}%/aarch64-linux-gnu/include/c++/8.3.0/",
+-                "%{AARCH64_COMPILER_PATH}%/aarch64-linux-gnu/libc/usr/include/",
++                "%{AARCH64_COMPILER_PATH}%/lib/gcc/aarch64-none-linux-gnu/11.3.1/include",
++                "%{AARCH64_COMPILER_PATH}%/lib/gcc/aarch64-none-linux-gnu/11.3.1/include-fixed",
++                "%{AARCH64_COMPILER_PATH}%/aarch64-none-linux-gnu/include/c++/11.3.1/",
++                "%{AARCH64_COMPILER_PATH}%/aarch64-none-linux-gnu/libc/usr/include/",
+                 "/usr/include",
+             ]
+     elif (ctx.attr.cpu == "armhf"):
+         cxx_builtin_include_directories = [
+-                "%{ARMHF_COMPILER_PATH}%/lib/gcc/arm-linux-gnueabihf/8.3.0/include",
+-                "%{ARMHF_COMPILER_PATH}%/lib/gcc/arm-linux-gnueabihf/8.3.0/include-fixed",
+-                "%{ARMHF_COMPILER_PATH}%/arm-linux-gnueabihf/include/c++/8.3.0/",
+-                "%{ARMHF_COMPILER_PATH}%/arm-linux-gnueabihf/libc/usr/include/",
++                "%{ARMHF_COMPILER_PATH}%/lib/gcc/arm-none-linux-gnueabihf/11.3.1/include",
++                "%{ARMHF_COMPILER_PATH}%/lib/gcc/arm-none-linux-gnueabihf/11.3.1/include-fixed",
++                "%{ARMHF_COMPILER_PATH}%/arm-none-linux-gnueabihf/include/c++/11.3.1/",
++                "%{ARMHF_COMPILER_PATH}%/arm-none-linux-gnueabihf/libc/usr/include/",
+                 "/usr/include",
+             ]
+     else:
+@@ -495,88 +495,88 @@ def _impl(ctx):
+         tool_paths = [
+             tool_path(
+                 name = "ar",
+-                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-ar",
++                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-none-linux-gnu-ar",
+             ),
+             tool_path(name = "compat-ld", path = "/bin/false"),
+             tool_path(
+                 name = "cpp",
+-                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-cpp",
++                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-none-linux-gnu-cpp",
+             ),
+             tool_path(
+                 name = "dwp",
+-                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-dwp",
++                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-none-linux-gnu-dwp",
+             ),
+             tool_path(
+                 name = "gcc",
+-                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-gcc",
++                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-none-linux-gnu-gcc",
+             ),
+             tool_path(
+                 name = "gcov",
+-                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-gcov",
++                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-none-linux-gnu-gcov",
+             ),
+             tool_path(
+                 name = "ld",
+-                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-ld",
++                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-none-linux-gnu-ld",
+             ),
+             tool_path(
+                 name = "nm",
+-                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-nm",
++                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-none-linux-gnu-nm",
+             ),
+             tool_path(
+                 name = "objcopy",
+-                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-objcopy",
++                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-none-linux-gnu-objcopy",
+             ),
+             tool_path(
+                 name = "objdump",
+-                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-objdump",
++                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-none-linux-gnu-objdump",
+             ),
+             tool_path(
+                 name = "strip",
+-                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-linux-gnu-strip",
++                path = "%{AARCH64_COMPILER_PATH}%/bin/aarch64-none-linux-gnu-strip",
+             ),
+         ]
+     elif (ctx.attr.cpu == "armhf"):
+         tool_paths = [
+             tool_path(
+                 name = "ar",
+-                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-linux-gnueabihf-ar",
++                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-none-linux-gnueabihf-ar",
+             ),
+             tool_path(name = "compat-ld", path = "/bin/false"),
+             tool_path(
+                 name = "cpp",
+-                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-linux-gnueabihf-cpp",
++                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-none-linux-gnueabihf-cpp",
+             ),
+             tool_path(
+                 name = "dwp",
+-                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-linux-gnueabihf-dwp",
++                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-none-linux-gnueabihf-dwp",
+             ),
+             tool_path(
+                 name = "gcc",
+-                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-linux-gnueabihf-gcc",
++                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-none-linux-gnueabihf-gcc",
+             ),
+             tool_path(
+                 name = "gcov",
+-                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-linux-gnueabihf-gcov",
++                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-none-linux-gnueabihf-gcov",
+             ),
+             tool_path(
+                 name = "ld",
+-                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-linux-gnueabihf-ld",
++                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-none-linux-gnueabihf-ld",
+             ),
+             tool_path(
+                 name = "nm",
+-                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-linux-gnueabihf-nm",
++                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-none-linux-gnueabihf-nm",
+             ),
+             tool_path(
+                 name = "objcopy",
+-                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-linux-gnueabihf-objcopy",
++                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-none-linux-gnueabihf-objcopy",
+             ),
+             tool_path(
+                 name = "objdump",
+-                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-linux-gnueabihf-objdump",
++                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-none-linux-gnueabihf-objdump",
+             ),
+             tool_path(
+                 name = "strip",
+-                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-linux-gnueabihf-strip",
++                path = "%{ARMHF_COMPILER_PATH}%/bin/arm-none-linux-gnueabihf-strip",
+             ),
+         ]
+     else:
+diff --git a/tensorflow/workspace2.bzl b/tensorflow/workspace2.bzl
+index 927c90ed180..d5e0fff1bb8 100644
+--- a/tensorflow/workspace2.bzl
++++ b/tensorflow/workspace2.bzl
+@@ -228,17 +228,17 @@ def _tf_repositories():
+     tf_http_archive(
+         name = "aarch64_linux_toolchain",
+         build_file = "//tensorflow/tools/toolchains/embedded/arm-linux:aarch64-linux-toolchain.BUILD",
+-        sha256 = "8ce3e7688a47d8cd2d8e8323f147104ae1c8139520eca50ccf8a7fa933002731",
+-        strip_prefix = "gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu",
+-        urls = tf_mirror_urls("https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu.tar.xz"),
++        sha256 = "50cdef6c5baddaa00f60502cc8b59cc11065306ae575ad2f51e412a9b2a90364",
++        strip_prefix = "arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-linux-gnu",
++        urls = tf_mirror_urls("https://developer.arm.com/-/media/Files/downloads/gnu/11.3.rel1/binrel/arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-linux-gnu.tar.xz"),
+     )
+ 
+     tf_http_archive(
+         name = "armhf_linux_toolchain",
+         build_file = "//tensorflow/tools/toolchains/embedded/arm-linux:armhf-linux-toolchain.BUILD",
+-        sha256 = "d4f6480ecaa99e977e3833cc8a8e1263f9eecd1ce2d022bb548a24c4f32670f5",
+-        strip_prefix = "gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf",
+-        urls = tf_mirror_urls("https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf.tar.xz"),
++        sha256 = "3f76650b1d048036473b16b647b8fd005ffccd1a2869c10994967e0e49f26ac2",
++        strip_prefix = "arm-gnu-toolchain-11.3.rel1-x86_64-arm-none-linux-gnueabihf",
++        urls = tf_mirror_urls("https://developer.arm.com/-/media/Files/downloads/gnu/11.3.rel1/binrel/arm-gnu-toolchain-11.3.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz"),
+     )
+ 
+     tf_http_archive(

@@ -24,11 +24,11 @@ mlir::Type SetBatchSize(mlir::Type type) {
 }
 
 struct SetBatchSizePass
-    : public PassWrapper<SetBatchSizePass, OperationPass<FuncOp>> {
+    : public PassWrapper<SetBatchSizePass, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final { return "mlir-setbatchsize"; }
   llvm::StringRef getDescription() const final { return "Set batch size to 1"; }
   void runOnOperation() override {
-    FuncOp func = getOperation();
+    mlir::func::FuncOp func = getOperation();
 
     // We have to edit both the function signature (mlir::Type) *and* the
     // function arguments (mlir::Value)
@@ -62,7 +62,7 @@ struct SetBatchSizePass
 }  // namespace
 
 // Creates an instance of the ZeroPointCompatibility pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateSetBatchSizePass() {
+std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateSetBatchSizePass() {
   return std::make_unique<SetBatchSizePass>();
 }
 

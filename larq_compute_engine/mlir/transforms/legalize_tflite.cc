@@ -9,7 +9,8 @@ namespace TFL {
 
 namespace {
 
-struct LegalizeLCE : public PassWrapper<LegalizeLCE, OperationPass<FuncOp>> {
+struct LegalizeLCE
+    : public PassWrapper<LegalizeLCE, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final { return "tfl-legalize-lce"; }
   llvm::StringRef getDescription() const final {
     return "Legalize LCE ops in TensorFlow Lite dialect";
@@ -57,7 +58,7 @@ void LegalizeLCE::runOnOperation() {
 }  // namespace
 
 // Creates an instance of the LegalizeLCE pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateLegalizeLCEPass() {
+std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateLegalizeLCEPass() {
   return std::make_unique<LegalizeLCE>();
 }
 

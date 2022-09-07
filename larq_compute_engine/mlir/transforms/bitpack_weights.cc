@@ -1,5 +1,6 @@
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "larq_compute_engine/mlir/transforms/bitpack.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -12,7 +13,7 @@ namespace TFL {
 namespace {
 
 struct BitpackWeightsLCE
-    : public PassWrapper<BitpackWeightsLCE, OperationPass<FuncOp>> {
+    : public PassWrapper<BitpackWeightsLCE, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final {
     return "tfl-lce-bitpack-weights";
   }
@@ -42,7 +43,8 @@ void BitpackWeightsLCE::runOnOperation() {
 }  // namespace
 
 // Creates an instance of the TensorFlow dialect BitpackWeights pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateBitpackWeightsLCEPass() {
+std::unique_ptr<OperationPass<mlir::func::FuncOp>>
+CreateBitpackWeightsLCEPass() {
   return std::make_unique<BitpackWeightsLCE>();
 }
 

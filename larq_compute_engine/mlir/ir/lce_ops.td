@@ -6,26 +6,41 @@
 //
 //===----------------------------------------------------------------------===//
 
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "tensorflow/compiler/mlir/lite/quantization/quantization.td"
 
-#ifndef TFL_OPS
-def TFL_AF_None  : StrEnumAttrCase<"NONE">;
-def TFL_AF_Relu  : StrEnumAttrCase<"RELU">;
-def TFL_AF_Relu1 : StrEnumAttrCase<"RELU_N1_TO_1">;
-def TFL_AF_Relu6 : StrEnumAttrCase<"RELU6">;
+#ifndef TFL_OP_ENUMS
+class TFL_AnyStrAttrOf<list<string> cases> : StringBasedAttr<
+  CPred<!foldl(
+      "$_self.cast<StringAttr>().getValue() == \"" # !head(cases) # "\"",
+      !foreach(case, !tail(cases),
+               "$_self.cast<StringAttr>().getValue() == \"" # case # "\""),
+      prev, cur, prev # " || " # cur)>,
+  "string attribute whose value is " #
+    !foldl(/*init*/!head(cases), /*list*/!tail(cases),
+           prev, cur, prev # ", or " # cur)>;
+// Allowed activation function cases
+// These should match the ActivationFunctionType enum in TFLite schema.
+def TFL_AFEnum_None  : I32EnumAttrCase<"NONE", 0>;
+def TFL_AFEnum_Relu  : I32EnumAttrCase<"RELU", 1>;
+def TFL_AFEnum_Relu1 : I32EnumAttrCase<"RELU_N1_TO_1", 2>;
+def TFL_AFEnum_Relu6 : I32EnumAttrCase<"RELU6", 3>;
+def TFL_AFEnum_Tanh  : I32EnumAttrCase<"TANH", 4>;
+def TFL_AFEnum_Sign  : I32EnumAttrCase<"SIGN_BIT", 5>;
 
-def TFL_AFAttr : StrEnumAttr<
-    "ActivationFunctionType", "fused activation enum", [
-      TFL_AF_None,  TFL_AF_Relu, TFL_AF_Relu1, TFL_AF_Relu6
+def TFL_AFAttr : TFL_AnyStrAttrOf<[
+      TFL_AFEnum_None.symbol,  TFL_AFEnum_Relu.symbol, TFL_AFEnum_Relu1.symbol,
+      TFL_AFEnum_Relu6.symbol, TFL_AFEnum_Tanh.symbol, TFL_AFEnum_Sign.symbol
     ]>;
 
-def TFL_PAD_Same  : StrEnumAttrCase<"SAME">;
-def TFL_PAD_Valid : StrEnumAttrCase<"VALID">;
-
-def TFL_PaddingAttr : StrEnumAttr<"Padding", "padding enum", [
-      TFL_PAD_Same, TFL_PAD_Valid
+// Allowed padding cases
+// These should match the padding enum in TFLite schema.
+def TFL_PADEnum_Same  : I32EnumAttrCase<"SAME", 0>;
+def TFL_PADEnum_Valid : I32EnumAttrCase<"VALID", 1>;
+def TFL_PaddingAttr : TFL_AnyStrAttrOf<[
+      TFL_PADEnum_Same.symbol, TFL_PADEnum_Valid.symbol
     ]>;
 #endif
 

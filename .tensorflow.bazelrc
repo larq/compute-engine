@@ -81,15 +81,15 @@ build:android --noenable_platform_specific_config
 build:windows --copt=/D_USE_MATH_DEFINES
 build:windows --host_copt=/D_USE_MATH_DEFINES
 
-# By default, build LCE in C++ 14 mode.
-build:android --cxxopt=-std=c++14
-build:android --host_cxxopt=-std=c++14
-build:linux --cxxopt=-std=c++14
-build:linux --host_cxxopt=-std=c++14
-build:macos --cxxopt=-std=c++14
-build:macos --host_cxxopt=-std=c++14
-build:windows --cxxopt=/std:c++14
-build:windows --host_cxxopt=/std:c++14
+# By default, build LCE in C++ 17 mode.
+build:android --cxxopt=-std=c++17
+build:android --host_cxxopt=-std=c++17
+build:linux --cxxopt=-std=c++17
+build:linux --host_cxxopt=-std=c++17
+build:macos --cxxopt=-std=c++17
+build:macos --host_cxxopt=-std=c++17
+build:windows --cxxopt=/std:c++17
+build:windows --host_cxxopt=/std:c++17
 
 # On windows, we still link everything into a single DLL.
 build:windows --config=monolithic
@@ -167,3 +167,19 @@ build:ubsan --copt -O3
 build:ubsan --copt -fno-omit-frame-pointer
 build:ubsan --linkopt -fsanitize=undefined
 build:ubsan --linkopt -lubsan
+
+
+# Debug config
+build:dbg -c dbg
+# Only include debug info for files under tensorflow/, excluding kernels, to
+# reduce the size of the debug info in the binary. This is because if the debug
+# sections in the ELF binary are too large, errors can occur. See
+# https://github.com/tensorflow/tensorflow/issues/48919.
+# Users can still include debug info for a specific kernel, e.g. with:
+#     --config=dbg --per_file_copt=+tensorflow/core/kernels/identity_op.*@-g
+build:dbg --per_file_copt=+.*,-tensorflow.*@-g0
+build:dbg --per_file_copt=+tensorflow/core/kernels.*@-g0
+# for now, disable arm_neon. see: https://github.com/tensorflow/tensorflow/issues/33360
+build:dbg --cxxopt -DTF_LITE_DISABLE_X86_NEON
+# AWS SDK must be compiled in release mode. see: https://github.com/tensorflow/tensorflow/issues/37498
+build:dbg --copt -DDEBUG_BUILD

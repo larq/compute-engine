@@ -5,13 +5,27 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
+static llvm::StringRef ConvertActivationAttr(
+    tflite::ActivationFunctionType af_type) {
+  if (af_type == tflite::ActivationFunctionType_NONE) return "NONE";
+  if (af_type == tflite::ActivationFunctionType_RELU) return "RELU";
+  if (af_type == tflite::ActivationFunctionType_RELU_N1_TO_1)
+    return "RELU_N1_TO_1";
+  if (af_type == tflite::ActivationFunctionType_RELU6) return "RELU6";
+}
+
+static llvm::StringRef ConvertPaddingAttr(tflite::Padding padding_type) {
+  if (padding_type == tflite::Padding_SAME) return "SAME";
+  if (padding_type == tflite::Padding_VALID) return "VALID";
+}
+
 namespace mlir {
 namespace TFL {
 
 namespace {
 
 struct TranslateToLCE
-    : public PassWrapper<TranslateToLCE, OperationPass<FuncOp>> {
+    : public PassWrapper<TranslateToLCE, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final { return "lce-translate-tfl"; }
   llvm::StringRef getDescription() const final {
     return "Translate TFL custom ops to LCE ops";
@@ -42,7 +56,8 @@ struct TranslateToLCEPattern : public OpRewritePattern<TFL::CustomOp> {
               .AsMap();
       rewriter.replaceOpWithNewOp<lq::BMaxPool2dOp>(
           custom_op, custom_op->getResultTypes(), custom_op->getOperand(0),
-          stringifyPadding(static_cast<Padding>(map["padding"].AsInt32())),
+          ConvertPaddingAttr(
+              static_cast<tflite::Padding>(map["padding"].AsInt32())),
           map["stride_width"].AsInt32(), map["stride_height"].AsInt32(),
           map["filter_width"].AsInt32(), map["filter_height"].AsInt32());
     } else if (custom_op.custom_code() == "LceBconv2d") {
@@ -55,10 +70,11 @@ struct TranslateToLCEPattern : public OpRewritePattern<TFL::CustomOp> {
           custom_op->getOperand(3), custom_op->getOperand(4),
           map["channels_in"].AsInt32(), map["dilation_height_factor"].AsInt32(),
           map["dilation_width_factor"].AsInt32(),
-          stringifyActivationFunctionType(static_cast<ActivationFunctionType>(
+          ConvertActivationAttr(static_cast<tflite::ActivationFunctionType>(
               map["fused_activation_function"].AsInt32())),
           map["pad_values"].AsInt32(),
-          stringifyPadding(static_cast<Padding>(map["padding"].AsInt32())),
+          ConvertPaddingAttr(
+              static_cast<tflite::Padding>(map["padding"].AsInt32())),
           map["stride_height"].AsInt32(), map["stride_width"].AsInt32());
     }
 
@@ -77,7 +93,7 @@ void TranslateToLCE::runOnOperation() {
 }  // namespace
 
 // Creates an instance of the TranslateToLCE pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateTranslateToLCEPass() {
+std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateTranslateToLCEPass() {
   return std::make_unique<TranslateToLCE>();
 }
 

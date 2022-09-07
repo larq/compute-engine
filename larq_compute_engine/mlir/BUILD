@@ -11,7 +11,7 @@ td_library(
     srcs = ["ir/lce_ops.td"],
     includes = ["/external/org_tensorflow"],
     deps = [
-        "@llvm-project//mlir:SideEffectTdFiles",
+        "@llvm-project//mlir:SideEffectInterfacesTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_td_files",
     ],
@@ -63,14 +63,6 @@ td_library(
 gentbl_cc_library(
     name = "lce_ops_inc_gen",
     tbl_outs = [
-        (
-            ["-gen-enum-decls"],
-            "ir/lce_enum.h.inc",
-        ),
-        (
-            ["-gen-enum-defs"],
-            "ir/lce_enum.cc.inc",
-        ),
         (
             ["-gen-op-decls"],
             "ir/lce_ops.h.inc",
@@ -257,8 +249,6 @@ cc_library(
     srcs = [
         "ir/lce_dialect.cc.inc",
         "ir/lce_dialect.h.inc",
-        "ir/lce_enum.cc.inc",
-        "ir/lce_enum.h.inc",
         "ir/lce_ops.cc",
         "ir/lce_ops.cc.inc",
         "ir/lce_ops.h.inc",
@@ -272,7 +262,7 @@ cc_library(
         "//larq_compute_engine/core/bitpacking:bitpack",
         "@flatbuffers",
         "@llvm-project//mlir:QuantOps",
-        "@llvm-project//mlir:SideEffects",
+        "@llvm-project//mlir:SideEffectInterfaces",
         "@org_tensorflow//tensorflow/lite/schema:schema_fbs",
     ],
     alwayslink = 1,

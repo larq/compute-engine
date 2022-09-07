@@ -1,3 +1,4 @@
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -11,7 +12,8 @@ namespace {
 
 // Op removal of pass through ops to make following patterns easier and enable
 // early constant folding
-struct OpRemoval : public PassWrapper<OpRemoval, OperationPass<FuncOp>> {
+struct OpRemoval
+    : public PassWrapper<OpRemoval, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final { return "lce-op-removal-tf"; }
   llvm::StringRef getDescription() const final {
     return "Remove pass through TensorFlow ops";
@@ -32,7 +34,7 @@ void OpRemoval::runOnOperation() {
 }  // namespace
 
 // Creates an instance of the TensorFlow dialect OpRemoval pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateOpRemovalPass() {
+std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateOpRemovalPass() {
   return std::make_unique<OpRemoval>();
 }
 

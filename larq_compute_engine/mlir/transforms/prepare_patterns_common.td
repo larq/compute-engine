@@ -94,7 +94,7 @@ def IsDataFormatNHWC : ConstantAttr<TF_ConvnetDataFormatAttr, "\"NHWC\"">;
 
 // All targets support this pattern with "VALID" padding, but only the "arm"
 // target supports it with "SAME" padding.
-class PrepareBConvPadValue0Pat<StrEnumAttrCase padding_type> :
+class PrepareBConvPadValue0Pat<ConstantStrAttr padding_type> :
       Pat<(TF_Conv2DOp
               (LQ_DequantizeOp:$dequantized_input $input),
               (Arith_ConstantOp:$filter_op $filter),
