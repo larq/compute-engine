@@ -160,8 +160,8 @@ jobs:
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
-          bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
-          bazel-bin/build_pip_pkg artifacts --plat-name macosx_10_13_x86_64
+          bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.14 --linkopt=-mmacosx-version-min=10.14 --linkopt=-dead_strip --distinct_host_configuration=false
+          bazel-bin/build_pip_pkg artifacts --plat-name macosx_10_14_x86_64
 
           for f in artifacts/*.whl; do
             delocate-wheel -w wheelhouse $f
