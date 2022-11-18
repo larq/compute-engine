@@ -198,7 +198,7 @@ void ComputeWriteBitpackedOutputThresholds(
   }
 }
 
-DenseElementsAttr GetSignsOfVectorAndBroadcast4D(Attribute vector_attr) {
+DenseElementsAttr GetSignsOfVectorAndBroadcast4D(TypedAttr vector_attr) {
   const auto vector = vector_attr.cast<DenseElementsAttr>();
   const auto vector_type = vector_attr.getType().cast<ShapedType>();
   assert(vector_type.getShape().size() == 1);
@@ -217,7 +217,7 @@ DenseElementsAttr GetSignsOfVectorAndBroadcast4D(Attribute vector_attr) {
 }
 
 DenseElementsAttr GetBitpackedOutputThresholds(
-    Builder& builder, Attribute filter_attr,
+    Builder& builder, TypedAttr filter_attr,
     Attribute post_activation_multiplier_attr,
     Attribute post_activation_bias_attr,
     Attribute fused_activation_function_attr) {

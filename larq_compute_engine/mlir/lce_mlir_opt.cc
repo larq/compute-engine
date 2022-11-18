@@ -9,7 +9,7 @@
 int main(int argc, char** argv) {
   mlir::registerTransformsPasses();
   mlir::DialectRegistry registry;
-  registry.insert<mlir::arith::ArithmeticDialect, mlir::func::FuncDialect,
+  registry.insert<mlir::arith::ArithDialect, mlir::func::FuncDialect,
                   mlir::quant::QuantizationDialect, mlir::TF::TensorFlowDialect,
                   mlir::TFL::TensorFlowLiteDialect, mlir::lq::LarqDialect>();
   return failed(mlir::MlirOptMain(

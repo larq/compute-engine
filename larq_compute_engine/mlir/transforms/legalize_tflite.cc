@@ -33,7 +33,7 @@ struct LegalizeToCustomOp : public OpRewritePattern<LarqOp> {
         {static_cast<int64_t>(options.size())}, rewriter.getIntegerType(8));
 
     std::string options_bytes(options.begin(), options.end());
-    auto attr = OpaqueElementsAttr::get(op->getDialect(), type, options_bytes);
+    auto attr = ConstBytesAttr::get(op->getContext(), options_bytes);
 
     rewriter.replaceOpWithNewOp<CustomOp>(
         op, op->getResultTypes(), op->getOperands(),

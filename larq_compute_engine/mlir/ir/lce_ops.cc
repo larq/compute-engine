@@ -3,7 +3,7 @@
 #include "flatbuffers/flexbuffers.h"
 #include "larq_compute_engine/core/bitpacking/bitpack.h"
 #include "larq_compute_engine/mlir/transforms/bitpack.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
 // Generated dialect defs.
@@ -36,15 +36,15 @@ std::vector<uint8_t> DequantizeOp::buildCustomOptions() { return {}; }
 std::vector<uint8_t> Bconv2dOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() {
-    fbb.Int("channels_in", channels_in());
-    fbb.Int("dilation_height_factor", dilation_height_factor());
-    fbb.Int("dilation_width_factor", dilation_width_factor());
+    fbb.Int("channels_in", getChannelsIn());
+    fbb.Int("dilation_height_factor", getDilationHeightFactor());
+    fbb.Int("dilation_width_factor", getDilationWidthFactor());
     fbb.Int("fused_activation_function",
-            (int)ConvertActivationAttr(fused_activation_function()));
-    fbb.Int("pad_values", pad_values());
-    fbb.Int("padding", (int)ConvertPaddingAttr(padding()));
-    fbb.Int("stride_height", stride_height());
-    fbb.Int("stride_width", stride_width());
+            (int)ConvertActivationAttr(getFusedActivationFunction()));
+    fbb.Int("pad_values", getPadValues());
+    fbb.Int("padding", (int)ConvertPaddingAttr(getPadding()));
+    fbb.Int("stride_height", getStrideHeight());
+    fbb.Int("stride_width", getStrideWidth());
   });
   fbb.Finish();
   return fbb.GetBuffer();
@@ -53,11 +53,11 @@ std::vector<uint8_t> Bconv2dOp::buildCustomOptions() {
 std::vector<uint8_t> BMaxPool2dOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() {
-    fbb.Int("padding", (int)ConvertPaddingAttr(padding()));
-    fbb.Int("stride_width", stride_width());
-    fbb.Int("stride_height", stride_height());
-    fbb.Int("filter_width", filter_width());
-    fbb.Int("filter_height", filter_height());
+    fbb.Int("padding", (int)ConvertPaddingAttr(getPadding()));
+    fbb.Int("stride_width", getStrideWidth());
+    fbb.Int("stride_height", getStrideHeight());
+    fbb.Int("filter_width", getFilterWidth());
+    fbb.Int("filter_height", getFilterHeight());
   });
   fbb.Finish();
   return fbb.GetBuffer();
