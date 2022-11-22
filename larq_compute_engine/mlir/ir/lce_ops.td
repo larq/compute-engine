@@ -83,7 +83,7 @@ class LQ_Op<string mnemonic, list<Trait> traits = []> :
 class TensorOfOrNone<list<Type> allowedTypes, string description = ""> :
   AnyTypeOf<[TensorOf<allowedTypes>, NoneType], description>;
 
-def LQ_QuantizeOp : LQ_Op<"Quantize", [NoSideEffect]> {
+def LQ_QuantizeOp : LQ_Op<"Quantize", [Pure]> {
   let summary = "Binary quantize operator";
 
   let description = [{
@@ -103,7 +103,7 @@ Converts floating point, integer, or boolean tensors to binarized bitpacked tens
   let hasFolder = 1;
 }
 
-def LQ_DequantizeOp : LQ_Op<"Dequantize", [NoSideEffect]> {
+def LQ_DequantizeOp : LQ_Op<"Dequantize", [Pure]> {
   let summary = "Binary dequantize operator";
 
   let description = [{
@@ -121,7 +121,7 @@ Converts binarized bitpacked tensors to floating point, integer, or boolean tens
   let hasFolder = 1;
 }
 
-def LQ_Bconv2dOp : LQ_Op<"Bconv2d", [NoSideEffect]> {
+def LQ_Bconv2dOp : LQ_Op<"Bconv2d", [Pure]> {
   let summary = [{
 Computes a 2D binary convolution by binarizing and bitpacking the input and filter.
   }];
@@ -152,7 +152,7 @@ TODO
   );
 }
 
-def LQ_BMaxPool2dOp : LQ_Op<"BMaxPool2d", [NoSideEffect]> {
+def LQ_BMaxPool2dOp : LQ_Op<"BMaxPool2d", [Pure]> {
   let summary = [{
 Binary MaxPool2D op.
   }];

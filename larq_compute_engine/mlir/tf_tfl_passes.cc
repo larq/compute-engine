@@ -51,6 +51,10 @@ void AddQuantizationPasses(const mlir::quant::QuantizationSpecs& quant_specs,
       mlir::TFL::CreatePostQuantizePass(emit_quant_adaptor_ops));
   pass_manager.addNestedPass<mlir::func::FuncOp>(
       mlir::TFL::CreateOptimizeOpOrderPass());
+  // Add optimization pass after quantization for additional fusing
+  // opportunities.
+  pass_manager.addNestedPass<mlir::func::FuncOp>(
+      mlir::TFL::CreateOptimizePass(true));
 }
 }  // namespace
 

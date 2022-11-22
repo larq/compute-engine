@@ -47,7 +47,7 @@ bool IsConstantValue(Attribute values, float expected_value) {
   }
   return true;
 }
-DenseElementsAttr GetConstantVector(Attribute filter, float val) {
+DenseElementsAttr GetConstantVector(TypedAttr filter, float val) {
   auto filter_type = filter.getType().cast<ShapedType>();
   auto filter_shape = filter_type.getShape();
 
@@ -56,7 +56,7 @@ DenseElementsAttr GetConstantVector(Attribute filter, float val) {
   return DenseElementsAttr::get(type, val);
 }
 
-DenseElementsAttr GetScaleVector(Attribute filter_attr) {
+DenseElementsAttr GetScaleVector(TypedAttr filter_attr) {
   auto filter = filter_attr.cast<DenseElementsAttr>();
   auto filter_type = filter_attr.getType().cast<ShapedType>();
   auto channels = filter_type.getShape()[3];
@@ -72,7 +72,7 @@ DenseElementsAttr GetScaleVector(Attribute filter_attr) {
   return DenseElementsAttr::get(type, scales);
 }
 
-bool IsBinaryFilter(Attribute filter_attr) {
+bool IsBinaryFilter(TypedAttr filter_attr) {
   if (!filter_attr.isa<DenseElementsAttr>()) return false;
   auto filter = filter_attr.cast<DenseElementsAttr>();
 

@@ -20,7 +20,7 @@ DenseElementsAttr Bitpack(mlir::Builder* builder, Attribute x) {
   if (!x) return nullptr;
 
   // ShapedType is something like tensor<1x2x3xf32> and element_type is f32
-  auto shaped_type = x.getType().cast<ShapedType>();
+  auto shaped_type = x.cast<TypedAttr>().getType().cast<ShapedType>();
   auto shape = shaped_type.getShape();
   auto element_type = shaped_type.getElementType();
 
@@ -60,7 +60,8 @@ DenseElementsAttr Unpack(Attribute x, ShapedType result_type) {
   if (!x) return nullptr;
   if (!result_type.hasStaticShape()) return nullptr;
 
-  auto input_shape = x.getType().cast<ShapedType>().getShape();
+  auto input_shape =
+      x.cast<TypedAttr>().getType().cast<ShapedType>().getShape();
   auto output_shape = result_type.getShape();
   auto output_type = result_type.getElementType();
 

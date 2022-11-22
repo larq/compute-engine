@@ -1,6 +1,6 @@
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "larq_compute_engine/mlir/transforms/bitpack.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -23,7 +23,7 @@ struct BitpackWeightsLCE
   void runOnOperation() override;
 };
 
-bool IsConv2DFilter(Attribute filter) {
+bool IsConv2DFilter(TypedAttr filter) {
   if (!filter.isa<DenseElementsAttr>()) return false;
   auto filter_type = filter.getType().cast<ShapedType>();
   return filter_type.getElementType().isF32() &&
