@@ -22,8 +22,6 @@ static llvm::StringRef ConvertPaddingAttr(tflite::Padding padding_type) {
 namespace mlir {
 namespace TFL {
 
-namespace {
-
 struct TranslateToLCE
     : public PassWrapper<TranslateToLCE, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final { return "lce-translate-tfl"; }
@@ -89,8 +87,6 @@ void TranslateToLCE::runOnOperation() {
   patterns.add<TranslateToLCEPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
-
-}  // namespace
 
 // Creates an instance of the TranslateToLCE pass.
 std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateTranslateToLCEPass() {

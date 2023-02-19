@@ -6,8 +6,6 @@
 
 namespace mlir {
 
-namespace {
-
 mlir::Type SetBatchSize(mlir::Type type) {
   auto tensor_type = type.dyn_cast<mlir::TensorType>();
   if (tensor_type && tensor_type.hasRank()) {
@@ -58,8 +56,6 @@ struct SetBatchSizePass
     }
   }
 };
-
-}  // namespace
 
 // Creates an instance of the ZeroPointCompatibility pass.
 std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateSetBatchSizePass() {

@@ -1,5 +1,6 @@
 #include "larq_compute_engine/core/types.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
+#include "larq_compute_engine/mlir/transforms/common.h"
 #include "larq_compute_engine/mlir/transforms/padding.h"
 #include "larq_compute_engine/mlir/transforms/passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -13,8 +14,6 @@
 
 namespace mlir {
 namespace TFL {
-
-namespace {
 
 using compute_engine::core::bitpacking_bitwidth;
 
@@ -39,14 +38,6 @@ struct PrepareLCE
                        clEnumValN(LCETarget::XCORE, "xcore", "XCORE target"))};
 };
 
-bool IsConstantValue(Attribute values, float expected_value) {
-  if (!values.isa<DenseElementsAttr>()) return false;
-
-  for (auto value : values.cast<DenseElementsAttr>().getValues<float>()) {
-    if (value != expected_value) return false;
-  }
-  return true;
-}
 DenseElementsAttr GetConstantVector(TypedAttr filter, float val) {
   auto filter_type = filter.getType().cast<ShapedType>();
   auto filter_shape = filter_type.getShape();
@@ -162,11 +153,11 @@ IntegerAttr GetNumChannels(Builder& b, Value output_val) {
   return b.getI32IntegerAttr(shape_vector[shape_vector.size() - 1]);
 }
 
-namespace target_arm {
+namespace prepare_target_arm {
 #include "larq_compute_engine/mlir/transforms/generated_prepare_target_arm.inc"
 }
 
-namespace target_other {
+namespace prepare_target_other {
 #include "larq_compute_engine/mlir/transforms/generated_prepare_target_other.inc"
 }
 
@@ -181,15 +172,13 @@ void PrepareLCE::runOnOperation() {
   patterns.add<ConvertTFDilatedConvOp<TF::Conv2DOp>>(ctx);
 
   if (target_ == LCETarget::ARM) {
-    target_arm::populateWithGenerated(patterns);
+    prepare_target_arm::populateWithGenerated(patterns);
   } else {
-    target_other::populateWithGenerated(patterns);
+    prepare_target_other::populateWithGenerated(patterns);
   }
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
-
-}  // namespace
 
 // Creates an instance of the TensorFlow dialect PrepareLCE pass.
 std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreatePrepareLCEPass(

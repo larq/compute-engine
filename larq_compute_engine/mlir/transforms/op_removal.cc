@@ -8,8 +8,6 @@
 namespace mlir {
 namespace TFL {
 
-namespace {
-
 // Op removal of pass through ops to make following patterns easier and enable
 // early constant folding
 struct OpRemoval
@@ -21,17 +19,17 @@ struct OpRemoval
   void runOnOperation() override;
 };
 
+namespace op_removal {
 #include "larq_compute_engine/mlir/transforms/generated_op_removal.inc"
+}  // namespace op_removal
 
 void OpRemoval::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   auto func = getOperation();
 
-  TFL::populateWithGenerated(patterns);
+  op_removal::populateWithGenerated(patterns);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
-
-}  // namespace
 
 // Creates an instance of the TensorFlow dialect OpRemoval pass.
 std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateOpRemovalPass() {

@@ -12,8 +12,6 @@ namespace TFL {
 //===----------------------------------------------------------------------===//
 // The actual Quantize Pass.
 //
-namespace {
-
 // Applies quantization on the model in TFL dialect.
 struct LCEQuantizePass
     : public PassWrapper<LCEQuantizePass, OperationPass<mlir::func::FuncOp>> {
@@ -24,15 +22,16 @@ struct LCEQuantizePass
   void runOnOperation() override;
 };
 
+namespace lce_quantize {
 #include "larq_compute_engine/mlir/transforms/generated_quantize.inc"
+}
 
 void LCEQuantizePass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   auto func = getOperation();
-  TFL::populateWithGenerated(patterns);
+  lce_quantize::populateWithGenerated(patterns);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
-}  // namespace
 
 // Creates an instance of the TensorFlow Lite dialect QuantizeTFL pass.
 std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateLCEQuantizePass() {
