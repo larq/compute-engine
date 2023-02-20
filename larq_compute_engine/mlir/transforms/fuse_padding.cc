@@ -6,8 +6,6 @@
 namespace mlir {
 namespace TFL {
 
-namespace {
-
 bool NoBatchAndChannelPadding(Attribute paddings_attr) {
   auto paddings = GetValidPadAttr(paddings_attr);
   if (!paddings) return false;
@@ -33,7 +31,9 @@ bool IsSamePaddingPartial(Attribute paddings_attr, Value input, Value output,
                          output_shape[dimension], stride);
 }
 
+namespace fuse_padding {
 #include "larq_compute_engine/mlir/transforms/generated_fuse_padding.inc"
+}
 
 // Prepare LCE operations in functions for subsequent legalization.
 struct FusePadding
@@ -49,15 +49,13 @@ struct FusePadding
     auto* ctx = &getContext();
     RewritePatternSet patterns(ctx);
     auto func = getOperation();
-    populateWithGenerated(patterns);
+    fuse_padding::populateWithGenerated(patterns);
     (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
   }
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<::mlir::TFL::TensorFlowLiteDialect>();
   }
 };
-
-}  // namespace
 
 // Creates an instance of the TensorFlow dialect FusePadding pass.
 std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateFusePaddingPass() {

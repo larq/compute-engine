@@ -287,6 +287,7 @@ cc_library(
 cc_library(
     name = "larq_compute_engine_prepare",
     srcs = [
+        "transforms/common.h",
         "transforms/generated_prepare_target_arm.inc",
         "transforms/generated_prepare_target_other.inc",
         "transforms/prepare_tf.cc",
@@ -310,6 +311,7 @@ cc_library(
 cc_library(
     name = "larq_compute_engine_optimize",
     srcs = [
+        "transforms/common.h",
         "transforms/generated_bitpack_activations.inc",
         "transforms/generated_optimize_target_arm.inc",
         "transforms/generated_optimize_target_other.inc",

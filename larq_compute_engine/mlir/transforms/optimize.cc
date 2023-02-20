@@ -2,6 +2,7 @@
 
 #include "larq_compute_engine/core/bitpacking/bitpack.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
+#include "larq_compute_engine/mlir/transforms/common.h"
 #include "larq_compute_engine/mlir/transforms/passes.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -15,8 +16,6 @@
 
 namespace mlir {
 namespace TFL {
-
-namespace {
 
 // Optimize LCE operations in functions.
 struct OptimizeLCE
@@ -37,15 +36,6 @@ struct OptimizeLCE
       llvm::cl::values(clEnumValN(LCETarget::ARM, "arm", "ARM target"),
                        clEnumValN(LCETarget::XCORE, "xcore", "XCORE target"))};
 };
-
-bool IsConstantValue(Attribute values, float expected_value) {
-  if (!values.isa<DenseElementsAttr>()) return false;
-
-  for (auto value : values.cast<DenseElementsAttr>().getValues<float>()) {
-    if (value != expected_value) return false;
-  }
-  return true;
-}
 
 /**
  * =================================================
@@ -254,15 +244,15 @@ DenseElementsAttr GetBitpackedOutputThresholds(
   return DenseElementsAttr::get(type, thresholds);
 }
 
-namespace target_arm {
+namespace optimize_target_arm {
 #include "larq_compute_engine/mlir/transforms/generated_optimize_target_arm.inc"
 }
 
-namespace target_other {
+namespace optimize_target_other {
 #include "larq_compute_engine/mlir/transforms/generated_optimize_target_other.inc"
 }
 
-namespace bitpack_activations {
+namespace optimize_bitpack_activations {
 #include "larq_compute_engine/mlir/transforms/generated_bitpack_activations.inc"
 }
 
@@ -271,16 +261,14 @@ void OptimizeLCE::runOnOperation() {
   auto func = getOperation();
 
   if (target_ == LCETarget::ARM) {
-    target_arm::populateWithGenerated(patterns);
+    optimize_target_arm::populateWithGenerated(patterns);
   } else {
-    target_other::populateWithGenerated(patterns);
+    optimize_target_other::populateWithGenerated(patterns);
   }
-  bitpack_activations::populateWithGenerated(patterns);
+  optimize_bitpack_activations::populateWithGenerated(patterns);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
-
-}  // namespace
 
 // Creates an instance of the TensorFlow dialect OptimizeLCE pass.
 std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateOptimizeLCEPass(

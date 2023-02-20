@@ -10,8 +10,6 @@
 namespace mlir {
 namespace TFL {
 
-namespace {
-
 struct BitpackWeightsLCE
     : public PassWrapper<BitpackWeightsLCE, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final {
@@ -30,17 +28,17 @@ bool IsConv2DFilter(TypedAttr filter) {
          filter_type.getShape().size() == 4;
 }
 
+namespace bitpackweights {
 #include "larq_compute_engine/mlir/transforms/generated_bitpack_weights.inc"
+}  // namespace bitpackweights
 
 void BitpackWeightsLCE::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   auto func = getOperation();
 
-  TFL::populateWithGenerated(patterns);
+  bitpackweights::populateWithGenerated(patterns);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
-
-}  // namespace
 
 // Creates an instance of the TensorFlow dialect BitpackWeights pass.
 std::unique_ptr<OperationPass<mlir::func::FuncOp>>

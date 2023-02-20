@@ -7,8 +7,6 @@
 namespace mlir {
 namespace TFL {
 
-namespace {
-
 struct LegalizeLCE
     : public PassWrapper<LegalizeLCE, OperationPass<mlir::func::FuncOp>> {
   llvm::StringRef getArgument() const final { return "tfl-legalize-lce"; }
@@ -54,8 +52,6 @@ void LegalizeLCE::runOnOperation() {
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
-
-}  // namespace
 
 // Creates an instance of the LegalizeLCE pass.
 std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateLegalizeLCEPass() {
