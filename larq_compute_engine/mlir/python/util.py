@@ -63,16 +63,12 @@ def _update_signature_def_tensors(tensor_maps, map_old_to_new_tensors):
             ]
 
 
-def _remove_tensors_from_model(model, remove_tensors_idxs):
+def _remove_tensors_from_model(
+    model: tflite_schema.ModelT, subgraph: tflite_schema.SubGraphT, remove_tensors_idxs
+):
     """Remove tensors from model."""
     if not remove_tensors_idxs:
         return
-    if len(model.subgraphs) > 1:
-        raise ValueError(
-            "Model must only have one subgraph. Instead, it has "
-            "{} subgraphs.".format(len(model.subgraphs))
-        )
-    subgraph = model.subgraphs[0]
     tensors = subgraph.tensors
     operators = subgraph.operators
 
@@ -89,6 +85,7 @@ def _remove_tensors_from_model(model, remove_tensors_idxs):
                 left_shift_by += 1
             else:
                 d_old_to_new_tensors[idx] = idx - left_shift_by
+
         # Update tensor indices referenced throughout the model
         def update_tensors(tensor_idxs):
             for i, ti in enumerate(tensor_idxs):
@@ -110,14 +107,9 @@ def _remove_tensors_from_model(model, remove_tensors_idxs):
 
 def _find_int8_quantized_inputs_outputs(model):
     """Validate that model input is quantized and output is dequantized."""
-    if len(model.subgraphs) > 1:
-        raise ValueError(
-            "Model must only have one subgraph. Instead, it has "
-            "{} subgraphs.".format(len(model.subgraphs))
-        )
-    subgraph = model.subgraphs[0]
-    tensors = subgraph.tensors
-    operators = subgraph.operators
+    main_subgraph = model.subgraphs[0]  # the main subgraph has ID 0
+    tensors = main_subgraph.tensors
+    operators = main_subgraph.operators
 
     # Ensure model has atleast one quantize and dequantize operator
     quant_opcode_idx, dequant_opcode_idx = None, None
@@ -138,7 +130,7 @@ def _find_int8_quantized_inputs_outputs(model):
     input_quant_ops, output_dequant_ops = [], []
     for op in operators:
         # Find input quantize operator
-        if op.opcodeIndex == quant_opcode_idx and op.inputs[0] in subgraph.inputs:
+        if op.opcodeIndex == quant_opcode_idx and op.inputs[0] in main_subgraph.inputs:
             pos, float_tensor, int_tensor = (
                 "input",
                 tensors[op.inputs[0]],
@@ -146,7 +138,10 @@ def _find_int8_quantized_inputs_outputs(model):
             )
             input_quant_ops.append(op)
         # Find output dequantize operator
-        elif op.opcodeIndex == dequant_opcode_idx and op.outputs[0] in subgraph.outputs:
+        elif (
+            op.opcodeIndex == dequant_opcode_idx
+            and op.outputs[0] in main_subgraph.outputs
+        ):
             pos, float_tensor, int_tensor = (
                 "output",
                 tensors[op.outputs[0]],
@@ -221,23 +216,28 @@ def modify_integer_quantized_model_io_type(
             operators.remove(op)
 
     # Remove tensors marked for deletion.
-    _remove_tensors_from_model(model, remove_tensors_idxs)
+    _remove_tensors_from_model(model, subgraph, remove_tensors_idxs)
 
     # Convert the model to a bytearray
     return _convert_model_from_object_to_bytearray(model)
 
 
-def strip_lcedequantize_ops(model):
+def strip_lcedequantize_ops(model: bytes) -> bytes:
     """Strip the LceDequantize ops to directly output bitpacked tf.int32 tensors."""
     # Convert the model to an object
     model = _convert_model_from_bytearray_to_object(model)
 
-    if len(model.subgraphs) > 1:
-        raise ValueError(
-            "Model must only have one subgraph. Instead, it has "
-            "{} subgraphs.".format(len(model.subgraphs))
-        )
+    # Process each subgraph separately
+    for subgraph in model.subgraphs:
+        _strip_lcedequantize_ops_subgraph(model, subgraph)
 
+    # Convert the model to a bytearray
+    return _convert_model_from_object_to_bytearray(model)
+
+
+def _strip_lcedequantize_ops_subgraph(
+    model: tflite_schema.ModelT, subgraph: tflite_schema.SubGraphT
+) -> None:
     # Ensure model has at least one LceDequantize and/or Dequantize operator
     lce_dequant_opcode_idx, dequant_opcode_idx = None, None
     for idx, opcode in enumerate(model.operatorCodes):
@@ -254,7 +254,6 @@ def strip_lcedequantize_ops(model):
 
     # Ensure model outputs are dequantized and remove Dequantize ops first if any
     if dequant_opcode_idx is not None:
-        subgraph = model.subgraphs[0]
         tensors = subgraph.tensors
         operators = subgraph.operators
         remove_tensors_idxs = set()
@@ -306,9 +305,8 @@ def strip_lcedequantize_ops(model):
             operators.remove(op)
 
         # Remove tensors marked for deletion.
-        _remove_tensors_from_model(model, remove_tensors_idxs)
+        _remove_tensors_from_model(model, subgraph, remove_tensors_idxs)
 
-    subgraph = model.subgraphs[0]
     tensors = subgraph.tensors
     operators = subgraph.operators
     remove_tensors_idxs = set()
@@ -364,7 +362,4 @@ def strip_lcedequantize_ops(model):
         operators.remove(op)
 
     # Remove tensors marked for deletion.
-    _remove_tensors_from_model(model, remove_tensors_idxs)
-
-    # Convert the model to a bytearray
-    return _convert_model_from_object_to_bytearray(model)
+    _remove_tensors_from_model(model, subgraph, remove_tensors_idxs)
