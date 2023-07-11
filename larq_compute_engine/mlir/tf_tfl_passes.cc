@@ -25,10 +25,16 @@ const char kTFLiteDataLayout[] = "NHWC";
 namespace {
 void AddQuantizationPasses(const mlir::quant::QuantizationSpecs& quant_specs,
                            mlir::OpPassManager& pass_manager) {
+  // PrepareQuantizePass adds Quantize->Dequantize pairs at *every* float tensor
+  // even if it did not have a fake quantization node, or if that fake
+  // quantization node was folded away (which would happen for weights).
   pass_manager.addNestedPass<mlir::func::FuncOp>(
       mlir::TFL::CreatePrepareQuantizePass(quant_specs));
+
+  // The LCEQuantizePass is similar to 'step 1' of the TFL QuantizePass below.
   pass_manager.addNestedPass<mlir::func::FuncOp>(
       mlir::TFL::CreateLCEQuantizePass());
+
   if (quant_specs.default_ranges.first.hasValue() ||
       quant_specs.default_ranges.second.hasValue()) {
     pass_manager.addNestedPass<mlir::func::FuncOp>(
@@ -39,6 +45,18 @@ void AddQuantizationPasses(const mlir::quant::QuantizationSpecs& quant_specs,
     pass_manager.addNestedPass<mlir::func::FuncOp>(
         mlir::TFL::CreateLCEQuantizePass());
   }
+
+  // This absorbs Dequantize ops into the postprocessing op when possible,
+  // similar to 'step 1' of the TFL QuantizePass below.
+  pass_manager.addNestedPass<mlir::func::FuncOp>(
+      mlir::TFL::QuantizeDetectionPostProcessPass());
+
+  // QuantizePass does two things:
+  // 1. For TFLite ops with quantize traits, the Dequantize is absorbed
+  //    into the input of the op, and in certain cases per-channel quantization
+  //    is applied.
+  // 2. Afterwards, any remaining Quantize->Dequantize pairs with constant input
+  //    are *removed*.
   pass_manager.addNestedPass<mlir::func::FuncOp>(
       mlir::TFL::CreateQuantizePass());
   bool emit_quant_adaptor_ops =
