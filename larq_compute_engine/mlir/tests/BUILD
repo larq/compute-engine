@@ -14,6 +14,13 @@ lce_lit_test_suite(
     ],
 )
 
+test_suite(
+    name = "all",
+    tests = [
+        ":lit",
+    ],
+)
+
 cc_test(
     name = "lce_ops_options_test",
     srcs = ["lce_ops_options_test.cc"],

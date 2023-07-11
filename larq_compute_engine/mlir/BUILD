@@ -395,6 +395,22 @@ cc_library(
 )
 
 cc_library(
+    name = "detection_postprocess_transform",
+    srcs = [
+        "transforms/detection_postprocess.cc",
+    ],
+    hdrs = [
+        "transforms/passes.h",
+    ],
+    deps = [
+        "//larq_compute_engine/mlir:larq_compute_engine",
+        "@llvm-project//mlir:FuncDialect",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+    ],
+    alwayslink = 1,
+)
+
+cc_library(
     name = "fuse_padding",
     srcs = [
         "transforms/fuse_padding.cc",
@@ -433,6 +449,7 @@ cc_library(
         "tf_tfl_passes.h",
     ],
     deps = [
+        ":detection_postprocess_transform",
         ":fuse_padding",
         ":larq_compute_engine_bitpack_weights",
         ":larq_compute_engine_legalize_tflite",

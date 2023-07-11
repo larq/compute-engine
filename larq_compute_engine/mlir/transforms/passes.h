@@ -29,6 +29,9 @@ std::unique_ptr<OperationPass<func::FuncOp>> CreateLCEQuantizePass();
 // Creates an instance of LegalizeLCE pass.
 std::unique_ptr<OperationPass<func::FuncOp>> CreateLegalizeLCEPass();
 
+// Creates an instance of the TensorFlow dialect DetectionPostProcess pass.
+std::unique_ptr<OperationPass<func::FuncOp>> QuantizeDetectionPostProcessPass();
+
 // Creates an instance of the FusePadding pass.
 std::unique_ptr<OperationPass<func::FuncOp>> CreateFusePaddingPass();
 
