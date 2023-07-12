@@ -29,7 +29,7 @@ ext_modules = [Extension("_foo", ["stub.cc"])] if platform.startswith("linux") e
 
 setup(
     name="larq-compute-engine",
-    version=get_version_number(default="0.11.0"),
+    version=get_version_number(default="0.11.1"),
     python_requires=">=3.7",
     description="Highly optimized inference engine for binarized neural networks.",
     long_description=readme(),
