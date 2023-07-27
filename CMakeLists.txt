@@ -50,15 +50,25 @@ set(LCE_CORE_HDRS  # such that they can be discovered by IDEs such as CLion Visu
         ${LCE_SOURCE_DIR}/tflite/kernels/utils.h
         )
 
+# The Larq-Compute-Engine version of the TFLite library (with BConvs)
+add_library(larq-compute-engine ${LCE_CORE_SRCS} ${LCE_CORE_HDRS})
+target_link_libraries(larq-compute-engine PUBLIC tensorflow-lite)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "^(Darwin|Emscripten)$")  # macOS or WebAssembly
+    target_link_libraries(larq-compute-engine PUBLIC dl)
+else ()
+    target_link_libraries(larq-compute-engine PUBLIC dl atomic)
+endif ()
+
 # The example application
-if(COMPILE_EXAMPLE)
+if (COMPILE_EXAMPLE)
     set(LCE_EXAMPLE_SRCS ${CMAKE_CURRENT_LIST_DIR}/examples/lce_minimal.cc)
-    add_executable(example ${LCE_CORE_SRCS} ${LCE_CORE_HDRS} ${LCE_EXAMPLE_SRCS})
-    target_link_libraries(example tensorflow-lite)
-endif()
+    add_executable(example ${LCE_EXAMPLE_SRCS})
+    target_link_libraries(example larq-compute-engine)
+endif ()
 
 # The benchmarking binary
-if(COMPILE_BENCHMARK)
+if (COMPILE_BENCHMARK)
     set(LCE_BENCHMARK_SRCS
             ${LCE_SOURCE_DIR}/tflite/benchmark/lce_benchmark_tflite_model.cc
             ${LCE_SOURCE_DIR}/tflite/benchmark/lce_benchmark_main.cc
@@ -73,8 +83,7 @@ if(COMPILE_BENCHMARK)
 
     add_executable(lce_benchmark_model
             ${TFLITE_BENCHMARK_SRCS}
-            ${LCE_CORE_SRCS} ${LCE_CORE_HDRS}
             ${LCE_BENCHMARK_SRCS} ${LCE_BENCHMARK_HRDS}
             )
-    target_link_libraries(lce_benchmark_model tensorflow-lite)
-endif()
+    target_link_libraries(lce_benchmark_model larq-compute-engine)
+endif ()
