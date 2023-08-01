@@ -86,7 +86,7 @@ jobs:
         if: github.ref != 'refs/heads/main'
         shell: bash
       - name: Install pip dependencies
-        run: pip install tensorflow-cpu~=2.11.0 larq~=0.12 larq_zoo~=2.0 pytest tensorflow_datasets~=4.4 flatbuffers==2.0 tqdm --no-cache-dir
+        run: pip install tensorflow-cpu~=2.13.0 larq~=0.12 larq_zoo~=2.0 pytest tensorflow_datasets~=4.4 flatbuffers==2.0 tqdm --no-cache-dir
       - name: Run Interpreter test
         run: bazelisk test larq_compute_engine/tflite/tests:interpreter_test --test_output=all
       - name: Run FileCheck tests
@@ -100,7 +100,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        tf-version: [1.14.0, 1.15.5, 2.0.4, 2.1.4, 2.2.3, 2.3.3, 2.4.4, 2.5.3, 2.6.4, 2.7.2, 2.8.1, 2.9.0, 2.10.0, 2.11.0]
+        tf-version: [1.14.0, 1.15.5, 2.0.4, 2.1.4, 2.2.3, 2.3.3, 2.4.4, 2.5.3, 2.6.5, 2.7.4, 2.8.4, 2.9.3, 2.10.1, 2.11.1, 2.13.0]
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
       - uses: actions/checkout@v3
