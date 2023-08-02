@@ -99,8 +99,8 @@ Status ConvertTFExecutorToTFLOrFlatbuffer(
   // Freeze variables if a session is provided.
   if (session.has_value()) {
     mlir::TFL::ErrorCollectorInstrumentation collector(module.getContext());
-    if (mlir::failed(mlir::tf_saved_model::FreezeVariables(module,
-                                                     session.value()))) {
+    if (mlir::failed(
+            mlir::tf_saved_model::FreezeVariables(module, session.value()))) {
       auto status = statusHandler.ConsumeStatus();
       mlir::TFL::ErrorCollector* collector =
           mlir::TFL::ErrorCollector::GetErrorCollector();

@@ -84,8 +84,8 @@ pybind11::bytes ConvertSavedModelToTFLiteFlatBuffer(
   }
 
   return ConvertMLIRModuleToTFLiteFlatBuffer(
-      &module.value(), context, target, default_ranges, tags,
-      saved_model_dir, bundle ? bundle->GetSession() : nullptr, num_inputs,
+      &module.value(), context, target, default_ranges, tags, saved_model_dir,
+      bundle ? bundle->GetSession() : nullptr, num_inputs,
       /*should_quantize=*/true,
       /*mark_as_post_training_quant=*/true);
 }

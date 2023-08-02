@@ -96,7 +96,8 @@ void LarqDialect::initialize() {
 Operation* LarqDialect::materializeConstant(OpBuilder& builder, Attribute value,
                                             Type type, Location loc) {
   if (arith::ConstantOp::isBuildableWith(value, type))
-    return builder.create<mlir::arith::ConstantOp>(loc, type, cast<TypedAttr>(value));
+    return builder.create<mlir::arith::ConstantOp>(loc, type,
+                                                   cast<TypedAttr>(value));
   return nullptr;
 }
 }  // namespace lq
