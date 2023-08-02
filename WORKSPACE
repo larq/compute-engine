@@ -13,10 +13,7 @@ http_archive(
     name = "org_tensorflow",
     patch_args = ["-p1"],
     patch_tool = "patch",
-    patches = [
-        "//third_party/tensorflow_patches:disable_forced_mkl.patch",
-        "//third_party/tensorflow_patches:embedded_toolchain.patch",
-    ],
+    patches = [],
     sha256 = "e58c939079588623e6fa1d054aec2f90f95018266e0a970fd353a5244f5173dc",
     strip_prefix = "tensorflow-2.13.0",
     urls = [
