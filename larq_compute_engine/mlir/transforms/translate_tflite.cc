@@ -39,16 +39,16 @@ struct TranslateToLCEPattern : public OpRewritePattern<TFL::CustomOp> {
 
   LogicalResult matchAndRewrite(TFL::CustomOp custom_op,
                                 PatternRewriter& rewriter) const override {
-    auto stringData = custom_op.custom_option().getValue();
+    auto stringData = custom_op.getCustomOption().getValue();
 
     // Replace CustomOp with relevant LarqOp
-    if (custom_op.custom_code() == "LceQuantize") {
+    if (custom_op.getCustomCode() == "LceQuantize") {
       rewriter.replaceOpWithNewOp<lq::QuantizeOp>(
           custom_op, custom_op->getResultTypes(), custom_op->getOperands());
-    } else if (custom_op.custom_code() == "LceDequantize") {
+    } else if (custom_op.getCustomCode() == "LceDequantize") {
       rewriter.replaceOpWithNewOp<lq::DequantizeOp>(
           custom_op, custom_op->getResultTypes(), custom_op->getOperands());
-    } else if (custom_op.custom_code() == "LceBMaxPool2d") {
+    } else if (custom_op.getCustomCode() == "LceBMaxPool2d") {
       auto map =
           flexbuffers::GetRoot((uint8_t*)stringData.data(), stringData.size())
               .AsMap();
@@ -58,7 +58,7 @@ struct TranslateToLCEPattern : public OpRewritePattern<TFL::CustomOp> {
               static_cast<tflite::Padding>(map["padding"].AsInt32())),
           map["stride_width"].AsInt32(), map["stride_height"].AsInt32(),
           map["filter_width"].AsInt32(), map["filter_height"].AsInt32());
-    } else if (custom_op.custom_code() == "LceBconv2d") {
+    } else if (custom_op.getCustomCode() == "LceBconv2d") {
       auto map =
           flexbuffers::GetRoot((uint8_t*)stringData.data(), stringData.size())
               .AsMap();

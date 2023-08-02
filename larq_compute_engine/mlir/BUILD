@@ -492,7 +492,7 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_config",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:error_util",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_saved_model_freeze_variables",
-        "@org_tensorflow//tensorflow/stream_executor/lib",
+        "@org_tensorflow//tensorflow/tsl/platform:statusor",
     ],
 )
 

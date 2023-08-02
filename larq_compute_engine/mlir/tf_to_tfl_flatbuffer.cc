@@ -11,7 +11,7 @@
 #include "tensorflow/compiler/mlir/tensorflow/transforms/tf_saved_model_freeze_variables.h"
 #include "tensorflow/compiler/mlir/tensorflow/utils/error_util.h"
 #include "tensorflow/core/framework/op.h"
-#include "tensorflow/stream_executor/lib/statusor.h"
+#include "tensorflow/tsl/platform/statusor.h"
 
 namespace tensorflow {
 namespace {
@@ -83,7 +83,10 @@ Status ConvertTFExecutorToTFLOrFlatbuffer(
   }
 
   mlir::PassManager pass_manager(module.getContext());
-  mlir::applyPassManagerCLOptions(pass_manager);
+  if (mlir::failed(mlir::applyPassManagerCLOptions(pass_manager))) {
+    return tensorflow::FromAbslStatus(
+        absl::UnknownError("failed to apply MLIR pass manager CL options"));
+  }
   pass_manager.addInstrumentation(
       std::make_unique<mlir::TFL::ErrorCollectorInstrumentation>(
           pass_manager.getContext()));
@@ -94,10 +97,10 @@ Status ConvertTFExecutorToTFLOrFlatbuffer(
   }
 
   // Freeze variables if a session is provided.
-  if (session.hasValue()) {
+  if (session.has_value()) {
     mlir::TFL::ErrorCollectorInstrumentation collector(module.getContext());
-    if (failed(mlir::tf_saved_model::FreezeVariables(module,
-                                                     session.getValue()))) {
+    if (mlir::failed(mlir::tf_saved_model::FreezeVariables(module,
+                                                     session.value()))) {
       auto status = statusHandler.ConsumeStatus();
       mlir::TFL::ErrorCollector* collector =
           mlir::TFL::ErrorCollector::GetErrorCollector();
@@ -144,7 +147,7 @@ Status ConvertTFExecutorToTFLOrFlatbuffer(
   if (mlir::failed(module.verify())) {
     return tensorflow::errors::Unknown("Final module is invalid");
   }
-  return Status::OK();
+  return OkStatus();
 }
 
 }  // namespace tensorflow

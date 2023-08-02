@@ -7,7 +7,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "tensorflow/compiler/mlir/lite/quantization/quantization_config.h"
 #include "tensorflow/core/public/session.h"
-#include "tensorflow/stream_executor/lib/statusor.h"
+#include "tensorflow/tsl/platform/statusor.h"
 namespace tensorflow {
 
 // This is a fork of ConvertTFExecutorToTFLOrFlatbuffer to enable custom

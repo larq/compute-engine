@@ -29,7 +29,7 @@ struct RemoveDequantizeBeforePostProcess : public OpRewritePattern<CustomOp> {
     // ----------------- matching part -----------------
 
     // Match the custom op code to 'TFLite_Detection_PostProcess'
-    auto custom_code = detection_op.custom_code().str();
+    auto custom_code = detection_op.getCustomCode().str();
     if (custom_code != "TFLite_Detection_PostProcess") {
       return rewriter.notifyMatchFailure(detection_op, [&](Diagnostic& diag) {
         diag << "op 'tfl.custom' attribute 'custom_code' failed to satisfy "
@@ -38,13 +38,13 @@ struct RemoveDequantizeBeforePostProcess : public OpRewritePattern<CustomOp> {
     }
 
     // Check the number of inputs and outputs of the detection op
-    auto original_detection_inputs = detection_op.input();
+    auto original_detection_inputs = detection_op.getInput();
     if (original_detection_inputs.size() != 3) {
       return rewriter.notifyMatchFailure(detection_op, [&](Diagnostic& diag) {
         diag << "expected 3 inputs for the detection op";
       });
     }
-    auto original_detection_outputs = detection_op.output();
+    auto original_detection_outputs = detection_op.getOutput();
     if (original_detection_outputs.size() != 4) {
       return rewriter.notifyMatchFailure(detection_op, [&](Diagnostic& diag) {
         diag << "expected 4 outputs for the original detection op";
@@ -102,9 +102,9 @@ struct RemoveDequantizeBeforePostProcess : public OpRewritePattern<CustomOp> {
     // ----------------- re-write part -----------------
 
     // Get the original inputs (before dequantization)
-    auto boxes_input = original_boxes_dequantize_op.input();
-    auto scores_input = original_scores_dequantize_op.input();
-    auto anchors_input = original_anchors_dequantize_op.input();
+    auto boxes_input = original_boxes_dequantize_op.getInput();
+    auto scores_input = original_scores_dequantize_op.getInput();
+    auto anchors_input = original_anchors_dequantize_op.getInput();
 
     // Set the new detection inputs
     auto new_detection_inputs =
@@ -139,25 +139,25 @@ struct RemoveDequantizeBeforePostProcess : public OpRewritePattern<CustomOp> {
     auto new_detection_op = rewriter.create<CustomOp>(
         detection_op->getLoc(), new_op_output_types, new_detection_inputs,
         std::string{"TFLite_Detection_PostProcess"},
-        detection_op.custom_option());
+        detection_op.getCustomOption());
 
     // Add the 4 outputs: boxes, classes, scores, num_detections
     auto new_outputs = SmallVector<Value, 4>{};
 
     // Output #0: [int32] detection boxes (scaled by 2048)
-    new_outputs.push_back(new_detection_op.output()[0]);
+    new_outputs.push_back(new_detection_op.getOutput()[0]);
 
     // Output #1: [int32] detection class IDs
-    new_outputs.push_back(new_detection_op.output()[1]);
+    new_outputs.push_back(new_detection_op.getOutput()[1]);
 
     // Output #2: [int8 quantized] detection scores
     auto new_dequantize_op = rewriter.create<DequantizeOp>(
         detection_op->getLoc(), original_detection_outputs[2].getType(),
-        new_detection_op.output()[2]);
-    new_outputs.push_back(new_dequantize_op.output());
+        new_detection_op.getOutput()[2]);
+    new_outputs.push_back(new_dequantize_op.getOutput());
 
     // Output #3: [int32] number of detections
-    new_outputs.push_back(new_detection_op.output()[3]);
+    new_outputs.push_back(new_detection_op.getOutput()[3]);
 
     // Final re-write of the detection op with detection + quantization
     rewriter.replaceOp(detection_op, new_outputs);

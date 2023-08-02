@@ -38,6 +38,7 @@ cc_test(
         "@com_google_googletest//:gtest",
         "@flatbuffers",
         "@org_tensorflow//tensorflow/lite:framework",
+        "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
         "@org_tensorflow//tensorflow/lite/kernels:test_main",
         "@org_tensorflow//tensorflow/lite/kernels:test_util",
     ],
