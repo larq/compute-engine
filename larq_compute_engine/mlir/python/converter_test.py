@@ -70,9 +70,9 @@ class TestConverter(unittest.TestCase):
         if version.parse(tf.__version__) < version.parse("2.2"):
             mocked_graphdef_converter.assert_called_once_with(
                 mock.ANY,
-                ["input_1"],
+                ["quant_conv2d_input"],
                 ["DT_FLOAT"],
-                [[1, 224, 224, 3]],
+                [[1, 28, 28, 1]],
                 ["Identity"],
                 False,
                 "arm",
