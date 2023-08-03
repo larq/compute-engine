@@ -16,8 +16,8 @@ def _center_crop(image, image_size):
 
     padded_center_crop_size = tf.cast(
         (
-                (image_size / (image_size + CROP_PADDING))
-                * tf.cast(tf.minimum(image_height, image_width), tf.float32)
+            (image_size / (image_size + CROP_PADDING))
+            * tf.cast(tf.minimum(image_height, image_width), tf.float32)
         ),
         tf.int32,
     )
