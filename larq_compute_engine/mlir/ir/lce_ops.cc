@@ -72,13 +72,15 @@ void QuantizeOp::build(OpBuilder& builder, OperationState& state, Value x) {
   state.addTypes(RankedTensorType::get(shape, builder.getIntegerType(32)));
 }
 
-OpFoldResult QuantizeOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult QuantizeOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   mlir::OpBuilder builder(getOperation());
   if (!operands[0]) return nullptr;
   return mlir::TFL::Bitpack(&builder, operands[0]);
 }
 
-OpFoldResult DequantizeOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult DequantizeOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   auto result_type = getType().cast<ShapedType>();
   if (!operands[0]) return nullptr;
   return mlir::TFL::Unpack(operands[0], result_type);
@@ -94,7 +96,8 @@ void LarqDialect::initialize() {
 Operation* LarqDialect::materializeConstant(OpBuilder& builder, Attribute value,
                                             Type type, Location loc) {
   if (arith::ConstantOp::isBuildableWith(value, type))
-    return builder.create<mlir::arith::ConstantOp>(loc, type, value);
+    return builder.create<mlir::arith::ConstantOp>(loc, type,
+                                                   cast<TypedAttr>(value));
   return nullptr;
 }
 }  // namespace lq

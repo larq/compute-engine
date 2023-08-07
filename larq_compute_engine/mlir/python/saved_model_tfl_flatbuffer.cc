@@ -55,7 +55,7 @@ pybind11::bytes ConvertSavedModelToTFLiteFlatBuffer(
   const toco::TocoFlags toco_flags;
   status = internal::RegisterAllCustomOps(toco_flags);
   if (!status.ok()) {
-    throw std::runtime_error(status.error_message());
+    throw std::runtime_error(std::string(status.message()));
   }
 
   // Some weirdness required to convert the vector<string> to an
@@ -78,14 +78,14 @@ pybind11::bytes ConvertSavedModelToTFLiteFlatBuffer(
   }
 
   int num_inputs = 0;
-  status = GetNumInputs(&module.ValueOrDie(), &num_inputs);
+  status = GetNumInputs(&module.value(), &num_inputs);
   if (!status.ok()) {
-    throw std::runtime_error(status.error_message());
+    throw std::runtime_error(std::string(status.message()));
   }
 
   return ConvertMLIRModuleToTFLiteFlatBuffer(
-      &module.ValueOrDie(), context, target, default_ranges, tags,
-      saved_model_dir, bundle ? bundle->GetSession() : nullptr, num_inputs,
+      &module.value(), context, target, default_ranges, tags, saved_model_dir,
+      bundle ? bundle->GetSession() : nullptr, num_inputs,
       /*should_quantize=*/true,
       /*mark_as_post_training_quant=*/true);
 }

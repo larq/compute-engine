@@ -21,9 +21,9 @@ struct BitpackWeightsLCE
   void runOnOperation() override;
 };
 
-bool IsConv2DFilter(TypedAttr filter) {
+bool IsConv2DFilter(Attribute filter) {
   if (!filter.isa<DenseElementsAttr>()) return false;
-  auto filter_type = filter.getType().cast<ShapedType>();
+  auto filter_type = filter.cast<TypedAttr>().getType().cast<ShapedType>();
   return filter_type.getElementType().isF32() &&
          filter_type.getShape().size() == 4;
 }

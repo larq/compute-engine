@@ -4,11 +4,9 @@ from packaging import version
 from unittest import mock
 
 import tensorflow as tf
-import larq_zoo as lqz
+import larq as lq
 from tensorflow.python.eager import context
 
-sys.modules["importlib.metadata"] = mock.MagicMock()
-sys.modules["importlib_metadata"] = mock.MagicMock()
 sys.modules["larq_compute_engine.mlir._tf_tfl_flatbuffer"] = mock.MagicMock()
 sys.modules[
     "larq_compute_engine.tflite.python.interpreter_wrapper_lite"
@@ -22,17 +20,59 @@ from larq_compute_engine.mlir._tf_tfl_flatbuffer import (
 )
 
 
+def get_test_model():
+    """Model taken from https://docs.larq.dev/larq/tutorials/mnist/#create-the-model."""
+
+    # All quantized layers except the first will use the same options
+    kwargs = {
+        "input_quantizer": "ste_sign",
+        "kernel_quantizer": "ste_sign",
+        "kernel_constraint": "weight_clip",
+    }
+
+    model = tf.keras.models.Sequential()
+
+    # In the first layer we only quantize the weights and not the input
+    model.add(
+        lq.layers.QuantConv2D(
+            32,
+            (3, 3),
+            kernel_quantizer="ste_sign",
+            kernel_constraint="weight_clip",
+            use_bias=False,
+            input_shape=(28, 28, 1),
+        )
+    )
+    model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+    model.add(tf.keras.layers.BatchNormalization(scale=False))
+
+    model.add(lq.layers.QuantConv2D(64, (3, 3), use_bias=False, **kwargs))
+    model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+    model.add(tf.keras.layers.BatchNormalization(scale=False))
+
+    model.add(lq.layers.QuantConv2D(64, (3, 3), use_bias=False, **kwargs))
+    model.add(tf.keras.layers.BatchNormalization(scale=False))
+    model.add(tf.keras.layers.Flatten())
+
+    model.add(lq.layers.QuantDense(64, use_bias=False, **kwargs))
+    model.add(tf.keras.layers.BatchNormalization(scale=False))
+    model.add(lq.layers.QuantDense(10, use_bias=False, **kwargs))
+    model.add(tf.keras.layers.BatchNormalization(scale=False))
+    model.add(tf.keras.layers.Activation("softmax"))
+    return model
+
+
 class TestConverter(unittest.TestCase):
-    def test_larq_zoo_models(self):
+    def test_model(self):
         with context.eager_mode():
-            model = lqz.sota.QuickNet(weights=None)
+            model = get_test_model()
             convert_keras_model(model)
         if version.parse(tf.__version__) < version.parse("2.2"):
             mocked_graphdef_converter.assert_called_once_with(
                 mock.ANY,
-                ["input_1"],
+                ["quant_conv2d_input"],
                 ["DT_FLOAT"],
-                [[1, 224, 224, 3]],
+                [[1, 28, 28, 1]],
                 ["Identity"],
                 False,
                 "arm",
@@ -49,7 +89,7 @@ class TestConverter(unittest.TestCase):
 
     def test_target_arg(self):
         with context.eager_mode():
-            model = lqz.sota.QuickNet(weights=None)
+            model = get_test_model()
 
             # These should work
             convert_keras_model(model, target="arm")

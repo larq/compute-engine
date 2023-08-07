@@ -10,7 +10,7 @@ mlir::Type SetBatchSize(mlir::Type type) {
   auto tensor_type = type.dyn_cast<mlir::TensorType>();
   if (tensor_type && tensor_type.hasRank()) {
     auto shape = tensor_type.getShape();
-    if (shape.size() > 0 && shape[0] == ShapedType::kDynamicSize) {
+    if (shape.size() > 0 && shape[0] == ShapedType::kDynamic) {
       // Create a new shape but set the first dimension to 1
       llvm::SmallVector<int64_t, 4> shape_new(shape.begin(), shape.end());
       shape_new[0] = 1;

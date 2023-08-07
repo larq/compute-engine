@@ -68,7 +68,7 @@ Status GetNumInputs(mlir::OwningOpRef<mlir::ModuleOp>* module,
   auto input_names = input_attr.cast<mlir::StringAttr>().getValue();
   input_names.split(function_input_names, ",");
   *num_inputs = function_input_names.size();
-  return Status::OK();
+  return OkStatus();
 }
 
 pybind11::bytes ConvertMLIRModuleToTFLiteFlatBuffer(

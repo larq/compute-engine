@@ -5,7 +5,6 @@ import tempfile
 from packaging import version
 
 import larq as lq
-import larq_zoo as lqz
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -16,6 +15,8 @@ from larq_compute_engine.mlir.python.converter import (
     convert_saved_model,
 )
 from larq_compute_engine.tflite.python.interpreter import Interpreter
+
+from preprocess import preprocess_image_tensor, IMAGE_SIZE
 
 
 def convert_keras_model_as_saved_model(model, **kwargs):
@@ -144,7 +145,13 @@ def toy_model_int8(**kwargs):
 
 
 def preprocess(data):
-    return lqz.preprocess_input(data["image"]), data["label"]
+    image = data["image"]
+    if len(image.shape) != 3:
+        raise ValueError("Input must be of size [height, width, C>0]")
+    result = preprocess_image_tensor(tf.convert_to_tensor(image), image_size=IMAGE_SIZE)
+    if isinstance(image, np.ndarray):
+        return tf.keras.backend.get_value(result)
+    return result, data["label"]
 
 
 def assert_model_output(model_lce, inputs, outputs, rtol, atol):
@@ -185,7 +192,6 @@ def tf_where_binary_quantizer(x):
             toy_model_sequential, binary_quantizer=tf_where_binary_quantizer
         ),
         toy_model_int8,
-        lqz.sota.QuickNetSmall,
     ],
 )
 def test_simple_model(dataset, conversion_function, model_cls):
@@ -194,20 +200,15 @@ def test_simple_model(dataset, conversion_function, model_cls):
     # For the untrained models, do a very small amount of training so that the
     # batch norm stats (and, less importantly, the weights) have sensible
     # values.
-    if model_cls != lqz.sota.QuickNetSmall:
-        model.compile(
-            optimizer=tf.keras.optimizers.Adam(1e-4),
-            loss="sparse_categorical_crossentropy",
-        )
-        model.fit(dataset, epochs=1)
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(1e-4),
+        loss="sparse_categorical_crossentropy",
+    )
+    model.fit(dataset, epochs=1)
 
     model_lce = conversion_function(model)
 
-    if model_cls == lqz.sota.QuickNetSmall:
-        # Since QuickNetSmall is a deep model we are more tolerant of error.
-        rtol = 0.05
-        atol = 0.2
-    elif model_cls == toy_model_int8:
+    if model_cls == toy_model_int8:
         # 0.025 atol is chosen because it allows an off-by-one error in the int8
         # model (with +-3 scales) but not off-by-two.
         rtol = 0.01
