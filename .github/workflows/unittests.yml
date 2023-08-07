@@ -106,7 +106,7 @@ jobs:
         protobuf-version: [3.19.6]
         include:
           - tf-version: 2.13.0
-            python-version: 3.8
+            python-version: 3.11
             flatbuffers-version: 23.1.21
             protobuf-version: 4.23.4
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
