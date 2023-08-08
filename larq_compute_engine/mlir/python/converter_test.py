@@ -1,6 +1,5 @@
 import sys
 import unittest
-from packaging import version
 from unittest import mock
 
 import tensorflow as tf
@@ -67,21 +66,9 @@ class TestConverter(unittest.TestCase):
         with context.eager_mode():
             model = get_test_model()
             convert_keras_model(model)
-        if version.parse(tf.__version__) < version.parse("2.2"):
-            mocked_graphdef_converter.assert_called_once_with(
-                mock.ANY,
-                ["quant_conv2d_input"],
-                ["DT_FLOAT"],
-                [[1, 28, 28, 1]],
-                ["Identity"],
-                False,
-                "arm",
-                None,
-            )
-        else:
-            mocked_saved_model_converter.assert_called_once_with(
-                mock.ANY, ["serve"], ["serving_default"], 1, "arm", None
-            )
+        mocked_saved_model_converter.assert_called_once_with(
+            mock.ANY, ["serve"], ["serving_default"], 1, "arm", None
+        )
 
     def test_wrong_arg(self):
         with self.assertRaises(ValueError):
