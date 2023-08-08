@@ -1,12 +1,13 @@
-from typing import Iterator, List, Tuple, Union, Optional
+from collections.abc import Iterator
+from typing import Union, Optional
 
 import numpy as np
 from tqdm import tqdm
 
-Data = Union[np.ndarray, List[np.ndarray]]
+Data = Union[np.ndarray, list[np.ndarray]]
 
 
-def data_generator(x: Union[Data, Iterator[Data]]) -> Iterator[List[np.ndarray]]:
+def data_generator(x: Union[Data, Iterator[Data]]) -> Iterator[list[np.ndarray]]:
     if isinstance(x, np.ndarray):
         for inputs in x:
             yield [np.expand_dims(inputs, axis=0)]
@@ -36,17 +37,17 @@ class InterpreterBase:
         return self.interpreter.input_types
 
     @property
-    def input_shapes(self) -> List[Tuple[int]]:
+    def input_shapes(self) -> list[tuple[int]]:
         """Returns a list of input shapes."""
         return self.interpreter.input_shapes
 
     @property
-    def input_scales(self) -> List[Optional[Union[float, List[float]]]]:
+    def input_scales(self) -> list[Optional[Union[float, list[float]]]]:
         """Returns a list of input scales."""
         return self.interpreter.input_scales
 
     @property
-    def input_zero_points(self) -> List[Optional[int]]:
+    def input_zero_points(self) -> list[Optional[int]]:
         """Returns a list of input zero points."""
         return self.interpreter.input_zero_points
 
@@ -56,17 +57,17 @@ class InterpreterBase:
         return self.interpreter.output_types
 
     @property
-    def output_shapes(self) -> List[Tuple[int]]:
+    def output_shapes(self) -> list[tuple[int]]:
         """Returns a list of output shapes."""
         return self.interpreter.output_shapes
 
     @property
-    def output_scales(self) -> List[Optional[Union[float, List[float]]]]:
+    def output_scales(self) -> list[Optional[Union[float, list[float]]]]:
         """Returns a list of input scales."""
         return self.interpreter.output_scales
 
     @property
-    def output_zero_points(self) -> List[Optional[int]]:
+    def output_zero_points(self) -> list[Optional[int]]:
         """Returns a list of input zero points."""
         return self.interpreter.output_zero_points
 

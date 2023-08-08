@@ -1,6 +1,6 @@
 import os
 import warnings
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 import tensorflow as tf
 import tempfile
 
@@ -97,7 +97,7 @@ def convert_saved_model(
     inference_input_type: tf.DType = tf.float32,
     inference_output_type: tf.DType = tf.float32,
     target: str = "arm",
-    experimental_default_int8_range: Optional[Tuple[float, float]] = None,
+    experimental_default_int8_range: Optional[tuple[float, float]] = None,
 ) -> bytes:
     """Converts a SavedModel to TFLite flatbuffer.
 
@@ -169,7 +169,7 @@ def convert_keras_model(
     inference_input_type: tf.DType = tf.float32,
     inference_output_type: tf.DType = tf.float32,
     target: str = "arm",
-    experimental_default_int8_range: Optional[Tuple[float, float]] = None,
+    experimental_default_int8_range: Optional[tuple[float, float]] = None,
 ) -> bytes:
     """Converts a Keras model to TFLite flatbuffer.
 
