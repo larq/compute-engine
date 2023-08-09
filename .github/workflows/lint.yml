@@ -24,7 +24,7 @@ jobs:
       - name: Run PyFlakes
         run: pyflakes larq_compute_engine
       - name: Black code style
-        run: black larq_compute_engine --check --target-version py36
+        run: black larq_compute_engine --check --target-version py39
       - name: clang-format lint
         uses: DoozyX/clang-format-lint-action@v0.16
         with:

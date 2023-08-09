@@ -2,7 +2,6 @@ import functools
 import os
 import sys
 import tempfile
-from packaging import version
 
 import larq as lq
 import numpy as np
@@ -238,9 +237,6 @@ def test_simple_model(dataset, conversion_function, model_cls):
 def test_int8_input_output(
     conversion_function, model_cls, inference_input_type, inference_output_type
 ):
-    if version.parse(tf.__version__) < version.parse("2.2"):
-        pytest.skip("TensorFlow 2.2 or newer is required for saved model conversion.")
-
     model_lce = conversion_function(
         model_cls(),
         inference_input_type=inference_input_type,

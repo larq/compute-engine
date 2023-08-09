@@ -1,7 +1,6 @@
 import os
-from packaging import version
 import warnings
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 import tensorflow as tf
 import tempfile
 
@@ -23,18 +22,17 @@ from tensorflow.python.keras.saving import saving_utils
 
 def concrete_function_from_keras_model(model):
     input_signature = None
-    if version.parse(tf.__version__) >= version.parse("2.1"):
-        # If the model's call is not a `tf.function`, then we need to first get its
-        # input signature from `model_input_signature` method. We can't directly
-        # call `trace_model_call` because otherwise the batch dimension is set
-        # to None.
-        # Once we have better support for dynamic shapes, we can remove this.
-        if not isinstance(model.call, def_function.Function):
-            # Pass `keep_original_batch_size=True` will ensure that we get an input
-            # signature including the batch dimension specified by the user.
-            input_signature = saving_utils.model_input_signature(
-                model, keep_original_batch_size=True
-            )
+    # If the model's call is not a `tf.function`, then we need to first get its
+    # input signature from `model_input_signature` method. We can't directly
+    # call `trace_model_call` because otherwise the batch dimension is set
+    # to None.
+    # Once we have better support for dynamic shapes, we can remove this.
+    if not isinstance(model.call, def_function.Function):
+        # Pass `keep_original_batch_size=True` will ensure that we get an input
+        # signature including the batch dimension specified by the user.
+        input_signature = saving_utils.model_input_signature(
+            model, keep_original_batch_size=True
+        )
 
     func = saving_utils.trace_model_call(model, input_signature)
     return func.get_concrete_function()
@@ -99,7 +97,7 @@ def convert_saved_model(
     inference_input_type: tf.DType = tf.float32,
     inference_output_type: tf.DType = tf.float32,
     target: str = "arm",
-    experimental_default_int8_range: Optional[Tuple[float, float]] = None,
+    experimental_default_int8_range: Optional[tuple[float, float]] = None,
 ) -> bytes:
     """Converts a SavedModel to TFLite flatbuffer.
 
@@ -125,10 +123,6 @@ def convert_saved_model(
     # Returns
         The converted data in serialized format.
     """
-    if version.parse(tf.__version__) < version.parse("2.2"):
-        raise RuntimeError(
-            "TensorFlow 2.2 or newer is required for saved model conversion."
-        )
     _validate_options(
         inference_input_type=inference_input_type,
         inference_output_type=inference_output_type,
@@ -175,7 +169,7 @@ def convert_keras_model(
     inference_input_type: tf.DType = tf.float32,
     inference_output_type: tf.DType = tf.float32,
     target: str = "arm",
-    experimental_default_int8_range: Optional[Tuple[float, float]] = None,
+    experimental_default_int8_range: Optional[tuple[float, float]] = None,
 ) -> bytes:
     """Converts a Keras model to TFLite flatbuffer.
 
@@ -236,10 +230,7 @@ def convert_keras_model(
         )
 
     func = concrete_function_from_keras_model(model)
-    if version.parse(tf.__version__) >= version.parse("1.15"):
-        frozen_func = convert_variables_to_constants_v2(func, lower_control_flow=False)
-    else:
-        frozen_func = convert_variables_to_constants_v2(func)
+    frozen_func = convert_variables_to_constants_v2(func, lower_control_flow=False)
     input_tensors = [
         tensor for tensor in frozen_func.inputs if tensor.dtype != tf.dtypes.resource
     ]
