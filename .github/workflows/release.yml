@@ -137,7 +137,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9, "3.10"]
+        python-version: [3.7, 3.8, 3.9, "3.10", 3.11]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -180,7 +180,7 @@ jobs:
     runs-on: macos-11
     strategy:
       matrix:
-        python-version: [3.8, 3.9, "3.10"]
+        python-version: [3.8, 3.9, "3.10", 3.11]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -223,7 +223,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9, "3.10"]
+        python-version: [3.7, 3.8, 3.9, "3.10", 3.11]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -245,7 +245,7 @@ jobs:
             -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-credentials.json \
             -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/gcloud-credentials.json:ro \
             -v ${PWD}:/compute-engine -w /compute-engine \
-            tensorflow/build:2.10-python${{ matrix.python-version }} \
+            tensorflow/build:2.13-python${{ matrix.python-version }} \
             .github/tools/release_linux.sh
 
           sudo apt-get -y -qq install patchelf --no-install-recommends
@@ -266,7 +266,7 @@ jobs:
     runs-on: windows-2019
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9, "3.10"]
+        python-version: [3.7, 3.8, 3.9, "3.10", 3.11]
       fail-fast: false
     steps:
       - name: Configure Pagefile
