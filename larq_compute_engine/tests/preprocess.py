@@ -1,4 +1,5 @@
 """From larq_zoo/training/data.py"""
+
 import tensorflow as tf
 
 IMAGE_SIZE = 224
