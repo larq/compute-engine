@@ -86,7 +86,7 @@ jobs:
         if: github.ref != 'refs/heads/main'
         shell: bash
       - name: Install pip dependencies
-        run: pip install tensorflow-cpu~=2.16.1 larq~=0.13 pytest tensorflow_datasets~=4.9 flatbuffers==24.3.25 tqdm --no-cache-dir
+        run: pip install tensorflow~=2.16.1 tf-keras==2.16.0 larq~=0.13 pytest tensorflow_datasets~=4.9 flatbuffers==24.3.25 tqdm --no-cache-dir
       - name: Run Interpreter test
         run: bazelisk test larq_compute_engine/tflite/tests:interpreter_test --test_output=all
       - name: Run FileCheck tests
@@ -131,7 +131,7 @@ jobs:
       - name: Install other dependencies
         run: pip install larq~=0.13.3 packaging tqdm --no-cache-dir
       - name: Run Converter test
-        run: PYTHONPATH=./ python larq_compute_engine/mlir/python/converter_test.py
+        run: TF_USE_LEGACY_KERAS=1 PYTHONPATH=./ python larq_compute_engine/mlir/python/converter_test.py
 
   Android_AAR:
     runs-on: ubuntu-latest
