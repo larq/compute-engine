@@ -86,7 +86,7 @@ jobs:
         if: github.ref != 'refs/heads/main'
         shell: bash
       - name: Install pip dependencies
-        run: pip install tensorflow-cpu~=2.13.0 larq~=0.13 pytest tensorflow_datasets~=4.9 flatbuffers==23.1.21 tqdm --no-cache-dir
+        run: pip install tensorflow-cpu~=2.16.1 larq~=0.13 pytest tensorflow_datasets~=4.9 flatbuffers==24.3.25 tqdm --no-cache-dir
       - name: Run Interpreter test
         run: bazelisk test larq_compute_engine/tflite/tests:interpreter_test --test_output=all
       - name: Run FileCheck tests
@@ -109,6 +109,10 @@ jobs:
             python-version: 3.11
             flatbuffers-version: 23.1.21
             protobuf-version: 4.23.4
+          - tf-version: 2.16.1
+            python-version: 3.11
+            flatbuffers-version: 24.3.25
+            protobuf-version: 4.25.3
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
       - uses: actions/checkout@v4
@@ -117,6 +121,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install TensorFlow
         run: pip install tensorflow==${{matrix.tf-version}} --no-cache-dir
+      - name: Install legacy tf-keras
+        if: matrix.tf-version == '2.16.1'
+        run: pip install tf-keras==2.16.0
       - name: Install flatbuffers
         run: pip install flatbuffers==${{matrix.flatbuffers-version}} --no-cache-dir
       - name: Install protobuf
