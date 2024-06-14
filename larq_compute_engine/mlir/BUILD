@@ -1,5 +1,5 @@
-load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension", "tf_cc_binary")
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension", "tf_cc_binary")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -470,8 +470,8 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_config",
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_passes",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_passes",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_saved_model_passes",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow/transforms:tensorflow_passes",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow/transforms:tf_saved_model_passes",
     ],
 )
 
