@@ -366,9 +366,6 @@ build:elinux_armhf --copt -mfp16-format=ieee
 try-import %workspace%/.tf_configure.bazelrc
 try-import %workspace%/xla_configure.bazelrc
 
-# Load rc file with user-specific options.
-try-import %workspace%/.bazelrc.user
-
 # Here are bazelrc configs for release builds
 # Build TensorFlow v2.
 test:release_base --test_size_filters=small,medium
