@@ -77,13 +77,9 @@ jobs:
           ./configure.py
           echo -e 'build --distinct_host_configuration=false' >> .bazelrc.user
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu' >> .bazelrc.user
+            echo -e 'build --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
-        shell: bash
-      - name: Set bazel cache
-        run: echo -e 'build --remote_upload_local_results=false' >> .bazelrc.user
-        if: github.ref != 'refs/heads/main'
         shell: bash
       - name: Install pip dependencies
         run: pip install tensorflow~=2.16.1 tf-keras==2.16.0 larq~=0.13 pytest tensorflow_datasets~=4.9 flatbuffers==24.3.25 tqdm --no-cache-dir
