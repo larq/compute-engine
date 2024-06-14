@@ -1,5 +1,6 @@
 load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension")
 load("@org_tensorflow//tensorflow/lite:build_def.bzl", "tflite_linkopts")
+load("@pypi//:requirements.bzl", "requirement")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -34,6 +35,9 @@ py_library(
     srcs = [
         "__init__.py",
         "interpreter_base.py",
+    ],
+    deps = [
+        requirement("numpy"),
     ],
 )
 

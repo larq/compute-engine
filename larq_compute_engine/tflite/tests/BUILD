@@ -1,3 +1,5 @@
+load("@pypi//:requirements.bzl", "requirement")
+
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],  # Apache 2.0
@@ -80,6 +82,7 @@ py_test(
     srcs = ["interpreter_test.py"],
     deps = [
         "//larq_compute_engine/tflite/python:interpreter",
+        requirement("numpy"),
     ],
 )
 
