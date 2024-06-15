@@ -37,7 +37,7 @@ multiclass QuantDequantPatterns<Op SelectOp> {
                             $select_op,
                             $select_op,
                             /*use 32bit*/ConstBoolAttrFalse)))),
-            [], (addBenefit 100)>;
+            []>;
   def : Pat<(SelectOp:$select_op
                 $cond,
                 (Arith_ConstantOp ConstantValue<"-1.0f">),
@@ -51,7 +51,7 @@ multiclass QuantDequantPatterns<Op SelectOp> {
                             $select_op,
                             $select_op,
                             /*use 32bit*/ConstBoolAttrFalse)))),
-            [], (addBenefit 100)>;
+            []>;
 }
 foreach SelectOp = [TF_SelectOp, TF_SelectV2Op]<Op> in
   defm : QuantDequantPatterns<SelectOp>;
@@ -59,9 +59,9 @@ foreach SelectOp = [TF_SelectOp, TF_SelectV2Op]<Op> in
 // A fallback for the old version of `ste_sign` that uses a specific `tf.sign`
 // based implementation of `larq.math.sign`.
 def : Pat<(TF_SignOp (TF_AddV2Op (TF_SignOp $arg), $c)),
-          (LQ_DequantizeOp (LQ_QuantizeOp $arg)), [], (addBenefit 100)>;
+          (LQ_DequantizeOp (LQ_QuantizeOp $arg)), []>;
 def : Pat<(TF_SignOp (TF_AddV2Op $c, (TF_SignOp $arg))),
-          (LQ_DequantizeOp (LQ_QuantizeOp $arg)), [], (addBenefit 100)>;
+          (LQ_DequantizeOp (LQ_QuantizeOp $arg)), []>;
 
 // Copied from legalize_patterns.td
 class I32VectorElementsAttr<int len> : ElementsAttrBase<
@@ -123,8 +123,7 @@ class PrepareBConvPadValue0Pat<ConstantStrAttr padding_type> :
               ExtractI32At<1>:$strides,
               ExtractI32At<2>:$strides),
           [(BinaryFilter $filter),
-           (ValidFilterShape $dequantized_input, $filter_op)],
-          (addBenefit 90)>;
+           (ValidFilterShape $dequantized_input, $filter_op)]>;
 def : PrepareBConvPadValue0Pat<TFL_PAD_Valid>;
 
 def ConstFloatValueIsOne : Constraint<
@@ -166,5 +165,4 @@ def : Pat<(TF_Conv2DOp:$output
           [(BinaryFilter $filter),
            (ConstFloatValueIsOne $pad_values),
            (SamePadding $paddings, $input, $output, $strides),
-           (ValidFilterShape $dequantized_input, $filter_op)],
-          (addBenefit 90)>;
+           (ValidFilterShape $dequantized_input, $filter_op)]>;

@@ -3,6 +3,7 @@
 
 #include "mlir/Dialect/Quant/QuantTypes.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 
 // clang-format off
 #include "larq_compute_engine/mlir/ir/lce_dialect.h.inc"

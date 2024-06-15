@@ -18,8 +18,7 @@ def : Pat<(LQ_QuantizeOp
                   $input,
                   (Arith_ConstantOp ConstantValue<"0.0f">))),
           (LQ_QuantizeOp $input),
-          [(HasOneUse $ge_op)],
-          (addBenefit 150)>;
+          [(HasOneUse $ge_op)]>;
 
 def : Pat<(LQ_QuantizeOp
               (TFL_GreaterEqualOp:$ge_op
@@ -27,15 +26,13 @@ def : Pat<(LQ_QuantizeOp
                   $threshold)),
           (LQ_QuantizeOp
               (TFL_SubOp $input, $threshold, TFL_AF_None)),
-          [(HasOneUse $ge_op)],
-          (addBenefit 100)>;
+          [(HasOneUse $ge_op)]>;
 
 def : Pat<(LQ_QuantizeOp
               (TFL_LessEqualOp:$ge_op $lhs, $rhs)),
           (LQ_QuantizeOp
               (TFL_GreaterEqualOp $rhs, $lhs)),
-          [(HasOneUse $ge_op)],
-          (addBenefit 100)>;
+          [(HasOneUse $ge_op)]>;
 
 // TODO: Check shapes before fusing
 multiclass FuseAddOrSubWithBConv2D<Op binaryOp> {
@@ -70,7 +67,7 @@ multiclass FuseAddOrSubWithBConv2D<Op binaryOp> {
                 $padding,
                 $stride_height,
                 $stride_width),
-            [(HasOneUse $output)], (addBenefit 100)>;
+            [(HasOneUse $output)]>;
 }
 foreach binaryOp = [TFL_AddOp, TFL_SubOp] in
   defm : FuseAddOrSubWithBConv2D<binaryOp>;
@@ -109,7 +106,7 @@ multiclass FuseMulOrDivWithBConv2D<Op binaryOp> {
                 $padding,
                 $stride_height,
                 $stride_width),
-            [(HasOneUse $conv_output)], (addBenefit 100)>;
+            [(HasOneUse $conv_output)]>;
 }
 foreach binaryOp = [TFL_DivOp, TFL_MulOp] in
   defm : FuseMulOrDivWithBConv2D<binaryOp>;
@@ -146,7 +143,7 @@ multiclass FuseActFnIntoConvOpPat<Op ActFnOp, ConstantStrAttr ActFnAttr> {
                 $padding,
                 $stride_height,
                 $stride_width),
-            [(HasOneUse $conv_output)], (addBenefit 100)>;
+            [(HasOneUse $conv_output)]>;
   def : Pat<(ActFnOp
                 (LQ_Bconv2dOp:$conv_output
                     $input,
@@ -176,7 +173,7 @@ multiclass FuseActFnIntoConvOpPat<Op ActFnOp, ConstantStrAttr ActFnAttr> {
                 $padding,
                 $stride_height,
                 $stride_width),
-            [(HasOneUse $conv_output)], (addBenefit 100)>;
+            [(HasOneUse $conv_output)]>;
 }
 foreach actFnPair = [[TFL_ReluOp, TFL_AF_Relu],
                      [TFL_Relu1Op, TFL_AF_Relu1],

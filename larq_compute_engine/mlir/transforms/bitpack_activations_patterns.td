@@ -55,6 +55,6 @@ class WriteBitpackedActivationsPat<ConstantStrAttr padding_type, string pad_valu
               padding_type,
               $stride_height,
               $stride_width),
-          [(HasOneUse $output)], (addBenefit 10)>;
+          [(HasOneUse $output)]>;
 def : WriteBitpackedActivationsPat<TFL_PAD_Valid, "0">;
 def : WriteBitpackedActivationsPat<TFL_PAD_Same, "1">;

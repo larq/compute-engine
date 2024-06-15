@@ -43,8 +43,7 @@ def : Pat<(TFL_Conv2DOp:$conv_output
           [(HasOneUse $pad_output),
            (NoBatchAndChannelPadding $paddings),
            (SamePaddingHeight $paddings, $input, $conv_output, $stride_h),
-           (SamePaddingWidth $paddings, $input, $conv_output, $stride_w)],
-          (addBenefit 100)>;
+           (SamePaddingWidth $paddings, $input, $conv_output, $stride_w)]>;
 
 
 // PadV2 > Conv2D
@@ -74,8 +73,7 @@ def : Pat<(TFL_Conv2DOp:$conv_output
            (ConstFloatValueIs<"0.0"> $pad_values),
            (NoBatchAndChannelPadding $paddings),
            (SamePaddingHeight $paddings, $input, $conv_output, $stride_h),
-           (SamePaddingWidth $paddings, $input, $conv_output, $stride_w)],
-          (addBenefit 100)>;
+           (SamePaddingWidth $paddings, $input, $conv_output, $stride_w)]>;
 
 // Pad > DepthwiseConv2D
 def : Pat<(TFL_DepthwiseConv2DOp:$conv_output
@@ -104,8 +102,7 @@ def : Pat<(TFL_DepthwiseConv2DOp:$conv_output
           [(HasOneUse $pad_output),
            (NoBatchAndChannelPadding $paddings),
            (SamePaddingHeight $paddings, $input, $conv_output, $stride_h),
-           (SamePaddingWidth $paddings, $input, $conv_output, $stride_w)],
-          (addBenefit 100)>;
+           (SamePaddingWidth $paddings, $input, $conv_output, $stride_w)]>;
 
 // PadV2 > DepthwiseConv2D
 def : Pat<(TFL_DepthwiseConv2DOp:$conv_output
@@ -136,5 +133,4 @@ def : Pat<(TFL_DepthwiseConv2DOp:$conv_output
            (ConstFloatValueIs<"0.0"> $pad_values),
            (NoBatchAndChannelPadding $paddings),
            (SamePaddingHeight $paddings, $input, $conv_output, $stride_h),
-           (SamePaddingWidth $paddings, $input, $conv_output, $stride_w)],
-          (addBenefit 100)>;
+           (SamePaddingWidth $paddings, $input, $conv_output, $stride_w)]>;
