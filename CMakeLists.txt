@@ -81,6 +81,11 @@ if (COMPILE_BENCHMARK)
     get_directory_property(TFLITE_BENCHMARK_SRCS DIRECTORY ${TFLITE_SOURCE_DIR}/tools/benchmark DEFINITION TFLITE_BENCHMARK_SRCS)
     list(FILTER TFLITE_BENCHMARK_SRCS EXCLUDE REGEX benchmark_main.cc)
 
+    # The TSL dir is included in the tensorflow CMakeLists.txt but because we manually refer to those source files here we have to explicitly list this include directory again.
+    set(TSL_SOURCE_DIR "${TENSORFLOW_SOURCE_DIR}/third_party/xla/third_party/tsl")
+    include_directories(
+      ${TSL_SOURCE_DIR}
+    )
     add_executable(lce_benchmark_model
             ${TFLITE_BENCHMARK_SRCS}
             ${LCE_BENCHMARK_SRCS} ${LCE_BENCHMARK_HRDS}
