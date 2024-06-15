@@ -1,6 +1,7 @@
 load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension")
 load("@org_tensorflow//tensorflow/lite:build_def.bzl", "tflite_linkopts")
-load("@pypi//:requirements.bzl", "requirement")
+load("@pypi//:requirements.bzl", tf_requirement = "requirement")
+load("@pypi_lce//:requirements.bzl", lce_requirement = "requirement")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -37,7 +38,8 @@ py_library(
         "interpreter_base.py",
     ],
     deps = [
-        requirement("numpy"),
+        tf_requirement("numpy"),
+        lce_requirement("tqdm"),
     ],
 )
 

@@ -85,9 +85,19 @@ pip_parse(
     requirements = "@org_tensorflow//:requirements_lock_" + TF_PYTHON_VERSION.replace(".", "_") + ".txt",
 )
 
-load("@pypi//:requirements.bzl", "install_deps")
+load("@pypi//:requirements.bzl", tf_install_deps = "install_deps")
 
-install_deps()
+tf_install_deps()
+
+pip_parse(
+    name = "pypi_lce",
+    python_interpreter_target = interpreter,
+    requirements = "//larq_compute_engine:requirements.txt",
+)
+
+load("@pypi_lce//:requirements.bzl", lce_install_deps = "install_deps")
+
+lce_install_deps()
 
 load("@org_tensorflow//tensorflow:workspace3.bzl", "tf_workspace3")
 
