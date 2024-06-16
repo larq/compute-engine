@@ -558,7 +558,7 @@ py_library(
     ],
     deps = [
         ":_tf_tfl_flatbuffer",
-        lce_requirement("tensorflow-cpu"),
+        lce_requirement("tensorflow"),
         lce_requirement("flatbuffers"),
     ],
 )

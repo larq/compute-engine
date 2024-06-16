@@ -10,13 +10,13 @@ absl-py==2.1.0
     #   etils
     #   keras
     #   tensorboard
-    #   tensorflow-cpu
+    #   tensorflow
     #   tensorflow-datasets
     #   tensorflow-metadata
 array-record==0.5.1
     # via tensorflow-datasets
 astunparse==1.6.3
-    # via tensorflow-cpu
+    # via tensorflow
 certifi==2024.6.2
     # via requests
 charset-normalizer==3.3.2
@@ -34,23 +34,23 @@ etils==1.7.0
 exceptiongroup==1.2.1
     # via pytest
 flatbuffers==24.3.25
-    # via tensorflow-cpu
+    # via tensorflow
 fsspec==2024.6.0
     # via etils
 gast==0.5.4
-    # via tensorflow-cpu
+    # via tensorflow
 google-pasta==0.2.0
-    # via tensorflow-cpu
+    # via tensorflow
 googleapis-common-protos==1.63.1
     # via -r larq_compute_engine/requirements.in
 grpcio==1.64.1
     # via
     #   tensorboard
-    #   tensorflow-cpu
+    #   tensorflow
 h5py==3.11.0
     # via
     #   keras
-    #   tensorflow-cpu
+    #   tensorflow
 idna==3.7
     # via requests
 immutabledict==4.2.0
@@ -60,11 +60,11 @@ importlib-resources==6.4.0
 iniconfig==2.0.0
     # via pytest
 keras==3.3.3
-    # via tensorflow-cpu
+    # via tensorflow
 larq==0.13.3
     # via -r larq_compute_engine/requirements.in
 libclang==18.1.1
-    # via tensorflow-cpu
+    # via tensorflow
 markdown==3.6
     # via tensorboard
 markdown-it-py==3.0.0
@@ -76,7 +76,7 @@ mdurl==0.1.2
 ml-dtypes==0.3.2
     # via
     #   keras
-    #   tensorflow-cpu
+    #   tensorflow
 namex==0.0.8
     # via keras
 numpy==1.26.4
@@ -89,17 +89,17 @@ numpy==1.26.4
     #   opt-einsum
     #   pyarrow
     #   tensorboard
-    #   tensorflow-cpu
+    #   tensorflow
     #   tensorflow-datasets
 opt-einsum==3.3.0
-    # via tensorflow-cpu
+    # via tensorflow
 optree==0.11.0
     # via keras
 packaging==24.1
     # via
     #   larq
     #   pytest
-    #   tensorflow-cpu
+    #   tensorflow
 pluggy==1.5.0
     # via pytest
 promise==2.3
@@ -108,7 +108,7 @@ protobuf==3.20.3
     # via
     #   googleapis-common-protos
     #   tensorboard
-    #   tensorflow-cpu
+    #   tensorflow
     #   tensorflow-datasets
     #   tensorflow-metadata
 psutil==5.9.8
@@ -121,7 +121,7 @@ pytest==8.2.2
     # via -r larq_compute_engine/requirements.in
 requests==2.32.3
     # via
-    #   tensorflow-cpu
+    #   tensorflow
     #   tensorflow-datasets
 rich==13.7.1
     # via keras
@@ -133,25 +133,29 @@ six==1.16.0
     #   google-pasta
     #   promise
     #   tensorboard
-    #   tensorflow-cpu
+    #   tensorflow
 tensorboard==2.16.2
-    # via tensorflow-cpu
+    # via tensorflow
 tensorboard-data-server==0.7.2
     # via tensorboard
-tensorflow-cpu==2.16.1
-    # via -r larq_compute_engine/requirements.in
+tensorflow==2.16.1
+    # via
+    #   -r larq_compute_engine/requirements.in
+    #   tf-keras
 tensorflow-datasets==4.9.6
     # via -r larq_compute_engine/requirements.in
 tensorflow-io-gcs-filesystem==0.37.0
-    # via tensorflow-cpu
+    # via tensorflow
 tensorflow-metadata==1.15.0
     # via tensorflow-datasets
 termcolor==2.4.0
     # via
-    #   tensorflow-cpu
+    #   tensorflow
     #   tensorflow-datasets
 terminaltables==3.1.10
     # via larq
+tf-keras==2.16.0
+    # via -r larq_compute_engine/requirements.in
 toml==0.10.2
     # via tensorflow-datasets
 tomli==2.0.1
@@ -166,7 +170,7 @@ typing-extensions==4.12.2
     #   etils
     #   optree
     #   simple-parsing
-    #   tensorflow-cpu
+    #   tensorflow
 urllib3==2.2.1
     # via requests
 werkzeug==3.0.3
@@ -175,7 +179,7 @@ wheel==0.43.0
     # via astunparse
 wrapt==1.16.0
     # via
-    #   tensorflow-cpu
+    #   tensorflow
     #   tensorflow-datasets
 zipp==3.19.2
     # via etils
@@ -184,4 +188,4 @@ zipp==3.19.2
 setuptools==70.0.0
     # via
     #   tensorboard
-    #   tensorflow-cpu
+    #   tensorflow

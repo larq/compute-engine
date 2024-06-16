@@ -81,7 +81,7 @@ jobs:
       - name: Run FileCheck tests
         run: bazelisk test larq_compute_engine/mlir/tests:all --test_output=all
       - name: Run End2End tests
-        run: bazelisk test larq_compute_engine/tests:end2end_test --test_output=all
+        run: bazelisk test larq_compute_engine/tests:end2end_test --test_output=all --test_env=TF_USE_LEGACY_KERAS=1
       - name: Run Strip dequantize op tests
         run: bazelisk test larq_compute_engine/tests:strip_lcedequantize_test --test_output=all
 

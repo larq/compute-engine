@@ -1,4 +1,5 @@
-tensorflow-cpu
+tensorflow==2.16.1
+tf-keras==2.16.0
 tensorflow-datasets
 larq
 tqdm

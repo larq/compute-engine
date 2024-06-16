@@ -22,8 +22,9 @@ py_test(
         tf_requirement("numpy"),
         lce_requirement("larq"),
         lce_requirement("pytest"),
-        lce_requirement("tensorflow-cpu"),
+        lce_requirement("tensorflow"),
         lce_requirement("tensorflow_datasets"),
+        lce_requirement("tf-keras"),
     ],
 )
 
