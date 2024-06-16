@@ -491,8 +491,8 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/mlir/lite/metrics:error_collector",
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_config",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:error_util",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_saved_model_freeze_variables",
-        "@org_tensorflow//tensorflow/tsl/platform:statusor",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow/transforms:tf_saved_model_freeze_variables",
+        "@local_tsl//tsl/platform:statusor",
     ],
 )
 
@@ -535,7 +535,7 @@ pybind_extension(
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:export_graphdef",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:import_utils",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:mlir_roundtrip_flags",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_dialect_passes",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow/transforms:tf_dialect_passes",
         "@org_tensorflow//tensorflow/core:ops",
         "@pybind11",
     ],

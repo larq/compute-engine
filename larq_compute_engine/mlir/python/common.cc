@@ -76,7 +76,7 @@ pybind11::bytes ConvertMLIRModuleToTFLiteFlatBuffer(
     const LCETarget target, const pybind11::object& default_ranges,
     const std::unordered_set<std::string>& saved_model_tags,
     llvm::StringRef saved_model_dir,
-    llvm::Optional<tensorflow::Session*> session, const int num_inputs,
+    std::optional<tensorflow::Session*> session, const int num_inputs,
     const bool should_quantize, const bool mark_as_post_training_quant) {
   mlir::quant::QuantizationSpecs quant_specs;
   if (should_quantize) {
@@ -86,9 +86,9 @@ pybind11::bytes ConvertMLIRModuleToTFLiteFlatBuffer(
     // we do that by default.
     quant_specs.inference_type = tensorflow::DT_QINT8;
     for (int i = 0; i < num_inputs; ++i) {
-      // Input inference type is DT_FLOAT, so set the default input ranges
-      // to llvm::None.
-      quant_specs.input_ranges.push_back({llvm::None, llvm::None});
+      // Input inference type is DT_FLOAT, so set the default input range to
+      // None.
+      quant_specs.input_ranges.push_back({std::nullopt, std::nullopt});
     }
     if (!default_ranges.is_none()) {
       // When there are no Quantize nodes in the graph then in the

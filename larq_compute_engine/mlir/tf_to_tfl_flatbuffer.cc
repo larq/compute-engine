@@ -11,7 +11,7 @@
 #include "tensorflow/compiler/mlir/tensorflow/transforms/tf_saved_model_freeze_variables.h"
 #include "tensorflow/compiler/mlir/tensorflow/utils/error_util.h"
 #include "tensorflow/core/framework/op.h"
-#include "tensorflow/tsl/platform/statusor.h"
+#include "tsl/platform/statusor.h"
 
 namespace tensorflow {
 namespace {
@@ -60,7 +60,7 @@ Status ConvertTFExecutorToTFLOrFlatbuffer(
     mlir::quant::QuantizationSpecs quant_specs,
     const std::unordered_set<std::string>& saved_model_tags,
     llvm::StringRef saved_model_dir,
-    llvm::Optional<tensorflow::Session*> session, std::string* result) {
+    std::optional<tensorflow::Session*> session, std::string* result) {
   // Explicitly disable dumping Op details on failures.
   module.getContext()->printOpOnDiagnostic(false);
 

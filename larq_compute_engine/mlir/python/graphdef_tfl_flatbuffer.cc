@@ -27,14 +27,13 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
 
   auto target = GetLCETarget(target_str);
 
-  // `ParseInputArrayInfo` requires a type that isn't pybind compatible, so
-  // translate here.
-  std::vector<llvm::Optional<std::vector<int>>> translated_input_shapes;
+  // Convert empty shapes to `None`. We could also do that on the python side.
+  std::vector<std::optional<std::vector<int>>> translated_input_shapes;
   for (auto x : input_shapes) {
     if (x.size() > 0) {
       translated_input_shapes.push_back(x);
     } else {
-      translated_input_shapes.push_back(llvm::None);
+      translated_input_shapes.push_back(std::nullopt);
     }
   }
 
@@ -65,7 +64,7 @@ pybind11::bytes ConvertGraphDefToTFLiteFlatBuffer(
   return ConvertMLIRModuleToTFLiteFlatBuffer(
       &module.value(), context, target, default_ranges,
       /*saved_model_tags=*/{},
-      /*saved_model_dir=*/"", /*session=*/llvm::None, input_arrays.size(),
+      /*saved_model_dir=*/"", /*session=*/std::nullopt, input_arrays.size(),
       should_quantize,
       /*mark_as_post_training_quant=*/false);
 }
