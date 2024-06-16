@@ -1,3 +1,7 @@
+load("@pypi//:requirements.bzl", tf_requirement = "requirement")
+load("@pypi_lce//:requirements.bzl", lce_requirement = "requirement")
+load("//larq_compute_engine/tests:qemu_test.bzl", "lce_qemu_test_suite")
+
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],  # Apache 2.0
@@ -8,8 +12,6 @@ exports_files([
     "test_aarch64_binary.sh",
 ])
 
-load("//larq_compute_engine/tests:qemu_test.bzl", "lce_qemu_test_suite")
-
 py_test(
     name = "end2end_test",
     size = "large",
@@ -17,6 +19,11 @@ py_test(
     deps = [
         "//larq_compute_engine/mlir:converter",
         "//larq_compute_engine/tflite/python:interpreter",
+        tf_requirement("numpy"),
+        lce_requirement("larq"),
+        lce_requirement("pytest"),
+        lce_requirement("tensorflow-cpu"),
+        lce_requirement("tensorflow_datasets"),
     ],
 )
 

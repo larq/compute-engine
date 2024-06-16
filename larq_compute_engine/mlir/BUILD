@@ -1,5 +1,6 @@
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension", "tf_cc_binary")
+load("@pypi_lce//:requirements.bzl", lce_requirement = "requirement")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -486,13 +487,13 @@ cc_library(
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
+        "@local_tsl//tsl/platform:statusor",
         "@org_tensorflow//tensorflow/compiler/mlir:op_or_arg_name_mapper",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
         "@org_tensorflow//tensorflow/compiler/mlir/lite/metrics:error_collector",
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_config",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:error_util",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow/transforms:tf_saved_model_freeze_variables",
-        "@local_tsl//tsl/platform:statusor",
     ],
 )
 
@@ -557,6 +558,8 @@ py_library(
     ],
     deps = [
         ":_tf_tfl_flatbuffer",
+        lce_requirement("tensorflow-cpu"),
+        lce_requirement("flatbuffers"),
     ],
 )
 
