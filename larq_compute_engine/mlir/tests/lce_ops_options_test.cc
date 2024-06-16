@@ -16,9 +16,9 @@ IntegerAttr getIntegerAttr(Builder builder, int value) {
 TEST(LCEOpsSerializationTest, QuantizeTest) {
   MLIRContext context;
   context.getOrLoadDialect<lq::LarqDialect>();
-  auto* op = Operation::create(
-      UnknownLoc::get(&context), OperationName("lq.Quantize", &context),
-      llvm::None, llvm::None, llvm::None, llvm::None, 0);
+  OperationState state(UnknownLoc::get(&context),
+                       OperationName("lq.Quantize", &context));
+  mlir::Operation* op = Operation::create(state);
 
   ASSERT_EQ(cast<lq::QuantizeOp>(op).buildCustomOptions().size(), 0);
 }
@@ -26,9 +26,9 @@ TEST(LCEOpsSerializationTest, QuantizeTest) {
 TEST(LCEOpsSerializationTest, DequantizeTest) {
   MLIRContext context;
   context.getOrLoadDialect<lq::LarqDialect>();
-  auto* op = Operation::create(
-      UnknownLoc::get(&context), OperationName("lq.Dequantize", &context),
-      llvm::None, llvm::None, llvm::None, llvm::None, 0);
+  OperationState state(UnknownLoc::get(&context),
+                       OperationName("lq.Dequantize", &context));
+  mlir::Operation* op = Operation::create(state);
 
   ASSERT_EQ(cast<lq::DequantizeOp>(op).buildCustomOptions().size(), 0);
 }
@@ -37,9 +37,9 @@ TEST(LCEOpsSerializationTest, BConv2dTest) {
   MLIRContext context;
   context.getOrLoadDialect<lq::LarqDialect>();
   Builder builder(&context);
-  auto op = Operation::create(UnknownLoc::get(&context),
-                              OperationName("lq.Bconv2d", &context), llvm::None,
-                              llvm::None, llvm::None, llvm::None, 0);
+  OperationState state(UnknownLoc::get(&context),
+                       OperationName("lq.Bconv2d", &context));
+  mlir::Operation* op = Operation::create(state);
 
   op->setAttr("channels_in", getIntegerAttr(builder, 64));
   op->setAttr("dilation_height_factor", getIntegerAttr(builder, 3));
@@ -69,9 +69,9 @@ TEST(LCEOpsSerializationTest, BMaxPool2dTest) {
   MLIRContext context;
   context.getOrLoadDialect<lq::LarqDialect>();
   Builder builder(&context);
-  auto op = Operation::create(
-      UnknownLoc::get(&context), OperationName("lq.BMaxPool2d", &context),
-      llvm::None, llvm::None, llvm::None, llvm::None, 0);
+  OperationState state(UnknownLoc::get(&context),
+                       OperationName("lq.BMaxPool2d", &context));
+  mlir::Operation* op = Operation::create(state);
 
   op->setAttr("padding", builder.getStringAttr("SAME"));
   op->setAttr("stride_width", getIntegerAttr(builder, 2));

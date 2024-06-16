@@ -1,9 +1,9 @@
 #ifndef LARQ_COMPUTE_ENGINE_MLIR_IR_LCE_OPS_H_
 #define LARQ_COMPUTE_ENGINE_MLIR_IR_LCE_OPS_H_
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Quant/QuantTypes.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 
 // clang-format off
 #include "larq_compute_engine/mlir/ir/lce_dialect.h.inc"
