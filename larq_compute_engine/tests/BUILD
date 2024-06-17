@@ -15,7 +15,10 @@ exports_files([
 py_test(
     name = "end2end_test",
     size = "large",
-    srcs = ["end2end_test.py"],
+    srcs = [
+        "end2end_test.py",
+        "preprocess.py",
+    ],
     deps = [
         "//larq_compute_engine/mlir:converter",
         "//larq_compute_engine/tflite/python:interpreter",
@@ -25,6 +28,7 @@ py_test(
         lce_requirement("tensorflow"),
         lce_requirement("tensorflow_datasets"),
         lce_requirement("tf-keras"),
+        lce_requirement("importlib_resources"),
     ],
 )
 

@@ -552,6 +552,7 @@ genrule(
 py_library(
     name = "converter",
     srcs = [
+        "python/__init__.py",
         "python/converter.py",
         "python/util.py",
         ":tflite_schema_py",
