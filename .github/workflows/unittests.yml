@@ -10,6 +10,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  TF_PYTHON_VERSION: "3.11"
+
 jobs:
   TFLite:
     runs-on: ubuntu-latest
@@ -19,12 +22,6 @@ jobs:
         with:
           submodules: true
           fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.9
-      - name: Configure Bazel
-        run: ./configure.py
-        shell: bash
       - name: Run C++ Unit Tests
         run: bazelisk test larq_compute_engine/tests:cc_tests --test_output=all
       - name: Build TF Lite Static Library with CMake
@@ -43,12 +40,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends qemu-user
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.9
-      - name: Configure Bazel
-        run: ./configure.py
-        shell: bash
       - name: "TF Lite Arm32: Cross-compile and run unit tests in qemu"
         run: bazelisk test larq_compute_engine/tests:arm32_tests --config=rpi3 --test_output=all --test_filter="-*BigTest*" --copt=-O1
       - name: "TF Lite Aarch64: Cross-compile and run unit tests in qemu"
@@ -65,12 +56,8 @@ jobs:
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.gcs_bazel_cache }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.9
       - name: Configure Bazel
         run: |
-          ./configure.py
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo -e 'build --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
