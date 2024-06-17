@@ -37,6 +37,10 @@ py_test(
     srcs = ["strip_lcedequantize_test.py"],
     deps = [
         "//larq_compute_engine/mlir:converter",
+        lce_requirement("larq"),
+        lce_requirement("pytest"),
+        lce_requirement("tensorflow"),
+        lce_requirement("tf-keras"),
     ],
 )
 
