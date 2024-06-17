@@ -108,7 +108,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./third_party/install_android.sh
       - name: Configure Bazel
-        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_NDK_HOME="/tmp/lce_android/ndk/21.4.7075529" ./configure.py
+        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_API_LEVEL=30 ANDROID_NDK_HOME="/tmp/lce_android/ndk/25.2.9519653" ANDROID_NDK_API_LEVEL=30 ANDROID_BUILD_TOOLS_VERSION=31.0.0 ./configure.py
         shell: bash
       - name: Build LCE AAR
         run: BUILDER=bazelisk ./larq_compute_engine/tflite/java/build_lce_aar.sh
@@ -169,6 +169,7 @@ jobs:
           done
         env:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          TF_PYTHON_VERSION: ${{ matrix.python-version }}
         shell: bash
       - uses: actions/upload-artifact@v4
         with:
@@ -212,6 +213,7 @@ jobs:
           done
         env:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          TF_PYTHON_VERSION: ${{ matrix.python-version }}
         shell: bash
       - uses: actions/upload-artifact@v4
         with:
@@ -256,6 +258,8 @@ jobs:
           done
 
           ls -al wheelhouse/
+        env:
+          TF_PYTHON_VERSION: ${{ matrix.python-version }}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ runner.os }}-wheels
@@ -302,6 +306,7 @@ jobs:
           bazel-bin/build_pip_pkg wheelhouse
         env:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          TF_PYTHON_VERSION: ${{ matrix.python-version }}
         shell: pwsh
       - uses: actions/upload-artifact@v4
         with:
