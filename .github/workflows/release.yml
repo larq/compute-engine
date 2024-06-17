@@ -157,11 +157,11 @@ jobs:
           export MACOSX_DEPLOYMENT_TARGET=10.14
 
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-macos-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-macos-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
-          bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --linkopt=-dead_strip --distinct_host_configuration=false
+          bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --linkopt=-dead_strip
           bazel-bin/build_pip_pkg artifacts --plat-name macosx_10_14_x86_64
 
           for f in artifacts/*.whl; do
@@ -201,7 +201,7 @@ jobs:
           export MACOSX_DEPLOYMENT_TARGET=11.0
 
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-macos-arm-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-macos-arm-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
@@ -239,7 +239,7 @@ jobs:
       - name: Build manylinux2014 wheels
         run: |
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-manylinux-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-manylinux-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
@@ -302,7 +302,7 @@ jobs:
 
           "" | python configure.py
 
-          bazelisk --output_base=C:\build_output build :build_pip_pkg --enable_runfiles --local_ram_resources=4096 --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-windows-python${{ matrix.python-version }} --google_default_credentials
+          bazelisk --output_base=C:\build_output build :build_pip_pkg --enable_runfiles --local_ram_resources=4096 --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-windows-python${{ matrix.python-version }} --google_default_credentials
           bazel-bin/build_pip_pkg wheelhouse
         env:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}

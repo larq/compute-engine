@@ -7,7 +7,6 @@ python configure.py
 bazel build :build_pip_pkg \
   --copt=-fvisibility=hidden \
   --copt=-mavx \
-  --distinct_host_configuration=false \
   --verbose_failures \
   --crosstool_top=@ubuntu20.04-gcc9_manylinux2014-cuda11.2-cudnn8.1-tensorrt7.2_config_cuda//crosstool:toolchain
 
