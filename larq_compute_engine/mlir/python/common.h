@@ -1,4 +1,5 @@
 #include <optional>
+
 #include "larq_compute_engine/mlir/transforms/passes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"

@@ -16,6 +16,7 @@
 # limitations under the License.
 # ==============================================================================
 
+import json
 import os
 import platform
 import re
@@ -24,7 +25,7 @@ import sys
 
 _LCE_BAZELRC = ".lce_configure.bazelrc"
 
-_SUPPORTED_ANDROID_NDK_VERSIONS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+_SUPPORTED_ANDROID_NDK_VERSIONS = [19, 20, 21, 25]
 
 _DEFAULT_PROMPT_ASK_ATTEMPTS = 10
 
@@ -570,29 +571,27 @@ def get_ndk_api_level(environ_cp, android_ndk_home_path):
             "errors.\n"
             % (android_ndk_home_path, ndk_version, _SUPPORTED_ANDROID_NDK_VERSIONS)
         )
+    write_action_env_to_bazelrc("ANDROID_NDK_VERSION", ndk_version)
 
     # Now grab the NDK API level to use. Note that this is different from the
     # SDK API level, as the NDK API level is effectively the *min* target SDK
     # version.
-    platforms = os.path.join(android_ndk_home_path, "platforms")
-    api_levels = sorted(os.listdir(platforms))
-    api_levels = [x.replace("android-", "") for x in api_levels if "android-" in x]
-
-    def valid_api_level(api_level):
-        return os.path.exists(
-            os.path.join(android_ndk_home_path, "platforms", "android-" + api_level)
-        )
+    meta = open(os.path.join(android_ndk_home_path, "meta/platforms.json"))
+    platforms = json.load(meta)
+    meta.close()
+    aliases = platforms["aliases"]
+    api_levels = sorted(list(set([aliases[i] for i in aliases])))
 
     android_ndk_api_level = prompt_loop_or_load_from_env(
         environ_cp,
         var_name="ANDROID_NDK_API_LEVEL",
-        var_default='26',  # 26 is required to support AHardwareBuffer.
+        var_default="26",  # 26 is required to support AHardwareBuffer.
         ask_for_var=(
             "Please specify the (min) Android NDK API level to use. "
             "[Available levels: %s]"
         )
         % api_levels,
-        check_success=valid_api_level,
+        check_success=(lambda *_: True),
         error_msg="Android-%s is not present in the NDK path.",
     )
 
