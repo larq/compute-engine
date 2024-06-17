@@ -134,7 +134,7 @@ jobs:
 
   macos-release-wheel:
     name: Build release wheels for macOS
-    runs-on: macos-latest
+    runs-on: macos-13
     strategy:
       matrix:
         python-version: ["3.10", 3.11]
@@ -178,7 +178,7 @@ jobs:
 
   macos-arm-release-wheel:
     name: Build release arm wheels for macOS
-    runs-on: macos-11
+    runs-on: macos-14
     strategy:
       matrix:
         python-version: ["3.10", 3.11]
