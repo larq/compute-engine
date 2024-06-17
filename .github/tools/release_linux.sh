@@ -4,11 +4,12 @@ set -e -x
 python configure.py
 
 # Build
+# `release_cpu_linux` will activate absolute paths to files that only exist in the tensorflow/build:2.16-pythonXX docker container
 bazel build :build_pip_pkg \
+  --config=release_cpu_linux \
   --copt=-fvisibility=hidden \
   --copt=-mavx \
-  --verbose_failures \
-  --crosstool_top=@ubuntu20.04-gcc9_manylinux2014-cuda11.2-cudnn8.1-tensorrt7.2_config_cuda//crosstool:toolchain
+  --verbose_failures
 
 # Package Whl
 bazel-bin/build_pip_pkg artifacts

@@ -137,7 +137,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [3.9, "3.10", 3.11]
+        python-version: ["3.10", 3.11]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -181,7 +181,7 @@ jobs:
     runs-on: macos-11
     strategy:
       matrix:
-        python-version: [3.9, "3.10", 3.11]
+        python-version: ["3.10", 3.11]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -225,7 +225,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9, "3.10", 3.11]
+        python-version: ["3.10", 3.11]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -245,9 +245,10 @@ jobs:
 
           docker run -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }} \
             -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-credentials.json \
+            -e TF_PYTHON_VERSION=${{ matrix.python-version }} \
             -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/gcloud-credentials.json:ro \
             -v ${PWD}:/compute-engine -w /compute-engine \
-            tensorflow/build:2.13-python${{ matrix.python-version }} \
+            tensorflow/build:2.16-python${{ matrix.python-version }} \
             .github/tools/release_linux.sh
 
           sudo apt-get -y -qq install patchelf --no-install-recommends
@@ -258,8 +259,6 @@ jobs:
           done
 
           ls -al wheelhouse/
-        env:
-          TF_PYTHON_VERSION: ${{ matrix.python-version }}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ runner.os }}-wheels
@@ -270,7 +269,7 @@ jobs:
     runs-on: windows-2019
     strategy:
       matrix:
-        python-version: [3.9, "3.10", 3.11]
+        python-version: ["3.10", 3.11]
       fail-fast: false
     steps:
       - name: Configure Pagefile
