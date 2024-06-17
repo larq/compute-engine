@@ -8,7 +8,6 @@ python configure.py
 bazel build :build_pip_pkg \
   --config=release_cpu_linux \
   --copt=-fvisibility=hidden \
-  --copt=-mavx \
   --verbose_failures
 
 # Package Whl
