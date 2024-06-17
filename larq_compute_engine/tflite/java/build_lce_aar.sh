@@ -16,11 +16,8 @@ VERSION=$(git describe --tags)
 
 BUILDER="${BUILDER:-bazel}"
 BASEDIR=larq_compute_engine/tflite
-CROSSTOOL="//external:android/crosstool"
-HOST_CROSSTOOL="@bazel_tools//tools/cpp:toolchain"
 
-BUILD_OPTS="-c opt --fat_apk_cpu=x86,x86_64,arm64-v8a"
-CROSSTOOL_OPTS="--crosstool_top=$CROSSTOOL --host_crosstool_top=$HOST_CROSSTOOL"
+BUILD_OPTS="-c opt --config=android_arm64 --fat_apk_cpu=x86,x86_64,arm64-v8a"
 
 test -d $BASEDIR || (echo "Aborting: not at top-level build directory"; exit 1)
 
