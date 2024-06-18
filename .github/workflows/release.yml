@@ -154,15 +154,16 @@ jobs:
           python -m pip install delocate wheel setuptools numpy six --no-cache-dir
 
           ./configure.py
-          export MACOSX_DEPLOYMENT_TARGET=13.0
+          # This matches `release_macox_x86` in .tensorflow.bazelrc
+          export MACOSX_DEPLOYMENT_TARGET=10.15
 
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo -e 'build --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-macos-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
-          bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --linkopt=-dead_strip
-          bazel-bin/build_pip_pkg artifacts --plat-name macosx_13_0_x86_64
+          bazelisk build :build_pip_pkg --config=release_macos_x86 --config=release_cpu_macos --copt=-fvisibility=hidden --linkopt=-dead_strip
+          bazel-bin/build_pip_pkg artifacts --plat-name macosx_10_15_x86_64
 
           for f in artifacts/*.whl; do
             delocate-wheel -w wheelhouse $f
@@ -198,15 +199,16 @@ jobs:
           python -m pip install delocate wheel setuptools numpy six --no-cache-dir
 
           ./configure.py
-          export MACOSX_DEPLOYMENT_TARGET=14.0
+          # This matches `release_macox_arm64` in .tensorflow.bazelrc
+          export MACOSX_DEPLOYMENT_TARGET=12.0
 
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo -e 'build --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-macos-arm-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
-          bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --linkopt=-dead_strip --config=macos_arm64
-          bazel-bin/build_pip_pkg artifacts --plat-name macosx_14_0_arm64
+          bazelisk build :build_pip_pkg --config=release_macos_arm64 --copt=-fvisibility=hidden --linkopt=-dead_strip
+          bazel-bin/build_pip_pkg artifacts --plat-name macosx_12_0_arm64
 
           for f in artifacts/*.whl; do
             delocate-wheel -w wheelhouse $f
