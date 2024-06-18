@@ -3,9 +3,9 @@ set -e -x
 
 python configure.py
 
-# Build
 # `release_cpu_linux` will activate absolute paths to files that only exist in the tensorflow/build:2.16-pythonXX docker container
 bazel build :build_pip_pkg \
+  -c opt \
   --config=release_cpu_linux \
   --copt=-fvisibility=hidden \
   --verbose_failures
