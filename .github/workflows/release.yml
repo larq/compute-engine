@@ -297,7 +297,9 @@ jobs:
           $Env:CC_OPT_FLAGS = "/O2"
 
           python --version
-          python -m pip install wheel setuptools numpy six --no-cache-dir
+          python -m pip install wheel setuptools numpy six pip-tools --no-cache-dir
+          # This is needed because the requirements on windows are different than on other systems
+          pip-compile --strip-extras --no-emit-index-url --allow-unsafe larq_compute_engine/requirements.in
 
           "" | python configure.py
 
