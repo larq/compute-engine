@@ -326,28 +326,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: Linux-wheels*
+          pattern: *wheels*
           path: dist
           merge-multiple: true
-        if: ${{ needs.manylinux-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: macOS-wheels*
-          path: dist
-          merge-multiple: true
-        if: ${{ needs.macos-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: macOS-arm-wheels*
-          path: dist
-          merge-multiple: true
-        if: ${{ needs.macos-arm-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: Windows-wheels*
-          path: dist
-          merge-multiple: true
-        if: ${{ needs.windows-release-wheel.result == 'success' }}
       - run: |
           set -x
           ls -la dist/
