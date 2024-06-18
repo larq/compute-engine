@@ -173,7 +173,7 @@ jobs:
         shell: bash
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}-wheels
+          name: ${{ runner.os }}-wheels-${{ matrix.python-version }}
           path: wheelhouse
 
   macos-arm-release-wheel:
@@ -217,7 +217,7 @@ jobs:
         shell: bash
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}-arm-wheels
+          name: ${{ runner.os }}-arm-wheels-${{ matrix.python-version }}
           path: wheelhouse
 
   manylinux-release-wheel:
@@ -261,7 +261,7 @@ jobs:
           ls -al wheelhouse/
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}-wheels
+          name: ${{ runner.os }}-wheels-${{ matrix.python-version }}
           path: wheelhouse
 
   windows-release-wheel:
@@ -309,7 +309,7 @@ jobs:
         shell: pwsh
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}-wheels
+          name: ${{ runner.os }}-wheels-${{ matrix.python-version }}
           path: wheelhouse
 
   upload-wheels:
@@ -326,31 +326,30 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: Linux-wheels
-          path: Linux-wheels
+          pattern: Linux-wheels*
+          path: dist
+          merge-multiple: true
         if: ${{ needs.manylinux-release-wheel.result == 'success' }}
       - uses: actions/download-artifact@v4
         with:
-          name: macOS-wheels
-          path: macOS-wheels
+          pattern: macOS-wheels*
+          path: dist
+          merge-multiple: true
         if: ${{ needs.macos-release-wheel.result == 'success' }}
       - uses: actions/download-artifact@v4
         with:
-          name: macOS-arm-wheels
-          path: macOS-arm-wheels
+          pattern: macOS-arm-wheels*
+          path: dist
+          merge-multiple: true
         if: ${{ needs.macos-arm-release-wheel.result == 'success' }}
       - uses: actions/download-artifact@v4
         with:
-          name: Windows-wheels
-          path: Windows-wheels
+          pattern: Windows-wheels*
+          path: dist
+          merge-multiple: true
         if: ${{ needs.windows-release-wheel.result == 'success' }}
       - run: |
           set -x
-          mkdir -p dist
-          cp Linux-wheels/*.whl dist/ || true
-          cp macOS-wheels/*.whl dist/ || true
-          cp macOS-arm-wheels/*.whl dist/ || true
-          cp Windows-wheels/*.whl dist/ || true
           ls -la dist/
           sha256sum dist/*.whl
       - uses: pypa/gh-action-pypi-publish@master
