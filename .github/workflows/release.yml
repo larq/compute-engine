@@ -304,6 +304,9 @@ jobs:
           # This is needed because the requirements on windows are different than on other systems
           pip-compile --strip-extras --no-emit-index-url --allow-unsafe larq_compute_engine/requirements.in
 
+          # Fix for path length limit: replace workspace name by 'lce'
+          (Get-Content WORKSPACE).Replace('workspace(name = "larq_compute_engine")', 'workspace(name = "lce")') | Set-Content WORKSPACE
+
           "" | python configure.py
 
           bazelisk --output_base=C:\bzl build :build_pip_pkg --enable_runfiles --local_ram_resources=4096 --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-windows-python${{ matrix.python-version }} --google_default_credentials

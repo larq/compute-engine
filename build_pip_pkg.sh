@@ -29,7 +29,8 @@ function is_windows() {
 }
 
 if is_windows; then
-  PIP_FILE_PREFIX="bazel-bin/build_pip_pkg.exe.runfiles/larq_compute_engine/"
+  # On windows, the workspace name is lce to avoid the path length limit of MSVC
+  PIP_FILE_PREFIX="bazel-bin/build_pip_pkg.exe.runfiles/lce/"
 else
   PIP_FILE_PREFIX="bazel-bin/build_pip_pkg.runfiles/larq_compute_engine/"
 fi
