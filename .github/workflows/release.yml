@@ -306,7 +306,7 @@ jobs:
 
           "" | python configure.py
 
-          bazelisk --output_base=C:\build_output build :build_pip_pkg --enable_runfiles --local_ram_resources=4096 --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-windows-python${{ matrix.python-version }} --google_default_credentials
+          bazelisk --output_base=C:\bzl build :build_pip_pkg --enable_runfiles --local_ram_resources=4096 --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-windows-python${{ matrix.python-version }} --google_default_credentials
           bazel-bin/build_pip_pkg wheelhouse
         env:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
