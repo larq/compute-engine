@@ -13,12 +13,13 @@ def HasOneUse : Constraint<CPred<"$0.hasOneUse()">>;
 
 class ConstantValue<string val> : AttrConstraint<CPred<"IsConstantValue($_self, " # val # ")">>;
 
+// This pattern has priority (addBenefit) over the more generic pattern below
 def : Pat<(LQ_QuantizeOp
               (TFL_GreaterEqualOp:$ge_op
                   $input,
                   (Arith_ConstantOp ConstantValue<"0.0f">))),
           (LQ_QuantizeOp $input),
-          [(HasOneUse $ge_op)]>;
+          [(HasOneUse $ge_op)], [], (addBenefit 100)>;
 
 def : Pat<(LQ_QuantizeOp
               (TFL_GreaterEqualOp:$ge_op
