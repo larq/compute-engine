@@ -151,7 +151,9 @@ jobs:
       - name: Build macOS wheels
         run: |
           python --version
-          python -m pip install delocate wheel setuptools numpy six --no-cache-dir
+          python -m pip install delocate wheel setuptools numpy six pip-tools --no-cache-dir
+          # This is needed because the requirements are different on every OS and Python version
+          pip-compile --strip-extras --no-emit-index-url --allow-unsafe larq_compute_engine/requirements.in
 
           ./configure.py
           # This matches `release_macox_x86` in .tensorflow.bazelrc
@@ -196,7 +198,9 @@ jobs:
       - name: Build macOS wheels
         run: |
           python --version
-          python -m pip install delocate wheel setuptools numpy six --no-cache-dir
+          python -m pip install delocate wheel setuptools numpy six pip-tools --no-cache-dir
+          # This is needed because the requirements are different on every OS and Python version
+          pip-compile --strip-extras --no-emit-index-url --allow-unsafe larq_compute_engine/requirements.in
 
           ./configure.py
           # This matches `release_macox_arm64` in .tensorflow.bazelrc
@@ -238,6 +242,11 @@ jobs:
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.gcs_bazel_cache }}
+      - name: Generate requirements.txt
+        run: |
+          python -m pip install pip-tools --no-cache-dir
+          # This is needed because the requirements are different on every OS and Python version
+          pip-compile --strip-extras --no-emit-index-url --allow-unsafe larq_compute_engine/requirements.in
       - name: Build manylinux2014 wheels
         run: |
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
@@ -301,7 +310,7 @@ jobs:
 
           python --version
           python -m pip install wheel setuptools numpy six pip-tools --no-cache-dir
-          # This is needed because the requirements on windows are different than on other systems
+          # This is needed because the requirements are different on every OS and Python version
           pip-compile --strip-extras --no-emit-index-url --allow-unsafe larq_compute_engine/requirements.in
 
           # Fix for path length limit: replace workspace name by 'lce'
