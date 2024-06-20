@@ -64,7 +64,7 @@ jobs:
           fi
         shell: bash
       - name: Run Interpreter test
-        run: bazelisk test larq_compute_engine/tflite/tests:interpreter_test --test_output=all
+        run: bazelisk test larq_compute_engine/tflite/tests:interpreter_test --test_output=all --test_env=TF_USE_LEGACY_KERAS=1
       - name: Run FileCheck tests
         run: bazelisk test larq_compute_engine/mlir/tests:all --test_output=all
       - name: Run End2End tests
