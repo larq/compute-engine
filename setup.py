@@ -1,4 +1,5 @@
 """Setup for pip package."""
+
 import os
 from sys import platform
 
@@ -30,7 +31,7 @@ ext_modules = [Extension("_foo", ["stub.cc"])] if platform.startswith("linux") e
 setup(
     name="larq-compute-engine",
     version=get_version_number(default="0.13.0"),
-    python_requires=">=3.9",
+    python_requires=">=3.10",
     description="Highly optimized inference engine for binarized neural networks.",
     long_description=readme(),
     long_description_content_type="text/markdown",
@@ -55,9 +56,9 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Mathematics",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
