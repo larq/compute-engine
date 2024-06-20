@@ -1,0 +1,7 @@
+tensorflow==2.16.1
+tf-keras==2.16.0
+tensorflow-datasets
+larq
+tqdm
+pytest
+googleapis-common-protos<2,>=1.52.0 # dependency of tensorflow-datasets, somehow not picked up by pip-compile

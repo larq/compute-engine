@@ -108,7 +108,7 @@ void AddPreVariableFreezingTFToLCETFLConversionPasses(
 
   // This decomposes resource ops like ResourceGather into read-variable op
   // followed by gather. This is used when the saved model import path is used
-  // during which resources dont get frozen in the python layer.
+  // during which resources don't get frozen in the python layer.
   pass_manager->addNestedPass<mlir::func::FuncOp>(
       mlir::TFDevice::CreateDecomposeResourceOpsPass());
 
@@ -257,7 +257,9 @@ void AddPostVariableFreezingTFToLCETFLConversionPasses(
 
   // Run quantization after all the floating point model conversion is
   // completed.
-  if (quant_specs.RunPropagationAndRewriteQuantizationPasses()) {
+  if (quant_specs.RunPropagationAndRewriteQuantizationPasses() ||
+      quant_specs.qdq_conversion_mode !=
+          mlir::quant::QDQConversionMode::kQDQNone) {
     AddQuantizationPasses(quant_specs, *pass_manager);
     // Remove unnecessary QDQs while handling QAT models.
     pass_manager->addNestedPass<mlir::func::FuncOp>(

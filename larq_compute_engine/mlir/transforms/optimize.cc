@@ -4,7 +4,6 @@
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "larq_compute_engine/mlir/transforms/common.h"
 #include "larq_compute_engine/mlir/transforms/passes.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"

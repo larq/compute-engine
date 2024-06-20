@@ -3,15 +3,19 @@
 #include "larq_compute_engine/mlir/tf_tfl_passes.h"
 #include "larq_compute_engine/mlir/transforms/passes.h"
 #include "llvm/Support/raw_ostream.h"
+#include "mlir/Dialect/Func/Extensions/AllExtensions.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/PassManager.h"
+#include "tensorflow/compiler/mlir/lite/debug/debug.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_export.h"
 #include "tensorflow/compiler/mlir/lite/metrics/error_collector_inst.h"
+#include "tensorflow/compiler/mlir/lite/stablehlo/transforms/op_stat_pass.h"
+#include "tensorflow/compiler/mlir/lite/stablehlo/transforms/stablehlo_util.h"
 #include "tensorflow/compiler/mlir/tensorflow/ir/tf_executor.h"
 #include "tensorflow/compiler/mlir/tensorflow/transforms/tf_saved_model_freeze_variables.h"
 #include "tensorflow/compiler/mlir/tensorflow/utils/error_util.h"
 #include "tensorflow/core/framework/op.h"
-#include "tensorflow/tsl/platform/statusor.h"
+#include "tsl/platform/statusor.h"
 
 namespace tensorflow {
 namespace {
@@ -55,79 +59,68 @@ class TruncateOpOrArgLocNameMapper : public OpOrArgLocNameMapper {
 };
 
 }  // namespace
-Status ConvertTFExecutorToTFLOrFlatbuffer(
+absl::Status ConvertTFExecutorToTFLOrFlatbuffer(
     mlir::ModuleOp module, bool export_to_mlir, const LCETarget target,
     mlir::quant::QuantizationSpecs quant_specs,
     const std::unordered_set<std::string>& saved_model_tags,
     llvm::StringRef saved_model_dir,
-    llvm::Optional<tensorflow::Session*> session, std::string* result) {
+    std::optional<tensorflow::Session*> session, std::string* result) {
   // Explicitly disable dumping Op details on failures.
   module.getContext()->printOpOnDiagnostic(false);
 
-  // Register a warning handler only log to std out.
-  mlir::ScopedDiagnosticHandler s(
-      module.getContext(), [](mlir::Diagnostic& diag) {
-        if (diag.getSeverity() == mlir::DiagnosticSeverity::Warning) {
-          for (auto& note : diag.getNotes()) {
-            std::cout << note.str() << "\n";
-            LOG(WARNING) << note.str() << "\n";
-          }
-        }
-        return mlir::failure();
-      });
+  mlir::DialectRegistry registry;
+  mlir::func::registerAllExtensions(registry);
+  module.getContext()->appendDialectRegistry(registry);
 
   mlir::StatusScopedDiagnosticHandler statusHandler(module.getContext(),
                                                     /*propagate=*/true);
-  if (failed(IsValidGraph(module))) {
-    return statusHandler.ConsumeStatus();
-  }
-
   mlir::PassManager pass_manager(module.getContext());
+  mlir::registerPassManagerCLOptions();
   if (mlir::failed(mlir::applyPassManagerCLOptions(pass_manager))) {
-    // We don't return here as in the normal TF converter, since apparently this
-    // actually fails in our case, but the failure isn't terminal.
-    // return tensorflow::FromAbslStatus(
-    //    absl::UnknownError("failed to apply MLIR pass manager CL options"));
+    return absl::InternalError("Failed to apply MLIR pass manager CL options.");
   }
+  // DebugOptions::ir_dump_dir can be set for debugging
+  converter::DebugOptions debug_options;
+  InitPassManager(pass_manager, debug_options);
+
   pass_manager.addInstrumentation(
       std::make_unique<mlir::TFL::ErrorCollectorInstrumentation>(
           pass_manager.getContext()));
 
+  if (mlir::failed(IsValidGraph(module))) {
+    return statusHandler.ConsumeStatus();
+  }
+
   tensorflow::AddPreVariableFreezingTFToLCETFLConversionPasses(&pass_manager);
-  if (failed(pass_manager.run(module))) {
+  if (mlir::failed(pass_manager.run(module))) {
     return statusHandler.ConsumeStatus();
   }
 
   // Freeze variables if a session is provided.
-  if (session.has_value()) {
-    mlir::TFL::ErrorCollectorInstrumentation collector(module.getContext());
-    if (mlir::failed(
-            mlir::tf_saved_model::FreezeVariables(module, session.value()))) {
-      auto status = statusHandler.ConsumeStatus();
-      mlir::TFL::ErrorCollector* collector =
-          mlir::TFL::ErrorCollector::GetErrorCollector();
-      if (!collector->CollectedErrors().empty()) {
-        return errors::InvalidArgument("Variable constant folding has failed.");
-      }
-      return status;
-    }
+  if (session.has_value() && mlir::failed(mlir::tf_saved_model::FreezeVariables(
+                                 module, session.value_or(nullptr)))) {
+    return statusHandler.Combine(
+        absl::InvalidArgumentError("Variable constant folding is failed."));
   }
+
   pass_manager.clear();
+
   tensorflow::AddPostVariableFreezingTFToLCETFLConversionPasses(
       saved_model_dir, quant_specs, &pass_manager, target);
-  if (failed(pass_manager.run(module))) {
-    auto status = statusHandler.ConsumeStatus();
-    mlir::TFL::ErrorCollector* collector =
-        mlir::TFL::ErrorCollector::GetErrorCollector();
-    for (const auto& error_data : collector->CollectedErrors()) {
-      if (error_data.subcomponent() == "FreezeGlobalTensorsPass") {
-        return errors::InvalidArgument("Variable constant folding is failed.");
-      }
-    }
-    return status;
+  if (mlir::failed(pass_manager.run(module))) {
+    return statusHandler.Combine(
+        absl::InvalidArgumentError("Variable constant folding failed."));
   }
 
   if (export_to_mlir) {
+    pass_manager.clear();
+    // Print out a detailed report of ops that are not converted to TFL ops.
+    pass_manager.addPass(mlir::odml::createPrintOpStatsPass(
+        mlir::odml::GetAcceptedTFLiteDialects()));
+    if (mlir::failed(pass_manager.run(module))) {
+      return statusHandler.ConsumeStatus();
+    }
+
     llvm::raw_string_ostream os(*result);
     module.print(os);
     return statusHandler.ConsumeStatus();
@@ -142,14 +135,18 @@ Status ConvertTFExecutorToTFLOrFlatbuffer(
   options.toco_flags = toco_flags;
   options.saved_model_tags = saved_model_tags;
   options.op_or_arg_name_mapper = &op_or_arg_name_mapper;
-  if (!tflite::MlirToFlatBufferTranslateFunction(module, options, result)) {
-    return statusHandler.ConsumeStatus();
+  const bool serialize_stablehlo_ops = false;
+  if (!tflite::MlirToFlatBufferTranslateFunction(module, options, result,
+                                                 serialize_stablehlo_ops)) {
+    return statusHandler.Combine(
+        absl::InternalError("Could not translate MLIR to FlatBuffer."));
   }
 
-  if (mlir::failed(module.verify())) {
-    return tensorflow::errors::Unknown("Final module is invalid");
+  if (mlir::failed(module.verifyInvariants())) {
+    return statusHandler.Combine(
+        absl::InternalError("Final module is invalid."));
   }
-  return OkStatus();
+  return absl::OkStatus();
 }
 
 }  // namespace tensorflow

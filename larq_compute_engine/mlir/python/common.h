@@ -1,3 +1,5 @@
+#include <optional>
+
 #include "larq_compute_engine/mlir/transforms/passes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -17,7 +19,7 @@ pybind11::bytes ConvertMLIRModuleToTFLiteFlatBuffer(
     const LCETarget target, const pybind11::object& default_ranges,
     const std::unordered_set<std::string>& saved_model_tags,
     llvm::StringRef saved_model_dir,
-    llvm::Optional<tensorflow::Session*> session, const int num_inputs,
+    std::optional<tensorflow::Session*> session, const int num_inputs,
     const bool should_quantize, const bool mark_as_post_training_quant);
 
 }  // namespace tensorflow

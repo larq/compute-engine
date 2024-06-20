@@ -1,5 +1,6 @@
-load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension", "tf_cc_binary")
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension", "tf_cc_binary")
+load("@pypi_lce//:requirements.bzl", lce_requirement = "requirement")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -470,8 +471,8 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_config",
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_passes",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_passes",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_saved_model_passes",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow/transforms:tensorflow_passes",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow/transforms:tf_saved_model_passes",
     ],
 )
 
@@ -486,13 +487,16 @@ cc_library(
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
+        "@local_tsl//tsl/platform:statusor",
         "@org_tensorflow//tensorflow/compiler/mlir:op_or_arg_name_mapper",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite/debug",
         "@org_tensorflow//tensorflow/compiler/mlir/lite/metrics:error_collector",
         "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_config",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite/stablehlo:op_stat_pass",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite/stablehlo:stablehlo_util",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:error_util",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_saved_model_freeze_variables",
-        "@org_tensorflow//tensorflow/tsl/platform:statusor",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow/transforms:tf_saved_model_freeze_variables",
     ],
 )
 
@@ -535,7 +539,7 @@ pybind_extension(
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:export_graphdef",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:import_utils",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:mlir_roundtrip_flags",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_dialect_passes",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow/transforms:tf_dialect_passes",
         "@org_tensorflow//tensorflow/core:ops",
         "@pybind11",
     ],
@@ -551,12 +555,15 @@ genrule(
 py_library(
     name = "converter",
     srcs = [
+        "python/__init__.py",
         "python/converter.py",
         "python/util.py",
         ":tflite_schema_py",
     ],
     deps = [
         ":_tf_tfl_flatbuffer",
+        lce_requirement("tensorflow"),
+        lce_requirement("flatbuffers"),
     ],
 )
 

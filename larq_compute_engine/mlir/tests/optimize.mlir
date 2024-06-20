@@ -109,7 +109,7 @@ func.func @fuse_relu_into_bconv2d(%arg0: tensor<256x32x32x1xi32>, %arg1: tensor<
   %1 = "tfl.relu"(%0) : (tensor<256x30x30x16xf32>) -> tensor<256x30x30x16xf32>
   return %1 : tensor<256x30x30x16xf32>
 
-  // CHECK: %0 = "lq.Bconv2d"(%arg0, %arg1, %cst, %cst_0, %arg2) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "RELU", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32}
+  // CHECK: %0 = "lq.Bconv2d"(%arg0, %arg1, %cst, %cst_0, %arg2) <{channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "RELU", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32}>
   // CHECK-NEXT: return %0
 }
 
@@ -121,7 +121,7 @@ func.func @fuse_relu6_into_bconv2d(%arg0: tensor<256x32x32x1xi32>, %arg1: tensor
   %1 = "tfl.relu6"(%0) : (tensor<256x30x30x16xf32>) -> tensor<256x30x30x16xf32>
   return %1 : tensor<256x30x30x16xf32>
 
-  // CHECK: %0 = "lq.Bconv2d"(%arg0, %arg1, %cst, %cst_0, %arg2) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "RELU6", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32}
+  // CHECK: %0 = "lq.Bconv2d"(%arg0, %arg1, %cst, %cst_0, %arg2) <{channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "RELU6", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32}>
   // CHECK-NEXT: return %0
 }
 
@@ -133,7 +133,7 @@ func.func @fuse_relu1_into_bconv2d(%arg0: tensor<256x32x32x1xi32>, %arg1: tensor
   %1 = "tfl.relu_n1_to_1"(%0) : (tensor<256x30x30x16xf32>) -> tensor<256x30x30x16xf32>
   return %1 : tensor<256x30x30x16xf32>
 
-  // CHECK: %0 = "lq.Bconv2d"(%arg0, %arg1, %cst, %cst_0, %arg2) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "RELU_N1_TO_1", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32}
+  // CHECK: %0 = "lq.Bconv2d"(%arg0, %arg1, %cst, %cst_0, %arg2) <{channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "RELU_N1_TO_1", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32}>
   // CHECK-NEXT: return %0
 }
 
@@ -145,7 +145,7 @@ func.func @fuse_relu_into_bconv2d_padding_same_one(%arg0: tensor<256x32x32x1xi32
   %1 = "tfl.relu"(%0) : (tensor<256x32x32x16xf32>) -> tensor<256x32x32x16xf32>
   return %1 : tensor<256x32x32x16xf32>
 
-  // CHECK: %0 = "lq.Bconv2d"(%arg0, %arg1, %cst, %cst_0, %arg2) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "RELU", pad_values = 1 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32}
+  // CHECK: %0 = "lq.Bconv2d"(%arg0, %arg1, %cst, %cst_0, %arg2) <{channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "RELU", pad_values = 1 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32}>
   // CHECK-NEXT: return %0
 }
 
@@ -157,7 +157,7 @@ func.func @do_not_fuse_relu_into_bconv2d_padding_same_zero(%arg0: tensor<256x32x
   %1 = "tfl.relu"(%0) : (tensor<256x32x32x16xf32>) -> tensor<256x32x32x16xf32>
   return %1 : tensor<256x32x32x16xf32>
 
-  // CHECK: %0 = "lq.Bconv2d"(%arg0, %arg1, %cst, %cst_0, %arg2) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32}
+  // CHECK: %0 = "lq.Bconv2d"(%arg0, %arg1, %cst, %cst_0, %arg2) <{channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32}>
   // CHECK-NEXT: %1 = "tfl.relu"(%0)
   // CHECK-NEXT: return %1
 }
@@ -170,7 +170,7 @@ func.func @do_not_fuse_relu_into_bconv2d_no_post_activation_bias(%arg0: tensor<2
   %1 = "tfl.relu"(%0) : (tensor<256x30x30x16xf32>) -> tensor<256x30x30x16xf32>
   return %1 : tensor<256x30x30x16xf32>
 
-  // CHECK: %0 = "lq.Bconv2d"(%arg0, %arg1, %cst, %cst_0, %arg2) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32}
+  // CHECK: %0 = "lq.Bconv2d"(%arg0, %arg1, %cst, %cst_0, %arg2) <{channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32}>
   // CHECK-NEXT: %1 = "tfl.relu"(%0)
   // CHECK-NEXT: return %1
 }
@@ -183,7 +183,7 @@ func.func @do_not_fuse_relu_into_bconv2d_no_post_activation_multiplier(%arg0: te
   %1 = "tfl.relu"(%0) : (tensor<256x30x30x16xf32>) -> tensor<256x30x30x16xf32>
   return %1 : tensor<256x30x30x16xf32>
 
-  // CHECK: %0 = "lq.Bconv2d"(%arg0, %arg1, %cst, %cst_0, %arg2) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32}
+  // CHECK: %0 = "lq.Bconv2d"(%arg0, %arg1, %cst, %cst_0, %arg2) <{channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32}>
   // CHECK-NEXT: %1 = "tfl.relu"(%0)
   // CHECK-NEXT: return %1
 }
@@ -195,7 +195,7 @@ func.func @target_specific_reorder_maxpool_2d_quantize(%arg0: tensor<256x32x32x6
   return %1 : tensor<256x16x8x3xi32>
 
   // CHECK-ARM-NEXT: %0 = "lq.Quantize"(%arg0) : (tensor<256x32x32x65xf32>) -> tensor<256x32x32x3xi32>
-  // CHECK-ARM-NEXT: %1 = "lq.BMaxPool2d"(%0) {filter_height = 3 : i32, filter_width = 2 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 4 : i32} : (tensor<256x32x32x3xi32>) -> tensor<256x16x8x3xi32>
+  // CHECK-ARM-NEXT: %1 = "lq.BMaxPool2d"(%0) <{filter_height = 3 : i32, filter_width = 2 : i32, padding = "SAME", stride_height = 2 : i32, stride_width = 4 : i32}> : (tensor<256x32x32x3xi32>) -> tensor<256x16x8x3xi32>
   // CHECK-ARM-NEXT: return %1
 
   // CHECK-XCORE-NEXT: %0 = "tfl.max_pool_2d"(%arg0) {filter_height = 3 : i32, filter_width = 2 : i32, fused_activation_function = "NONE", padding = "SAME", stride_h = 2 : i32, stride_w = 4 : i32} : (tensor<256x32x32x65xf32>) -> tensor<256x16x8x65xf32>
@@ -236,7 +236,7 @@ func.func @bitpack_activation_thresholds_with_negative_post_multipliers(%arg0: t
   // Verify correct thresholds. These have been manually computed.
   // CHECK-NEXT: %cst_0 = arith.constant dense<[0, 3, 2, 2, -2147483648, 2, 1, 2]> : tensor<8xi32>
 
-  // CHECK-NEXT: %1 = "lq.Bconv2d"(%arg0, %cst, %0, %0, %cst_0) {channels_in = 1 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 1 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<256x32x32x1xi32>, tensor<8x2x2x1xf32>, none, none, tensor<8xi32>) -> tensor<256x32x32x1xi32>
+  // CHECK-NEXT: %1 = "lq.Bconv2d"(%arg0, %cst, %0, %0, %cst_0) <{channels_in = 1 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 1 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32}> : (tensor<256x32x32x1xi32>, tensor<8x2x2x1xf32>, none, none, tensor<8xi32>) -> tensor<256x32x32x1xi32>
   // CHECK-NEXT: return %1
 }
 
@@ -250,7 +250,7 @@ func.func @bitpack_activations_valid_padding(%arg0: tensor<256x32x32x1xi32>) -> 
   %2 = "lq.Quantize"(%1) : (tensor<256x30x30x65xf32>) -> tensor<256x30x30x3xi32>
   return %2 : tensor<256x30x30x3xi32>
 
-  // CHECK: %1 = "lq.Bconv2d"(%arg0, %cst, %0, %0, %cst_0) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<256x32x32x1xi32>, tensor<65x3x3x3xf32>, none, none, tensor<65xi32>) -> tensor<256x30x30x3xi32>
+  // CHECK: %1 = "lq.Bconv2d"(%arg0, %cst, %0, %0, %cst_0) <{channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32}> : (tensor<256x32x32x1xi32>, tensor<65x3x3x3xf32>, none, none, tensor<65xi32>) -> tensor<256x30x30x3xi32>
   // CHECK-NEXT: return %1
 }
 
@@ -264,7 +264,7 @@ func.func @bitpack_activations_same_one_padding(%arg0: tensor<256x32x32x1xi32>) 
   %2 = "lq.Quantize"(%1) : (tensor<256x32x32x65xf32>) -> tensor<256x32x32x3xi32>
   return %2 : tensor<256x32x32x3xi32>
 
-  // CHECK: %1 = "lq.Bconv2d"(%arg0, %cst, %0, %0, %cst_0) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 1 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<256x32x32x1xi32>, tensor<65x3x3x3xf32>, none, none, tensor<65xi32>) -> tensor<256x32x32x3xi32>
+  // CHECK: %1 = "lq.Bconv2d"(%arg0, %cst, %0, %0, %cst_0) <{channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 1 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32}> : (tensor<256x32x32x1xi32>, tensor<65x3x3x3xf32>, none, none, tensor<65xi32>) -> tensor<256x32x32x3xi32>
   // CHECK-NEXT: return %1
 }
 
@@ -278,7 +278,7 @@ func.func @do_not_bitpack_activations_same_zero_padding(%arg0: tensor<256x32x32x
   %2 = "lq.Quantize"(%1) : (tensor<256x32x32x65xf32>) -> tensor<256x32x32x3xi32>
   return %2 : tensor<256x32x32x3xi32>
 
-  // CHECK: %1 = "lq.Bconv2d"(%arg0, %cst, %cst_0, %cst_1, %0) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<256x32x32x1xi32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>, none) -> tensor<256x32x32x65xf32>
+  // CHECK: %1 = "lq.Bconv2d"(%arg0, %cst, %cst_0, %cst_1, %0) <{channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "SAME", stride_height = 1 : i32, stride_width = 1 : i32}> : (tensor<256x32x32x1xi32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>, none) -> tensor<256x32x32x65xf32>
   // CHECK-NEXT: %2 = "lq.Quantize"(%1) : (tensor<256x32x32x65xf32>) -> tensor<256x32x32x3xi32>
   // CHECK-NEXT: return %2
 }
@@ -293,7 +293,7 @@ func.func @do_not_bitpack_activations_multiple_uses(%arg0: tensor<256x32x32x1xi3
   %2 = "lq.Quantize"(%1) : (tensor<256x30x30x65xf32>) -> tensor<256x30x30x3xi32>
   return %1, %2: tensor<256x30x30x65xf32>, tensor<256x30x30x3xi32>
 
-  // CHECK: %1 = "lq.Bconv2d"(%arg0, %cst, %cst_0, %cst_1, %0) {channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32} : (tensor<256x32x32x1xi32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>, none) -> tensor<256x30x30x65xf32>
+  // CHECK: %1 = "lq.Bconv2d"(%arg0, %cst, %cst_0, %cst_1, %0) <{channels_in = 3 : i32, dilation_height_factor = 1 : i32, dilation_width_factor = 1 : i32, fused_activation_function = "NONE", pad_values = 0 : i32, padding = "VALID", stride_height = 1 : i32, stride_width = 1 : i32}> : (tensor<256x32x32x1xi32>, tensor<65x3x3x3xf32>, tensor<65xf32>, tensor<65xf32>, none) -> tensor<256x30x30x65xf32>
   // CHECK-NEXT: %2 = "lq.Quantize"(%1) : (tensor<256x30x30x65xf32>) -> tensor<256x30x30x3xi32>
   // CHECK-NEXT: return %1, %2
 }

@@ -3,13 +3,17 @@ set -e -x
 
 python configure.py
 
-# Build
-bazel build :build_pip_pkg \
+# Inside the docker container on github actions there is not
+# enough space for the bazel cache, but a larger disk is mounted at /github_disk
+# so we tell bazel to store everything there
+
+# `release_cpu_linux` will activate absolute paths to files that only exist in the tensorflow/build:2.16-pythonXX docker container
+bazel --output_user_root=/github_disk/bazel_root \
+  build :build_pip_pkg \
+  -c opt \
+  --config=release_cpu_linux \
   --copt=-fvisibility=hidden \
-  --copt=-mavx \
-  --distinct_host_configuration=false \
-  --verbose_failures \
-  --crosstool_top=@ubuntu20.04-gcc9_manylinux2014-cuda11.2-cudnn8.1-tensorrt7.2_config_cuda//crosstool:toolchain
+  --verbose_failures
 
 # Package Whl
 bazel-bin/build_pip_pkg artifacts

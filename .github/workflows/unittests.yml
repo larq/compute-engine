@@ -10,6 +10,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  TF_PYTHON_VERSION: "3.11"
+
 jobs:
   TFLite:
     runs-on: ubuntu-latest
@@ -19,16 +22,8 @@ jobs:
         with:
           submodules: true
           fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.9
-      - name: Configure Bazel
-        run: ./configure.py
-        shell: bash
-      - name: Install pip dependencies
-        run: pip install numpy --no-cache-dir
       - name: Run C++ Unit Tests
-        run: bazelisk test larq_compute_engine/tests:cc_tests --distinct_host_configuration=false --test_output=all
+        run: bazelisk test larq_compute_engine/tests:cc_tests --test_output=all
       - name: Build TF Lite Static Library with CMake
         run: |
           mkdir build
@@ -45,14 +40,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends qemu-user
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.9
-      - name: Configure Bazel
-        run: ./configure.py
-        shell: bash
-      - name: Install pip dependencies
-        run: pip install numpy six --no-cache-dir
       - name: "TF Lite Arm32: Cross-compile and run unit tests in qemu"
         run: bazelisk test larq_compute_engine/tests:arm32_tests --config=rpi3 --test_output=all --test_filter="-*BigTest*" --copt=-O1
       - name: "TF Lite Aarch64: Cross-compile and run unit tests in qemu"
@@ -69,32 +56,21 @@ jobs:
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.gcs_bazel_cache }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.9
       - name: Configure Bazel
         run: |
-          ./configure.py
-          echo -e 'build --distinct_host_configuration=false' >> .bazelrc.user
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu' >> .bazelrc.user
+            echo -e 'build --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-ubuntu' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
         shell: bash
-      - name: Set bazel cache
-        run: echo -e 'build --remote_upload_local_results=false' >> .bazelrc.user
-        if: github.ref != 'refs/heads/main'
-        shell: bash
-      - name: Install pip dependencies
-        run: pip install tensorflow-cpu~=2.13.0 larq~=0.13 pytest tensorflow_datasets~=4.9 flatbuffers==23.1.21 tqdm --no-cache-dir
       - name: Run Interpreter test
         run: bazelisk test larq_compute_engine/tflite/tests:interpreter_test --test_output=all
       - name: Run FileCheck tests
         run: bazelisk test larq_compute_engine/mlir/tests:all --test_output=all
       - name: Run End2End tests
-        run: bazelisk test larq_compute_engine/tests:end2end_test --test_output=all
+        run: bazelisk test larq_compute_engine/tests:end2end_test --test_output=all --test_env=TF_USE_LEGACY_KERAS=1
       - name: Run Strip dequantize op tests
-        run: bazelisk test larq_compute_engine/tests:strip_lcedequantize_test --test_output=all
+        run: bazelisk test larq_compute_engine/tests:strip_lcedequantize_test --test_output=all --test_env=TF_USE_LEGACY_KERAS=1
 
   ConverterPython:
     runs-on: ubuntu-latest
@@ -109,6 +85,10 @@ jobs:
             python-version: 3.11
             flatbuffers-version: 23.1.21
             protobuf-version: 4.23.4
+          - tf-version: 2.16.1
+            python-version: 3.11
+            flatbuffers-version: 24.3.25
+            protobuf-version: 4.25.3
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
       - uses: actions/checkout@v4
@@ -117,6 +97,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install TensorFlow
         run: pip install tensorflow==${{matrix.tf-version}} --no-cache-dir
+      - name: Install legacy tf-keras
+        if: matrix.tf-version == '2.16.1'
+        run: pip install tf-keras==2.16.0
       - name: Install flatbuffers
         run: pip install flatbuffers==${{matrix.flatbuffers-version}} --no-cache-dir
       - name: Install protobuf
@@ -124,7 +107,7 @@ jobs:
       - name: Install other dependencies
         run: pip install larq~=0.13.3 packaging tqdm --no-cache-dir
       - name: Run Converter test
-        run: PYTHONPATH=./ python larq_compute_engine/mlir/python/converter_test.py
+        run: TF_USE_LEGACY_KERAS=1 PYTHONPATH=./ python larq_compute_engine/mlir/python/converter_test.py
 
   Android_AAR:
     runs-on: ubuntu-latest
@@ -142,15 +125,13 @@ jobs:
         with:
           path: /tmp/lce_android
           key: ${{ runner.os }}-${{ hashFiles('**/third_party/install_android.sh') }}
-      - name: Install pip dependencies
-        run: pip install numpy six --no-cache-dir
       - name: Set Java version
         run: echo "JAVA_HOME=${JAVA_HOME_8_X64}" >> $GITHUB_ENV
       - name: Download and install Android NDK/SDK
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./third_party/install_android.sh
       - name: Configure Bazel
-        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_NDK_HOME="/tmp/lce_android/ndk/21.4.7075529" ./configure.py
+        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_API_LEVEL=30 ANDROID_NDK_HOME="/tmp/lce_android/ndk/25.2.9519653" ANDROID_NDK_API_LEVEL=30 ANDROID_BUILD_TOOLS_VERSION=31.0.0 ./configure.py
         shell: bash
       - name: Build LCE AAR
         run: BUILDER=bazelisk ./larq_compute_engine/tflite/java/build_lce_aar.sh

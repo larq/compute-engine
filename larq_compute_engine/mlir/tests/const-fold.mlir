@@ -8,8 +8,8 @@ func.func @quantize() -> (tensor<1x1x2x1xi32>, tensor<1x1x2x1xi32>) {
   %1 = "lq.Quantize"(%neg) {} : (tensor<1x1x2x32xf32>) -> tensor<1x1x2x1xi32>
   return %0, %1 : tensor<1x1x2x1xi32>, tensor<1x1x2x1xi32>
 
-  // CHECK: %[[neg:.*]] = arith.constant dense<-1> : tensor<1x1x2x1xi32>
   // CHECK: %[[pos:.*]] = arith.constant dense<0> : tensor<1x1x2x1xi32>
+  // CHECK: %[[neg:.*]] = arith.constant dense<-1> : tensor<1x1x2x1xi32>
   // CHECK: return %[[pos]], %[[neg]] : tensor<1x1x2x1xi32>, tensor<1x1x2x1xi32>
 }
 
@@ -21,7 +21,7 @@ func.func @dequantize() -> (tensor<1x1x2x32xf32>, tensor<1x1x2x32xf32>) {
   %1 = "lq.Dequantize"(%neg) {} : (tensor<1x1x2x1xi32>) -> tensor<1x1x2x32xf32>
   return %0, %1 : tensor<1x1x2x32xf32>, tensor<1x1x2x32xf32>
 
-  // CHECK: %[[neg:.*]] = arith.constant dense<-1.000000e+00> : tensor<1x1x2x32xf32>
   // CHECK: %[[pos:.*]] = arith.constant dense<1.000000e+00> : tensor<1x1x2x32xf32>
+  // CHECK: %[[neg:.*]] = arith.constant dense<-1.000000e+00> : tensor<1x1x2x32xf32>
   // CHECK: return %[[pos]], %[[neg]] : tensor<1x1x2x32xf32>, tensor<1x1x2x32xf32>
 }

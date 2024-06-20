@@ -15,7 +15,7 @@ from larq_compute_engine.mlir.python.converter import (
 )
 from larq_compute_engine.tflite.python.interpreter import Interpreter
 
-from preprocess import preprocess_image_tensor, IMAGE_SIZE
+from larq_compute_engine.tests.preprocess import preprocess_image_tensor, IMAGE_SIZE
 
 
 def convert_keras_model_as_saved_model(model, **kwargs):

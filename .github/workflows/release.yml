@@ -36,7 +36,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./third_party/install_android.sh
       - name: Configure Bazel
-        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_NDK_HOME="/tmp/lce_android/ndk/21.4.7075529" ./configure.py
+        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_API_LEVEL=30 ANDROID_NDK_HOME="/tmp/lce_android/ndk/25.2.9519653" ANDROID_NDK_API_LEVEL=30 ANDROID_BUILD_TOOLS_VERSION=31.0.0 ./configure.py
         shell: bash
       - run: mkdir benchmark-binaries
       - name: Build Benchmark utility for AArch64
@@ -108,7 +108,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./third_party/install_android.sh
       - name: Configure Bazel
-        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_NDK_HOME="/tmp/lce_android/ndk/21.4.7075529" ./configure.py
+        run: LCE_SET_ANDROID_WORKSPACE=1 ANDROID_SDK_HOME="/tmp/lce_android" ANDROID_API_LEVEL=30 ANDROID_NDK_HOME="/tmp/lce_android/ndk/25.2.9519653" ANDROID_NDK_API_LEVEL=30 ANDROID_BUILD_TOOLS_VERSION=31.0.0 ./configure.py
         shell: bash
       - name: Build LCE AAR
         run: BUILDER=bazelisk ./larq_compute_engine/tflite/java/build_lce_aar.sh
@@ -134,10 +134,10 @@ jobs:
 
   macos-release-wheel:
     name: Build release wheels for macOS
-    runs-on: macos-latest
+    runs-on: macos-13
     strategy:
       matrix:
-        python-version: [3.9, "3.10", 3.11]
+        python-version: ["3.10", 3.11]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -154,33 +154,35 @@ jobs:
           python -m pip install delocate wheel setuptools numpy six --no-cache-dir
 
           ./configure.py
-          export MACOSX_DEPLOYMENT_TARGET=10.14
+          # This matches `release_macox_x86` in .tensorflow.bazelrc
+          export MACOSX_DEPLOYMENT_TARGET=10.15
 
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-macos-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-macos-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
-          bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --copt=-mavx --linkopt=-dead_strip --distinct_host_configuration=false
-          bazel-bin/build_pip_pkg artifacts --plat-name macosx_10_14_x86_64
+          bazelisk build :build_pip_pkg --config=release_macos_x86 --config=release_cpu_macos --copt=-fvisibility=hidden --linkopt=-dead_strip
+          bazel-bin/build_pip_pkg artifacts --plat-name macosx_10_15_x86_64
 
           for f in artifacts/*.whl; do
             delocate-wheel -w wheelhouse $f
           done
         env:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          TF_PYTHON_VERSION: ${{ matrix.python-version }}
         shell: bash
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}-wheels
+          name: ${{ runner.os }}-wheels-${{ matrix.python-version }}
           path: wheelhouse
 
   macos-arm-release-wheel:
     name: Build release arm wheels for macOS
-    runs-on: macos-11
+    runs-on: macos-14
     strategy:
       matrix:
-        python-version: [3.9, "3.10", 3.11]
+        python-version: ["3.10", 3.11]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -197,25 +199,27 @@ jobs:
           python -m pip install delocate wheel setuptools numpy six --no-cache-dir
 
           ./configure.py
-          export MACOSX_DEPLOYMENT_TARGET=11.0
+          # This matches `release_macox_arm64` in .tensorflow.bazelrc
+          export MACOSX_DEPLOYMENT_TARGET=12.0
 
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-macos-arm-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-macos-arm-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
-          bazelisk build :build_pip_pkg --copt=-fvisibility=hidden --linkopt=-dead_strip --config=macos_arm64
-          bazel-bin/build_pip_pkg artifacts --plat-name macosx_11_0_arm64
+          bazelisk build :build_pip_pkg --config=release_macos_arm64 --copt=-fvisibility=hidden --linkopt=-dead_strip
+          bazel-bin/build_pip_pkg artifacts --plat-name macosx_12_0_arm64
 
           for f in artifacts/*.whl; do
             delocate-wheel -w wheelhouse $f
           done
         env:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          TF_PYTHON_VERSION: ${{ matrix.python-version }}
         shell: bash
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}-arm-wheels
+          name: ${{ runner.os }}-arm-wheels-${{ matrix.python-version }}
           path: wheelhouse
 
   manylinux-release-wheel:
@@ -223,7 +227,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9, "3.10", 3.11]
+        python-version: ["3.10", 3.11]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -237,15 +241,17 @@ jobs:
       - name: Build manylinux2014 wheels
         run: |
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo -e 'build --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-manylinux-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-manylinux-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
           docker run -e LCE_RELEASE_VERSION=${{ github.event.inputs.version }} \
             -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-credentials.json \
+            -e TF_PYTHON_VERSION=${{ matrix.python-version }} \
             -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/gcloud-credentials.json:ro \
             -v ${PWD}:/compute-engine -w /compute-engine \
-            tensorflow/build:2.13-python${{ matrix.python-version }} \
+            -v /mnt:/github_disk \
+            tensorflow/build:2.16-python${{ matrix.python-version }} \
             .github/tools/release_linux.sh
 
           sudo apt-get -y -qq install patchelf --no-install-recommends
@@ -258,7 +264,7 @@ jobs:
           ls -al wheelhouse/
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}-wheels
+          name: ${{ runner.os }}-wheels-${{ matrix.python-version }}
           path: wheelhouse
 
   windows-release-wheel:
@@ -266,7 +272,7 @@ jobs:
     runs-on: windows-2019
     strategy:
       matrix:
-        python-version: [3.9, "3.10", 3.11]
+        python-version: ["3.10", 3.11]
       fail-fast: false
     steps:
       - name: Configure Pagefile
@@ -294,18 +300,24 @@ jobs:
           $Env:CC_OPT_FLAGS = "/O2"
 
           python --version
-          python -m pip install wheel setuptools numpy six --no-cache-dir
+          python -m pip install wheel setuptools numpy six pip-tools --no-cache-dir
+          # This is needed because the requirements on windows are different than on other systems
+          pip-compile --strip-extras --no-emit-index-url --allow-unsafe larq_compute_engine/requirements.in
+
+          # Fix for path length limit: replace workspace name by 'lce'
+          (Get-Content WORKSPACE).Replace('workspace(name = "larq_compute_engine")', 'workspace(name = "lce")') | Set-Content WORKSPACE
 
           "" | python configure.py
 
-          bazelisk --output_base=C:\build_output build :build_pip_pkg --enable_runfiles --local_ram_resources=4096 --remote_http_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-windows-python${{ matrix.python-version }} --google_default_credentials
+          bazelisk --output_base=C:\bzl build :build_pip_pkg --enable_runfiles --local_ram_resources=4096 --remote_cache=https://storage.googleapis.com/plumerai-bazel-cache/lce-release-windows-python${{ matrix.python-version }} --google_default_credentials
           bazel-bin/build_pip_pkg wheelhouse
         env:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          TF_PYTHON_VERSION: ${{ matrix.python-version }}
         shell: pwsh
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}-wheels
+          name: ${{ runner.os }}-wheels-${{ matrix.python-version }}
           path: wheelhouse
 
   upload-wheels:
@@ -322,31 +334,11 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: Linux-wheels
-          path: Linux-wheels
-        if: ${{ needs.manylinux-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v4
-        with:
-          name: macOS-wheels
-          path: macOS-wheels
-        if: ${{ needs.macos-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v4
-        with:
-          name: macOS-arm-wheels
-          path: macOS-arm-wheels
-        if: ${{ needs.macos-arm-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v4
-        with:
-          name: Windows-wheels
-          path: Windows-wheels
-        if: ${{ needs.windows-release-wheel.result == 'success' }}
+          pattern: "*wheels*"
+          path: dist
+          merge-multiple: true
       - run: |
           set -x
-          mkdir -p dist
-          cp Linux-wheels/*.whl dist/ || true
-          cp macOS-wheels/*.whl dist/ || true
-          cp macOS-arm-wheels/*.whl dist/ || true
-          cp Windows-wheels/*.whl dist/ || true
           ls -la dist/
           sha256sum dist/*.whl
       - uses: pypa/gh-action-pypi-publish@master

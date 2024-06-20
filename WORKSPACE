@@ -16,12 +16,88 @@ http_archive(
     patches = [
         "//third_party/tensorflow_patches:disable_forced_mkl.patch",
     ],
-    sha256 = "e58c939079588623e6fa1d054aec2f90f95018266e0a970fd353a5244f5173dc",
-    strip_prefix = "tensorflow-2.13.0",
+    sha256 = "c729e56efc945c6df08efe5c9f5b8b89329c7c91b8f40ad2bb3e13900bd4876d",
+    strip_prefix = "tensorflow-2.16.1",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/v2.13.0.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/v2.16.1.tar.gz",
     ],
 )
+
+# We must initialize hermetic python first.
+http_archive(
+    name = "bazel_skylib",
+    sha256 = "74d544d96f4a5bb630d465ca8bbcfe231e3594e5aae57e1edbf17a6eb3ca2506",
+    urls = [
+        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
+    ],
+)
+
+http_archive(
+    name = "rules_python",
+    sha256 = "9d04041ac92a0985e344235f5d946f71ac543f1b1565f2cdbc9a2aaee8adf55b",
+    strip_prefix = "rules_python-0.26.0",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.26.0/rules_python-0.26.0.tar.gz",
+)
+
+load("@rules_python//python:repositories.bzl", "py_repositories", "python_register_toolchains")
+
+py_repositories()
+
+load(
+    "@org_tensorflow//tensorflow/tools/toolchains/python:python_repo.bzl",
+    "python_repository",
+)
+
+python_repository(name = "python_version_repo")
+
+load("@python_version_repo//:py_version.bzl", "TF_PYTHON_VERSION")
+
+python_register_toolchains(
+    name = "python",
+    ignore_root_user_error = True,
+    python_version = TF_PYTHON_VERSION,
+)
+
+load("@python//:defs.bzl", "interpreter")
+load("@rules_python//python:pip.bzl", "package_annotation", "pip_parse")
+
+NUMPY_ANNOTATIONS = {
+    "numpy": package_annotation(
+        additive_build_content = """\
+filegroup(
+    name = "includes",
+    srcs = glob(["site-packages/numpy/core/include/**/*.h"]),
+)
+cc_library(
+    name = "numpy_headers",
+    hdrs = [":includes"],
+    strip_include_prefix="site-packages/numpy/core/include/",
+)
+""",
+    ),
+}
+
+pip_parse(
+    name = "pypi",
+    annotations = NUMPY_ANNOTATIONS,
+    python_interpreter_target = interpreter,
+    requirements = "@org_tensorflow//:requirements_lock_" + TF_PYTHON_VERSION.replace(".", "_") + ".txt",
+)
+
+load("@pypi//:requirements.bzl", tf_install_deps = "install_deps")
+
+tf_install_deps()
+
+pip_parse(
+    name = "pypi_lce",
+    python_interpreter_target = interpreter,
+    requirements = "//larq_compute_engine:requirements.txt",
+)
+
+load("@pypi_lce//:requirements.bzl", lce_install_deps = "install_deps")
+
+lce_install_deps()
 
 load("@org_tensorflow//tensorflow:workspace3.bzl", "tf_workspace3")
 

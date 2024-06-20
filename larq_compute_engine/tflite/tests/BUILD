@@ -1,3 +1,6 @@
+load("@pypi//:requirements.bzl", tf_requirement = "requirement")
+load("@pypi_lce//:requirements.bzl", lce_requirement = "requirement")
+
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],  # Apache 2.0
@@ -77,9 +80,13 @@ cc_test(
 
 py_test(
     name = "interpreter_test",
+    size = "small",
     srcs = ["interpreter_test.py"],
     deps = [
         "//larq_compute_engine/tflite/python:interpreter",
+        tf_requirement("numpy"),
+        lce_requirement("pytest"),
+        lce_requirement("tensorflow"),
     ],
 )
 
