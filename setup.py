@@ -42,8 +42,8 @@ setup(
     url="https://larq.dev/",
     install_requires=["flatbuffers>=2.0", "tqdm>=4"],
     extras_require={
-        "tensorflow": ["tensorflow>=1.14"],
-        "tensorflow_gpu": ["tensorflow-gpu>=1.14"],
+        "tensorflow": ["tensorflow>=2.8"],
+        "tensorflow_gpu": ["tensorflow-gpu>=2.8"],
     },
     include_package_data=True,
     zip_safe=False,
