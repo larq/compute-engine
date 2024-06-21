@@ -41,7 +41,7 @@ google-pasta==0.2.0
     # via tensorflow
 googleapis-common-protos==1.63.1
     # via
-    #   -r larq_compute_engine/requirements.in
+    #   -r requirements.in
     #   tensorflow-metadata
 grpcio==1.64.1
     # via
@@ -62,7 +62,7 @@ iniconfig==2.0.0
 keras==3.3.3
     # via tensorflow
 larq==0.13.3
-    # via -r larq_compute_engine/requirements.in
+    # via -r requirements.in
 libclang==18.1.1
     # via tensorflow
 markdown==3.6
@@ -118,7 +118,7 @@ pyarrow==16.1.0
 pygments==2.18.0
     # via rich
 pytest==8.2.2
-    # via -r larq_compute_engine/requirements.in
+    # via -r requirements.in
 requests==2.32.3
     # via
     #   tensorflow
@@ -140,10 +140,10 @@ tensorboard-data-server==0.7.2
     # via tensorboard
 tensorflow==2.16.1
     # via
-    #   -r larq_compute_engine/requirements.in
+    #   -r requirements.in
     #   tf-keras
 tensorflow-datasets==4.9.6
-    # via -r larq_compute_engine/requirements.in
+    # via -r requirements.in
 tensorflow-metadata==1.15.0
     # via tensorflow-datasets
 termcolor==2.4.0
@@ -153,12 +153,12 @@ termcolor==2.4.0
 terminaltables==3.1.10
     # via larq
 tf-keras==2.16.0
-    # via -r larq_compute_engine/requirements.in
+    # via -r requirements.in
 toml==0.10.2
     # via tensorflow-datasets
 tqdm==4.66.4
     # via
-    #   -r larq_compute_engine/requirements.in
+    #   -r requirements.in
     #   etils
     #   tensorflow-datasets
 typing-extensions==4.12.2
@@ -167,7 +167,7 @@ typing-extensions==4.12.2
     #   optree
     #   simple-parsing
     #   tensorflow
-urllib3==2.2.1
+urllib3==2.2.2
     # via requests
 werkzeug==3.0.3
     # via tensorboard
