@@ -167,7 +167,7 @@ typing-extensions==4.12.2
     #   optree
     #   simple-parsing
     #   tensorflow
-urllib3==2.2.1
+urllib3==2.2.2
     # via requests
 werkzeug==3.0.3
     # via tensorboard
