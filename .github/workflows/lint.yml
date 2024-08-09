@@ -26,7 +26,7 @@ jobs:
       - name: Black code style
         run: black larq_compute_engine --check --target-version py39
       - name: clang-format lint
-        uses: DoozyX/clang-format-lint-action@v0.17
+        uses: DoozyX/clang-format-lint-action@v0.18
         with:
           clangFormatVersion: 12
       - name: Lint bazel files
