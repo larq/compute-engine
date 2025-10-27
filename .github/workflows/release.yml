@@ -51,7 +51,7 @@ jobs:
         run: |
           bazelisk build //larq_compute_engine/tflite/benchmark:lce_benchmark_model --config=android_arm64 -c opt --copt=-O3
           cp bazel-bin/larq_compute_engine/tflite/benchmark/lce_benchmark_model benchmark-binaries/lce_benchmark_model_android_arm64
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: Benchmark-Binaries
           path: benchmark-binaries
@@ -112,7 +112,7 @@ jobs:
         shell: bash
       - name: Build LCE AAR
         run: BUILDER=bazelisk ./larq_compute_engine/tflite/java/build_lce_aar.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: Android-AAR
           path: lce-lite-*.aar
@@ -174,7 +174,7 @@ jobs:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
           TF_PYTHON_VERSION: ${{ matrix.python-version }}
         shell: bash
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ${{ runner.os }}-wheels-${{ matrix.python-version }}
           path: wheelhouse
@@ -221,7 +221,7 @@ jobs:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
           TF_PYTHON_VERSION: ${{ matrix.python-version }}
         shell: bash
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ${{ runner.os }}-arm-wheels-${{ matrix.python-version }}
           path: wheelhouse
@@ -271,7 +271,7 @@ jobs:
           done
 
           ls -al wheelhouse/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ${{ runner.os }}-wheels-${{ matrix.python-version }}
           path: wheelhouse
@@ -324,7 +324,7 @@ jobs:
           LCE_RELEASE_VERSION: ${{ github.event.inputs.version }}
           TF_PYTHON_VERSION: ${{ matrix.python-version }}
         shell: pwsh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ${{ runner.os }}-wheels-${{ matrix.python-version }}
           path: wheelhouse
