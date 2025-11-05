@@ -59,7 +59,7 @@ importlib-resources==6.4.0
     # via etils
 iniconfig==2.0.0
     # via pytest
-keras==3.3.3
+keras==3.12.0
     # via tensorflow
 larq==0.13.3
     # via -r requirements.in
@@ -97,6 +97,7 @@ optree==0.11.0
     # via keras
 packaging==24.1
     # via
+    #   keras
     #   larq
     #   pytest
     #   tensorflow
