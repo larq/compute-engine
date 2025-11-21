@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: true
           fetch-depth: 0
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install qemu-user
         run: |
           sudo apt-get update
@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: google-github-actions/auth@v3
         continue-on-error: true
         with:
@@ -91,7 +91,7 @@ jobs:
             protobuf-version: 4.25.3
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -114,7 +114,7 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'ci-skip')"
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: actions/setup-python@v6
