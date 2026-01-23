@@ -100,6 +100,7 @@ packaging==24.1
     #   larq
     #   pytest
     #   tensorflow
+    #   wheel
 pluggy==1.5.0
     # via pytest
 promise==2.3
@@ -171,7 +172,7 @@ urllib3==2.2.2
     # via requests
 werkzeug==3.1.4
     # via tensorboard
-wheel==0.43.0
+wheel==0.46.2
     # via astunparse
 wrapt==1.16.0
     # via
