@@ -170,7 +170,7 @@ typing-extensions==4.12.2
     #   tensorflow
 urllib3==2.2.2
     # via requests
-werkzeug==3.1.4
+werkzeug==3.1.6
     # via tensorboard
 wheel==0.46.2
     # via astunparse
