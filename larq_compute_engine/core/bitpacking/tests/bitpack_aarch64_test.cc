@@ -35,7 +35,7 @@ void test_bitpacking_order(const int num_4x32_blocks) {
         input[j] = zero_point + 5;
     }
     // Run bitpacking
-    bitpack_aarch64_4x32(input, num_blocks, output, zero_point);
+    bitpack_aarch64_4x32(input, num_4x32_blocks, output, zero_point);
     // See where in the output the bit has popped up
     int bit_index = -1;
     int bits_found = 0;
