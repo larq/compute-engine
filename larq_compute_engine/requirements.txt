@@ -117,8 +117,10 @@ psutil==5.9.8
 pyarrow==16.1.0
     # via tensorflow-datasets
 pygments==2.20.0
-    # via rich
-pytest==8.2.2
+    # via
+    #   pytest
+    #   rich
+pytest==9.0.3
     # via -r requirements.in
 requests==2.33.0
     # via
