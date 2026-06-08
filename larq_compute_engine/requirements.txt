@@ -87,7 +87,6 @@ numpy==1.26.4
     #   larq
     #   ml-dtypes
     #   opt-einsum
-    #   pyarrow
     #   tensorboard
     #   tensorflow
     #   tensorflow-datasets
@@ -114,7 +113,7 @@ protobuf==4.25.3
     #   tensorflow-metadata
 psutil==5.9.8
     # via tensorflow-datasets
-pyarrow==16.1.0
+pyarrow==23.0.1
     # via tensorflow-datasets
 pygments==2.20.0
     # via
