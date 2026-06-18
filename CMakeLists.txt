@@ -5,6 +5,11 @@ project(larq_compute_engine C CXX)
 option(COMPILE_EXAMPLE "Enable compilation of the minimal example" ON)
 option(COMPILE_BENCHMARK "Enable compilation of the benchmarking utility" ON)
 
+string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" LCE_SYSTEM_PROCESSOR_LOWER)
+if(LCE_SYSTEM_PROCESSOR_LOWER MATCHES "^riscv")
+    message(STATUS "RISC-V target detected; using portable C++ bitpacking/BGEMM kernels")
+endif()
+
 # TensorFlow dependency, see https://www.tensorflow.org/lite/guide/build_cmake
 set(TENSORFLOW_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/third_party/tensorflow")
 set(TFLITE_SOURCE_DIR "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite")
