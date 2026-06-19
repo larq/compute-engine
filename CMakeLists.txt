@@ -7,7 +7,18 @@ option(COMPILE_BENCHMARK "Enable compilation of the benchmarking utility" ON)
 
 string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" LCE_SYSTEM_PROCESSOR_LOWER)
 if(LCE_SYSTEM_PROCESSOR_LOWER MATCHES "^riscv")
-    message(STATUS "RISC-V target detected; using portable C++ bitpacking/BGEMM kernels")
+    message(STATUS "RISC-V target detected; using portable C++ kernels and disabling host CPU feature backends")
+    set(TFLITE_ENABLE_XNNPACK OFF CACHE BOOL "Disable XNNPACK on RISC-V" FORCE)
+    # TensorFlow Lite's bundled ruy falls back to fixed cache parameters when
+    # cpuinfo initialization fails. Provide a conservative shim so the build
+    # does not depend on Linux riscv hwprobe headers.
+    if(NOT TARGET cpuinfo)
+        add_library(cpuinfo STATIC cmake/riscv_cpuinfo_shim/cpuinfo.c)
+        target_include_directories(cpuinfo PUBLIC ${CMAKE_CURRENT_LIST_DIR}/cmake/riscv_cpuinfo_shim)
+    endif()
+    if(NOT TARGET cpuinfo::cpuinfo)
+        add_library(cpuinfo::cpuinfo ALIAS cpuinfo)
+    endif()
 endif()
 
 # TensorFlow dependency, see https://www.tensorflow.org/lite/guide/build_cmake
