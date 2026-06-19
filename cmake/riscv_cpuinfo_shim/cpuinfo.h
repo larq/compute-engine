@@ -10,10 +10,6 @@ extern "C" {
 
 enum cpuinfo_uarch {
   cpuinfo_uarch_unknown = 0,
-  cpuinfo_uarch_cortex_a53 = 0x00300353,
-  cpuinfo_uarch_cortex_a55r0 = 0x00300354,
-  cpuinfo_uarch_cortex_a55 = 0x00300355,
-  cpuinfo_uarch_cortex_x1 = 0x003004C1
 };
 
 struct cpuinfo_core {
