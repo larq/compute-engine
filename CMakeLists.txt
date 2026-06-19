@@ -29,8 +29,6 @@ if(LCE_RISCV_LINUX_WITHOUT_HWPROBE)
     if(NOT TARGET cpuinfo::cpuinfo)
         add_library(cpuinfo::cpuinfo ALIAS cpuinfo)
     endif()
-elseif(LCE_SYSTEM_PROCESSOR_LOWER MATCHES "^riscv" AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    message(STATUS "RISC-V Linux target with sys/hwprobe.h detected; keeping upstream cpuinfo and XNNPACK configuration")
 endif()
 
 # TensorFlow dependency, see https://www.tensorflow.org/lite/guide/build_cmake
