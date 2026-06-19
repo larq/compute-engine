@@ -5,9 +5,7 @@
 Larq Compute Engine (LCE) is a highly optimized inference engine for deploying
 extremely quantized neural networks, such as
 Binarized Neural Networks (BNNs). It currently supports various mobile platforms
-and has been benchmarked on a Pixel 1 phone and a Raspberry Pi. On non-ARM
-targets, including `riscv64`, LCE falls back to portable C++ kernels instead of
-the hand-optimized AArch64 paths.
+and has been benchmarked on a Pixel 1 phone and a Raspberry Pi.
 LCE provides a collection of hand-optimized [TensorFlow Lite](https://www.tensorflow.org/lite)
 custom operators for supported instruction sets, developed in inline assembly or in C++
 using compiler intrinsics. LCE leverages optimization techniques
@@ -32,15 +30,13 @@ advantage of multi-core modern desktop and mobile CPUs.
       is fully compatible with TensorFlow Lite and performs additional
       network level optimizations for Larq models.
 
-- **Lightning fast deployment** on a variety of target platforms:
+- **Lightning fast deployment** on a variety of mobile platforms:
 
     - LCE enables high performance, on-device machine learning inference by
       providing hand-optimized kernels and network level optimizations for BNN models.
 
     - LCE currently supports 64-bit ARM-based mobile platforms such as Android phones
-      and Raspberry Pi boards. On other targets, including `riscv64`, the
-      portable C++ bitpacking, BGEMM, and indirect-BGEMM kernels remain
-      available as a conservative fallback path.
+      and Raspberry Pi boards.
 
     - Thread parallelism support in LCE is essential for modern mobile devices with
       multi-core CPUs.
@@ -91,7 +87,7 @@ Follow these steps to deploy a BNN with LCE:
 
 3. **Build LCE**
 
-    The LCE documentation provides the build instructions for [Android](https://docs.larq.dev/compute-engine/quickstart_android) and [64-bit ARM-based boards](https://docs.larq.dev/compute-engine/build/arm) such as Raspberry Pi. On `riscv64`, LCE currently uses the same portable C++ kernels that are already used as the generic fallback on non-AArch64 targets. If a RISC-V Linux target lacks `sys/hwprobe.h` for TensorFlow Lite's bundled `cpuinfo`, the build falls back to a conservative non-XNNPACK configuration instead of claiming a dedicated RISC-V vector or assembly backend.
+    The LCE documentation provides the build instructions for [Android](https://docs.larq.dev/compute-engine/quickstart_android) and [64-bit ARM-based boards](https://docs.larq.dev/compute-engine/build/arm) such as Raspberry Pi. Please follow the provided instructions to create a native LCE build or cross-compile for one of the supported targets.
 
 4. **Run inference**
 
