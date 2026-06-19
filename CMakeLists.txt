@@ -1,14 +1,20 @@
 cmake_minimum_required(VERSION 3.16)
 project(larq_compute_engine C CXX)
 
+include(CheckIncludeFile)
+
 # Options and their default values
 option(COMPILE_EXAMPLE "Enable compilation of the minimal example" ON)
 option(COMPILE_BENCHMARK "Enable compilation of the benchmarking utility" ON)
 
 string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" LCE_SYSTEM_PROCESSOR_LOWER)
-if(LCE_SYSTEM_PROCESSOR_LOWER MATCHES "^riscv")
-    message(STATUS "RISC-V target detected; using portable C++ kernels and disabling host CPU feature backends")
-    set(TFLITE_ENABLE_XNNPACK OFF CACHE BOOL "Disable XNNPACK on RISC-V" FORCE)
+if(LCE_SYSTEM_PROCESSOR_LOWER MATCHES "^riscv" AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    check_include_file("sys/hwprobe.h" LCE_HAS_SYS_HWPROBE_H)
+endif()
+
+if(LCE_SYSTEM_PROCESSOR_LOWER MATCHES "^riscv" AND CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT LCE_HAS_SYS_HWPROBE_H)
+    message(STATUS "RISC-V Linux target without sys/hwprobe.h detected; using the portable fallback and disabling XNNPACK")
+    set(TFLITE_ENABLE_XNNPACK OFF CACHE BOOL "Disable XNNPACK when RISC-V cpuinfo hwprobe headers are unavailable" FORCE)
     # TensorFlow Lite's bundled ruy falls back to fixed cache parameters when
     # cpuinfo initialization fails. Provide a conservative shim so the build
     # does not depend on Linux riscv hwprobe headers.
@@ -19,6 +25,8 @@ if(LCE_SYSTEM_PROCESSOR_LOWER MATCHES "^riscv")
     if(NOT TARGET cpuinfo::cpuinfo)
         add_library(cpuinfo::cpuinfo ALIAS cpuinfo)
     endif()
+elseif(LCE_SYSTEM_PROCESSOR_LOWER MATCHES "^riscv" AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    message(STATUS "RISC-V Linux target with sys/hwprobe.h detected; keeping upstream cpuinfo and XNNPACK configuration")
 endif()
 
 # TensorFlow dependency, see https://www.tensorflow.org/lite/guide/build_cmake

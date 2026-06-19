@@ -91,7 +91,7 @@ Follow these steps to deploy a BNN with LCE:
 
 3. **Build LCE**
 
-    The LCE documentation provides the build instructions for [Android](https://docs.larq.dev/compute-engine/quickstart_android) and [64-bit ARM-based boards](https://docs.larq.dev/compute-engine/build/arm) such as Raspberry Pi. On `riscv64`, LCE currently uses the same portable C++ kernels that are already used as the generic fallback on non-AArch64 targets; no dedicated RISC-V vector or assembly backend is claimed here.
+    The LCE documentation provides the build instructions for [Android](https://docs.larq.dev/compute-engine/quickstart_android) and [64-bit ARM-based boards](https://docs.larq.dev/compute-engine/build/arm) such as Raspberry Pi. On `riscv64`, LCE currently uses the same portable C++ kernels that are already used as the generic fallback on non-AArch64 targets. If a RISC-V Linux target lacks `sys/hwprobe.h` for TensorFlow Lite's bundled `cpuinfo`, the build falls back to a conservative non-XNNPACK configuration instead of claiming a dedicated RISC-V vector or assembly backend.
 
 4. **Run inference**
 
