@@ -33,7 +33,7 @@ etils==1.9.2
     #   tensorflow-datasets
 flatbuffers==24.3.25
     # via tensorflow
-fsspec==2024.6.0
+fsspec==2026.6.0
     # via etils
 gast==0.5.4
     # via tensorflow
