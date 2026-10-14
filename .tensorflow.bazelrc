@@ -233,6 +233,15 @@ build:linux --copt="-Wno-error=unused-but-set-variable"
 build:linux_arm64 --copt="-mtune=generic" --copt="-march=armv8-a" --copt="-O3"
 
 
+# Suppress C++ compiler warnings, otherwise build logs become 10s of MBs.
+build:android --copt=-w
+build:ios --copt=-w
+build:linux --copt=-w
+build:linux --host_copt=-w
+build:macos --copt=-w
+build:windows --copt=/W0
+build:windows --host_copt=/W0
+
 # On Windows, `__cplusplus` is wrongly defined without this switch
 # See https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
 build:windows --copt=/Zc:__cplusplus
